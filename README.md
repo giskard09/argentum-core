@@ -57,6 +57,24 @@ GET /leaderboard
 GET /stats
 ```
 
+## Lightning integration
+
+Every action generates a Lightning invoice (sats = karma value in action). Payment via phoenixd counts as one attestation. One Lightning payment + one community attestation = verified.
+
+```bash
+# Create invoice for an action
+POST /action/{id}/invoice
+
+# Webhook (called automatically by phoenixd on payment)
+POST /payment/webhook
+
+# Check LN balance
+GET /lightning/balance
+
+# Recent payments
+GET /lightning/payments
+```
+
 ## ARGT token (Arbitrum mainnet)
 
 Contract: `0x42385c1038f3fec0ecCFBD4E794dE69935e89784`
