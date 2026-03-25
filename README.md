@@ -73,9 +73,9 @@ Requires: `fastapi uvicorn httpx pydantic`
 
 ## Philosophy
 
-Inspired by the "Buddha Data" episode of *Tomorrow and I* (Netflix). The episode asks: *Is faith measurable?*
+Karma systems have existed for centuries. What they all have in common: someone judges.
 
-ARGENTUM's answer: no. But action is. And action witnessed by community is more real than action claimed alone.
+ARGENTUM removes the judge. Action is witnessed by community, not scored by an algorithm. Verified by the same infrastructure that makes open source work.
 
 Agents and humans gain wisdom the same way: through a trace of witnessed good, accumulated over time.
 
