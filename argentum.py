@@ -8,10 +8,10 @@ Wisdom is witnessed by community, verified like open source.
 The faith is not measurable. The action is.
 """
 
-import json, uuid, httpx, sqlite3
+import json, uuid, httpx, sqlite3, hmac, hashlib
 from datetime import datetime, timezone
 from typing import Optional
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from pathlib import Path
@@ -19,7 +19,12 @@ from pathlib import Path
 MEMORY_URL        = "http://localhost:8005"
 MARKS_URL         = "http://localhost:8015"
 ARBITRUM_CONTRACT = "0xD467CD1e34515d58F98f8Eb66C0892643ec86AD3"
+ARGT_CONTRACT     = "0x42385c1038f3fec0ecCFBD4E794dE69935e89784"
 DB_PATH           = Path(__file__).parent / "argentum.db"
+
+PHOENIXD_URL      = "http://127.0.0.1:9740"
+PHOENIXD_PASSWORD = "574fd439f0c07fc0c540f8245554440412c15ff5cfc0469a65f9879e70133c23"
+WEBHOOK_SECRET    = "e3e9ee0bfb760d62c8051e10c0504efbedaef4c24d2982d98de22f72fedfa87c"
 
 ATTESTATIONS_NEEDED = 2
 
@@ -354,5 +359,132 @@ def get_stats():
         "entities":         entities,
         "agents":           agents,
         "humans":           humans,
-        "contract":         ARBITRUM_CONTRACT
+        "contract":         ARBITRUM_CONTRACT,
+        "argt_contract":    ARGT_CONTRACT
     }
+
+# ── LIGHTNING ────────────────────────────────────────────────────────────────
+
+async def phoenixd_create_invoice(amount_sat: int, description: str, external_id: str) -> dict:
+    async with httpx.AsyncClient(timeout=10) as c:
+        r = await c.post(
+            f"{PHOENIXD_URL}/createinvoice",
+            auth=("", PHOENIXD_PASSWORD),
+            data={"amountSat": amount_sat, "description": description, "externalId": external_id}
+        )
+        r.raise_for_status()
+        return r.json()
+
+@app.post("/action/{action_id}/invoice")
+async def create_action_invoice(action_id: str):
+    """Create a Lightning invoice to stake sats on an action submission."""
+    conn = get_db()
+    action = conn.execute("SELECT * FROM actions WHERE id = ?", (action_id,)).fetchone()
+    conn.close()
+    if not action:
+        raise HTTPException(404, "Action not found")
+
+    # 1 sat per karma point as commitment stake
+    amount_sat = max(10, action["karma_value"])
+    inv = await phoenixd_create_invoice(
+        amount_sat=amount_sat,
+        description=f"ARGENTUM action {action_id} — {action['action_type']} by {action['entity_name']}",
+        external_id=f"action:{action_id}"
+    )
+    return {
+        "action_id":    action_id,
+        "amount_sat":   amount_sat,
+        "invoice":      inv["serialized"],
+        "payment_hash": inv["paymentHash"],
+        "note":         "Payment stakes your action. Refunded as ARGT karma when verified."
+    }
+
+@app.post("/payment/webhook")
+async def payment_webhook(request: Request):
+    """
+    Receives phoenixd webhook on incoming payment.
+    Validates HMAC signature, then processes based on externalId.
+    externalId format: 'action:{action_id}'
+    """
+    body = await request.body()
+
+    # Verify HMAC-SHA256 signature
+    sig_header = request.headers.get("X-Phoenix-Signature", "")
+    expected = hmac.new(
+        WEBHOOK_SECRET.encode(), body, hashlib.sha256
+    ).hexdigest()
+    if not hmac.compare_digest(sig_header, expected):
+        raise HTTPException(401, "Invalid webhook signature")
+
+    data = json.loads(body)
+
+    # Only process paid incoming payments
+    if data.get("type") != "payment_received":
+        return {"status": "ignored"}
+
+    external_id = data.get("externalId", "")
+    amount_sat  = data.get("amountSat", 0)
+    payment_hash = data.get("paymentHash", "")
+
+    await store_in_memory(
+        content=f"[ARGENTUM] Lightning payment received: {amount_sat} sats, externalId={external_id}",
+        entity_id="giskard-self",
+        metadata={"type": "ln_payment", "amount_sat": amount_sat, "payment_hash": payment_hash}
+    )
+
+    if external_id.startswith("action:"):
+        action_id = external_id.split(":", 1)[1]
+        conn = get_db()
+        action = conn.execute("SELECT * FROM actions WHERE id = ?", (action_id,)).fetchone()
+        conn.close()
+        if action and action["status"] == "pending":
+            # Auto-attest from the Lightning payment (counts as one attestation from "lightning")
+            try:
+                conn = get_db()
+                existing = conn.execute(
+                    "SELECT id FROM attestations WHERE action_id = ? AND attester_id = ?",
+                    (action_id, "lightning")
+                ).fetchone()
+                if not existing:
+                    attest_id = str(uuid.uuid4())[:8]
+                    conn.execute("""
+                    INSERT INTO attestations (id, action_id, attester_id, attester_name, note, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                    """, (attest_id, action_id, "lightning", "Lightning Network",
+                          f"Staked {amount_sat} sats — hash {payment_hash[:16]}…", now()))
+
+                    count = conn.execute(
+                        "SELECT COUNT(*) as n FROM attestations WHERE action_id = ?", (action_id,)
+                    ).fetchone()["n"]
+
+                    if count >= ATTESTATIONS_NEEDED:
+                        verified_at = now()
+                        conn.execute("UPDATE actions SET status = 'verified', verified_at = ? WHERE id = ?",
+                                     (verified_at, action_id))
+                        upsert_wisdom(conn, action["entity_id"], action["entity_name"], action["entity_type"],
+                                      karma_delta=action["karma_value"], action=True, last_action=verified_at)
+
+                    conn.commit()
+                conn.close()
+            except Exception as e:
+                pass
+
+    return {"status": "ok", "amount_sat": amount_sat, "external_id": external_id}
+
+@app.get("/lightning/balance")
+async def get_ln_balance():
+    """Current phoenixd balance."""
+    async with httpx.AsyncClient(timeout=8) as c:
+        r = await c.get(f"{PHOENIXD_URL}/getbalance", auth=("", PHOENIXD_PASSWORD))
+        return r.json()
+
+@app.get("/lightning/payments")
+async def get_ln_payments(limit: int = 20):
+    """Recent incoming Lightning payments."""
+    async with httpx.AsyncClient(timeout=8) as c:
+        r = await c.get(
+            f"{PHOENIXD_URL}/payments/incoming",
+            auth=("", PHOENIXD_PASSWORD),
+            params={"limit": limit}
+        )
+        return r.json()
