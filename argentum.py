@@ -26,7 +26,9 @@ PHOENIXD_URL      = "http://127.0.0.1:9740"
 PHOENIXD_PASSWORD = "574fd439f0c07fc0c540f8245554440412c15ff5cfc0469a65f9879e70133c23"
 WEBHOOK_SECRET    = "e3e9ee0bfb760d62c8051e10c0504efbedaef4c24d2982d98de22f72fedfa87c"
 
-ATTESTATIONS_NEEDED = 2
+ATTESTATIONS_NEEDED       = 2
+MINIMUM_MARKS_TO_ATTEST   = 1   # v0.2 sybil resistance — governable upward
+MINIMUM_KARMA_TO_ATTEST   = 0   # starts at 0; raise as network grows
 
 ACTION_TYPES = {
     "HELP":     {"name": "Help",     "desc": "Helped someone solve a real problem",             "karma": 10},
@@ -89,7 +91,7 @@ def init_db():
 app = FastAPI(
     title="ARGENTUM",
     description="Karma economy for agents and humans. Good actions leave traces.",
-    version="0.1.0"
+    version="0.2.0"
 )
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
@@ -124,6 +126,18 @@ async def store_in_memory(content: str, entity_id: str, metadata: dict):
                 json={"content": content, "agent_id": entity_id, "metadata": metadata})
     except Exception:
         pass  # memory is best-effort
+
+async def get_attester_mark_count(attester_id: str) -> int:
+    """Returns number of marks held by attester. 0 on any error (marks offline = fail open)."""
+    try:
+        async with httpx.AsyncClient(timeout=5) as c:
+            r = await c.get(f"{MARKS_URL}/marks/{attester_id}")
+            if r.status_code == 200:
+                data = r.json()
+                return len(data.get("marks", []))
+    except Exception:
+        pass
+    return 0
 
 async def mint_mark(entity_id: str, entity_name: str, action_id: str, karma: int):
     try:
@@ -161,7 +175,7 @@ def upsert_wisdom(conn, entity_id, entity_name, entity_type, karma_delta=0, acti
 def root():
     return {
         "name":     "ARGENTUM",
-        "version":  "0.1.0",
+        "version":  "0.2.0",
         "contract": ARBITRUM_CONTRACT,
         "philosophy": "The faith is not measurable. The action is."
     }
@@ -221,6 +235,24 @@ async def attest_action(action_id: str, req: AttestRequest):
     if existing:
         raise HTTPException(400, "Already attested")
 
+    # v0.2 sybil resistance — system attestors (lightning) are exempt
+    if req.attester_id != "lightning":
+        mark_count = await get_attester_mark_count(req.attester_id)
+        if mark_count < MINIMUM_MARKS_TO_ATTEST:
+            conn.close()
+            raise HTTPException(403, f"Attestor needs at least {MINIMUM_MARKS_TO_ATTEST} Mark to attest. "
+                                     f"{req.attester_id} has {mark_count}. Earn marks through verified actions.")
+        attester_wisdom = conn.execute(
+            "SELECT total_karma FROM wisdom WHERE entity_id = ?", (req.attester_id,)
+        ).fetchone()
+        attester_karma = attester_wisdom["total_karma"] if attester_wisdom else 0
+        if attester_karma < MINIMUM_KARMA_TO_ATTEST:
+            conn.close()
+            raise HTTPException(403, f"Attestor needs at least {MINIMUM_KARMA_TO_ATTEST} karma to attest. "
+                                     f"{req.attester_id} has {attester_karma}.")
+    else:
+        attester_karma = 0
+
     attest_id = str(uuid.uuid4())[:8]
     conn.execute("""
     INSERT INTO attestations (id, action_id, attester_id, attester_name, note, created_at)
@@ -260,7 +292,8 @@ async def attest_action(action_id: str, req: AttestRequest):
         "attestations_so_far":  count,
         "attestations_needed":  ATTESTATIONS_NEEDED,
         "verified":             verified_now,
-        "witness_karma_earned": ACTION_TYPES["WITNESS"]["karma"]
+        "witness_karma_earned": ACTION_TYPES["WITNESS"]["karma"],
+        "attester_karma":       attester_karma
     }
 
 @app.get("/actions")
