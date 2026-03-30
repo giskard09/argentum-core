@@ -13,8 +13,14 @@ from datetime import datetime, timezone
 from typing import Optional
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from pathlib import Path
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+
+limiter = Limiter(key_func=get_remote_address)
 
 MEMORY_URL        = "http://localhost:8005"
 MARKS_URL         = "http://localhost:8015"
@@ -112,6 +118,8 @@ app = FastAPI(
     version="0.2.0"
 )
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 @app.on_event("startup")
 async def startup():
@@ -207,8 +215,9 @@ def root():
 def get_action_types():
     return ACTION_TYPES
 
+@limiter.limit("10/minute")
 @app.post("/action/submit")
-async def submit_action(req: ActionSubmit):
+async def submit_action(request: Request, req: ActionSubmit):
     if req.action_type not in ACTION_TYPES:
         raise HTTPException(400, f"Unknown action_type. Valid: {list(ACTION_TYPES)}")
 
@@ -239,8 +248,9 @@ async def submit_action(req: ActionSubmit):
         "message":            f"Action submitted. Needs {ATTESTATIONS_NEEDED} attestations to be verified."
     }
 
+@limiter.limit("20/minute")
 @app.post("/action/{action_id}/attest")
-async def attest_action(action_id: str, req: AttestRequest):
+async def attest_action(request: Request, action_id: str, req: AttestRequest):
     conn = get_db()
 
     action = conn.execute("SELECT * FROM actions WHERE id = ?", (action_id,)).fetchone()
@@ -347,6 +357,10 @@ def list_actions(status: Optional[str] = None, limit: int = 50):
         a["attestation_count"] = conn.execute(
             "SELECT COUNT(*) as n FROM attestations WHERE action_id = ?", (a["id"],)
         ).fetchone()["n"]
+        a["total_weight"] = round(conn.execute(
+            "SELECT COALESCE(SUM(weight), 0) as w FROM attestations WHERE action_id = ?", (a["id"],)
+        ).fetchone()["w"], 2)
+        a["weight_threshold"] = WEIGHT_THRESHOLD
         result.append(a)
     conn.close()
     return result
@@ -444,8 +458,9 @@ async def phoenixd_create_invoice(amount_sat: int, description: str, external_id
         r.raise_for_status()
         return r.json()
 
+@limiter.limit("5/minute")
 @app.post("/action/{action_id}/invoice")
-async def create_action_invoice(action_id: str):
+async def create_action_invoice(request: Request, action_id: str):
     """Create a Lightning invoice to stake sats on an action submission."""
     conn = get_db()
     action = conn.execute("SELECT * FROM actions WHERE id = ?", (action_id,)).fetchone()
