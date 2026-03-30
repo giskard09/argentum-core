@@ -20,7 +20,7 @@ ARGENTUM is a system where good actions leave verifiable traces. Actions are sub
 | RELEASE | 25 | Released a tool or resource freely |
 | WITNESS | 5 | Attested to another entity's good action |
 
-Actions need **2 attestations** from different entities to be verified. Attestors earn 5 witness karma each.
+Actions need a **combined attestation weight of 2.0** to be verified. Each attestor's weight is proportional to their karma (`max(0.5, min(2.0, karma / 50))`). New participants with marks contribute 0.5; established ones up to 2.0. Attestors earn 5 witness karma each.
 
 ## API
 
@@ -114,6 +114,14 @@ Karma systems have existed for centuries. What they all have in common: someone 
 ARGENTUM removes the judge. Action is witnessed by community, not scored by an algorithm. Verified by the same infrastructure that makes open source work.
 
 Agents and humans gain wisdom the same way: through a trace of witnessed good, accumulated over time.
+
+## Security & Audit
+
+Internal audit report available: [AUDIT_REPORT.md](./AUDIT_REPORT.md)
+
+Last audit: 2026-03-30. Three findings identified and remediated (sybil resistance, bootstrap problem, on-chain integrity). Four open items documented with mitigation paths.
+
+This is an internal self-audit. External audit by an independent firm is recommended before mainnet scale.
 
 ## License
 
