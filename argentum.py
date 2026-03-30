@@ -108,6 +108,17 @@ def init_db():
         attestations_given  INTEGER DEFAULT 0,
         last_action         TEXT
     )""")
+    conn.execute("""
+    CREATE TABLE IF NOT EXISTS reports (
+        id           TEXT PRIMARY KEY,
+        action_id    TEXT NOT NULL,
+        reporter_id  TEXT NOT NULL,
+        reason       TEXT NOT NULL,
+        status       TEXT DEFAULT 'open',
+        created_at   TEXT NOT NULL,
+        resolved_at  TEXT,
+        FOREIGN KEY (action_id) REFERENCES actions(id)
+    )""")
     conn.commit()
     conn.close()
 
@@ -140,6 +151,13 @@ class AttestRequest(BaseModel):
     attester_id:   str
     attester_name: str
     note:          Optional[str] = None
+
+class ReportRequest(BaseModel):
+    reporter_id: str
+    reason:      str
+
+class SlashConfirmRequest(BaseModel):
+    confirmer_id: str  # must be genesis attestor
 
 # ── HELPERS ─────────────────────────────────────────────────────────────────
 
@@ -566,6 +584,107 @@ async def payment_webhook(request: Request):
                 pass
 
     return {"status": "ok", "amount_sat": amount_sat, "external_id": external_id}
+
+# ── SLASHING ────────────────────────────────────────────────────────────────
+
+@app.post("/action/{action_id}/report")
+def report_action(action_id: str, req: ReportRequest):
+    """Anyone can report a verified action as false. Opens a slash investigation."""
+    conn = get_db()
+    action = conn.execute("SELECT * FROM actions WHERE id = ?", (action_id,)).fetchone()
+    if not action:
+        conn.close()
+        raise HTTPException(404, "Action not found")
+    if action["status"] != "verified":
+        conn.close()
+        raise HTTPException(400, "Only verified actions can be reported")
+    if action["entity_id"] == req.reporter_id:
+        conn.close()
+        raise HTTPException(400, "Cannot report your own action")
+    existing = conn.execute(
+        "SELECT id FROM reports WHERE action_id = ? AND reporter_id = ?",
+        (action_id, req.reporter_id)
+    ).fetchone()
+    if existing:
+        conn.close()
+        raise HTTPException(400, "Already reported")
+    report_id = str(uuid.uuid4())[:8]
+    conn.execute(
+        "INSERT INTO reports (id, action_id, reporter_id, reason, status, created_at) VALUES (?, ?, ?, ?, 'open', ?)",
+        (report_id, action_id, req.reporter_id, req.reason, now())
+    )
+    conn.commit()
+    conn.close()
+    return {"report_id": report_id, "action_id": action_id, "status": "open",
+            "message": "Report submitted. Genesis attestors will review."}
+
+
+@app.post("/action/{action_id}/slash")
+def confirm_slash(action_id: str, req: SlashConfirmRequest):
+    """Genesis attestors confirm a slash. Penalizes poster and all attestors."""
+    if req.confirmer_id not in GENESIS_ATTESTORS:
+        raise HTTPException(403, "Only genesis attestors can confirm a slash")
+    conn = get_db()
+    action = conn.execute("SELECT * FROM actions WHERE id = ?", (action_id,)).fetchone()
+    if not action:
+        conn.close()
+        raise HTTPException(404, "Action not found")
+    if action["status"] == "slashed":
+        conn.close()
+        raise HTTPException(400, "Already slashed")
+    open_report = conn.execute(
+        "SELECT id FROM reports WHERE action_id = ? AND status = 'open'", (action_id,)
+    ).fetchone()
+    if not open_report:
+        conn.close()
+        raise HTTPException(400, "No open report for this action")
+
+    # Slash poster — lose karma_value
+    slash_amount = action["karma_value"]
+    conn.execute(
+        "UPDATE wisdom SET total_karma = MAX(0, total_karma - ?), verified_actions = MAX(0, verified_actions - 1) WHERE entity_id = ?",
+        (slash_amount, action["entity_id"])
+    )
+    # Slash each attestor — lose WITNESS karma (5)
+    attestors = conn.execute(
+        "SELECT attester_id FROM attestations WHERE action_id = ?", (action_id,)
+    ).fetchall()
+    for att in attestors:
+        if att["attester_id"] not in GENESIS_ATTESTORS:
+            conn.execute(
+                "UPDATE wisdom SET total_karma = MAX(0, total_karma - ?) WHERE entity_id = ?",
+                (ACTION_TYPES["WITNESS"]["karma"], att["attester_id"])
+            )
+    # Mark action as slashed and close report
+    conn.execute("UPDATE actions SET status = 'slashed' WHERE id = ?", (action_id,))
+    conn.execute(
+        "UPDATE reports SET status = 'confirmed', resolved_at = ? WHERE action_id = ? AND status = 'open'",
+        (now(), action_id)
+    )
+    conn.commit()
+    conn.close()
+    return {
+        "action_id":     action_id,
+        "status":        "slashed",
+        "poster_slash":  slash_amount,
+        "attestors_slashed": len(attestors),
+        "message":       f"Action slashed. Poster lost {slash_amount} karma. {len(attestors)} attestor(s) lost {ACTION_TYPES['WITNESS']['karma']} karma each."
+    }
+
+
+@app.get("/reports")
+def list_reports(status: Optional[str] = None):
+    """List slash reports."""
+    conn = get_db()
+    if status:
+        rows = conn.execute(
+            "SELECT * FROM reports WHERE status = ? ORDER BY created_at DESC", (status,)
+        ).fetchall()
+    else:
+        rows = conn.execute("SELECT * FROM reports ORDER BY created_at DESC").fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
 
 @app.get("/lightning/balance")
 async def get_ln_balance():
