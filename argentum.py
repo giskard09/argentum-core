@@ -43,6 +43,7 @@ MINIMUM_KARMA_TO_ATTEST   = 0   # starts at 0; raise as network grows
 # Genesis attestors — trusted at launch, exempt from marks/karma, weight 1.0
 # Like a blockchain genesis block: explicit, documented, shrinks as network grows
 GENESIS_ATTESTORS = {"lightning", "giskard-self"}
+MAX_ATTESTATIONS_PER_DAY  = 5    # rate limit — max attestations per attester per day
 
 # kept for backwards compat in lightning webhook
 ATTESTATIONS_NEEDED       = int(WEIGHT_THRESHOLD)
@@ -267,6 +268,17 @@ async def attest_action(request: Request, action_id: str, req: AttestRequest):
     ).fetchone()
     if existing:
         raise HTTPException(400, "Already attested")
+
+    # Rate limiting — max attestations per day (genesis attestors exempt)
+    if req.attester_id not in GENESIS_ATTESTORS:
+        today_start = now()[:10] + "T00:00:00"
+        today_count = conn.execute(
+            "SELECT COUNT(*) as n FROM attestations WHERE attester_id = ? AND created_at >= ?",
+            (req.attester_id, today_start)
+        ).fetchone()["n"]
+        if today_count >= MAX_ATTESTATIONS_PER_DAY:
+            conn.close()
+            raise HTTPException(429, f"Rate limit: max {MAX_ATTESTATIONS_PER_DAY} attestations per day. Try again tomorrow.")
 
     # Genesis attestors are exempt from marks/karma — trusted at launch
     if req.attester_id in GENESIS_ATTESTORS:
