@@ -33,6 +33,10 @@ KARMA_WEIGHT_MAX          = 2.0  # ceiling — prevents single expert monopoly
 MINIMUM_MARKS_TO_ATTEST   = 1   # v0.2 sybil resistance — governable upward
 MINIMUM_KARMA_TO_ATTEST   = 0   # starts at 0; raise as network grows
 
+# Genesis attestors — trusted at launch, exempt from marks/karma, weight 1.0
+# Like a blockchain genesis block: explicit, documented, shrinks as network grows
+GENESIS_ATTESTORS = {"lightning", "giskard-self"}
+
 # kept for backwards compat in lightning webhook
 ATTESTATIONS_NEEDED       = int(WEIGHT_THRESHOLD)
 
@@ -187,10 +191,13 @@ def upsert_wisdom(conn, entity_id, entity_name, entity_type, karma_delta=0, acti
 @app.get("/")
 def root():
     return {
-        "name":     "ARGENTUM",
-        "version":  "0.2.0",
-        "contract": ARBITRUM_CONTRACT,
-        "philosophy": "The faith is not measurable. The action is."
+        "name":             "ARGENTUM",
+        "version":          "0.3.0",
+        "contract":         ARBITRUM_CONTRACT,
+        "philosophy":       "The faith is not measurable. The action is.",
+        "genesis_attestors": list(GENESIS_ATTESTORS),
+        "weight_threshold": WEIGHT_THRESHOLD,
+        "sybil_resistance": "marks + karma-weighted attestations"
     }
 
 @app.get("/action_types")
@@ -248,8 +255,12 @@ async def attest_action(action_id: str, req: AttestRequest):
     if existing:
         raise HTTPException(400, "Already attested")
 
-    # v0.2 sybil resistance — system attestors (lightning) are exempt
-    if req.attester_id != "lightning":
+    # Genesis attestors are exempt from marks/karma — trusted at launch
+    if req.attester_id in GENESIS_ATTESTORS:
+        attester_karma = 0
+        attest_weight = 1.0
+    else:
+        # v0.2 sybil resistance — marks required
         mark_count = await get_attester_mark_count(req.attester_id)
         if mark_count < MINIMUM_MARKS_TO_ATTEST:
             conn.close()
@@ -263,13 +274,7 @@ async def attest_action(action_id: str, req: AttestRequest):
             conn.close()
             raise HTTPException(403, f"Attestor needs at least {MINIMUM_KARMA_TO_ATTEST} karma to attest. "
                                      f"{req.attester_id} has {attester_karma}.")
-    else:
-        attester_karma = 0
-
-    # v0.3 karma-weighted attestation weight
-    if req.attester_id == "lightning":
-        attest_weight = 1.0  # lightning counts as neutral weight
-    else:
+        # v0.3 karma-weighted attestation weight
         attest_weight = max(KARMA_WEIGHT_MIN, min(KARMA_WEIGHT_MAX, attester_karma / KARMA_WEIGHT_BASE))
 
     attest_id = str(uuid.uuid4())[:8]
