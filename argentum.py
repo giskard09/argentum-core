@@ -26,9 +26,15 @@ PHOENIXD_URL      = "http://127.0.0.1:9740"
 PHOENIXD_PASSWORD = "574fd439f0c07fc0c540f8245554440412c15ff5cfc0469a65f9879e70133c23"
 WEBHOOK_SECRET    = "e3e9ee0bfb760d62c8051e10c0504efbedaef4c24d2982d98de22f72fedfa87c"
 
-ATTESTATIONS_NEEDED       = 2
+WEIGHT_THRESHOLD          = 2.0  # total weighted attestations needed to verify
+KARMA_WEIGHT_BASE         = 50   # karma units for weight = 1.0
+KARMA_WEIGHT_MIN          = 0.5  # floor — new users with marks still count
+KARMA_WEIGHT_MAX          = 2.0  # ceiling — prevents single expert monopoly
 MINIMUM_MARKS_TO_ATTEST   = 1   # v0.2 sybil resistance — governable upward
 MINIMUM_KARMA_TO_ATTEST   = 0   # starts at 0; raise as network grows
+
+# kept for backwards compat in lightning webhook
+ATTESTATIONS_NEEDED       = int(WEIGHT_THRESHOLD)
 
 ACTION_TYPES = {
     "HELP":     {"name": "Help",     "desc": "Helped someone solve a real problem",             "karma": 10},
@@ -71,8 +77,15 @@ def init_db():
         attester_name  TEXT NOT NULL,
         note           TEXT,
         created_at     TEXT NOT NULL,
+        weight         REAL DEFAULT 1.0,
         FOREIGN KEY (action_id) REFERENCES actions(id)
     )""")
+    # v0.3 migration — add weight column if missing
+    try:
+        conn.execute("ALTER TABLE attestations ADD COLUMN weight REAL DEFAULT 1.0")
+        conn.commit()
+    except Exception:
+        pass  # column already exists
     conn.execute("""
     CREATE TABLE IF NOT EXISTS wisdom (
         entity_id           TEXT PRIMARY KEY,
@@ -253,18 +266,27 @@ async def attest_action(action_id: str, req: AttestRequest):
     else:
         attester_karma = 0
 
+    # v0.3 karma-weighted attestation weight
+    if req.attester_id == "lightning":
+        attest_weight = 1.0  # lightning counts as neutral weight
+    else:
+        attest_weight = max(KARMA_WEIGHT_MIN, min(KARMA_WEIGHT_MAX, attester_karma / KARMA_WEIGHT_BASE))
+
     attest_id = str(uuid.uuid4())[:8]
     conn.execute("""
-    INSERT INTO attestations (id, action_id, attester_id, attester_name, note, created_at)
-    VALUES (?, ?, ?, ?, ?, ?)
-    """, (attest_id, action_id, req.attester_id, req.attester_name, req.note, now()))
+    INSERT INTO attestations (id, action_id, attester_id, attester_name, note, created_at, weight)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, (attest_id, action_id, req.attester_id, req.attester_name, req.note, now(), attest_weight))
 
+    total_weight = conn.execute(
+        "SELECT COALESCE(SUM(weight), 0) as w FROM attestations WHERE action_id = ?", (action_id,)
+    ).fetchone()["w"]
     count = conn.execute(
         "SELECT COUNT(*) as n FROM attestations WHERE action_id = ?", (action_id,)
     ).fetchone()["n"]
 
     verified_now = False
-    if count >= ATTESTATIONS_NEEDED:
+    if total_weight >= WEIGHT_THRESHOLD:
         verified_at = now()
         conn.execute("UPDATE actions SET status = 'verified', verified_at = ? WHERE id = ?",
                      (verified_at, action_id))
@@ -290,7 +312,9 @@ async def attest_action(action_id: str, req: AttestRequest):
         "attestation_id":       attest_id,
         "action_id":            action_id,
         "attestations_so_far":  count,
-        "attestations_needed":  ATTESTATIONS_NEEDED,
+        "total_weight":         round(total_weight, 2),
+        "weight_threshold":     WEIGHT_THRESHOLD,
+        "this_attestation_weight": round(attest_weight, 2),
         "verified":             verified_now,
         "witness_karma_earned": ACTION_TYPES["WITNESS"]["karma"],
         "attester_karma":       attester_karma
@@ -329,6 +353,10 @@ def get_action(action_id: str):
     a["attestations"] = [dict(r) for r in conn.execute(
         "SELECT * FROM attestations WHERE action_id = ?", (action_id,)
     ).fetchall()]
+    a["total_weight"] = conn.execute(
+        "SELECT COALESCE(SUM(weight), 0) as w FROM attestations WHERE action_id = ?", (action_id,)
+    ).fetchone()["w"]
+    a["weight_threshold"] = WEIGHT_THRESHOLD
     conn.close()
     return a
 
