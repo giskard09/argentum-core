@@ -18,6 +18,7 @@ from pathlib import Path
 
 MEMORY_URL        = "http://localhost:8005"
 MARKS_URL         = "http://localhost:8015"
+MARKS_API_KEY     = "7e3755d34536917f113947b97e4d8c8fddbb7f44891e8952463681cbbb14bb6b"
 ARBITRUM_CONTRACT = "0xD467CD1e34515d58F98f8Eb66C0892643ec86AD3"
 ARGT_CONTRACT     = "0x42385c1038f3fec0ecCFBD4E794dE69935e89784"
 DB_PATH           = Path(__file__).parent / "argentum.db"
@@ -159,12 +160,14 @@ async def get_attester_mark_count(attester_id: str) -> int:
 async def mint_mark(entity_id: str, entity_name: str, action_id: str, karma: int):
     try:
         async with httpx.AsyncClient(timeout=8) as c:
-            await c.post(f"{MARKS_URL}/mint", json={
-                "agent_id":   entity_id,
-                "username":   entity_name,
-                "mark_type":  "BUILDER",
-                "note":       f"ARGENTUM action {action_id} verified — {karma} karma"
-            })
+            await c.post(f"{MARKS_URL}/mint",
+                headers={"x-api-key": MARKS_API_KEY},
+                json={
+                    "agent_id":   entity_id,
+                    "username":   entity_name,
+                    "mark_type":  "BUILDER",
+                    "note":       f"ARGENTUM action {action_id} verified — {karma} karma"
+                })
     except Exception:
         pass  # marks are best-effort
 
