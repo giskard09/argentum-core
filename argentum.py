@@ -44,6 +44,8 @@ MINIMUM_KARMA_TO_ATTEST   = 0   # starts at 0; raise as network grows
 # Like a blockchain genesis block: explicit, documented, shrinks as network grows
 GENESIS_ATTESTORS = {"lightning", "giskard-self"}
 MAX_ATTESTATIONS_PER_DAY  = 5    # rate limit — max attestations per attester per day
+MINIMUM_KARMA_TO_DISPUTE  = 10   # karma required to open a Kleros dispute
+KLEROS_RULING_SECRET      = "d4f8a2c6e9b1f5a3c7d2e8b4f9a5c3d7e1b6f2a8c4d9e5b3f7a1c5d8e2b9f4a6"
 
 # kept for backwards compat in lightning webhook
 ATTESTATIONS_NEEDED       = int(WEIGHT_THRESHOLD)
@@ -119,6 +121,19 @@ def init_db():
         resolved_at  TEXT,
         FOREIGN KEY (action_id) REFERENCES actions(id)
     )""")
+    conn.execute("""
+    CREATE TABLE IF NOT EXISTS disputes (
+        id                TEXT PRIMARY KEY,
+        action_id         TEXT NOT NULL,
+        reporter_id       TEXT NOT NULL,
+        reason            TEXT NOT NULL,
+        kleros_dispute_id INTEGER,
+        status            TEXT DEFAULT 'pending',
+        ruling            INTEGER,
+        created_at        TEXT NOT NULL,
+        resolved_at       TEXT,
+        FOREIGN KEY (action_id) REFERENCES actions(id)
+    )""")
     conn.commit()
     conn.close()
 
@@ -158,6 +173,14 @@ class ReportRequest(BaseModel):
 
 class SlashConfirmRequest(BaseModel):
     confirmer_id: str  # must be genesis attestor
+
+class DisputeRequest(BaseModel):
+    reporter_id: str
+    reason:      str
+
+class KlerosRulingRequest(BaseModel):
+    action_id: str
+    ruling:    int  # 1 = slash (reporter wins), 2 = clear (poster wins), 0 = refused to arbitrate
 
 # ── HELPERS ─────────────────────────────────────────────────────────────────
 
@@ -684,6 +707,175 @@ def list_reports(status: Optional[str] = None):
         rows = conn.execute("SELECT * FROM reports ORDER BY created_at DESC").fetchall()
     conn.close()
     return [dict(r) for r in rows]
+
+
+# ── KLEROS DISPUTE RESOLUTION ────────────────────────────────────────────────
+
+@limiter.limit("5/minute")
+@app.post("/action/{action_id}/dispute")
+async def open_dispute(request: Request, action_id: str, req: DisputeRequest):
+    """
+    Escalate a verified action to Kleros for decentralized arbitration.
+    Requires reporter karma >= MINIMUM_KARMA_TO_DISPUTE (10).
+    Action status moves to 'disputed' — karma frozen until ruling.
+    On-chain: ArgentumArbitrable.sol implements IArbitrable (deploy pending Kleros coordination).
+    """
+    conn = get_db()
+    action = conn.execute("SELECT * FROM actions WHERE id = ?", (action_id,)).fetchone()
+    if not action:
+        conn.close()
+        raise HTTPException(404, "Action not found")
+    if action["status"] not in ("verified", "pending"):
+        conn.close()
+        raise HTTPException(400, f"Cannot dispute an action with status '{action['status']}'")
+    if action["entity_id"] == req.reporter_id:
+        conn.close()
+        raise HTTPException(400, "Cannot dispute your own action")
+
+    # Check reporter karma — genesis attestors exempt
+    if req.reporter_id not in GENESIS_ATTESTORS:
+        reporter_wisdom = conn.execute(
+            "SELECT total_karma FROM wisdom WHERE entity_id = ?", (req.reporter_id,)
+        ).fetchone()
+        reporter_karma = reporter_wisdom["total_karma"] if reporter_wisdom else 0
+        if reporter_karma < MINIMUM_KARMA_TO_DISPUTE:
+            conn.close()
+            raise HTTPException(
+                403,
+                f"Opening a dispute requires at least {MINIMUM_KARMA_TO_DISPUTE} karma. "
+                f"{req.reporter_id} has {reporter_karma}."
+            )
+
+    # No double disputes
+    existing = conn.execute(
+        "SELECT id FROM disputes WHERE action_id = ? AND status = 'pending'", (action_id,)
+    ).fetchone()
+    if existing:
+        conn.close()
+        raise HTTPException(400, "Dispute already open for this action")
+
+    dispute_id = str(uuid.uuid4())[:8]
+    conn.execute(
+        "INSERT INTO disputes (id, action_id, reporter_id, reason, status, created_at) VALUES (?, ?, ?, ?, 'pending', ?)",
+        (dispute_id, action_id, req.reporter_id, req.reason, now())
+    )
+    conn.execute("UPDATE actions SET status = 'disputed' WHERE id = ?", (action_id,))
+    conn.commit()
+    conn.close()
+
+    await store_in_memory(
+        content=f"[ARGENTUM] Dispute opened on action {action_id} by {req.reporter_id} — {req.reason}",
+        entity_id="giskard-self",
+        metadata={"type": "argentum_dispute", "action_id": action_id, "dispute_id": dispute_id}
+    )
+
+    return {
+        "dispute_id":  dispute_id,
+        "action_id":   action_id,
+        "status":      "pending",
+        "message":     "Dispute opened. Action frozen pending Kleros ruling.",
+        "kleros_note": "ArgentumArbitrable.sol (IArbitrable) — deploy pending Kleros coordination.",
+        "rulings":     {"1": "slash poster + attestors", "2": "clear — action restored to verified", "0": "refused — action restored"}
+    }
+
+
+@app.get("/action/{action_id}/dispute")
+def get_dispute(action_id: str):
+    """Get the dispute record for an action (open or resolved)."""
+    conn = get_db()
+    dispute = conn.execute(
+        "SELECT * FROM disputes WHERE action_id = ? ORDER BY created_at DESC LIMIT 1", (action_id,)
+    ).fetchone()
+    conn.close()
+    if not dispute:
+        raise HTTPException(404, "No dispute found for this action")
+    return dict(dispute)
+
+
+@app.post("/kleros/ruling")
+async def kleros_ruling(request: Request, req: KlerosRulingRequest):
+    """
+    Receives the ruling from Kleros arbitrator.
+    In production: triggered by ArgentumArbitrable.sol DisputeResolved event listener.
+    In development: call directly with X-Kleros-Secret header.
+
+    ruling = 1 → reporter wins → slash poster + attestors
+    ruling = 2 → poster wins  → action restored to verified
+    ruling = 0 → refused      → action restored to verified (no punishment)
+    """
+    secret = request.headers.get("X-Kleros-Secret", "")
+    if not hmac.compare_digest(secret, KLEROS_RULING_SECRET):
+        raise HTTPException(401, "Invalid Kleros ruling secret")
+
+    conn = get_db()
+    action = conn.execute("SELECT * FROM actions WHERE id = ?", (req.action_id,)).fetchone()
+    if not action:
+        conn.close()
+        raise HTTPException(404, "Action not found")
+    if action["status"] != "disputed":
+        conn.close()
+        raise HTTPException(400, f"Action is not disputed (current: {action['status']})")
+
+    dispute = conn.execute(
+        "SELECT * FROM disputes WHERE action_id = ? AND status = 'pending' ORDER BY created_at DESC LIMIT 1",
+        (req.action_id,)
+    ).fetchone()
+    if not dispute:
+        conn.close()
+        raise HTTPException(404, "No pending dispute for this action")
+
+    resolved_at = now()
+
+    if req.ruling == 1:
+        # Reporter wins — slash poster and attestors
+        slash_amount = action["karma_value"]
+        conn.execute(
+            "UPDATE wisdom SET total_karma = MAX(0, total_karma - ?), verified_actions = MAX(0, verified_actions - 1) WHERE entity_id = ?",
+            (slash_amount, action["entity_id"])
+        )
+        attestors = conn.execute(
+            "SELECT attester_id FROM attestations WHERE action_id = ?", (req.action_id,)
+        ).fetchall()
+        for att in attestors:
+            if att["attester_id"] not in GENESIS_ATTESTORS:
+                conn.execute(
+                    "UPDATE wisdom SET total_karma = MAX(0, total_karma - ?) WHERE entity_id = ?",
+                    (ACTION_TYPES["WITNESS"]["karma"], att["attester_id"])
+                )
+        conn.execute("UPDATE actions SET status = 'slashed' WHERE id = ?", (req.action_id,))
+        conn.execute(
+            "UPDATE disputes SET status = 'ruled_slash', ruling = 1, resolved_at = ? WHERE id = ?",
+            (resolved_at, dispute["id"])
+        )
+        result_msg    = f"Kleros ruled: slash. Poster lost {slash_amount} karma. {len(attestors)} attestor(s) penalized."
+        result_status = "slashed"
+
+    else:
+        # ruling == 2 (poster wins) or 0 (refused) — restore action
+        conn.execute("UPDATE actions SET status = 'verified' WHERE id = ?", (req.action_id,))
+        dispute_outcome = "ruled_clear" if req.ruling == 2 else "ruled_refused"
+        conn.execute(
+            "UPDATE disputes SET status = ?, ruling = ?, resolved_at = ? WHERE id = ?",
+            (dispute_outcome, req.ruling, resolved_at, dispute["id"])
+        )
+        result_msg    = "Kleros ruled: action cleared. Status restored to verified."
+        result_status = "verified"
+
+    conn.commit()
+    conn.close()
+
+    await store_in_memory(
+        content=f"[ARGENTUM] Kleros ruling on {req.action_id}: ruling={req.ruling} — {result_msg}",
+        entity_id="giskard-self",
+        metadata={"type": "argentum_kleros_ruling", "action_id": req.action_id, "ruling": req.ruling}
+    )
+
+    return {
+        "action_id":     req.action_id,
+        "ruling":        req.ruling,
+        "action_status": result_status,
+        "message":       result_msg
+    }
 
 
 @app.get("/lightning/balance")

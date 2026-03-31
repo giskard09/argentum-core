@@ -132,6 +132,77 @@ This declaration is not a weakness. It is honest engineering: the right system f
 
 ---
 
+## Gap 3: Decentralized dispute resolution
+
+### The problem
+
+The existing slashing mechanism (`POST /action/{id}/slash`) requires a genesis attestor to confirm the slash. Genesis attestors are both operated by Giskard — this means the operator is judge in disputes about their own system. This is not acceptable at scale, and was flagged during the v0.3 audit (OPEN-001: genesis attestor centralization).
+
+A second problem: reports have no structured resolution path. Anyone can report; only a trusted insider can act. This is a closed loop that breaks trust with external participants.
+
+### Option evaluated: Kleros Court
+
+Kleros is a decentralized arbitration protocol. Disputes are resolved by randomly selected jurors who stake PNK (Kleros token) and can be slashed for bad rulings. The protocol is EVM-native, battle-tested on Ethereum mainnet (Kleros v1) and deployed on Arbitrum One (Kleros Court v2).
+
+The integration model is the `IArbitrable` interface: our contract implements `rule(disputeID, ruling)` which Kleros calls after the jury votes. The ruling is final and on-chain.
+
+**Fit assessment:**
+- Rulings are public, permanent, and operator-independent — removes Giskard as judge
+- Jurors are economically incentivized to rule correctly (PNK stake at risk)
+- Dispute cost (arbitration fee in ETH) deters frivolous disputes better than karma-gating alone
+- The protocol handles all jury selection, challenge periods, and appeals
+
+**Limitations:**
+- Dispute resolution takes days (juror voting period + appeals)
+- Requires ETH to open a dispute — cost varies by subcourt and juror count
+- Kleros jurors interpret evidence based on what we submit in `extraData` — quality of evidence matters
+- Kleros Court v2 on Arbitrum: address confirmed at deploy time (coordinate with Petchevere, Kleros team)
+
+### v0.4 decision: Kleros as escalation layer over existing report/slash
+
+**Architecture (2026-03-31):**
+
+```
+Reporter (karma >= 10)
+    │
+    ▼
+POST /action/{id}/dispute
+    │  action status → "disputed" (karma frozen)
+    │  dispute record created in SQLite
+    │
+    ▼  [future: ArgentumArbitrable.sol → arbitrator.createDispute()]
+Kleros Court — jurors review evidence (proof link from action)
+    │
+    ▼  rule(disputeID, ruling) callback
+ArgentumArbitrable.sol emits DisputeResolved(actionId, ruling)
+    │
+    ▼  event listener in argentum-core
+POST /kleros/ruling  (internal, secured by X-Kleros-Secret)
+    │
+    ruling = 1 → slash poster + attestors (same logic as /slash)
+    ruling = 2 → action restored to verified
+    ruling = 0 → refused — action restored to verified
+```
+
+**What is deployed today (v0.3.1):**
+- `POST /action/{id}/dispute` — opens dispute, freezes action, requires karma >= 10
+- `GET /action/{id}/dispute` — dispute status
+- `POST /kleros/ruling` — ruling webhook (secured, executable by us for testing)
+- `disputes` table in SQLite
+- `ArgentumArbitrable.sol` — contract ready, awaiting Kleros coordination for deploy
+
+**What is NOT yet deployed:**
+- `ArgentumArbitrable.sol` on Arbitrum — needs Kleros arbitrator address confirmation
+- Event listener for `DisputeResolved` — wires the on-chain ruling to `/kleros/ruling`
+- The old `/slash` (genesis attestors) remains operational in parallel
+
+**Karma gate for disputes (10 karma):**
+Chosen to include all current system participants (lowest karma in system is 10). Prevents zero-karma actors from opening grief disputes. Will increase as network grows, following the same governance path as `MINIMUM_KARMA_TO_ATTEST`.
+
+**Contact:** Petchevere (Kleros team) — response pending. Architecture may be refined after coordination.
+
+---
+
 ## What v0.2 still does not solve
 
 1. **Reachability for unregistered agents** — agents that never called `/registry/register` remain unfindable
