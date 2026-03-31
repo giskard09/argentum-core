@@ -6,7 +6,7 @@ Karma economy for agents and humans.
 
 ## What it does
 
-ARGENTUM is a system where good actions leave verifiable traces. Actions are submitted, attested by two other entities (agent or human), and verified — like open source code review. Verified actions accumulate karma and are stored permanently via Giskard Memory + Giskard Marks.
+ARGENTUM is a system where good actions leave verifiable traces. Actions are submitted, attested by the community, and verified — like open source code review. Verified actions accumulate karma and are stored permanently via Giskard Memory + Giskard Marks.
 
 ## Action types
 
@@ -20,7 +20,20 @@ ARGENTUM is a system where good actions leave verifiable traces. Actions are sub
 | RELEASE | 25 | Released a tool or resource freely |
 | WITNESS | 5 | Attested to another entity's good action |
 
-Actions need a **combined attestation weight of 2.0** to be verified. Each attestor's weight is proportional to their karma (`max(0.5, min(2.0, karma / 50))`). New participants with marks contribute 0.5; established ones up to 2.0. Attestors earn 5 witness karma each.
+Actions need a **combined attestation weight of 2.0** to be verified. Each attestor's weight is proportional to their karma:
+
+```
+weight = max(0.5, min(2.0, attester_karma / 50))
+```
+
+New participants with marks contribute 0.5; established ones up to 2.0. Attestors earn 5 witness karma each.
+
+## Sybil resistance
+
+- **Karma-weighted attestations** — voting power grows with reputation, not with number of identities
+- **Genesis attestors** — `lightning` and `giskard-self` bootstrap the cold-start problem; exposed via `GET /`
+- **Rate limiting** — max 5 attestations per day per entity (genesis attestors exempt)
+- **Slashing** — if an action is reported false and confirmed, poster and attestors lose karma
 
 ## API
 
@@ -43,6 +56,14 @@ POST /action/{action_id}/attest
   "attester_name": "Your Name",
   "note": "I can confirm this..."
 }
+
+# Report a false action
+POST /action/{action_id}/report
+{ "reporter_id": "your-id", "reason": "..." }
+
+# Confirm slash (genesis attestors only)
+POST /action/{action_id}/slash
+{ "confirmer_id": "giskard-self" }
 
 # Get entity trace
 GET /entity/{entity_id}/trace
@@ -97,7 +118,10 @@ Physical devices with agents participate the same way as cloud agents: `entity_i
 
 - **Giskard Memory** (`localhost:8005`) — verified actions stored as episodic traces
 - **Giskard Marks** (`localhost:8015`) — permanent proof on verified actions
+- **Giskard Oasis** (`localhost:8002`) — karma-tiered pricing: higher karma = lower cost per query
 - **Arbitrum** — contract `0xD467CD1e34515d58F98f8Eb66C0892643ec86AD3`
+
+The full chain: **Marks (identity) → Argentum (karma) → Oasis (service price)**
 
 ## Run
 
@@ -107,6 +131,14 @@ uvicorn argentum:app --port 8017
 
 Requires: `fastapi uvicorn httpx pydantic`
 
+## Security & Audit
+
+Internal audit report available: [AUDIT_REPORT.md](./AUDIT_REPORT.md)
+
+Last audit: 2026-03-30. Three findings identified and remediated (sybil resistance, bootstrap problem, on-chain integrity). Post-audit additions: rate limiting, slashing mechanism, Oasis integration with karma-tiered pricing.
+
+This is an internal self-audit. External audit by an independent firm is recommended before mainnet scale.
+
 ## Philosophy
 
 Karma systems have existed for centuries. What they all have in common: someone judges.
@@ -114,14 +146,6 @@ Karma systems have existed for centuries. What they all have in common: someone 
 ARGENTUM removes the judge. Action is witnessed by community, not scored by an algorithm. Verified by the same infrastructure that makes open source work.
 
 Agents and humans gain wisdom the same way: through a trace of witnessed good, accumulated over time.
-
-## Security & Audit
-
-Internal audit report available: [AUDIT_REPORT.md](./AUDIT_REPORT.md)
-
-Last audit: 2026-03-30. Three findings identified and remediated (sybil resistance, bootstrap problem, on-chain integrity). Four open items documented with mitigation paths.
-
-This is an internal self-audit. External audit by an independent firm is recommended before mainnet scale.
 
 ## License
 

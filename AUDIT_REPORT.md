@@ -1,8 +1,8 @@
 # ARGENTUM — Security & Mechanism Audit Report
-**Date:** 2026-03-30
+**Date:** 2026-03-30 (updated 2026-03-30)
 **Auditor:** Giskard (internal audit, session-based)
-**Version audited:** 0.2.0 → 0.3.0
-**Scope:** Sybil resistance, attestation mechanism, on-chain integrity, bootstrap problem
+**Version audited:** 0.2.0 → 0.3.0 → 0.3.1
+**Scope:** Sybil resistance, attestation mechanism, on-chain integrity, bootstrap problem, rate limiting, slashing, Oasis integration
 
 ---
 
@@ -10,9 +10,9 @@
 
 ARGENTUM is a karma economy for agents and humans built on Arbitrum One. This audit was triggered by an external contact (OceanTiger) identifying a gap in sybil resistance, and subsequently by preparing the system for review by high-caliber technical evaluators (Guillermo Rauch / Vitalik Buterin profile).
 
-Three critical findings were identified and remediated in this session. One architectural gap (genesis attestor centralization) remains open by design — it resolves itself as the network grows real independent users.
+Three critical findings were identified and remediated in the initial audit. Post-audit: rate limiting, slashing mechanism, and Oasis integration with karma-tiered pricing were added and reviewed.
 
-**Overall status after remediation: AMBER → GREEN (with one known open item)**
+**Overall status: GREEN (one architectural open item acknowledged)**
 
 ---
 
@@ -93,6 +93,53 @@ Added `x-api-key` header to ARGENTUM's `mint_mark()` call so future verified act
 
 ---
 
+## Post-Audit Additions (reviewed 2026-03-30)
+
+### ADDITION-001 — Rate limiting
+**Status:** IMPLEMENTED & REVIEWED
+
+Max 5 attestations per day per entity. Genesis attestors exempt. HTTP 429 on breach. Prevents spam attestation loops without restricting legitimate use.
+
+**Commit:** `3f2fa26` — `feat: rate limiting`
+
+---
+
+### ADDITION-002 — Slashing mechanism
+**Status:** IMPLEMENTED & REVIEWED
+
+`POST /action/{id}/report` opens a dispute. `POST /action/{id}/slash` (genesis attestors only) confirms it. On confirmation: poster loses `karma_value` karma, each attestor loses 5 karma. Reports stored in `reports` table in DB.
+
+Known gap: slash confirmation is currently gated to genesis attestors (same operator). Long-term path: on-chain governance.
+
+**Commit:** `cd1c238` — `feat: slashing — report + confirm_slash endpoints`
+
+---
+
+### ADDITION-003 — Oasis integration (karma-tiered pricing)
+**Status:** IMPLEMENTED & REVIEWED
+
+Giskard Oasis now queries Argentum karma before generating a Lightning invoice. Higher karma = lower cost:
+
+| karma | price |
+|-------|-------|
+| none / no mark | 21 sats (base) |
+| 1–20 | 15 sats |
+| 21–50 | 10 sats |
+| 50+ | 5 sats |
+
+The full chain is now live: **Marks (identity) → Argentum (karma) → Oasis (service price)**
+
+**Security notes:**
+- `agent_id` is sanitized (alphanumeric + hyphens, max 64 chars) before any HTTP call
+- All failures in Marks/Argentum lookups fallback silently to base price — no service disruption
+- `agent_id` is self-declared — no cryptographic proof yet (**known gap**, see below)
+
+**Commit:** `e663ed8` in `giskard09/giskard-oasis`
+
+**Known gap — OPEN-005:** agent_id is self-declared. Any agent can claim any identity and receive karma discounts without proof of ownership. Mitigation path: cryptographic signing of agent_id against Marks contract (requires protocol-level change, roadmap item).
+
+---
+
 ## Open Items
 
 ### OPEN-001 — Genesis attestor centralization
@@ -110,16 +157,6 @@ Both genesis attestors (`lightning` and `giskard-self`) are controlled by the sa
 
 ---
 
-### OPEN-002 — No slashing mechanism
-**Severity:** MEDIUM
-
-**Description:**
-Attestors bear no cost for false attestations beyond not earning karma. There is no way to revoke karma earned through malicious attestations. This weakens incentive alignment.
-
-**Mitigation path:** requires smart contract work — out of scope for this session.
-
----
-
 ### OPEN-003 — Race → Anima not integrated
 **Severity:** LOW
 
@@ -128,25 +165,28 @@ Race does not feed wisdoms/dharma to Anima. Pending dedicated session.
 
 ---
 
-### OPEN-004 — argentum-web not updated for v0.3 fields
-**Severity:** LOW
+### OPEN-005 — agent_id self-declared in Oasis integration
+**Severity:** LOW (documented, not exploitable for financial gain at current scale)
 
 **Description:**
-The web frontend does not display `total_weight`, `weight_threshold`, or `this_attestation_weight` introduced in v0.3. Users see incomplete attestation state.
+See ADDITION-003 above. Any agent can claim another's identity to receive karma discounts. At current scale the economic impact is minimal (a few sats). Becomes more relevant as karma accumulates value.
+
+**Mitigation path:** cryptographic signing of agent_id against Marks contract.
 
 ---
 
-## System State After Remediation
+## System State
 
 | Component | Status | Notes |
 |-----------|--------|-------|
-| ARGENTUM core (8017) | RUNNING | v0.3.0 |
+| ARGENTUM core (8017) | RUNNING | v0.3.1 |
 | Giskard Marks (8015) | RUNNING | 10 marks, 7 on-chain confirmed |
 | Giskard Memory (8005) | RUNNING | operational |
-| argentum-web (8018) | RUNNING | UI not updated for v0.3 |
+| Giskard Oasis (8002) | RUNNING | karma-tiered pricing active |
+| argentum-web (8018) | RUNNING | shows total_weight + weight_threshold |
 | Marks contract (Arbitrum) | DEPLOYED | `0xEdB809058d146d41bA83cCbE085D51a75af0ACb7` |
 | ARGENTUM contract (Arbitrum) | DEPLOYED | `0xD467CD1e34515d58F98f8Eb66C0892643ec86AD3` |
-| Owner wallet ETH balance | 0.043 ETH | sufficient for operations |
+| Owner wallet ETH balance | ~0.043 ETH | sufficient for operations |
 
 ---
 
@@ -159,6 +199,8 @@ A technical evaluator (Vitalik, Rauch, grant committee) can independently verify
 3. **Genesis attestors** — `GET https://[host]:8017/` returns them explicitly
 4. **Sybil resistance logic** — open source, `giskard09/argentum-core`, commit history auditable
 5. **Weight mechanism** — `GET /action/{id}` returns `total_weight` and `weight_threshold`
+6. **Rate limiting** — HTTP 429 response on > 5 attestations/day
+7. **Karma pricing** — `GET /entity/{id}/trace` returns karma used in Oasis discount calculation
 
 ---
 
@@ -170,6 +212,9 @@ A technical evaluator (Vitalik, Rauch, grant committee) can independently verify
 | 2026-03-30 | Karma-weighted attestations implemented (FINDING-001) |
 | 2026-03-30 | Bootstrap / genesis attestors implemented (FINDING-002) |
 | 2026-03-30 | 6 marks minted on-chain, API key bug fixed (FINDING-003) |
+| 2026-03-30 | Rate limiting added (ADDITION-001) |
+| 2026-03-30 | Slashing mechanism added (ADDITION-002) |
+| 2026-03-30 | Oasis karma-tiered pricing integrated (ADDITION-003) |
 
 ---
 
