@@ -1,8 +1,41 @@
-# ARGENTUM core
+# ARGENTUM — MCP Server
 
-Karma economy for agents and humans.
+Karma economy for AI agents and humans, exposed as a **Model Context Protocol (MCP)** server.
 
 > The faith is not measurable. The action is.
+
+## MCP Tools
+
+ARGENTUM provides 5 MCP tools for AI agents to interact with the karma economy:
+
+| Tool | Description |
+|------|-------------|
+| `submit_action` | Submit a good action for community verification |
+| `attest_action` | Attest (verify) someone else's action — your karma weight counts |
+| `get_karma` | Check an entity's karma, verified actions, and attestations |
+| `get_action_detail` | Get full details of an action including attestations |
+| `get_leaderboard` | View the top entities by reputation |
+
+### Add to your MCP config
+
+```json
+{
+  "mcpServers": {
+    "argentum": {
+      "url": "https://your-tunnel.trycloudflare.com/sse"
+    }
+  }
+}
+```
+
+### Run locally
+
+```bash
+pip install mcp httpx fastapi uvicorn pydantic slowapi python-dotenv
+python3 argentum.py
+```
+
+MCP server starts on port 8019 (SSE transport). REST API on port 8017.
 
 ## What it does
 
@@ -126,10 +159,11 @@ The full chain: **Marks (identity) → Argentum (karma) → Oasis (service price
 ## Run
 
 ```bash
-uvicorn argentum:app --port 8017
+pip install mcp httpx fastapi uvicorn pydantic slowapi python-dotenv
+python3 argentum.py
 ```
 
-Requires: `fastapi uvicorn httpx pydantic`
+This starts both the MCP server (port 8019, SSE) and the REST API (port 8017).
 
 ## Security & Audit
 
