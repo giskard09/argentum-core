@@ -895,3 +895,157 @@ async def get_ln_payments(limit: int = 20):
             params={"limit": limit}
         )
         return r.json()
+
+
+# ── MCP LAYER ──────────────────────────────────────────────────────────────
+
+import os
+from mcp.server.fastmcp import FastMCP
+
+mcp = FastMCP("ARGENTUM", host="0.0.0.0", port=8019)
+
+
+@mcp.tool()
+def submit_action(entity_id: str, entity_name: str, entity_type: str, action_type: str, description: str, proof: str = "") -> str:
+    """Submit a good action to ARGENTUM for community verification.
+
+    entity_id: your unique identifier (e.g. GitHub username)
+    entity_name: display name
+    entity_type: 'human' or 'agent'
+    action_type: HELP | BUILD | TEACH | FIX | WITNESS | CONNECT | RELEASE
+    description: what you did
+    proof: URL to evidence (GitHub PR, commit, etc.)"""
+    if action_type not in ACTION_TYPES:
+        return f"Unknown action_type. Valid: {list(ACTION_TYPES.keys())}"
+    action_id = str(uuid.uuid4())[:8]
+    karma = ACTION_TYPES[action_type]["karma"]
+    conn = get_db()
+    conn.execute(
+        "INSERT INTO actions (id, entity_id, entity_name, entity_type, action_type, description, proof, karma_value, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (action_id, entity_id, entity_name, entity_type, action_type, description, proof or None, karma, now()))
+    conn.commit()
+    conn.close()
+    return f"Action {action_id} submitted ({action_type}, {karma} karma on verify). Needs attestations (weight >= {WEIGHT_THRESHOLD}) to be verified."
+
+
+@mcp.tool()
+def attest_action(action_id: str, attester_id: str, attester_name: str, note: str = "") -> str:
+    """Attest (verify) someone else's action. Your karma weight counts toward verification.
+
+    action_id: the action to attest
+    attester_id: your identifier
+    attester_name: your display name
+    note: optional comment"""
+    conn = get_db()
+    action = conn.execute("SELECT * FROM actions WHERE id = ?", (action_id,)).fetchone()
+    if not action:
+        conn.close()
+        return "Action not found."
+    if action["status"] == "verified":
+        conn.close()
+        return "Action already verified."
+    if action["entity_id"] == attester_id:
+        conn.close()
+        return "Cannot attest your own action."
+    existing = conn.execute("SELECT id FROM attestations WHERE action_id = ? AND attester_id = ?", (action_id, attester_id)).fetchone()
+    if existing:
+        conn.close()
+        return "Already attested."
+
+    if attester_id in GENESIS_ATTESTORS:
+        attest_weight = 1.0
+    else:
+        attester_wisdom = conn.execute("SELECT total_karma FROM wisdom WHERE entity_id = ?", (attester_id,)).fetchone()
+        attester_karma = attester_wisdom["total_karma"] if attester_wisdom else 0
+        attest_weight = max(KARMA_WEIGHT_MIN, min(KARMA_WEIGHT_MAX, attester_karma / KARMA_WEIGHT_BASE))
+
+    attest_id = str(uuid.uuid4())[:8]
+    conn.execute(
+        "INSERT INTO attestations (id, action_id, attester_id, attester_name, note, created_at, weight) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (attest_id, action_id, attester_id, attester_name, note or None, now(), attest_weight))
+
+    total_weight = conn.execute("SELECT COALESCE(SUM(weight), 0) as w FROM attestations WHERE action_id = ?", (action_id,)).fetchone()["w"]
+
+    verified_now = False
+    if total_weight >= WEIGHT_THRESHOLD:
+        conn.execute("UPDATE actions SET status = 'verified', verified_at = ? WHERE id = ?", (now(), action_id))
+        upsert_wisdom(conn, action["entity_id"], action["entity_name"], action["entity_type"],
+                      karma_delta=action["karma_value"], action=True, last_action=now())
+        verified_now = True
+
+    upsert_wisdom(conn, attester_id, attester_name, "unknown",
+                  karma_delta=ACTION_TYPES["WITNESS"]["karma"], attestation=True)
+    conn.commit()
+    conn.close()
+
+    status = "VERIFIED" if verified_now else f"weight {round(total_weight, 2)}/{WEIGHT_THRESHOLD}"
+    return f"Attested (weight {round(attest_weight, 2)}). Action status: {status}. You earned {ACTION_TYPES['WITNESS']['karma']} witness karma."
+
+
+@mcp.tool()
+def get_karma(entity_id: str) -> str:
+    """Check an entity's karma, verified actions, and attestations given.
+
+    entity_id: the entity to look up"""
+    conn = get_db()
+    wisdom = conn.execute("SELECT * FROM wisdom WHERE entity_id = ?", (entity_id,)).fetchone()
+    conn.close()
+    if not wisdom:
+        return f"Entity '{entity_id}' not found in ARGENTUM."
+    w = dict(wisdom)
+    return f"{w['entity_name']} ({w['entity_type']}): {w['total_karma']} karma, {w['verified_actions']} verified actions, {w['attestations_given']} attestations given."
+
+
+@mcp.tool()
+def get_action_detail(action_id: str) -> str:
+    """Get details of a specific action including attestations.
+
+    action_id: the action to look up"""
+    conn = get_db()
+    action = conn.execute("SELECT * FROM actions WHERE id = ?", (action_id,)).fetchone()
+    if not action:
+        conn.close()
+        return "Action not found."
+    a = dict(action)
+    attestations = [dict(r) for r in conn.execute("SELECT attester_name, weight, note, created_at FROM attestations WHERE action_id = ?", (action_id,)).fetchall()]
+    total_weight = conn.execute("SELECT COALESCE(SUM(weight), 0) as w FROM attestations WHERE action_id = ?", (action_id,)).fetchone()["w"]
+    conn.close()
+    lines = [f"Action {a['id']}: {a['action_type']} by {a['entity_name']} — {a['status']}",
+             f"  {a['description']}",
+             f"  Karma: {a['karma_value']} | Weight: {round(total_weight, 2)}/{WEIGHT_THRESHOLD}"]
+    if a.get("proof"):
+        lines.append(f"  Proof: {a['proof']}")
+    for att in attestations:
+        lines.append(f"  ✓ {att['attester_name']} (w={round(att['weight'], 2)}){': ' + att['note'] if att.get('note') else ''}")
+    return "\n".join(lines)
+
+
+@mcp.tool()
+def get_leaderboard(top: int = 10) -> str:
+    """Get the karma leaderboard — top entities by reputation.
+
+    top: how many to show (default 10)"""
+    conn = get_db()
+    rows = conn.execute("SELECT * FROM wisdom ORDER BY total_karma DESC LIMIT ?", (min(top, 50),)).fetchall()
+    conn.close()
+    if not rows:
+        return "No entities yet."
+    lines = ["ARGENTUM Leaderboard:"]
+    for i, r in enumerate(rows, 1):
+        lines.append(f"  {i}. {r['entity_name']} — {r['total_karma']} karma ({r['verified_actions']} actions, {r['attestations_given']} attestations)")
+    return "\n".join(lines)
+
+
+if __name__ == "__main__":
+    import threading
+    import uvicorn as _uvicorn
+
+    # REST API on 8017
+    def run_rest():
+        _uvicorn.run(app, host="0.0.0.0", port=8017)
+
+    threading.Thread(target=run_rest, daemon=True).start()
+
+    # MCP on 8019
+    transport = os.getenv("MCP_TRANSPORT", "sse")
+    mcp.run(transport=transport)
