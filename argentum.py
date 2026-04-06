@@ -1047,5 +1047,5 @@ if __name__ == "__main__":
     threading.Thread(target=run_rest, daemon=True).start()
 
     # MCP on 8019
-    transport = os.getenv("MCP_TRANSPORT", "sse")
+    transport = os.getenv("MCP_TRANSPORT", "stdio")
     mcp.run(transport=transport)
