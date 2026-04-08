@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  audit:
+    name: Audit + lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Audit — no ALBY references (must be phoenixd)
+        run: |
+          if grep -ri "alby" . --include="*.py" --include="*.md" --include="*.json" --include="Dockerfile" -l 2>/dev/null | grep -v ".git/"; then
+            echo "FAIL: ALBY reference found — should be phoenixd"
+            exit 1
+          fi
+
+      - name: Audit — no hardcoded local paths
+        run: |
+          if grep -rn "sys.path.insert.*dell7568" . --include="*.py" 2>/dev/null; then
+            echo "FAIL: hardcoded local path"
+            exit 1
+          fi
+
+      - name: Audit — .env not tracked
+        run: |
+          if git ls-files .env 2>/dev/null | grep -q .; then
+            echo "FAIL: .env is tracked in git"
+            exit 1
+          fi
+
+      - name: Audit — no hardcoded credentials in tracked files
+        run: |
+          for pattern in "PRIVATE_KEY=" "API_KEY=" "SECRET=" "PASSWORD="; do
+            hits=$(git ls-files -z | xargs -0 grep -l "$pattern" 2>/dev/null | grep -v ".env" | grep -v ".github/workflows/" || true)
+            if [ -n "$hits" ]; then
+              echo "FAIL: $pattern found in tracked file: $hits"
+              exit 1
+            fi
+          done
+
+      - name: Python syntax check
+        run: |
+          python -m compileall -q . || exit 1
+
+      - name: Run tests if present
+        run: |
+          if [ -d tests ] || ls test_*.py 2>/dev/null | grep -q .; then
+            pip install pytest
+            pytest -q || exit 1
+          else
+            echo "No tests — skipping"
+          fi
