@@ -41,13 +41,14 @@ jobs:
 
       - name: Audit — no hardcoded credentials in tracked files
         run: |
-          for pattern in "PRIVATE_KEY=" "API_KEY=" "SECRET=" "PASSWORD="; do
-            hits=$(git ls-files -z | xargs -0 grep -l "$pattern" 2>/dev/null | grep -v ".env" | grep -v ".github/workflows/" || true)
-            if [ -n "$hits" ]; then
-              echo "FAIL: $pattern found in tracked file: $hits"
-              exit 1
-            fi
-          done
+          # Match KEY=<non-empty value>. Skips empty placeholders (KEY="" or KEY=)
+          # and excludes .env, workflows, and the audit job itself.
+          files=$(git ls-files | grep -v "^\.env" | grep -v "^\.github/workflows/")
+          if [ -z "$files" ]; then exit 0; fi
+          if echo "$files" | xargs grep -HnE '(PRIVATE_KEY|API_KEY|SECRET|PASSWORD)=["'\'']?[^"'\'' ]' 2>/dev/null; then
+            echo "FAIL: hardcoded credential found"
+            exit 1
+          fi
 
       - name: Python syntax check
         run: |
