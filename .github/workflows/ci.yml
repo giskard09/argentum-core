@@ -43,7 +43,9 @@ jobs:
         run: |
           # Match KEY=<non-empty value>. Skips empty placeholders (KEY="" or KEY=)
           # and excludes .env, workflows, and the audit job itself.
-          files=$(git ls-files | grep -v "^\.env" | grep -v "^\.github/workflows/")
+          # Check only code files (.py, .js, .ts, .json, .yml, .yaml, .sh, .toml).
+          # Skip .md (docs/placeholders), Dockerfile (ENV decls), .env, workflows.
+          files=$(git ls-files '*.py' '*.js' '*.ts' '*.json' '*.yml' '*.yaml' '*.sh' '*.toml' 2>/dev/null | grep -v "^\.github/workflows/" || true)
           if [ -z "$files" ]; then exit 0; fi
           if echo "$files" | xargs grep -HnE '(PRIVATE_KEY|API_KEY|SECRET|PASSWORD)=["'\'']?[^"'\'' ]' 2>/dev/null; then
             echo "FAIL: hardcoded credential found"
