@@ -8,7 +8,8 @@ Wisdom is witnessed by community, verified like open source.
 The faith is not measurable. The action is.
 """
 
-import json, uuid, httpx, sqlite3, hmac, hashlib
+import json, uuid, time, httpx, sqlite3, hmac, hashlib
+_started_at = time.time()
 from datetime import datetime, timezone
 from typing import Optional
 from fastapi import FastAPI, HTTPException, Request
@@ -252,6 +253,30 @@ def root():
         "weight_threshold": WEIGHT_THRESHOLD,
         "sybil_resistance": "marks + karma-weighted attestations"
     }
+
+@app.get("/status")
+def get_status():
+    """Estado del servicio: nombre, versión, uptime, puerto, salud, dependencias.
+    Read-only, gratis. Útil para monitoreo y health checks."""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        n_actions = conn.execute("SELECT COUNT(*) FROM actions").fetchone()[0]
+        conn.close()
+        healthy = True
+    except Exception:
+        n_actions = None
+        healthy = False
+    return {
+        "service": "argentum-core",
+        "version": "0.3.1",
+        "port": 8017,
+        "uptime_seconds": int(time.time() - _started_at),
+        "healthy": healthy,
+        "dependencies": ["sqlite", "giskard-marks", "arbitrum-rpc"],
+        "total_actions": n_actions,
+        "weight_threshold": WEIGHT_THRESHOLD,
+    }
+
 
 @app.get("/action_types")
 def get_action_types():
