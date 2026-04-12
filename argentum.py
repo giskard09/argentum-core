@@ -20,6 +20,7 @@ from pathlib import Path
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
+import agent_signing
 
 limiter = Limiter(key_func=get_remote_address)
 
@@ -123,6 +124,35 @@ def init_db():
         FOREIGN KEY (action_id) REFERENCES actions(id)
     )""")
     conn.execute("""
+    CREATE TABLE IF NOT EXISTS trails (
+        id              TEXT PRIMARY KEY,
+        author_id       TEXT NOT NULL,
+        author_name     TEXT NOT NULL,
+        name            TEXT NOT NULL,
+        description     TEXT NOT NULL,
+        steps           TEXT NOT NULL,    -- JSON list of {service, tool, note}
+        price_sats      INTEGER NOT NULL,
+        output_schema   TEXT,             -- optional JSON schema
+        created_at      TEXT NOT NULL,
+        executions      INTEGER DEFAULT 0,
+        success_count   INTEGER DEFAULT 0,
+        rating_sum      INTEGER DEFAULT 0,
+        rating_count    INTEGER DEFAULT 0
+    )""")
+    conn.execute("""
+    CREATE TABLE IF NOT EXISTS trail_executions (
+        id            TEXT PRIMARY KEY,
+        trail_id      TEXT NOT NULL,
+        executor_id   TEXT NOT NULL,
+        executor_name TEXT NOT NULL,
+        status        TEXT NOT NULL,      -- success | fail
+        output_hash   TEXT,
+        payment_hash  TEXT,
+        rating        INTEGER,            -- 1..5, optional
+        created_at    TEXT NOT NULL,
+        FOREIGN KEY (trail_id) REFERENCES trails(id)
+    )""")
+    conn.execute("""
     CREATE TABLE IF NOT EXISTS disputes (
         id                TEXT PRIMARY KEY,
         action_id         TEXT NOT NULL,
@@ -143,7 +173,7 @@ def init_db():
 app = FastAPI(
     title="ARGENTUM",
     description="Karma economy for agents and humans. Good actions leave traces.",
-    version="0.2.0"
+    version="0.4.0"
 )
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 app.state.limiter = limiter
@@ -167,6 +197,9 @@ class AttestRequest(BaseModel):
     attester_id:   str
     attester_name: str
     note:          Optional[str] = None
+    signature:     Optional[str] = None
+    timestamp:     Optional[int] = None
+    nonce:         Optional[str] = None
 
 class ReportRequest(BaseModel):
     reporter_id: str
@@ -182,6 +215,32 @@ class DisputeRequest(BaseModel):
 class KlerosRulingRequest(BaseModel):
     action_id: str
     ruling:    int  # 1 = slash (reporter wins), 2 = clear (poster wins), 0 = refused to arbitrate
+
+class TrailRegister(BaseModel):
+    author_id:     str
+    author_name:   str
+    name:          str
+    description:   str
+    steps:         list   # [{"service": "search", "tool": "search_web", "note": "..."}]
+    price_sats:    int
+    output_schema: Optional[dict] = None
+    signature:     Optional[str] = None
+    timestamp:     Optional[int] = None
+    nonce:         Optional[str] = None
+
+class TrailExecution(BaseModel):
+    executor_id:   str
+    executor_name: str
+    status:        str            # 'success' | 'fail'
+    output_hash:   Optional[str] = None
+    payment_hash:  Optional[str] = None
+    signature:     Optional[str] = None
+    timestamp:     Optional[int] = None
+    nonce:         Optional[str] = None
+
+class TrailRating(BaseModel):
+    execution_id: str
+    rating:       int             # 1..5
 
 # ── HELPERS ─────────────────────────────────────────────────────────────────
 
@@ -246,7 +305,7 @@ def upsert_wisdom(conn, entity_id, entity_name, entity_type, karma_delta=0, acti
 def root():
     return {
         "name":             "ARGENTUM",
-        "version":          "0.3.0",
+        "version":          "0.4.0",
         "contract":         ARBITRUM_CONTRACT,
         "philosophy":       "The faith is not measurable. The action is.",
         "genesis_attestors": list(GENESIS_ATTESTORS),
@@ -268,7 +327,7 @@ def get_status():
         healthy = False
     return {
         "service": "argentum-core",
-        "version": "0.3.1",
+        "version": "0.4.0",
         "port": 8017,
         "uptime_seconds": int(time.time() - _started_at),
         "healthy": healthy,
@@ -282,8 +341,24 @@ def get_status():
 def get_action_types():
     return ACTION_TYPES
 
-@limiter.limit("10/minute")
+def _verify_agent_signature(agent_id: str, signature, timestamp, nonce) -> bool:
+    """Returns True only if all fields present and verification passes.
+    Unsigned requests return False silently — caller decides the policy."""
+    if not (signature and timestamp and nonce):
+        return False
+    try:
+        return agent_signing.verify_request(
+            agent_id=agent_id,
+            signature_b64=signature,
+            timestamp=int(timestamp),
+            nonce=nonce,
+        )
+    except Exception:
+        return False
+
+
 @app.post("/action/submit")
+@limiter.limit("10/minute")
 async def submit_action(request: Request, req: ActionSubmit):
     if req.action_type not in ACTION_TYPES:
         raise HTTPException(400, f"Unknown action_type. Valid: {list(ACTION_TYPES)}")
@@ -367,6 +442,10 @@ async def attest_action(request: Request, action_id: str, req: AttestRequest):
                                      f"{req.attester_id} has {attester_karma}.")
         # v0.3 karma-weighted attestation weight
         attest_weight = max(KARMA_WEIGHT_MIN, min(KARMA_WEIGHT_MAX, attester_karma / KARMA_WEIGHT_BASE))
+        # v0.4 signed identity — unsigned non-genesis attestors get 0.5x weight
+        signed = _verify_agent_signature(req.attester_id, req.signature, req.timestamp, req.nonce)
+        if not signed:
+            attest_weight = attest_weight * 0.5
 
     attest_id = str(uuid.uuid4())[:8]
     conn.execute("""
@@ -903,6 +982,143 @@ async def kleros_ruling(request: Request, req: KlerosRulingRequest):
     }
 
 
+# ── MYCELIUM TRAILS ─────────────────────────────────────────────────────────
+# Recetas verificables: secuencias de calls a servicios MCP que resuelven un
+# problema concreto. Composability monetizada sobre el stack Mycelium.
+
+import json as _json
+
+TRAIL_AUTHOR_KARMA_REWARD = 3   # karma when a trail execution succeeds
+MIN_TRAIL_PRICE = 1
+MAX_TRAIL_STEPS = 12
+
+@limiter.limit("10/minute")
+@app.post("/trails")
+async def register_trail(request: Request, req: TrailRegister):
+    if not req.steps or len(req.steps) > MAX_TRAIL_STEPS:
+        raise HTTPException(400, f"steps must be 1..{MAX_TRAIL_STEPS}")
+    if req.price_sats < MIN_TRAIL_PRICE:
+        raise HTTPException(400, f"price_sats must be >= {MIN_TRAIL_PRICE}")
+    for s in req.steps:
+        if not isinstance(s, dict) or "service" not in s or "tool" not in s:
+            raise HTTPException(400, "each step needs {service, tool}")
+    signed = _verify_agent_signature(req.author_id, req.signature, req.timestamp, req.nonce)
+    trail_id = str(uuid.uuid4())[:8]
+    conn = get_db()
+    conn.execute(
+        "INSERT INTO trails (id, author_id, author_name, name, description, steps, price_sats, output_schema, created_at) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (trail_id, req.author_id, req.author_name, req.name, req.description,
+         _json.dumps(req.steps), req.price_sats,
+         _json.dumps(req.output_schema) if req.output_schema else None, now()))
+    conn.commit()
+    conn.close()
+    return {"trail_id": trail_id, "name": req.name, "steps": len(req.steps),
+            "price_sats": req.price_sats, "signed": signed}
+
+@app.get("/trails")
+def list_trails(limit: int = 50, sort: str = "reputation"):
+    conn = get_db()
+    order = {
+        "reputation": "ORDER BY (CAST(success_count AS REAL) / MAX(executions, 1)) DESC, executions DESC",
+        "popular":    "ORDER BY executions DESC",
+        "recent":     "ORDER BY created_at DESC",
+        "rating":     "ORDER BY (CAST(rating_sum AS REAL) / MAX(rating_count, 1)) DESC, rating_count DESC",
+    }.get(sort, "ORDER BY created_at DESC")
+    rows = conn.execute(f"SELECT * FROM trails {order} LIMIT ?", (min(limit, 200),)).fetchall()
+    conn.close()
+    out = []
+    for r in rows:
+        d = dict(r)
+        d["steps"] = _json.loads(d["steps"])
+        if d.get("output_schema"):
+            d["output_schema"] = _json.loads(d["output_schema"])
+        d["success_rate"] = round(d["success_count"] / d["executions"], 3) if d["executions"] else None
+        d["avg_rating"]   = round(d["rating_sum"] / d["rating_count"], 2) if d["rating_count"] else None
+        out.append(d)
+    return {"trails": out, "count": len(out), "sort": sort}
+
+@app.get("/trails/{trail_id}")
+def get_trail(trail_id: str):
+    conn = get_db()
+    row = conn.execute("SELECT * FROM trails WHERE id = ?", (trail_id,)).fetchone()
+    if not row:
+        conn.close()
+        raise HTTPException(404, "trail not found")
+    d = dict(row)
+    d["steps"] = _json.loads(d["steps"])
+    if d.get("output_schema"):
+        d["output_schema"] = _json.loads(d["output_schema"])
+    d["success_rate"] = round(d["success_count"] / d["executions"], 3) if d["executions"] else None
+    d["avg_rating"]   = round(d["rating_sum"] / d["rating_count"], 2) if d["rating_count"] else None
+    recent = conn.execute(
+        "SELECT id, executor_name, status, rating, created_at FROM trail_executions "
+        "WHERE trail_id = ? ORDER BY created_at DESC LIMIT 10", (trail_id,)).fetchall()
+    conn.close()
+    d["recent_executions"] = [dict(x) for x in recent]
+    return d
+
+@limiter.limit("30/minute")
+@app.post("/trails/{trail_id}/execute")
+async def record_trail_execution(request: Request, trail_id: str, req: TrailExecution):
+    if req.status not in ("success", "fail"):
+        raise HTTPException(400, "status must be 'success' or 'fail'")
+    conn = get_db()
+    trail = conn.execute("SELECT * FROM trails WHERE id = ?", (trail_id,)).fetchone()
+    if not trail:
+        conn.close()
+        raise HTTPException(404, "trail not found")
+    signed = _verify_agent_signature(req.executor_id, req.signature, req.timestamp, req.nonce)
+    exec_id = str(uuid.uuid4())[:8]
+    conn.execute(
+        "INSERT INTO trail_executions (id, trail_id, executor_id, executor_name, status, output_hash, payment_hash, created_at) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        (exec_id, trail_id, req.executor_id, req.executor_name, req.status,
+         req.output_hash, req.payment_hash, now()))
+    conn.execute("UPDATE trails SET executions = executions + 1 WHERE id = ?", (trail_id,))
+    karma_reward = 0
+    if req.status == "success":
+        conn.execute("UPDATE trails SET success_count = success_count + 1 WHERE id = ?", (trail_id,))
+        karma_reward = TRAIL_AUTHOR_KARMA_REWARD if signed else 0
+        if karma_reward > 0:
+            upsert_wisdom(conn, trail["author_id"], trail["author_name"], "unknown",
+                          karma_delta=karma_reward, last_action=now())
+    conn.commit()
+    conn.close()
+    return {
+        "execution_id": exec_id,
+        "trail_id":     trail_id,
+        "status":       req.status,
+        "signed":       signed,
+        "author_karma_awarded": karma_reward
+    }
+
+@app.post("/trails/{trail_id}/rate")
+def rate_trail_execution(trail_id: str, req: TrailRating):
+    if not (1 <= req.rating <= 5):
+        raise HTTPException(400, "rating must be 1..5")
+    conn = get_db()
+    ex = conn.execute(
+        "SELECT * FROM trail_executions WHERE id = ? AND trail_id = ?",
+        (req.execution_id, trail_id)).fetchone()
+    if not ex:
+        conn.close()
+        raise HTTPException(404, "execution not found")
+    if ex["rating"] is not None:
+        conn.close()
+        raise HTTPException(409, "execution already rated")
+    trail = conn.execute("SELECT author_id FROM trails WHERE id = ?", (trail_id,)).fetchone()
+    if trail and trail["author_id"] == ex["executor_id"]:
+        conn.close()
+        raise HTTPException(403, "author cannot rate own trail execution")
+    conn.execute("UPDATE trail_executions SET rating = ? WHERE id = ?", (req.rating, req.execution_id))
+    conn.execute("UPDATE trails SET rating_sum = rating_sum + ?, rating_count = rating_count + 1 WHERE id = ?",
+                 (req.rating, trail_id))
+    conn.commit()
+    conn.close()
+    return {"execution_id": req.execution_id, "rating": req.rating}
+
+
 @app.get("/lightning/balance")
 async def get_ln_balance():
     """Current phoenixd balance."""
@@ -1043,6 +1259,171 @@ def get_action_detail(action_id: str) -> str:
     for att in attestations:
         lines.append(f"  ✓ {att['attester_name']} (w={round(att['weight'], 2)}){': ' + att['note'] if att.get('note') else ''}")
     return "\n".join(lines)
+
+
+@mcp.tool()
+def register_trail(author_id: str, author_name: str, name: str, description: str,
+                   steps_json: str, price_sats: int) -> str:
+    """Register a Mycelium Trail — a verifiable recipe of MCP service calls.
+
+    author_id: your unique identifier
+    author_name: your display name
+    name: short trail name
+    description: what the trail does
+    steps_json: JSON list of steps, each {"service": "...", "tool": "...", "note": "..."}
+    price_sats: cost in sats per execution
+    """
+    try:
+        steps = _json.loads(steps_json)
+    except Exception as e:
+        return f"Invalid steps_json: {e}"
+    if not isinstance(steps, list) or not steps or len(steps) > MAX_TRAIL_STEPS:
+        return f"steps must be a non-empty list of <= {MAX_TRAIL_STEPS} items"
+    for s in steps:
+        if not isinstance(s, dict) or "service" not in s or "tool" not in s:
+            return "each step needs {service, tool}"
+    if price_sats < MIN_TRAIL_PRICE:
+        return f"price_sats must be >= {MIN_TRAIL_PRICE}"
+    trail_id = str(uuid.uuid4())[:8]
+    conn = get_db()
+    conn.execute(
+        "INSERT INTO trails (id, author_id, author_name, name, description, steps, price_sats, output_schema, created_at) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (trail_id, author_id, author_name, name, description,
+         _json.dumps(steps), price_sats, None, now()))
+    conn.commit()
+    conn.close()
+    return f"Trail {trail_id} registered: '{name}' ({len(steps)} steps, {price_sats} sats)."
+
+
+@mcp.tool()
+def list_trails(sort: str = "reputation", limit: int = 20) -> str:
+    """List Mycelium Trails available for execution.
+
+    sort: reputation | popular | recent | rating
+    limit: how many to show (default 20, max 50)
+    """
+    conn = get_db()
+    order = {
+        "reputation": "ORDER BY (CAST(success_count AS REAL) / MAX(executions, 1)) DESC, executions DESC",
+        "popular":    "ORDER BY executions DESC",
+        "recent":     "ORDER BY created_at DESC",
+        "rating":     "ORDER BY (CAST(rating_sum AS REAL) / MAX(rating_count, 1)) DESC, rating_count DESC",
+    }.get(sort, "ORDER BY created_at DESC")
+    rows = conn.execute(f"SELECT * FROM trails {order} LIMIT ?", (min(limit, 50),)).fetchall()
+    conn.close()
+    if not rows:
+        return "No trails yet."
+    lines = [f"Mycelium Trails (sort={sort}):"]
+    for r in rows:
+        d = dict(r)
+        sr = (d["success_count"] / d["executions"]) if d["executions"] else None
+        sr_str = f"{round(sr*100)}%" if sr is not None else "—"
+        avg = (d["rating_sum"] / d["rating_count"]) if d["rating_count"] else None
+        avg_str = f"{round(avg, 1)}★" if avg is not None else "—"
+        lines.append(f"  {d['id']} {d['name']} — {d['price_sats']} sats | "
+                     f"{d['executions']} runs ({sr_str} ok, {avg_str}) by {d['author_name']}")
+    return "\n".join(lines)
+
+
+@mcp.tool()
+def get_trail(trail_id: str) -> str:
+    """Get details of a Mycelium Trail including its step sequence.
+
+    trail_id: the trail id"""
+    conn = get_db()
+    row = conn.execute("SELECT * FROM trails WHERE id = ?", (trail_id,)).fetchone()
+    conn.close()
+    if not row:
+        return "Trail not found."
+    d = dict(row)
+    steps = _json.loads(d["steps"])
+    sr = (d["success_count"] / d["executions"]) if d["executions"] else None
+    sr_str = f"{round(sr*100)}%" if sr is not None else "—"
+    avg = (d["rating_sum"] / d["rating_count"]) if d["rating_count"] else None
+    avg_str = f"{round(avg, 2)}★ ({d['rating_count']})" if avg is not None else "—"
+    lines = [
+        f"Trail {d['id']}: {d['name']}",
+        f"  by {d['author_name']} — {d['price_sats']} sats",
+        f"  {d['description']}",
+        f"  Stats: {d['executions']} runs, {sr_str} success, {avg_str}",
+        f"  Steps:"
+    ]
+    for i, s in enumerate(steps, 1):
+        note = f" — {s.get('note')}" if s.get('note') else ""
+        lines.append(f"    {i}. {s['service']}.{s['tool']}{note}")
+    return "\n".join(lines)
+
+
+@mcp.tool()
+def execute_trail(trail_id: str, executor_id: str, executor_name: str,
+                  status: str = "success", output_hash: str = "",
+                  payment_hash: str = "") -> str:
+    """Record execution of a Mycelium Trail. The executor self-attests success or failure.
+
+    trail_id: the trail being executed
+    executor_id: your unique identifier
+    executor_name: your display name
+    status: 'success' or 'fail'
+    output_hash: optional sha256 of the output
+    payment_hash: optional Lightning payment hash
+    """
+    if status not in ("success", "fail"):
+        return "status must be 'success' or 'fail'"
+    conn = get_db()
+    trail = conn.execute("SELECT * FROM trails WHERE id = ?", (trail_id,)).fetchone()
+    if not trail:
+        conn.close()
+        return "Trail not found."
+    exec_id = str(uuid.uuid4())[:8]
+    conn.execute(
+        "INSERT INTO trail_executions (id, trail_id, executor_id, executor_name, status, output_hash, payment_hash, created_at) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        (exec_id, trail_id, executor_id, executor_name, status,
+         output_hash or None, payment_hash or None, now()))
+    conn.execute("UPDATE trails SET executions = executions + 1 WHERE id = ?", (trail_id,))
+    karma_awarded = 0
+    if status == "success":
+        conn.execute("UPDATE trails SET success_count = success_count + 1 WHERE id = ?", (trail_id,))
+        upsert_wisdom(conn, trail["author_id"], trail["author_name"], "unknown",
+                      karma_delta=TRAIL_AUTHOR_KARMA_REWARD, last_action=now())
+        karma_awarded = TRAIL_AUTHOR_KARMA_REWARD
+    conn.commit()
+    conn.close()
+    return (f"Execution {exec_id} recorded ({status}). "
+            f"Author {trail['author_name']} earned {karma_awarded} karma.")
+
+
+@mcp.tool()
+def rate_trail(trail_id: str, execution_id: str, rating: int) -> str:
+    """Rate a Trail execution 1..5. Cannot rate own trail.
+
+    trail_id: the trail
+    execution_id: the execution to rate
+    rating: 1..5
+    """
+    if not (1 <= rating <= 5):
+        return "rating must be 1..5"
+    conn = get_db()
+    ex = conn.execute(
+        "SELECT * FROM trail_executions WHERE id = ? AND trail_id = ?",
+        (execution_id, trail_id)).fetchone()
+    if not ex:
+        conn.close()
+        return "Execution not found."
+    if ex["rating"] is not None:
+        conn.close()
+        return "Execution already rated."
+    trail = conn.execute("SELECT author_id FROM trails WHERE id = ?", (trail_id,)).fetchone()
+    if trail and trail["author_id"] == ex["executor_id"]:
+        conn.close()
+        return "Author cannot rate own trail execution."
+    conn.execute("UPDATE trail_executions SET rating = ? WHERE id = ?", (rating, execution_id))
+    conn.execute("UPDATE trails SET rating_sum = rating_sum + ?, rating_count = rating_count + 1 WHERE id = ?",
+                 (rating, trail_id))
+    conn.commit()
+    conn.close()
+    return f"Rated execution {execution_id} with {rating}★."
 
 
 @mcp.tool()
