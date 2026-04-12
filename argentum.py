@@ -539,6 +539,17 @@ def get_action(action_id: str):
     conn.close()
     return a
 
+@app.get("/entity/{entity_id}")
+def get_entity(entity_id: str):
+    conn = get_db()
+    w = conn.execute("SELECT * FROM wisdom WHERE entity_id = ?", (entity_id,)).fetchone()
+    conn.close()
+    if not w:
+        raise HTTPException(status_code=404, detail=f"Entity {entity_id} not found")
+    d = dict(w)
+    d["karma"] = d["total_karma"]
+    return d
+
 @app.get("/entity/{entity_id}/trace")
 def get_trace(entity_id: str):
     conn = get_db()
