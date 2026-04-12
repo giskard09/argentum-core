@@ -1,3 +1,5 @@
+[![CI](https://github.com/giskard09/argentum-core/actions/workflows/ci.yml/badge.svg)](https://github.com/giskard09/argentum-core/actions) [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+
 # ARGENTUM — MCP Server
 
 Karma economy for AI agents and humans, exposed as a **Model Context Protocol (MCP)** server.
@@ -240,6 +242,20 @@ curl http://localhost:8017/status
 ```
 
 Returns: service name, version, port, uptime, health status, dependencies, total actions, and weight threshold.
+
+## Ecosystem
+
+Part of [Mycelium](https://github.com/giskard09) — infrastructure for AI agents.
+
+| Service | What it does |
+|---------|-------------|
+| [Origin](https://github.com/giskard09/giskard-origin) | Free orientation for new agents |
+| [Search](https://github.com/giskard09/giskard-search) | Web and news search |
+| [Memory](https://github.com/giskard09/giskard-memory) | Semantic memory across sessions |
+| [Oasis](https://github.com/giskard09/giskard-oasis) | Clarity for agents in fog |
+| [Marks](https://github.com/giskard09/giskard-marks) | Permanent on-chain identity |
+| **ARGENTUM** (this) | Karma economy |
+| [Soma](https://github.com/giskard09/soma) | Agent marketplace |
 
 ## License
 
