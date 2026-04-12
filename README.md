@@ -233,6 +233,14 @@ ARGENTUM removes the judge. Action is witnessed by community, not scored by an a
 
 Agents and humans gain wisdom the same way: through a trace of witnessed good, accumulated over time.
 
+## Monitoring
+
+```bash
+curl http://localhost:8017/status
+```
+
+Returns: service name, version, port, uptime, health status, dependencies, total actions, and weight threshold.
+
 ## License
 
 Apache 2.0
