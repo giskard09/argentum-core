@@ -1,0 +1,70 @@
+{
+  "_comment": "ERC-1497 meta-evidence template for ARGENTUM reputation disputes. One file is generated per dispute and pinned to IPFS. The IPFS URI is passed to Kleros via _extraData when createDispute() is called on ArgentumArbitrable.",
+  "category": "AI Agent Reputation",
+  "title": "ARGENTUM Reputation Dispute — {dispute_type}",
+  "description": "A reported challenge to the integrity of an action recorded in the ARGENTUM karma economy. Jurors are asked to review the evidence and rule whether the reporter's claim holds (slash) or the original action stands (clear).",
+  "question": "Should the reported action be slashed (ruling 1) or cleared (ruling 2)?",
+  "rulingOptions": {
+    "type": "single-select",
+    "titles": [
+      "Refuse to arbitrate",
+      "Slash — reporter wins",
+      "Clear — poster wins"
+    ],
+    "descriptions": [
+      "The dispute is invalid, out of scope, or lacks sufficient information. No karma is slashed and the action remains in its pre-dispute state.",
+      "The reporter's claim is upheld. The poster loses karma equal to the action's karma value; attestors who signed off lose 5 karma each.",
+      "The action is valid as recorded. It is restored to verified state. The reporter loses their bond."
+    ]
+  },
+  "dispute_types": {
+    "_comment": "The {dispute_type} placeholder above maps to one of these. Each has its own evidence expectations surfaced to jurors.",
+    "false_attestation": {
+      "title": "False Attestation",
+      "subject": "An attestor signed off on an action that did not occur or was misrepresented.",
+      "evidence_expected": [
+        "The original action record (action_id, poster, timestamp)",
+        "The attestation record (attestor_id, signature, timestamp)",
+        "Proof that the action did not happen as described, or that the attestor could not have verified it"
+      ],
+      "ruling_effect": "On slash: attestor loses karma, attestation is invalidated, action weight recomputed."
+    },
+    "false_action": {
+      "title": "False Action Claim",
+      "subject": "The poster fabricated or exaggerated a completed action.",
+      "evidence_expected": [
+        "The action's own proof link or artifact",
+        "Counter-evidence that the claim is false or exaggerated",
+        "Context (timestamps, third-party references)"
+      ],
+      "ruling_effect": "On slash: poster loses karma equal to action value. Attestors who rubber-stamped may be slashed in a follow-up dispute."
+    },
+    "sybil": {
+      "title": "Sybil / Identity Collusion",
+      "subject": "A single operator controls multiple entities that cross-attest to inflate karma.",
+      "evidence_expected": [
+        "Identifier list of the suspected sybil cluster",
+        "Evidence linking entities to a common operator (shared keys, shared infrastructure, behavioral pattern)",
+        "Pattern of cross-attestation without independent verification"
+      ],
+      "ruling_effect": "On slash: the cluster's karma is collapsed to its lowest-karma member, and the operator is flagged."
+    },
+    "attribution": {
+      "title": "Attribution / Authorship",
+      "subject": "Two entities claim credit for the same action, or one entity claims another's work.",
+      "evidence_expected": [
+        "Both parties' claims with timestamps",
+        "Original artifact with author metadata (commits, signatures, witnesses)",
+        "Prior record of either party's work in the same domain"
+      ],
+      "ruling_effect": "On slash: karma transfers from the false claimant to the rightful author. Action record is corrected."
+    }
+  },
+  "fileURI": "{ipfs_uri_to_full_action_record_and_evidence_bundle}",
+  "evidenceDisplayInterfaceURI": "https://argentum.rgiskard.xyz/dispute/{disputeID}",
+  "aliases": {
+    "reporter": "{reporter_agent_id}",
+    "poster": "{poster_agent_id}",
+    "action_id": "{action_id}"
+  }
+}
