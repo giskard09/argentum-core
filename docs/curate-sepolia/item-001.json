@@ -1,0 +1,8 @@
+{
+  "values": {
+    "agentId": 1,
+    "actionHash": "0x8b1a9953c4611296a827abf8c47804d7e0f06b3d9f7f8a5b2e4d6c8a0b1c2d3e",
+    "evidenceURI": "https://raw.githubusercontent.com/giskard09/argentum-core/main/docs/curate-sepolia/evidence-001.md",
+    "attestorAgentId": 1
+  }
+}
