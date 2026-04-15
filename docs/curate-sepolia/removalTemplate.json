@@ -1,0 +1,21 @@
+{
+  "$schema": "../NewDisputeTemplate.schema.json",
+  "title": "ARGENTUM attestation removal — challenge",
+  "description": "A requester has asked to remove an existing attestation for agentId={{agentId}}, actionHash={{actionHash}}. A challenger disputes that removal. Evaluate whether the attestation should remain in the list.",
+  "question": "Should the attestation remain in the list?",
+  "answers": [
+    { "title": "Yes, keep the attestation", "description": "The attestation is valid and should not be removed." },
+    { "title": "No, remove the attestation", "description": "The attestation is invalid/false and should be removed." }
+  ],
+  "policyURI": "https://raw.githubusercontent.com/giskard09/argentum-core/main/docs/curate-sepolia/policy.md",
+  "attachment": {
+    "label": "evidence",
+    "uri": "{{evidenceURI}}"
+  },
+  "frontendUrl": "https://curate.kleros.io/",
+  "arbitrableChainID": "421614",
+  "arbitrableAddress": "{{arbitrable}}",
+  "category": "Curated Lists",
+  "specification": "KIP001",
+  "lang": "en_US"
+}

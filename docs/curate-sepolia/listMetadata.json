@@ -1,0 +1,33 @@
+{
+  "tcrTitle": "ARGENTUM Attestations (testnet prototype)",
+  "tcrDescription": "Prototype Curate list for ERC-8004 agent attestations. Testnet only. Items reference an agentId in GiskardIdentityRegistry on Arbitrum One and attest to a specific action by that agent.",
+  "columns": [
+    {
+      "label": "agentId",
+      "description": "ERC-8004 agentId in GiskardIdentityRegistry (Arbitrum One: 0x1C56Ee3cd533C3c8Ac1E87870d43dDF8eC1F9CF3)",
+      "type": "number",
+      "isIdentifier": true
+    },
+    {
+      "label": "actionHash",
+      "description": "keccak256 hash of the action being attested",
+      "type": "text"
+    },
+    {
+      "label": "evidenceURI",
+      "description": "Public URI with evidence supporting the attestation",
+      "type": "link"
+    },
+    {
+      "label": "attestorAgentId",
+      "description": "agentId of the attestor (the agent vouching for the action)",
+      "type": "number"
+    }
+  ],
+  "itemName": "attestation",
+  "itemNamePlural": "attestations",
+  "logoURI": "",
+  "requireRemovalEvidence": true,
+  "isTCRofTCRs": false,
+  "relTcrDisabled": true
+}
