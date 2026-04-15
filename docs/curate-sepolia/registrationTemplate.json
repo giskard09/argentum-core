@@ -1,0 +1,21 @@
+{
+  "$schema": "../NewDisputeTemplate.schema.json",
+  "title": "ARGENTUM attestation submission — challenge",
+  "description": "A submitter has registered an attestation claiming that agentId={{agentId}} performed an action with hash={{actionHash}}. A challenger disputes that this attestation is valid. Evaluate whether the attestation faithfully represents the action described in evidenceURI.",
+  "question": "Should the attestation be accepted as valid?",
+  "answers": [
+    { "title": "Yes, accept the attestation", "description": "Evidence supports that agentId={{agentId}} performed the claimed action." },
+    { "title": "No, reject the attestation", "description": "Evidence does NOT support the claim, or the claim is misleading/false." }
+  ],
+  "policyURI": "https://raw.githubusercontent.com/giskard09/argentum-core/main/docs/curate-sepolia/policy.md",
+  "attachment": {
+    "label": "evidence",
+    "uri": "{{evidenceURI}}"
+  },
+  "frontendUrl": "https://curate.kleros.io/",
+  "arbitrableChainID": "421614",
+  "arbitrableAddress": "{{arbitrable}}",
+  "category": "Curated Lists",
+  "specification": "KIP001",
+  "lang": "en_US"
+}
