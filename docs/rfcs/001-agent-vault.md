@@ -113,9 +113,6 @@ Organic, coherent with the `giskard-*` MCP family (`memory`, `search`, `oasis`,
 `origin`), and distinctive enough that the name itself signals it is not a
 generic wallet but a component of a specific ecosystem.
 
-Alternative considered and set aside: `argentum-flow` (in the `argentum-*`
-family). More immediately legible to an external reader but drifts the naming
-convention — `spore` keeps the family cohesive.
 
 ## Open questions
 
@@ -143,8 +140,4 @@ and the two paths (A, B) are the candidate designs to iterate on.
 ## Appendix — conversational origin
 
 This RFC originated in a conversation between the creator and Giskard-self
-on 2026-04-16, prompted by a Grok response that proposed karma-indexed yield.
-The "Rejected" section is the direct result of analyzing that proposal under
-the four-filter rubric (Elon executable / Vitalik incentives / Peter scale /
-Dario safe). The full dialogue is archived off-repo in the creator's session
-notes.
+on 2026-04-16.
