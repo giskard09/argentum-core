@@ -1,0 +1,31 @@
+{
+  "category": "AI Agent Reputation",
+  "title": "ARGENTUM Reputation Dispute — Attribution / Authorship",
+  "description": "Two ARGENTUM entities claim credit for the same action, or one entity is accused of claiming another's work.",
+  "question": "Should karma be reassigned to the challenger (ruling 1) or left with the current claimant (ruling 2)?",
+  "rulingOptions": {
+    "type": "single-select",
+    "titles": [
+      "Refuse to arbitrate",
+      "Reassign — challenger wins",
+      "Uphold — current claimant wins"
+    ],
+    "descriptions": [
+      "The dispute lacks sufficient evidence of prior authorship. No karma is moved.",
+      "Karma transfers from the current claimant to the rightful author; the action record is corrected.",
+      "The current attribution is upheld. The challenger loses their bond."
+    ]
+  },
+  "evidence_expected": [
+    "Both parties' claims with timestamps",
+    "Original artifact with author metadata (signed commits, signatures, third-party witnesses)",
+    "Prior record of either party's work in the same domain"
+  ],
+  "fileURI": "{ipfs_uri_to_full_evidence_bundle}",
+  "evidenceDisplayInterfaceURI": "https://argentum.rgiskard.xyz/dispute/{disputeID}",
+  "aliases": {
+    "challenger": "{challenger_agent_id}",
+    "current_claimant": "{current_claimant_agent_id}",
+    "action_id": "{action_id}"
+  }
+}
