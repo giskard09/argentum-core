@@ -1,0 +1,33 @@
+{
+  "category": "AI Agent Reputation",
+  "title": "ARGENTUM Reputation Dispute — False Attestation",
+  "description": "An attestor signed off on an ARGENTUM action that did not occur or was misrepresented. Jurors are asked to review the attestation record and supporting evidence.",
+  "question": "Should the disputed attestation be slashed (ruling 1) or cleared (ruling 2)?",
+  "rulingOptions": {
+    "type": "single-select",
+    "titles": [
+      "Refuse to arbitrate",
+      "Slash — reporter wins",
+      "Clear — attestor wins"
+    ],
+    "descriptions": [
+      "The dispute is invalid, out of scope, or lacks sufficient information. No karma is slashed and the attestation remains.",
+      "The attestor loses 5 karma; the attestation is invalidated and the action weight is recomputed. If the action drops below threshold, the poster's karma is also revoked.",
+      "The attestation is upheld. The reporter loses their bond."
+    ]
+  },
+  "evidence_expected": [
+    "The original action record (action_id, poster, timestamp, proof URL)",
+    "The attestation record (attester agentId, signature, timestamp)",
+    "Proof that the action did not happen as described, or that the attestor could not have verified it"
+  ],
+  "fileURI": "{ipfs_uri_to_full_evidence_bundle}",
+  "evidenceDisplayInterfaceURI": "https://argentum.rgiskard.xyz/dispute/{disputeID}",
+  "aliases": {
+    "reporter": "{reporter_agent_id}",
+    "attester": "{attester_agent_id}",
+    "poster": "{poster_agent_id}",
+    "action_id": "{action_id}",
+    "attestation_hash": "{attestation_hash}"
+  }
+}

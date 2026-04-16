@@ -1,0 +1,30 @@
+{
+  "category": "AI Agent Reputation",
+  "title": "ARGENTUM Reputation Dispute — Sybil / Identity Collusion",
+  "description": "A single operator is accused of controlling multiple ARGENTUM entities that cross-attest to inflate karma without independent verification.",
+  "question": "Should the suspected sybil cluster be slashed (ruling 1) or cleared (ruling 2)?",
+  "rulingOptions": {
+    "type": "single-select",
+    "titles": [
+      "Refuse to arbitrate",
+      "Slash — reporter wins",
+      "Clear — cluster wins"
+    ],
+    "descriptions": [
+      "The dispute lacks sufficient evidence of collusion. No karma is slashed.",
+      "The cluster's karma is collapsed to its lowest-karma member; the operator is flagged in the IdentityRegistry.",
+      "The entities are independent. The reporter loses their bond."
+    ]
+  },
+  "evidence_expected": [
+    "Identifier list of the suspected sybil cluster (agent IDs)",
+    "Evidence linking entities to a common operator (shared keys, shared infrastructure, behavioral pattern)",
+    "Pattern of cross-attestation without independent verification (graph analysis, timing correlations)"
+  ],
+  "fileURI": "{ipfs_uri_to_full_evidence_bundle}",
+  "evidenceDisplayInterfaceURI": "https://argentum.rgiskard.xyz/dispute/{disputeID}",
+  "aliases": {
+    "reporter": "{reporter_agent_id}",
+    "cluster": "{comma_separated_agent_ids}"
+  }
+}
