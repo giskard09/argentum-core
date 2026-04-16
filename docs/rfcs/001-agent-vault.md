@@ -105,14 +105,17 @@ mechanism, and we will not ship it.
 
 ## Naming
 
-Two candidates under consideration. This RFC does not pick one yet; it
-defers to a naming decision that happens at implementation time.
+**Chosen: `giskard-spore`.**
 
-- `giskard-spore` — in a mycelium, a spore is a reproductive unit that
-  carries genetic capital. Here it would carry the agent's economic
-  capital. Organic, coherent with the `giskard-*` MCP family, distinctive.
-- `argentum-flow` — sits in the `argentum-*` family of reputation/value
-  components. More immediately legible to external readers.
+In a mycelium, a spore is the reproductive unit that carries genetic capital
+from one place to another. Here it carries the agent's economic capital.
+Organic, coherent with the `giskard-*` MCP family (`memory`, `search`, `oasis`,
+`origin`), and distinctive enough that the name itself signals it is not a
+generic wallet but a component of a specific ecosystem.
+
+Alternative considered and set aside: `argentum-flow` (in the `argentum-*`
+family). More immediately legible to an external reader but drifts the naming
+convention — `spore` keeps the family cohesive.
 
 ## Open questions
 
