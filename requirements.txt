@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+pydantic
+httpx
+slowapi
+mcp
+pynacl
+web3
+pytest

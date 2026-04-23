@@ -56,6 +56,12 @@ jobs:
         run: |
           python -m compileall -q . || exit 1
 
+      - name: Install dependencies
+        run: |
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          fi
+
       - name: Run tests if present
         run: |
           if [ -d tests ] || ls test_*.py 2>/dev/null | grep -q .; then
