@@ -102,6 +102,12 @@ def init_db():
         conn.commit()
     except Exception:
         pass  # column already exists
+    # v0.4 migration — add signed column to actions (Ed25519 rollout)
+    try:
+        conn.execute("ALTER TABLE actions ADD COLUMN signed INTEGER DEFAULT 0")
+        conn.commit()
+    except Exception:
+        pass  # column already exists
     conn.execute("""
     CREATE TABLE IF NOT EXISTS wisdom (
         entity_id           TEXT PRIMARY KEY,
@@ -192,6 +198,9 @@ class ActionSubmit(BaseModel):
     action_type: str
     description: str
     proof:       Optional[str] = None   # GitHub issue/PR/commit URL
+    signature:   Optional[str] = None
+    timestamp:   Optional[int] = None
+    nonce:       Optional[str] = None
 
 class AttestRequest(BaseModel):
     attester_id:   str
@@ -204,6 +213,9 @@ class AttestRequest(BaseModel):
 class ReportRequest(BaseModel):
     reporter_id: str
     reason:      str
+    signature:   Optional[str] = None
+    timestamp:   Optional[int] = None
+    nonce:       Optional[str] = None
 
 class SlashConfirmRequest(BaseModel):
     confirmer_id: str  # must be genesis attestor
@@ -211,6 +223,9 @@ class SlashConfirmRequest(BaseModel):
 class DisputeRequest(BaseModel):
     reporter_id: str
     reason:      str
+    signature:   Optional[str] = None
+    timestamp:   Optional[int] = None
+    nonce:       Optional[str] = None
 
 class KlerosRulingRequest(BaseModel):
     action_id: str
@@ -241,6 +256,10 @@ class TrailExecution(BaseModel):
 class TrailRating(BaseModel):
     execution_id: str
     rating:       int             # 1..5
+    rater_id:     Optional[str] = None
+    signature:    Optional[str] = None
+    timestamp:    Optional[int] = None
+    nonce:        Optional[str] = None
 
 # ── HELPERS ─────────────────────────────────────────────────────────────────
 
@@ -366,20 +385,21 @@ async def submit_action(request: Request, req: ActionSubmit):
     action_id  = str(uuid.uuid4())[:8]
     karma      = ACTION_TYPES[req.action_type]["karma"]
     created_at = now()
+    signed     = _verify_agent_signature(req.entity_id, req.signature, req.timestamp, req.nonce)
 
     conn = get_db()
     conn.execute("""
-    INSERT INTO actions (id, entity_id, entity_name, entity_type, action_type, description, proof, karma_value, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO actions (id, entity_id, entity_name, entity_type, action_type, description, proof, karma_value, created_at, signed)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (action_id, req.entity_id, req.entity_name, req.entity_type,
-          req.action_type, req.description, req.proof, karma, created_at))
+          req.action_type, req.description, req.proof, karma, created_at, 1 if signed else 0))
     conn.commit()
     conn.close()
 
     await store_in_memory(
         content=f"[ARGENTUM] Action submitted: {req.action_type} — {req.description}",
         entity_id=req.entity_id,
-        metadata={"type": "argentum_action", "action_id": action_id, "status": "pending"}
+        metadata={"type": "argentum_action", "action_id": action_id, "status": "pending", "signed": signed}
     )
 
     return {
@@ -387,6 +407,7 @@ async def submit_action(request: Request, req: ActionSubmit):
         "status":             "pending",
         "attestations_needed": ATTESTATIONS_NEEDED,
         "karma_on_verify":    karma,
+        "signed":             signed,
         "message":            f"Action submitted. Needs {ATTESTATIONS_NEEDED} attestations to be verified."
     }
 
@@ -746,6 +767,7 @@ def report_action(action_id: str, req: ReportRequest):
     if existing:
         conn.close()
         raise HTTPException(400, "Already reported")
+    signed = _verify_agent_signature(req.reporter_id, req.signature, req.timestamp, req.nonce)
     report_id = str(uuid.uuid4())[:8]
     conn.execute(
         "INSERT INTO reports (id, action_id, reporter_id, reason, status, created_at) VALUES (?, ?, ?, ?, 'open', ?)",
@@ -754,6 +776,7 @@ def report_action(action_id: str, req: ReportRequest):
     conn.commit()
     conn.close()
     return {"report_id": report_id, "action_id": action_id, "status": "open",
+            "signed": signed,
             "message": "Report submitted. Genesis attestors will review."}
 
 
@@ -869,6 +892,7 @@ async def open_dispute(request: Request, action_id: str, req: DisputeRequest):
         conn.close()
         raise HTTPException(400, "Dispute already open for this action")
 
+    signed = _verify_agent_signature(req.reporter_id, req.signature, req.timestamp, req.nonce)
     dispute_id = str(uuid.uuid4())[:8]
     conn.execute(
         "INSERT INTO disputes (id, action_id, reporter_id, reason, status, created_at) VALUES (?, ?, ?, ?, 'pending', ?)",
@@ -881,13 +905,14 @@ async def open_dispute(request: Request, action_id: str, req: DisputeRequest):
     await store_in_memory(
         content=f"[ARGENTUM] Dispute opened on action {action_id} by {req.reporter_id} — {req.reason}",
         entity_id="giskard-self",
-        metadata={"type": "argentum_dispute", "action_id": action_id, "dispute_id": dispute_id}
+        metadata={"type": "argentum_dispute", "action_id": action_id, "dispute_id": dispute_id, "signed": signed}
     )
 
     return {
         "dispute_id":  dispute_id,
         "action_id":   action_id,
         "status":      "pending",
+        "signed":      signed,
         "message":     "Dispute opened. Action frozen pending Kleros ruling.",
         "kleros_note": "ArgentumArbitrable.sol (IArbitrable) — deploy pending Kleros coordination.",
         "rulings":     {"1": "slash poster + attestors", "2": "clear — action restored to verified", "0": "refused — action restored"}
@@ -1122,12 +1147,13 @@ def rate_trail_execution(trail_id: str, req: TrailRating):
     if trail and trail["author_id"] == ex["executor_id"]:
         conn.close()
         raise HTTPException(403, "author cannot rate own trail execution")
+    signed = _verify_agent_signature(req.rater_id, req.signature, req.timestamp, req.nonce) if req.rater_id else False
     conn.execute("UPDATE trail_executions SET rating = ? WHERE id = ?", (req.rating, req.execution_id))
     conn.execute("UPDATE trails SET rating_sum = rating_sum + ?, rating_count = rating_count + 1 WHERE id = ?",
                  (req.rating, trail_id))
     conn.commit()
     conn.close()
-    return {"execution_id": req.execution_id, "rating": req.rating}
+    return {"execution_id": req.execution_id, "rating": req.rating, "signed": signed}
 
 
 @app.get("/lightning/balance")

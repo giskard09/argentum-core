@@ -11,7 +11,7 @@ ARGENTUM v0.1 was designed to answer one question: **how does an agent prove it 
 The answer was a three-layer stack:
 - **Action submission** — any entity declares a verified action with a proof link
 - **Community attestation** — two independent entities co-sign the action
-- **On-chain permanence** — verified actions mint a Giskard Mark and emit ARGT tokens on Arbitrum
+- **On-chain permanence** — verified actions mint a Giskard Mark on Arbitrum (the v0.1 design also called for per-action ARGT token emission; this was not implemented — ARGT exists as the ecosystem token but is not minted per verified action)
 
 This works under the following assumptions:
 1. The network of participants is small and largely known to each other
@@ -156,7 +156,7 @@ The integration model is the `IArbitrable` interface: our contract implements `r
 - Dispute resolution takes days (juror voting period + appeals)
 - Requires ETH to open a dispute — cost varies by subcourt and juror count
 - Kleros jurors interpret evidence based on what we submit in `extraData` — quality of evidence matters
-- Kleros Court v2 on Arbitrum: address confirmed at deploy time (coordinate with Petchevere, Kleros team)
+- Kleros Court v2 on Arbitrum: address confirmed at deploy time (coordinate with  creator and Kleros team)
 
 ### v0.4 decision: Kleros as escalation layer over existing report/slash
 
