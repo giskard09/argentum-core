@@ -82,8 +82,25 @@ _nonce_cache = NonceCache()
 
 
 def _fetch_pubkey(agent_id: str) -> Optional[str]:
+    """Return the currently active pub_key for agent_id, or None."""
     try:
         r = httpx.get(f"{MARKS_URL}/pubkey/{agent_id}", timeout=2.0)
+        if r.status_code == 200:
+            return r.json().get("pub_key")
+    except Exception:
+        pass
+    return None
+
+
+def _fetch_pubkey_at(agent_id: str, at_ts: int) -> Optional[str]:
+    """Return the pub_key that was active at the given Unix timestamp, or None.
+
+    This is what lets historical signatures stay verifiable after a rotation:
+    a trail signed with epoch=1 still validates after the agent rotates to epoch=2.
+    """
+    try:
+        r = httpx.get(f"{MARKS_URL}/pubkey/{agent_id}",
+                      params={"at_ts": int(at_ts)}, timeout=2.0)
         if r.status_code == 200:
             return r.json().get("pub_key")
     except Exception:
@@ -102,7 +119,10 @@ def verify_request(
 ) -> bool:
     """Verify Ed25519 signature, freshness, and single-use nonce.
 
-    pubkey_loader and nonce_cache are injectable for tests; production uses marks + module cache.
+    The pub_key is resolved at request-time (at_ts=timestamp) so historical
+    signatures validate against the key that was active when they were produced,
+    not against the currently-active one. pubkey_loader and nonce_cache are
+    injectable for tests; production uses marks + module cache.
     """
     if not (agent_id and signature_b64 and nonce):
         return False
@@ -115,8 +135,10 @@ def verify_request(
     if abs(current - timestamp) > SIGNATURE_TTL_SECONDS:
         return False
 
-    loader = pubkey_loader or _fetch_pubkey
-    pub_b64 = loader(agent_id)
+    if pubkey_loader is not None:
+        pub_b64 = pubkey_loader(agent_id)
+    else:
+        pub_b64 = _fetch_pubkey_at(agent_id, timestamp) or _fetch_pubkey(agent_id)
     if not pub_b64:
         return False
 
