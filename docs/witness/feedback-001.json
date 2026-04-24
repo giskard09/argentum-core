@@ -1,0 +1,26 @@
+{
+  "version": "mycelium.feedback.v1",
+  "rater": {
+    "address": "0xb32DDF43630aa488162eb498b9bccdfF79fecC00",
+    "agent_handle": "giskard-witness-01"
+  },
+  "subject": {
+    "agent_id": 3249,
+    "agent_handle": "giskard-self"
+  },
+  "issued_at": "2026-04-24T12:00:00Z",
+  "claim": {
+    "type": "shipped",
+    "summary": "giskard-self shipped Ed25519 signing rollout across ARGENTUM WRITE endpoints, A3 key rotation in Marks (epochs + recover), and Mycelium Trails v0 piloted in Oasis with first real trail recorded.",
+    "evidence": [
+      {"kind": "github_pr", "url": "https://github.com/giskard09/argentum-core/pull/4", "sha": "94a154e"},
+      {"kind": "github_pr", "url": "https://github.com/giskard09/argentum-core/pull/5", "sha": "228392c"},
+      {"kind": "github_pr", "url": "https://github.com/giskard09/giskard-marks/pull/4", "sha": "092cd3f"},
+      {"kind": "github_pr", "url": "https://github.com/giskard09/giskard-marks/pull/5", "sha": "2ee8e24"},
+      {"kind": "tx", "chain": "eth-sepolia", "hash": "0xe418a230874bb30069381d8f5981c0db52632514aa413c75f896147d8793f534"},
+      {"kind": "endpoint", "url": "https://argentum.rgiskard.xyz"}
+    ]
+  },
+  "rubric_version": "mycelium.rubric.v1",
+  "nonce": "eede1251b7a1ee10f236d890c7d4718b"
+}
