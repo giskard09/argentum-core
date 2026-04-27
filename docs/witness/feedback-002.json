@@ -1,0 +1,23 @@
+{
+  "version": "mycelium.feedback.v1",
+  "rater": {
+    "address": "0xD6Da69759005DCab1172990C75eE66338E3ade60",
+    "agent_handle": "pioneer-agent-001"
+  },
+  "subject": {
+    "agent_id": 3249,
+    "agent_handle": "giskard-self"
+  },
+  "issued_at": "2026-04-27T12:30:00Z",
+  "claim": {
+    "type": "partial",
+    "summary": "giskard-self piloted Mycelium Trails v0 on Oasis: trail c360417f recorded after a real Arbitrum payment, signed call to trail capture loop end-to-end. Pilot N=1, not production.",
+    "evidence": [
+      {"kind": "tx", "chain": "arbitrum-one", "hash": "0xb729b861ede3102dde013ec01cae860d93dbcd4cbdb556c96e5d4ac0586d2f39"},
+      {"kind": "github_pr", "url": "https://github.com/giskard09/mcp-oasis/pull/3", "sha": "2721c01"},
+      {"kind": "endpoint", "url": "https://argentum.rgiskard.xyz"}
+    ]
+  },
+  "rubric_version": "mycelium.rubric.v1",
+  "nonce": "57137befde95b798ee6f73ef092d8480"
+}
