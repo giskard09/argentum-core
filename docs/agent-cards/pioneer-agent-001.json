@@ -6,8 +6,9 @@
   "canonical_identity": {
     "registry": "0x8004A818BFB912233c491871b3d84c89A494BD9e",
     "network": "ethereum-sepolia",
-    "agent_id_canonical": null,
-    "note": "register pending — wallet 0xD6Da69759005DCab1172990C75eE66338E3ade60"
+    "agent_id_canonical": 3961,
+    "tx": "0xaee108776e90572be8c51aa3ccdcc8791b671c34fb998f451ff3caa121e44645",
+    "block": 10765223
   },
   "signing": {
     "pub_key_b64": "5pZTdLR/ld9Ef9LtSGTtK00paWqgoqFSz/21nsqutmg=",
