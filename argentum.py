@@ -8,7 +8,7 @@ Wisdom is witnessed by community, verified like open source.
 The faith is not measurable. The action is.
 """
 
-import json, uuid, time, httpx, sqlite3, hmac, hashlib
+import json, uuid, time, httpx, sqlite3, hmac, hashlib, os
 _started_at = time.time()
 from datetime import datetime, timezone
 from typing import Optional
@@ -26,14 +26,14 @@ limiter = Limiter(key_func=get_remote_address)
 
 MEMORY_URL        = "http://localhost:8005"
 MARKS_URL         = "http://localhost:8015"
-MARKS_API_KEY     = "7e3755d34536917f113947b97e4d8c8fddbb7f44891e8952463681cbbb14bb6b"
+MARKS_API_KEY     = os.environ.get("MARKS_API_KEY", "")
 ARBITRUM_CONTRACT = "0xD467CD1e34515d58F98f8Eb66C0892643ec86AD3"
 ARGT_CONTRACT     = "0x42385c1038f3fec0ecCFBD4E794dE69935e89784"
 DB_PATH           = Path(__file__).parent / "argentum.db"
 
 PHOENIXD_URL      = "http://127.0.0.1:9740"
-PHOENIXD_PASSWORD = "574fd439f0c07fc0c540f8245554440412c15ff5cfc0469a65f9879e70133c23"
-WEBHOOK_SECRET    = "e3e9ee0bfb760d62c8051e10c0504efbedaef4c24d2982d98de22f72fedfa87c"
+PHOENIXD_PASSWORD = os.environ.get("PHOENIXD_PASSWORD", "")
+WEBHOOK_SECRET    = os.environ.get("WEBHOOK_SECRET", "")
 
 WEIGHT_THRESHOLD          = 2.0  # total weighted attestations needed to verify
 KARMA_WEIGHT_BASE         = 50   # karma units for weight = 1.0
@@ -47,7 +47,7 @@ MINIMUM_KARMA_TO_ATTEST   = 0   # starts at 0; raise as network grows
 GENESIS_ATTESTORS = {"lightning", "giskard-self"}
 MAX_ATTESTATIONS_PER_DAY  = 5    # rate limit — max attestations per attester per day
 MINIMUM_KARMA_TO_DISPUTE  = 10   # karma required to open a Kleros dispute
-KLEROS_RULING_SECRET      = "d4f8a2c6e9b1f5a3c7d2e8b4f9a5c3d7e1b6f2a8c4d9e5b3f7a1c5d8e2b9f4a6"
+KLEROS_RULING_SECRET      = os.environ.get("KLEROS_RULING_SECRET", "")
 
 # kept for backwards compat in lightning webhook
 ATTESTATIONS_NEEDED       = int(WEIGHT_THRESHOLD)
