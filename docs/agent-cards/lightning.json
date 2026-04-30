@@ -6,8 +6,9 @@
   "canonical_identity": {
     "registry": "0x8004A818BFB912233c491871b3d84c89A494BD9e",
     "network": "ethereum-sepolia",
-    "agent_id_canonical": null,
-    "note": "register pending"
+    "agent_id_canonical": 3962,
+    "tx": "0x4076d99316c01aeef0abb3965ad8554d138d235f5afaf733178c51caab2b29cf",
+    "block": 10765225
   },
   "signing": {
     "pub_key_b64": "qjrAhLx4c5RhQiszfhsG9CzXp1cId4R7Zukn4ex8U6o=",
