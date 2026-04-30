@@ -1,0 +1,27 @@
+{
+  "version": "mycelium.agent-card.v1",
+  "agent_id": "pioneer-agent-001",
+  "agent_name": "Pioneer Agent 001",
+  "type": "agent",
+  "canonical_identity": {
+    "registry": "0x8004A818BFB912233c491871b3d84c89A494BD9e",
+    "network": "ethereum-sepolia",
+    "agent_id_canonical": null,
+    "note": "register pending — wallet 0xD6Da69759005DCab1172990C75eE66338E3ade60"
+  },
+  "signing": {
+    "pub_key_b64": "5pZTdLR/ld9Ef9LtSGTtK00paWqgoqFSz/21nsqutmg=",
+    "epoch": 1,
+    "status": "active",
+    "rotation_registry": "https://marks.rgiskard.xyz/pubkey/pioneer-agent-001",
+    "registered_at": "2026-04-23T09:24:36.457295Z"
+  },
+  "karma": {
+    "score": 20,
+    "registry": "https://argentum.rgiskard.xyz/entity/pioneer-agent-001",
+    "verified_actions": 1,
+    "attestations_given": 0
+  },
+  "services": [],
+  "issued_at": "2026-04-30T00:00:00Z"
+}
