@@ -1052,6 +1052,14 @@ async def register_trail(request: Request, req: TrailRegister):
     return {"trail_id": trail_id, "name": req.name, "steps": len(req.steps),
             "price_sats": req.price_sats, "signed": signed}
 
+@app.get("/trails/demo")
+async def proxy_trails_demo(limit: int = 10):
+    """Proxy a Giskard Oasis /trails/demo — flujo demo Lightning + cross-chain bridge."""
+    async with httpx.AsyncClient(timeout=10) as c:
+        r = await c.get(f"http://localhost:8003/trails/demo", params={"limit": limit})
+        return r.json()
+
+
 @app.get("/trails")
 def list_trails(limit: int = 50, sort: str = "reputation"):
     conn = get_db()
