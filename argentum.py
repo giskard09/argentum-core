@@ -10,6 +10,7 @@ The faith is not measurable. The action is.
 
 import json, uuid, time, httpx, sqlite3, hmac, hashlib, os
 _started_at = time.time()
+import mycelium_trails
 from datetime import datetime, timezone
 from typing import Optional
 from fastapi import FastAPI, HTTPException, Request
@@ -30,6 +31,8 @@ MARKS_API_KEY     = os.environ.get("MARKS_API_KEY", "")
 ARBITRUM_CONTRACT = "0xD467CD1e34515d58F98f8Eb66C0892643ec86AD3"
 ARGT_CONTRACT     = "0x42385c1038f3fec0ecCFBD4E794dE69935e89784"
 DB_PATH           = Path(__file__).parent / "argentum.db"
+TRAILS_DB         = str(Path(__file__).parent / "trails.db")
+SERVICE_NAME      = "argentum"
 
 PHOENIXD_URL      = "http://127.0.0.1:9740"
 PHOENIXD_PASSWORD = os.environ.get("PHOENIXD_PASSWORD", "")
@@ -188,6 +191,7 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 @app.on_event("startup")
 async def startup():
     init_db()
+    mycelium_trails.init_db(TRAILS_DB)
 
 # ── MODELS ──────────────────────────────────────────────────────────────────
 
@@ -402,6 +406,19 @@ async def submit_action(request: Request, req: ActionSubmit):
         metadata={"type": "argentum_action", "action_id": action_id, "status": "pending", "signed": signed}
     )
 
+    try:
+        mycelium_trails.record_trail(
+            TRAILS_DB,
+            agent_id=req.entity_id,
+            service=SERVICE_NAME,
+            operation="submit_action",
+            nonce=req.nonce or action_id,
+            karma_at_time=None,
+            success=True,
+        )
+    except Exception:
+        pass
+
     return {
         "action_id":          action_id,
         "status":             "pending",
@@ -503,6 +520,19 @@ async def attest_action(request: Request, action_id: str, req: AttestRequest):
             metadata={"type": "argentum_verified", "action_id": action_id}
         )
         await mint_mark(action["entity_id"], action["entity_name"], action_id, action["karma_value"])
+
+    try:
+        mycelium_trails.record_trail(
+            TRAILS_DB,
+            agent_id=req.attester_id,
+            service=SERVICE_NAME,
+            operation="attest_action",
+            nonce=req.nonce or attest_id,
+            karma_at_time=attester_karma if req.attester_id not in GENESIS_ATTESTORS else None,
+            success=True,
+        )
+    except Exception:
+        pass
 
     return {
         "attestation_id":       attest_id,
