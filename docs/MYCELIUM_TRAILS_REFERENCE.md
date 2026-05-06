@@ -6,7 +6,7 @@ who want to close the accountability loop after an agent acts.
 Composability pattern:
 
 ```
-pre-check (Sentinel / AgentShield)
+pre-check (Sentinel Alpha / BeezShield)
   → payment authorization (x402 / Lightning)
   → agent execution (AgentKit / AutoGen / any framework)
   → post-action trail (Mycelium Trails) ← this document
