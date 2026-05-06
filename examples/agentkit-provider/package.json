@@ -1,0 +1,31 @@
+{
+  "name": "@mycelium/agentkit-trails-provider",
+  "version": "0.1.0",
+  "description": "Unofficial AgentKit action provider for Mycelium Trails — post-execution agent reputation layer",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "demo": "npx ts-node src/demo.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@coinbase/agentkit": "^0.4.0",
+    "zod": "^3.22.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.0",
+    "ts-node": "^10.9.0",
+    "@types/node": "^20.0.0"
+  },
+  "keywords": [
+    "agentkit",
+    "mycelium",
+    "trails",
+    "reputation",
+    "agents",
+    "base",
+    "coinbase"
+  ],
+  "license": "Apache-2.0"
+}

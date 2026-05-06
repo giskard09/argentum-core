@@ -1105,6 +1105,17 @@ async def proxy_trails_demo(limit: int = 10):
         return r.json()
 
 
+@app.get("/trails/agents/{agent_id}")
+async def proxy_trails_by_agent(agent_id: str, limit: int = 50):
+    """Proxy a Giskard Oasis /trails/{agent_id} — historial de trails por agente."""
+    async with httpx.AsyncClient(timeout=10) as c:
+        r = await c.get(
+            f"http://localhost:8003/trails/{agent_id}",
+            params={"limit": min(limit, 50)},
+        )
+        return JSONResponse(content=r.json(), status_code=r.status_code)
+
+
 @app.get("/trails")
 def list_trails(limit: int = 50, sort: str = "reputation"):
     conn = get_db()
