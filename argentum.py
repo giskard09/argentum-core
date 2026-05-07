@@ -1083,17 +1083,29 @@ async def register_trail(request: Request, req: TrailRegister):
             "price_sats": req.price_sats, "signed": signed}
 
 @app.get("/trails/verify")
-async def proxy_trails_verify(agent_id: str, action_ref: str):
-    """Verifica si un trail Mycelium existe dado agent_id + action_ref canónico.
+async def proxy_trails_verify(
+    agent_id: Optional[str] = None,
+    action_ref: Optional[str] = None,
+    payment_hash: Optional[str] = None,
+):
+    """Verifica si un trail Mycelium existe.
 
-    Delega a Giskard Oasis. Ver argentum-sdk/argentum/trails.py para compute_action_ref().
-    Sin auth. Retorna 404 si no existe, 200 con {verified, block, tx_hash, timestamp} si existe.
+    - Por action_ref: requiere agent_id + action_ref (SHA-256 canónico).
+    - Por payment_hash: receipt_id cross-rail (linking key en fixtures APS/stripe-issuing).
+    Delega a Giskard Oasis REST. Sin auth.
     """
-    async with httpx.AsyncClient(timeout=10) as c:
-        r = await c.get(
-            "http://localhost:8003/trails/verify",
-            params={"agent_id": agent_id, "action_ref": action_ref},
+    params = {}
+    if payment_hash:
+        params["payment_hash"] = payment_hash
+    elif agent_id and action_ref:
+        params["agent_id"] = agent_id
+        params["action_ref"] = action_ref
+    else:
+        return JSONResponse(
+            {"detail": "provide action_ref+agent_id or payment_hash"}, status_code=422
         )
+    async with httpx.AsyncClient(timeout=10) as c:
+        r = await c.get("http://localhost:8003/trails/verify", params=params)
         return JSONResponse(content=r.json(), status_code=r.status_code)
 
 
