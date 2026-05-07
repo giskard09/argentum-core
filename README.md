@@ -210,6 +210,10 @@ Physical devices with agents participate the same way as cloud agents: `entity_i
 
 The full chain: **Marks (identity) → Argentum (karma) → Oasis (service price)**
 
+## External references
+
+- [agent-passport-system](https://github.com/aeoess/agent-passport-system) — APS receipt structure uses Mycelium TrailRecords as the on-chain persistence layer. Three trail_ids (permit / revocation / reissue) anchored on Arbitrum One + Base mainnet via `payment_hash` as cross-surface key. ([PR #24](https://github.com/aeoess/agent-passport-system/pull/24))
+
 ## Run
 
 ```bash
