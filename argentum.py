@@ -1251,6 +1251,98 @@ async def get_ln_payments(limit: int = 20):
         return r.json()
 
 
+# ── RAMA / SPORE ────────────────────────────────────────────────────────────
+
+class GenesisRegisterRequest(BaseModel):
+    buyer_id: str
+    amount_sats: int
+    wallet_address: str
+    note: str = "First human participant. Skin in the game."
+    payment_hash: str = ""          # optional: LN payment_hash if already paid
+
+
+class GenesisRegisterResponse(BaseModel):
+    status: str
+    trail_id: str = ""
+    buyer_id: str
+    amount_sats: int
+    wallet_address: str
+    delivery: str = "pending_mainnet_delivery"
+    error: str = ""
+
+
+@app.post("/rama/genesis", response_model=GenesisRegisterResponse)
+def register_genesis_purchase(req: GenesisRegisterRequest):
+    """Register the foundational RAMA genesis purchase trail.
+
+    Records a RAMA_GENESIS_PURCHASE trail with status pending_mainnet_delivery.
+    Tokens are delivered when RamaToken.sol is deployed on mainnet (Legales approval required).
+
+    If payment_hash is provided, it links the LN payment to the trail.
+    If empty, the trail is recorded without on-chain proof (admin use only).
+    """
+    import uuid as _uuid
+    nonce = str(_uuid.uuid4())
+    meta = {
+        "operation": "RAMA_GENESIS_PURCHASE",
+        "buyer": req.buyer_id,
+        "amount_sats": req.amount_sats,
+        "wallet_arb": req.wallet_address,
+        "note": req.note,
+        "payment_hash_ln": req.payment_hash or None,
+        "status": "pending_mainnet_delivery",
+        "delivery_condition": "RamaToken.sol deploy on mainnet + Legales approval",
+    }
+    trail_id = mycelium_trails.record_trail(
+        db_path=TRAILS_DB,
+        agent_id=req.buyer_id,
+        service="rama",
+        operation="RAMA_GENESIS_PURCHASE",
+        nonce=nonce,
+        karma_at_time=None,
+        success=True,
+        rate_limit_cap=0,
+        genesis_agents=frozenset(["creador", "giskard-self"]),
+        metadata=meta,
+        payment_hash=req.payment_hash or None,
+    )
+    if not trail_id:
+        raise HTTPException(status_code=500, detail="Trail registration failed.")
+    return GenesisRegisterResponse(
+        status="ok",
+        trail_id=trail_id,
+        buyer_id=req.buyer_id,
+        amount_sats=req.amount_sats,
+        wallet_address=req.wallet_address,
+    )
+
+
+@app.get("/rama/genesis")
+def list_genesis_purchases():
+    """List all RAMA_GENESIS_PURCHASE trails — foundational buyers."""
+    import sqlite3, json as _json
+    conn = sqlite3.connect(TRAILS_DB)
+    conn.row_factory = sqlite3.Row
+    rows = conn.execute(
+        "SELECT trail_id, agent_id, timestamp, metadata, payment_hash "
+        "FROM trails WHERE operation='RAMA_GENESIS_PURCHASE' ORDER BY timestamp ASC"
+    ).fetchall()
+    conn.close()
+    result = []
+    for row in rows:
+        meta = _json.loads(row["metadata"]) if row["metadata"] else {}
+        result.append({
+            "trail_id": row["trail_id"],
+            "buyer": row["agent_id"],
+            "timestamp": row["timestamp"],
+            "amount_sats": meta.get("amount_sats"),
+            "wallet_arb": meta.get("wallet_arb"),
+            "status": meta.get("status"),
+            "note": meta.get("note"),
+        })
+    return {"genesis_purchases": result, "count": len(result)}
+
+
 # ── MCP LAYER ──────────────────────────────────────────────────────────────
 
 import os
