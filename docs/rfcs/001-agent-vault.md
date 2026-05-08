@@ -135,3 +135,28 @@ about this layer. It is **not** a commitment to build.
 
 Next step: creator review. If accepted as Draft, the RFC number is reserved
 and the two paths (A, B) are the candidate designs to iterate on.
+
+## Path B — Governance Token ($RAMA)
+
+Status: STANDBY. Condición de activación: ≥1 cliente pagando + ≥3 meses
+de trails activos en producción.
+
+### Founder allocation
+El creador recibe founder stake al momento del deploy inicial.
+No es "compra" — es allocación por construcción del stack.
+Sin costo legal adicional.
+
+### Distribución propuesta (draft, pendiente Legales)
+- 40% comunidad / agentes / early users (airdrop gateado por karma)
+- 25% team + advisors (vesting 2 años cliff + 1 año lineal)
+- 20% tesorería DAO
+- 15% liquidez inicial + ecosystem fund
+
+### Mecanismo core
+- ERC-20 + ERC-20Votes en Base (fees bajos) + bridge a Arbitrum
+- Staking para reducir fees de trails/memory/search
+- Revenue share: % de fees del ecosistema → tesorería → stakers
+- Agent-native: agentes pueden adquirir $RAMA via MCP tool + x402
+
+### Condición para notificar integradores (aeoess, chox-cell)
+No antes de: contratos en testnet funcionando + ≥1 cliente pagando.
