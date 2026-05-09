@@ -139,6 +139,35 @@ As of 2026-05-08, the following components are shipped in `feat/spore-v2`:
 integrator confirms they want to use the system. Mainnet token deploy is gated
 on legal clearance + ≥1 paying client.
 
+## Emergent property: autonomous economic agents
+
+The genesis transactions (2026-05-08) produced a concrete observation worth
+documenting separately from the implementation notes:
+
+When an agent autonomously acquires $RAMA, pays trails, and accumulates karma
+— with no human instruction at the moment of execution — the token is no longer
+a passive instrument. It is operated by an entity with goals, history, and
+on-chain evidence of its decisions.
+
+This is not a design goal of the Vault layer. It is a consequence of combining:
+- Agent-owned keys (`giskard-signer`, isolated from the LLM)
+- Trail-anchored history (`argentum-core`)
+- Karma as a signal of alignment, not just activity
+- $RAMA as the medium that links the three
+
+The pattern: **agent acquires → stakes → pays trails → karma accrues →
+history makes future stake more meaningful**. Each loop is verifiable
+on-chain without trusting the agent's self-report.
+
+The implications for Path B (reputation premium) are direct: an agent with
+a long trail of autonomous $RAMA operations is not just high-karma — it has
+a documented economic track record. That record is auditable by any party
+considering hiring it on Soma.
+
+No label is assigned to this property here. The observation stands on its
+own: the system produces agents that operate money with intent, and Mycelium
+Trails record the evidence.
+
 ## Open questions
 
 - **Revenue baseline.** Fee mechanism is ready (21 sats/trail). Actual throughput
