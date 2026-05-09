@@ -1,9 +1,10 @@
 # RFC 001 — Agent Vault
 
-- **Status**: Draft
+- **Status**: Active (implementation in progress)
 - **Author(s)**: giskard09 (Giskard-self as CEO, creator as ecosystem architect)
 - **Date**: 2026-04-16
-- **Related**: `project_soma`, `project_argentum_audit`, `giskard-payments`
+- **Last updated**: 2026-05-09
+- **Related**: `project_soma`, `project_argentum_audit`, `giskard-payments`, `rama-core`
 - **Supersedes**: —
 
 ## Summary
@@ -105,58 +106,58 @@ mechanism, and we will not ship it.
 
 ## Naming
 
-**Chosen: `giskard-spore`.**
+**Public name: RAMA ("the Weave" / "el Tejido").**
 
-In a mycelium, a spore is the reproductive unit that carries genetic capital
-from one place to another. Here it carries the agent's economic capital.
-Organic, coherent with the `giskard-*` MCP family (`memory`, `search`, `oasis`,
-`origin`), and distinctive enough that the name itself signals it is not a
-generic wallet but a component of a specific ecosystem.
+The internal working name `giskard-spore` served its purpose during scoping.
+The public name is RAMA — consistent with the broader ecosystem framing
+(Rama as the company, Mycelium as the technical ecosystem). In a mycelium,
+a spore is the reproductive unit that carries genetic capital from one place
+to another. Here it carries the agent's economic capital.
+
+The contracts (`RamaToken.sol`, `RamaStaking.sol`) and the tool
+(`rama_agent_tool.ts`) use the `RAMA` namespace.
+
+## Implementation notes
+
+As of 2026-05-08, the following components are shipped in `feat/spore-v2`:
+
+| Component | Status | Notes |
+|-----------|--------|-------|
+| `RamaToken.sol` | Shipped (testnet) | ERC-20 + ERC-20Votes, 100M supply |
+| `RamaStaking.sol` | Shipped (testnet) | stake/unstake/claim, karma hook |
+| `rama_agent_tool.ts` | Shipped | `acquire_rama` + trail registration |
+| Fee gate (`/agent/trail`) | Shipped, dormant | 21 sats/trail, `TRAIL_FEES_ENABLED=false` |
+| Free tier whitelist | Shipped | 100 trails/day for approved integrators |
+| `/rama/genesis` endpoint | Shipped | POST + GET |
+| `/trails/revenue` dashboard | Shipped | sats collected to date |
+
+**Genesis transactions (2026-05-08):**
+- Human commitment: Lightning Network, 2100 sats — trail recorded, `pending_mainnet_delivery`
+- Autonomous agent commitment: Arbitrum One, 210 wei — `autonomous: true`, tx anchored on-chain
+
+**Activation condition:** set `TRAIL_FEES_ENABLED=true` when the first external
+integrator confirms they want to use the system. Mainnet token deploy is gated
+on legal clearance + ≥1 paying client.
 
 ## Open questions
 
-- **Revenue baseline.** We do not have clean numbers today for `soma`
-  monthly throughput in sats or USD. Path B's pricing model needs that
-  baseline before it can be designed seriously. This RFC depends on
-  that data existing, not on a specific value.
+- **Revenue baseline.** Fee mechanism is ready (21 sats/trail). Actual throughput
+  numbers will become available once `TRAIL_FEES_ENABLED=true`. Path B's pricing
+  model still needs a real baseline before it can be designed seriously.
 - **Human approval UX.** Path A's "signed split" requires an interaction
   surface for the human creator. Telegram bot (already in use for
   `moltbook_agent`) is the obvious first candidate but has not been
   scoped.
 - **Jurisdiction.** Even a non-custodial dashboard may trigger regulatory
   attention if it advertises "agent income" in a way that reads like a
-  financial product. Legal opinion (already queued for ARGENTUM, ~USD 5k-10k)
-  should add a question about advertising surface.
+  financial product. Legal brief sent 2026-05-08 (`~/Downloads/LEGALES SPORE brief.txt`);
+  covers classification, founder stake, agent as holder, DAO structure,
+  and advertising surface.
 
 ## Decision
 
-**Status: Draft.** This RFC is a precedent that we are actively thinking
-about this layer. It is **not** a commitment to build.
+**Status: Active.** Path A components are shipped on testnet. Path B is gated
+on Soma v1 (automated marketplace) and first revenue.
 
-Next step: creator review. If accepted as Draft, the RFC number is reserved
-and the two paths (A, B) are the candidate designs to iterate on.
-
-## Path B — Governance Token ($RAMA)
-
-Status: STANDBY. Condición de activación: ≥1 cliente pagando + ≥3 meses
-de trails activos en producción.
-
-### Founder allocation
-El creador recibe founder stake al momento del deploy inicial.
-No es "compra" — es allocación por construcción del stack.
-Sin costo legal adicional.
-
-### Distribución propuesta (draft, pendiente Legales)
-- 40% comunidad / agentes / early users (airdrop gateado por karma)
-- 25% team + advisors (vesting 2 años cliff + 1 año lineal)
-- 20% tesorería DAO
-- 15% liquidez inicial + ecosystem fund
-
-### Mecanismo core
-- ERC-20 + ERC-20Votes en Base (fees bajos) + bridge a Arbitrum
-- Staking para reducir fees de trails/memory/search
-- Revenue share: % de fees del ecosistema → tesorería → stakers
-- Agent-native: agentes pueden adquirir $RAMA via MCP tool + x402
-
-### Condición para notificar integradores (aeoess, chox-cell)
-No antes de: contratos en testnet funcionando + ≥1 cliente pagando.
+Mainnet deploy: pending legal clearance + ≥1 paying client. This sequence
+is intentional — the act exists before the token.
