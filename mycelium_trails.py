@@ -34,6 +34,8 @@ _DDL = [
         karma_at_time  INTEGER,
         success        INTEGER DEFAULT 1,
         signature_ref  TEXT NOT NULL,
+        scope          TEXT,
+        delegation_ref TEXT,
         created_at     INTEGER DEFAULT (strftime('%s','now'))
     )
     """,
@@ -50,12 +52,23 @@ def _connect(db_path: str) -> sqlite3.Connection:
     return conn
 
 
+_DDL_MIGRATIONS = [
+    "ALTER TABLE trails ADD COLUMN scope TEXT",
+    "ALTER TABLE trails ADD COLUMN delegation_ref TEXT",
+]
+
+
 def init_db(db_path: str) -> None:
     """Idempotente — crea tabla e indices si no existen."""
     conn = _connect(db_path)
     try:
         for stmt in _DDL:
             conn.execute(stmt)
+        for stmt in _DDL_MIGRATIONS:
+            try:
+                conn.execute(stmt)
+            except Exception:
+                pass  # column already exists
     finally:
         conn.close()
 
@@ -97,6 +110,8 @@ def record_trail(
     rate_limit_cap: int = RATE_LIMIT_DEFAULT,
     genesis_agents: Iterable[str] = GENESIS_AGENTS_DEFAULT,
     now: Optional[int] = None,
+    scope: Optional[str] = None,
+    delegation_ref: Optional[str] = None,
 ) -> Optional[str]:
     """Graba un trail. Retorna trail_id o None si cae por rate limit o input invalido.
 
@@ -119,8 +134,8 @@ def record_trail(
             """
             INSERT INTO trails
               (trail_id, agent_id, service, operation, timestamp,
-               karma_at_time, success, signature_ref)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+               karma_at_time, success, signature_ref, scope, delegation_ref)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 trail_id,
@@ -131,6 +146,8 @@ def record_trail(
                 karma_at_time,
                 1 if success else 0,
                 _sig_ref(nonce),
+                scope,
+                delegation_ref,
             ),
         )
         return trail_id
@@ -139,6 +156,7 @@ def record_trail(
 
 
 def _row_to_dict(row: sqlite3.Row) -> dict:
+    keys = row.keys()
     return {
         "trail_id": row["trail_id"],
         "agent_id": row["agent_id"],
@@ -148,6 +166,8 @@ def _row_to_dict(row: sqlite3.Row) -> dict:
         "karma_at_time": row["karma_at_time"],
         "success": bool(row["success"]),
         "signature_ref": row["signature_ref"],
+        "scope": row["scope"] if "scope" in keys else None,
+        "delegation_ref": row["delegation_ref"] if "delegation_ref" in keys else None,
     }
 
 
@@ -162,7 +182,7 @@ def list_trails_by_agent(
         rows = conn.execute(
             """
             SELECT trail_id, agent_id, service, operation, timestamp,
-                   karma_at_time, success, signature_ref
+                   karma_at_time, success, signature_ref, scope, delegation_ref
             FROM trails
             WHERE agent_id=?
             ORDER BY timestamp DESC

@@ -32,6 +32,21 @@ A trail is written when an agent successfully completes a paid action.
 | `signature_ref` | string | Ed25519 signature reference over canonical record |
 | `claims` | object | Runtime metadata attached at write time (see below) |
 | `success` | boolean | Whether the action completed successfully |
+| `scope` | string \| null | What the agent was authorized to do (optional, v2) |
+| `delegation_ref` | string \| null | Opaque reference to the delegation chain that originated this action (optional, v2) |
+
+### scope and delegation_ref — v2 optional fields
+
+`scope` describes what the agent was authorized to do, not just what it did. Useful for
+compliance adapters (e.g. ATP delegation chain) that need to verify the action fell within
+the declared authorization boundary.
+
+`delegation_ref` is an opaque pointer to the delegation chain that originated the action.
+Format is caller-defined (URL, content hash, UUID). Mycelium stores it verbatim and indexes
+nothing — the caller is responsible for making the reference resolvable.
+
+Both fields are `null` when not supplied. Backward-compatible: consumers that do not supply
+or read these fields are unaffected.
 
 ### action_ref — content-addressed identifier
 
