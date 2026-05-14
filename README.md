@@ -239,6 +239,24 @@ Last audit: 2026-03-30. Three findings identified and remediated (sybil resistan
 
 This is an internal self-audit. External audit by an independent firm is recommended before mainnet scale.
 
+### What the audit trail records — and what it does not
+
+**Privacy by design:** ARGENTUM records that an action occurred, not the content of the action. Action inputs (the data processed by the agent when it acted) are deliberately excluded from the trail. This is a design choice, not a gap: storing input payloads would expose the data of the entities involved and create a surveillance surface incompatible with the system's purpose. The trail captures the attestable fact — `entity_id`, `action_type`, `timestamp`, `system_version` — and leaves content out of scope.
+
+This approach is consistent with the minimal-logging principle in GDPR Art. 5(1)(c) and equivalent data minimisation requirements. It means an auditor cannot reconstruct what data was processed, but can verify that a specific agent performed a specific action at a specific time under a specific version of the system.
+
+**Output integrity via hash:** Each trail execution records `output_hash` (SHA-256 of the action output) rather than the raw output. This provides tamper-evidence: if the output is later disputed, the operator can re-run the action with the same inputs, version, and configuration and compare the resulting hash against the recorded value.
+
+To reproduce a recorded output:
+1. Retrieve `system_version` and `created_at` from the trail record.
+2. Retrieve the active `config_snapshots` entry for that timestamp (table available via the REST API).
+3. Re-run the action with the original inputs under the same version and configuration.
+4. SHA-256 the result and compare against `output_hash`.
+
+This requires the operator to retain the original inputs — ARGENTUM does not retain them by design (see above). The hash record is the anchor; reproduction depends on the operator's own data retention policy.
+
+**Configuration snapshots:** As of v0.5.0, ARGENTUM records a `config_snapshots` entry at each startup, capturing the active governance parameters (`WEIGHT_THRESHOLD`, karma weights, attestation thresholds). Each action record carries a `system_version` field. Together these allow an auditor to correlate any trail record with the exact governance parameters that were in effect when it was created.
+
 ## Philosophy
 
 Karma systems have existed for centuries. What they all have in common: someone judges.

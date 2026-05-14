@@ -76,17 +76,18 @@ def init_db():
     conn = get_db()
     conn.execute("""
     CREATE TABLE IF NOT EXISTS actions (
-        id           TEXT PRIMARY KEY,
-        entity_id    TEXT NOT NULL,
-        entity_name  TEXT NOT NULL,
-        entity_type  TEXT NOT NULL,
-        action_type  TEXT NOT NULL,
-        description  TEXT NOT NULL,
-        proof        TEXT,
-        status       TEXT DEFAULT 'pending',
-        karma_value  INTEGER DEFAULT 0,
-        created_at   TEXT NOT NULL,
-        verified_at  TEXT
+        id             TEXT PRIMARY KEY,
+        entity_id      TEXT NOT NULL,
+        entity_name    TEXT NOT NULL,
+        entity_type    TEXT NOT NULL,
+        action_type    TEXT NOT NULL,
+        description    TEXT NOT NULL,
+        proof          TEXT,
+        status         TEXT DEFAULT 'pending',
+        karma_value    INTEGER DEFAULT 0,
+        created_at     TEXT NOT NULL,
+        verified_at    TEXT,
+        system_version TEXT
     )""")
     conn.execute("""
     CREATE TABLE IF NOT EXISTS attestations (
@@ -108,6 +109,12 @@ def init_db():
     # v0.4 migration — add signed column to actions (Ed25519 rollout)
     try:
         conn.execute("ALTER TABLE actions ADD COLUMN signed INTEGER DEFAULT 0")
+        conn.commit()
+    except Exception:
+        pass  # column already exists
+    # v0.5 migration — add system_version to actions (GAP-A: audit trail versioning)
+    try:
+        conn.execute("ALTER TABLE actions ADD COLUMN system_version TEXT")
         conn.commit()
     except Exception:
         pass  # column already exists
@@ -174,15 +181,66 @@ def init_db():
         resolved_at       TEXT,
         FOREIGN KEY (action_id) REFERENCES actions(id)
     )""")
+    conn.execute("""
+    CREATE TABLE IF NOT EXISTS config_snapshots (
+        id                        TEXT PRIMARY KEY,
+        captured_at               TEXT NOT NULL,
+        system_version            TEXT NOT NULL,
+        weight_threshold          REAL NOT NULL,
+        karma_weight_base         INTEGER NOT NULL,
+        karma_weight_min          REAL NOT NULL,
+        karma_weight_max          REAL NOT NULL,
+        minimum_marks_to_attest   INTEGER NOT NULL,
+        minimum_karma_to_attest   INTEGER NOT NULL,
+        max_attestations_per_day  INTEGER NOT NULL,
+        minimum_karma_to_dispute  INTEGER NOT NULL
+    )""")
     conn.commit()
     conn.close()
 
+
+def capture_config_snapshot() -> str:
+    """Graba un snapshot de los parámetros activos en config_snapshots.
+
+    Llamado al startup. Permite a auditores correlacionar cada trail con
+    los parámetros de sistema que estaban activos en ese momento.
+    Retorna el id del snapshot creado.
+    """
+    conn = get_db()
+    try:
+        snapshot_id = str(uuid.uuid4())
+        now = datetime.now(timezone.utc).isoformat()
+        conn.execute(
+            """
+            INSERT INTO config_snapshots
+              (id, captured_at, system_version, weight_threshold,
+               karma_weight_base, karma_weight_min, karma_weight_max,
+               minimum_marks_to_attest, minimum_karma_to_attest,
+               max_attestations_per_day, minimum_karma_to_dispute)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                snapshot_id, now, SYSTEM_VERSION,
+                WEIGHT_THRESHOLD, KARMA_WEIGHT_BASE,
+                KARMA_WEIGHT_MIN, KARMA_WEIGHT_MAX,
+                MINIMUM_MARKS_TO_ATTEST, MINIMUM_KARMA_TO_ATTEST,
+                MAX_ATTESTATIONS_PER_DAY, MINIMUM_KARMA_TO_DISPUTE,
+            ),
+        )
+        conn.commit()
+        return snapshot_id
+    finally:
+        conn.close()
+
+
 # ── APP ─────────────────────────────────────────────────────────────────────
+
+SYSTEM_VERSION = "0.5.0"
 
 app = FastAPI(
     title="ARGENTUM",
     description="Karma economy for agents and humans. Good actions leave traces.",
-    version="0.4.0"
+    version=SYSTEM_VERSION
 )
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 app.state.limiter = limiter
@@ -191,6 +249,7 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 @app.on_event("startup")
 async def startup():
     init_db()
+    capture_config_snapshot()
     mycelium_trails.init_db(TRAILS_DB)
 
 # ── MODELS ──────────────────────────────────────────────────────────────────
@@ -393,10 +452,10 @@ async def submit_action(request: Request, req: ActionSubmit):
 
     conn = get_db()
     conn.execute("""
-    INSERT INTO actions (id, entity_id, entity_name, entity_type, action_type, description, proof, karma_value, created_at, signed)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO actions (id, entity_id, entity_name, entity_type, action_type, description, proof, karma_value, created_at, signed, system_version)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (action_id, req.entity_id, req.entity_name, req.entity_type,
-          req.action_type, req.description, req.proof, karma, created_at, 1 if signed else 0))
+          req.action_type, req.description, req.proof, karma, created_at, 1 if signed else 0, SYSTEM_VERSION))
     conn.commit()
     conn.close()
 
@@ -1275,8 +1334,8 @@ def submit_action(entity_id: str, entity_name: str, entity_type: str, action_typ
     karma = ACTION_TYPES[action_type]["karma"]
     conn = get_db()
     conn.execute(
-        "INSERT INTO actions (id, entity_id, entity_name, entity_type, action_type, description, proof, karma_value, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        (action_id, entity_id, entity_name, entity_type, action_type, description, proof or None, karma, now()))
+        "INSERT INTO actions (id, entity_id, entity_name, entity_type, action_type, description, proof, karma_value, created_at, system_version) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (action_id, entity_id, entity_name, entity_type, action_type, description, proof or None, karma, now(), SYSTEM_VERSION))
     conn.commit()
     conn.close()
     return f"Action {action_id} submitted ({action_type}, {karma} karma on verify). Needs attestations (weight >= {WEIGHT_THRESHOLD}) to be verified."
