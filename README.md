@@ -214,6 +214,12 @@ The full chain: **Marks (identity) → Argentum (karma) → Oasis (service price
 
 - [agent-passport-system](https://github.com/aeoess/agent-passport-system) — APS receipt structure uses Mycelium TrailRecords as the on-chain persistence layer. Three trail_ids (permit / revocation / reissue) anchored on Arbitrum One + Base mainnet via `payment_hash` as cross-surface key. ([PR #24](https://github.com/aeoess/agent-passport-system/pull/24))
 
+### Ecosystem references
+
+- [aeoess/agent-governance-vocabulary PR #96](https://github.com/aeoess/agent-governance-vocabulary/pull/96) — `crosswalk/mycelium-trails.yaml` v0.1 merged into main. Captures the byte-contract alignment between Mycelium TrailRecords and the APS vocabulary: `action_ref` derivation, `delegation_ref`, and multi-agent composition pattern.
+
+- [microsoft/agent-governance-toolkit PR #2244](https://github.com/microsoft/agent-governance-toolkit/pull/2244) — EvidenceAnchor proposal (open). Proposes a backend-agnostic pluggable anchoring interface for `agt-evidence.json`. Mycelium Trails is the reference on-chain backend for the community-plugin path; the `action_ref` canonicalization in the proposal aligns with the four preimage fields published in each TrailRecord.
+
 ## Run
 
 ```bash
