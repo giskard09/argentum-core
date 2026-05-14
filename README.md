@@ -222,6 +222,8 @@ The full chain: **Marks (identity) → Argentum (karma) → Oasis (service price
 
 - [chox-cell/Sentinel-Alpha — AGENT_TRUST_LOOP_REFERENCE.md](https://github.com/chox-cell/Sentinel-Alpha/blob/main/docs/17_growth/AGENT_TRUST_LOOP_REFERENCE.md) — Mycelium cited as layer 5 in the agent trust loop reference architecture.
 
+- [azender1/SafeAgent — Layer 4 RFC](https://github.com/azender1/SafeAgent) — joint spec (argentum-core#7) defines the four-field `action_ref` derivation shared with AGT #2244. First live settlement: $0.001 USDC x402 payment on Base mainnet, block 45907183 ([basescan](https://basescan.org/tx/0x5bda840a3fd247d907ddbb4a8c6af5d229ea25e315ff5109a578f2388ce5078b)).
+
 ## Run
 
 ```bash
