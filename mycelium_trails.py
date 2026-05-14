@@ -26,17 +26,19 @@ MAX_LIMIT_PER_QUERY = 500
 _DDL = [
     """
     CREATE TABLE IF NOT EXISTS trails (
-        trail_id       TEXT PRIMARY KEY,
-        agent_id       TEXT NOT NULL,
-        service        TEXT NOT NULL,
-        operation      TEXT NOT NULL,
-        timestamp      INTEGER NOT NULL,
-        karma_at_time  INTEGER,
-        success        INTEGER DEFAULT 1,
-        signature_ref  TEXT NOT NULL,
-        scope          TEXT,
-        delegation_ref TEXT,
-        created_at     INTEGER DEFAULT (strftime('%s','now'))
+        trail_id        TEXT PRIMARY KEY,
+        agent_id        TEXT NOT NULL,
+        service         TEXT NOT NULL,
+        operation       TEXT NOT NULL,
+        timestamp       INTEGER NOT NULL,
+        karma_at_time   INTEGER,
+        success         INTEGER DEFAULT 1,
+        signature_ref   TEXT NOT NULL,
+        scope           TEXT,
+        delegation_ref  TEXT,
+        parent_trail_id TEXT,
+        root_trail_id   TEXT,
+        created_at      INTEGER DEFAULT (strftime('%s','now'))
     )
     """,
     "CREATE INDEX IF NOT EXISTS idx_trails_agent ON trails(agent_id, timestamp DESC)",
@@ -55,6 +57,8 @@ def _connect(db_path: str) -> sqlite3.Connection:
 _DDL_MIGRATIONS = [
     "ALTER TABLE trails ADD COLUMN scope TEXT",
     "ALTER TABLE trails ADD COLUMN delegation_ref TEXT",
+    "ALTER TABLE trails ADD COLUMN parent_trail_id TEXT",
+    "ALTER TABLE trails ADD COLUMN root_trail_id TEXT",
 ]
 
 
@@ -112,10 +116,14 @@ def record_trail(
     now: Optional[int] = None,
     scope: Optional[str] = None,
     delegation_ref: Optional[str] = None,
+    parent_trail_id: Optional[str] = None,
+    root_trail_id: Optional[str] = None,
 ) -> Optional[str]:
     """Graba un trail. Retorna trail_id o None si cae por rate limit o input invalido.
 
     Precondicion: la firma Ed25519 ya fue verificada por el caller.
+    parent_trail_id: ID del trail que generó éste (None si es raíz).
+    root_trail_id:   ID del trail origen de la cadena (None si es raíz).
     """
     if not (agent_id and service and operation and nonce):
         return None
@@ -134,8 +142,9 @@ def record_trail(
             """
             INSERT INTO trails
               (trail_id, agent_id, service, operation, timestamp,
-               karma_at_time, success, signature_ref, scope, delegation_ref)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+               karma_at_time, success, signature_ref, scope, delegation_ref,
+               parent_trail_id, root_trail_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 trail_id,
@@ -148,6 +157,8 @@ def record_trail(
                 _sig_ref(nonce),
                 scope,
                 delegation_ref,
+                parent_trail_id,
+                root_trail_id,
             ),
         )
         return trail_id
@@ -168,6 +179,8 @@ def _row_to_dict(row: sqlite3.Row) -> dict:
         "signature_ref": row["signature_ref"],
         "scope": row["scope"] if "scope" in keys else None,
         "delegation_ref": row["delegation_ref"] if "delegation_ref" in keys else None,
+        "parent_trail_id": row["parent_trail_id"] if "parent_trail_id" in keys else None,
+        "root_trail_id": row["root_trail_id"] if "root_trail_id" in keys else None,
     }
 
 
@@ -182,7 +195,8 @@ def list_trails_by_agent(
         rows = conn.execute(
             """
             SELECT trail_id, agent_id, service, operation, timestamp,
-                   karma_at_time, success, signature_ref, scope, delegation_ref
+                   karma_at_time, success, signature_ref, scope, delegation_ref,
+                   parent_trail_id, root_trail_id
             FROM trails
             WHERE agent_id=?
             ORDER BY timestamp DESC
@@ -193,6 +207,100 @@ def list_trails_by_agent(
         return [_row_to_dict(r) for r in rows]
     finally:
         conn.close()
+
+
+def get_trail_by_id(db_path: str, trail_id: str) -> Optional[dict]:
+    conn = _connect(db_path)
+    try:
+        row = conn.execute(
+            """
+            SELECT trail_id, agent_id, service, operation, timestamp,
+                   karma_at_time, success, signature_ref, scope, delegation_ref,
+                   parent_trail_id, root_trail_id
+            FROM trails WHERE trail_id=?
+            """,
+            (trail_id,),
+        ).fetchone()
+        return _row_to_dict(row) if row else None
+    finally:
+        conn.close()
+
+
+def get_trail_graph(db_path: str, trail_id: str) -> Optional[dict]:
+    """Devuelve el DAG completo a partir de trail_id como raíz o nodo.
+
+    Primero resuelve la raíz real (sube por parent_trail_id hasta llegar a None),
+    luego baja recursivamente por todos los descendientes.
+    """
+    root = get_trail_by_id(db_path, trail_id)
+    if root is None:
+        return None
+
+    # subir hasta la raíz real
+    current = root
+    while current.get("parent_trail_id"):
+        parent = get_trail_by_id(db_path, current["parent_trail_id"])
+        if parent is None:
+            break
+        current = parent
+    root = current
+
+    def _build_node(t: dict) -> dict:
+        conn = _connect(db_path)
+        try:
+            rows = conn.execute(
+                "SELECT trail_id FROM trails WHERE parent_trail_id=?",
+                (t["trail_id"],),
+            ).fetchall()
+        finally:
+            conn.close()
+        children = []
+        for r in rows:
+            child = get_trail_by_id(db_path, r["trail_id"])
+            if child:
+                children.append(_build_node(child))
+        return {
+            "trail_id": t["trail_id"],
+            "agent_id": t["agent_id"],
+            "karma_at_time": t["karma_at_time"],
+            "attestation_count": 0,  # placeholder — join con actions si se requiere
+            "parent_trail_id": t["parent_trail_id"],
+            "children": children,
+        }
+
+    return {"root": _build_node(root)}
+
+
+def verify_chain(db_path: str, trail_id: str) -> dict:
+    """Valida integridad de la cadena desde trail_id hasta la raíz.
+
+    Checks:
+      (a) cada eslabón tiene signature_ref no nulo (proxy de firma válida)
+      (b) delegation_ref es consistente con parent_trail_id donde ambos están presentes
+
+    Retorna: { valid: bool, broken_at: trail_id | None, reason: str | None }
+    """
+    visited = set()
+    current_id = trail_id
+    while current_id:
+        if current_id in visited:
+            return {"valid": False, "broken_at": current_id, "reason": "cycle_detected"}
+        visited.add(current_id)
+        trail = get_trail_by_id(db_path, current_id)
+        if trail is None:
+            return {"valid": False, "broken_at": current_id, "reason": "trail_not_found"}
+        if not trail.get("signature_ref"):
+            return {"valid": False, "broken_at": current_id, "reason": "missing_signature_ref"}
+        # si tiene parent_trail_id y delegation_ref, delegation_ref debe referenciar al parent
+        if trail.get("parent_trail_id") and trail.get("delegation_ref"):
+            if trail["parent_trail_id"] not in trail["delegation_ref"]:
+                return {
+                    "valid": False,
+                    "broken_at": current_id,
+                    "reason": "delegation_ref_parent_mismatch",
+                }
+        current_id = trail.get("parent_trail_id")
+    return {"valid": True, "broken_at": None, "reason": None}
 
 
 def list_trails_by_service(

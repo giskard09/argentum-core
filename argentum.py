@@ -1209,6 +1209,21 @@ async def proxy_trails_by_agent(agent_id: str, limit: int = 50):
         return JSONResponse(content=r.json(), status_code=r.status_code)
 
 
+@app.get("/mycelium/trails/{trail_id}/graph")
+def get_mycelium_trail_graph(trail_id: str):
+    """DAG completo de usage trails encadenados — sube a la raíz y baja a todos los descendientes."""
+    result = mycelium_trails.get_trail_graph(TRAILS_DB, trail_id)
+    if result is None:
+        raise HTTPException(404, "trail not found")
+    return result
+
+
+@app.get("/mycelium/trails/{trail_id}/verify_chain")
+def verify_mycelium_trail_chain(trail_id: str):
+    """Valida integridad de la cadena desde trail_id hasta la raíz."""
+    return mycelium_trails.verify_chain(TRAILS_DB, trail_id)
+
+
 @app.get("/trails")
 def list_trails(limit: int = 50, sort: str = "reputation"):
     conn = get_db()
