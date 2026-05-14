@@ -220,6 +220,8 @@ The full chain: **Marks (identity) → Argentum (karma) → Oasis (service price
 
 - [microsoft/agent-governance-toolkit PR #2244](https://github.com/microsoft/agent-governance-toolkit/pull/2244) — EvidenceAnchor proposal (open). Proposes a backend-agnostic pluggable anchoring interface for `agt-evidence.json`. Mycelium Trails is the reference on-chain backend for the community-plugin path; the `action_ref` canonicalization in the proposal aligns with the four preimage fields published in each TrailRecord.
 
+- [chox-cell/Sentinel-Alpha — AGENT_TRUST_LOOP_REFERENCE.md](https://github.com/chox-cell/Sentinel-Alpha/blob/main/docs/17_growth/AGENT_TRUST_LOOP_REFERENCE.md) — Mycelium cited as layer 5 in the agent trust loop reference architecture.
+
 ## Run
 
 ```bash
