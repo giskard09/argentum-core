@@ -13,6 +13,7 @@ Disenio:
 
 Ver ~/Downloads/CODIGO - MYCELIUM TRAILS.txt para diseno completo.
 """
+import datetime
 import hashlib
 import sqlite3
 import time
@@ -22,6 +23,8 @@ from typing import Iterable, Optional
 GENESIS_AGENTS_DEFAULT = frozenset({"giskard-self", "lightning"})
 RATE_LIMIT_DEFAULT = 100
 MAX_LIMIT_PER_QUERY = 500
+MONTHLY_LIMIT_FREE = 1000
+SATS_PER_TRAIL = 300  # 300 sats ≈ $0.003 al precio actual
 
 _DDL = [
     """
@@ -54,6 +57,17 @@ def _connect(db_path: str) -> sqlite3.Connection:
     return conn
 
 
+_DDL_PAYG = """
+    CREATE TABLE IF NOT EXISTS payg_accounts (
+        api_key          TEXT PRIMARY KEY,
+        agent_id         TEXT NOT NULL,
+        tier             TEXT NOT NULL DEFAULT 'free',
+        credit_trails    INTEGER NOT NULL DEFAULT 0,
+        created_at       INTEGER NOT NULL,
+        updated_at       INTEGER NOT NULL
+    )
+"""
+
 _DDL_MIGRATIONS = [
     "ALTER TABLE trails ADD COLUMN scope TEXT",
     "ALTER TABLE trails ADD COLUMN delegation_ref TEXT",
@@ -68,6 +82,7 @@ def init_db(db_path: str) -> None:
     try:
         for stmt in _DDL:
             conn.execute(stmt)
+        conn.execute(_DDL_PAYG)
         for stmt in _DDL_MIGRATIONS:
             try:
                 conn.execute(stmt)
@@ -337,5 +352,101 @@ def list_trails_by_service(
                 (int(since_ts), limit),
             ).fetchall()
         return [_row_to_dict(r) for r in rows]
+    finally:
+        conn.close()
+
+
+# ── MONTHLY USAGE (free tier) ─────────────────────────────────────────────────
+
+def _year_month(now: Optional[int] = None) -> str:
+    t = now if now is not None else int(time.time())
+    dt = datetime.datetime.utcfromtimestamp(t)
+    return dt.strftime("%Y-%m")
+
+
+def _start_of_month_ts(now: Optional[int] = None) -> int:
+    t = now if now is not None else int(time.time())
+    dt = datetime.datetime.utcfromtimestamp(t)
+    return int(datetime.datetime(dt.year, dt.month, 1).timestamp())
+
+
+def count_trails_this_month(db_path: str, agent_id: str, now: Optional[int] = None) -> int:
+    start = _start_of_month_ts(now)
+    conn = _connect(db_path)
+    try:
+        row = conn.execute(
+            "SELECT COUNT(*) AS n FROM trails WHERE agent_id=? AND timestamp>=?",
+            (agent_id, start),
+        ).fetchone()
+        return int(row["n"]) if row else 0
+    finally:
+        conn.close()
+
+
+# ── PAYG ACCOUNTS ─────────────────────────────────────────────────────────────
+
+def get_payg_account(db_path: str, api_key: str) -> Optional[dict]:
+    conn = _connect(db_path)
+    try:
+        row = conn.execute(
+            "SELECT api_key, agent_id, tier, credit_trails, created_at, updated_at "
+            "FROM payg_accounts WHERE api_key=?",
+            (api_key,),
+        ).fetchone()
+        return dict(row) if row else None
+    finally:
+        conn.close()
+
+
+def create_payg_account(db_path: str, agent_id: str) -> str:
+    api_key = uuid.uuid4().hex
+    ts = int(time.time())
+    conn = _connect(db_path)
+    try:
+        conn.execute(
+            "INSERT INTO payg_accounts (api_key, agent_id, tier, credit_trails, created_at, updated_at) "
+            "VALUES (?, ?, 'free', 0, ?, ?)",
+            (api_key, agent_id, ts, ts),
+        )
+        return api_key
+    finally:
+        conn.close()
+
+
+def topup_payg(db_path: str, api_key: str, trails: int) -> Optional[dict]:
+    """Acredita N trails a una cuenta PAYG. Sube tier a 'payg' si estaba en 'free'."""
+    ts = int(time.time())
+    conn = _connect(db_path)
+    try:
+        conn.execute(
+            "UPDATE payg_accounts SET credit_trails = credit_trails + ?, tier = 'payg', updated_at = ? "
+            "WHERE api_key=?",
+            (trails, ts, api_key),
+        )
+        row = conn.execute(
+            "SELECT api_key, agent_id, tier, credit_trails FROM payg_accounts WHERE api_key=?",
+            (api_key,),
+        ).fetchone()
+        return dict(row) if row else None
+    finally:
+        conn.close()
+
+
+def consume_payg_credit(db_path: str, api_key: str) -> bool:
+    """Descuenta 1 crédito. Retorna True si había créditos, False si no."""
+    ts = int(time.time())
+    conn = _connect(db_path)
+    try:
+        row = conn.execute(
+            "SELECT credit_trails FROM payg_accounts WHERE api_key=? AND tier='payg'",
+            (api_key,),
+        ).fetchone()
+        if not row or row["credit_trails"] <= 0:
+            return False
+        conn.execute(
+            "UPDATE payg_accounts SET credit_trails = credit_trails - 1, updated_at = ? WHERE api_key=?",
+            (ts, api_key),
+        )
+        return True
     finally:
         conn.close()

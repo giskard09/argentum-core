@@ -746,6 +746,110 @@ def get_stats():
         "argt_contract":    ARGT_CONTRACT
     }
 
+# ── PAYG ─────────────────────────────────────────────────────────────────────
+
+class PaygTopupLightningReq(BaseModel):
+    api_key: str
+    trails: int  # cantidad de trails a comprar
+
+class PaygTopupUsdcReq(BaseModel):
+    api_key: str
+    trails: int
+
+@limiter.limit("10/minute")
+@app.post("/payg/topup/lightning")
+async def payg_topup_lightning(request: Request, req: PaygTopupLightningReq):
+    """Genera invoice Lightning para comprar N trails (300 sats/trail)."""
+    if req.trails < 1 or req.trails > 10000:
+        raise HTTPException(400, "trails must be between 1 and 10000")
+    account = mycelium_trails.get_payg_account(TRAILS_DB, req.api_key)
+    if account is None:
+        raise HTTPException(404, "api_key not found — create account first via POST /payg/account")
+    amount_sat = req.trails * mycelium_trails.SATS_PER_TRAIL
+    inv = await phoenixd_create_invoice(
+        amount_sat=amount_sat,
+        description=f"ARGENTUM PAYG — {req.trails} trails",
+        external_id=f"payg:{req.api_key}:{req.trails}",
+    )
+    return {
+        "api_key":      req.api_key,
+        "trails":       req.trails,
+        "amount_sat":   amount_sat,
+        "invoice":      inv["serialized"],
+        "payment_hash": inv["paymentHash"],
+        "note":         f"{mycelium_trails.SATS_PER_TRAIL} sats/trail. Credits added on payment confirmation.",
+    }
+
+
+@limiter.limit("10/minute")
+@app.post("/payg/topup/usdc")
+def payg_topup_usdc(request: Request, req: PaygTopupUsdcReq):
+    """Devuelve dirección Base + amount USDC para depósito manual (v1 manual)."""
+    if req.trails < 1 or req.trails > 10000:
+        raise HTTPException(400, "trails must be between 1 and 10000")
+    account = mycelium_trails.get_payg_account(TRAILS_DB, req.api_key)
+    if account is None:
+        raise HTTPException(404, "api_key not found")
+    usdc_amount = round(req.trails * 0.003, 4)
+    return {
+        "api_key":        req.api_key,
+        "trails":         req.trails,
+        "usdc_amount":    usdc_amount,
+        "deposit_address": ARBITRUM_CONTRACT,  # owner wallet recibe, ops acredita manualmente
+        "network":        "Base mainnet (eip155:8453)",
+        "token":          "USDC",
+        "memo":           f"payg:{req.api_key}:{req.trails}",
+        "note":           "v1: manual crediting within 24h after deposit confirmed on-chain.",
+    }
+
+
+@app.post("/payg/webhook/lightning")
+async def payg_webhook_lightning(request: Request):
+    """Webhook phoenixd para topups PAYG. externalId: 'payg:{api_key}:{trails}'"""
+    body = await request.body()
+    sig_header = request.headers.get("X-Phoenix-Signature", "")
+    expected = hmac.new(WEBHOOK_SECRET.encode(), body, hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(sig_header, expected):
+        raise HTTPException(401, "Invalid webhook signature")
+    data = json.loads(body)
+    if data.get("type") != "payment_received":
+        return {"status": "ignored"}
+    external_id = data.get("externalId", "")
+    if not external_id.startswith("payg:"):
+        return {"status": "ignored"}
+    parts = external_id.split(":")
+    if len(parts) != 3:
+        return {"status": "ignored"}
+    _, api_key, trails_str = parts
+    trails = int(trails_str)
+    result = mycelium_trails.topup_payg(TRAILS_DB, api_key, trails)
+    if result is None:
+        raise HTTPException(404, "api_key not found")
+    return {"status": "ok", "api_key": api_key, "credited_trails": trails, "balance": result["credit_trails"]}
+
+
+@app.get("/payg/balance")
+def payg_balance(api_key: str):
+    """Créditos restantes + tier para una api_key."""
+    account = mycelium_trails.get_payg_account(TRAILS_DB, api_key)
+    if account is None:
+        raise HTTPException(404, "api_key not found")
+    return {
+        "api_key":       account["api_key"],
+        "agent_id":      account["agent_id"],
+        "tier":          account["tier"],
+        "credit_trails": account["credit_trails"],
+    }
+
+
+@limiter.limit("5/minute")
+@app.post("/payg/account")
+def create_payg_account(request: Request, agent_id: str):
+    """Crea una cuenta PAYG (tier free, 0 créditos). Devuelve api_key."""
+    api_key = mycelium_trails.create_payg_account(TRAILS_DB, agent_id)
+    return {"api_key": api_key, "agent_id": agent_id, "tier": "free", "credit_trails": 0}
+
+
 # ── LIGHTNING ────────────────────────────────────────────────────────────────
 
 async def phoenixd_create_invoice(amount_sat: int, description: str, external_id: str) -> dict:
