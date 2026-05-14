@@ -170,3 +170,25 @@ result = verify_trail(agent_id="my-agent-001", action_ref=ref)
 ```
 
 Source: https://github.com/giskard09/argentum-core
+
+---
+
+## Timestamp representation — wire vs. API layers
+
+`action_ref` derivation involves a timestamp field that has three distinct representations depending on the layer. These are not inconsistencies — they are intentional boundaries between the internal wire format and external interoperability specs.
+
+| Layer | Format | Where used |
+|-------|--------|-----------|
+| **Wire (internal)** | Unix epoch seconds, integer | `timestamp` column in trails DB, `compute_action_ref()` input, `record_trail()` |
+| **Cross-rail** | `timestamp_ms = timestamp × 1000`, int64 big-endian | Published in `preimage.timestamp_ms` on each TrailRecord response; used by cross-rail integrations (SafeAgent, APS) |
+| **API / crosswalk** | RFC 3339 string, UTC, 3-digit ms — e.g. `"2026-05-13T10:00:00.123Z"` | `anchored_at` field in AnchorReceipt; AGT EvidenceAnchor proposal (PR #2244); aeoess crosswalk YAML |
+
+The `action_ref` hash is always computed over the **wire format** (Unix seconds integer):
+
+```
+action_ref = SHA-256("{agent_id}:{action_type}:{scope}:{timestamp_seconds}")
+```
+
+External callers that need to pre-generate the same `action_ref` should use the integer seconds value, not milliseconds and not RFC 3339. The `preimage.timestamp_ms` field in the API response is provided for cross-rail linking, not for hash recomputation.
+
+This design keeps the internal hash function simple and stable, while allowing external systems to express the same timestamp in their preferred format without creating hash divergence.

@@ -682,6 +682,28 @@ def get_trace(entity_id: str):
         "witnessed":  attested
     }
 
+@app.get("/entity/{entity_id}/usage")
+def get_entity_usage(entity_id: str):
+    """Uso mensual de trails para un agent_id — alimenta la barra de progreso en la UI."""
+    used = mycelium_trails.count_trails_this_month(TRAILS_DB, entity_id)
+    limit = mycelium_trails.MONTHLY_LIMIT_FREE
+    pct = round(used / limit * 100, 1) if limit else 0
+    if pct >= 90:
+        status = "critical"
+    elif pct >= 75:
+        status = "warning"
+    else:
+        status = "ok"
+    return {
+        "entity_id":    entity_id,
+        "used":         used,
+        "limit":        limit,
+        "percent":      pct,
+        "status":       status,
+        "year_month":   mycelium_trails._year_month(),
+    }
+
+
 @app.get("/commons")
 def get_commons(limit: int = 20):
     conn = get_db()
