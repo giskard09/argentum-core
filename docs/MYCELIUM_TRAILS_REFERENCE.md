@@ -192,3 +192,96 @@ action_ref = SHA-256("{agent_id}:{action_type}:{scope}:{timestamp_seconds}")
 External callers that need to pre-generate the same `action_ref` should use the integer seconds value, not milliseconds and not RFC 3339. The `preimage.timestamp_ms` field in the API response is provided for cross-rail linking, not for hash recomputation.
 
 This design keeps the internal hash function simple and stable, while allowing external systems to express the same timestamp in their preferred format without creating hash divergence.
+
+---
+
+## Trail Graphs — Multi-Agent Chaining (v3)
+
+When an agent delegates to another agent, each step in the chain writes its own trail.
+`parent_trail_id` and `root_trail_id` link them into a verifiable DAG.
+
+### New fields in v3
+
+| Field | Type | Description |
+|---|---|---|
+| `parent_trail_id` | UUID \| null | Trail that spawned this one. `null` if this is the chain root. |
+| `root_trail_id` | UUID \| null | First trail in the chain. `null` if this trail is itself the root. |
+
+Both fields are `null` when not supplied. Backward-compatible: v2 consumers are unaffected.
+
+**Relationship to existing fields:**
+- `delegation_ref` remains the opaque pointer to the external delegation credential (JWT, hash, URL).
+- `parent_trail_id` is the internal Mycelium link — it points to another trail record, not an external credential.
+- A trail can have both: `delegation_ref` = the credential that authorized the delegation, `parent_trail_id` = the trail where the delegating agent acted.
+
+### Example — three-agent chain
+
+```
+trail_id: A  (root)          agent: orchestrator
+  └─ trail_id: B             agent: researcher   parent_trail_id: A, root_trail_id: A
+       └─ trail_id: C        agent: writer       parent_trail_id: B, root_trail_id: A
+```
+
+### Graph endpoint
+
+```
+GET https://argentum.rgiskard.xyz/trails/{id}/graph
+```
+
+Returns the full DAG rooted at the given trail (walks up to the real root, then down through all descendants).
+
+**Response:**
+```json
+{
+  "root": {
+    "trail_id": "A",
+    "agent_id": "orchestrator",
+    "timestamp": "2026-05-14T10:00:00.000Z",
+    "karma": 42,
+    "attestation_count": 2,
+    "parent_trail_id": null,
+    "root_trail_id": null,
+    "children": [
+      {
+        "trail_id": "B",
+        "agent_id": "researcher",
+        "parent_trail_id": "A",
+        "root_trail_id": "A",
+        "children": [...]
+      }
+    ]
+  }
+}
+```
+
+### Chain verification endpoint
+
+```
+GET https://argentum.rgiskard.xyz/trails/{id}/verify_chain
+```
+
+Walks the chain from the given trail up to the root and validates:
+1. Ed25519 signature (`signature_ref`) is valid at each step.
+2. `delegation_ref` is consistent with `parent_trail_id` (when both are present).
+
+**Response — valid chain:**
+```json
+{"valid": true, "broken_at": null, "reason": null, "chain_length": 3}
+```
+
+**Response — broken chain:**
+```json
+{"valid": false, "broken_at": "B", "reason": "signature_invalid", "chain_length": 2}
+```
+
+### SDK
+
+```python
+from argentum.trails import get_trail_graph, verify_chain
+
+graph = get_trail_graph("trail-id-A")
+# Returns nested dict matching the /graph response
+
+result = verify_chain("trail-id-C")
+# {"valid": True, "broken_at": None, "reason": None, "chain_length": 3}
+```
