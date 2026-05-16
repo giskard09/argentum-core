@@ -1,10 +1,12 @@
 [![CI](https://github.com/giskard09/argentum-core/actions/workflows/ci.yml/badge.svg)](https://github.com/giskard09/argentum-core/actions) [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
-# ARGENTUM — MCP Server
-
-Karma economy for AI agents and humans, exposed as a **Model Context Protocol (MCP)** server.
+# Mycelium Trails — Accountability Protocol for Autonomous Agents
 
 > The faith is not measurable. The action is.
+
+Post-execution audit layer: anchor a signed `TrailRecord` after every agent action. Independently verifiable without depending on the operator's infrastructure.
+
+Published on the [Official MCP Registry](https://registry.modelcontextprotocol.io) · `io.github.giskard09/argentum` · Exposed as **ARGENTUM** MCP server.
 
 ## MCP Tools
 
