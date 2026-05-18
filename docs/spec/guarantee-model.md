@@ -31,6 +31,35 @@ for the same `action_ref` can assert the action ran **exactly once AND** the out
 tamper-evident. Neither guarantee requires the other — consumers can adopt either
 independently based on their requirements.
 
+## Trail status states
+
+A `TrailRecord` carries a `trail_status` field with three terminal or transitional values:
+
+| Status | Meaning | Verifiable externally? |
+|--------|---------|----------------------|
+| `COMMITTED` | Execution completed, on-chain anchor exists | Yes — via `tx_hash` |
+| `PENDING` | External call started, outcome not yet verified | No — awaiting post-execution receipt |
+| `FAILED` | Terminal. Execution did not complete or post-execution receipt never arrived | Yes — absence of `tx_hash` |
+
+### Crash-after-charge handling
+
+For non-idempotent external systems (payments, regulated actions), the crash window between
+the external call starting and the outcome being verified produces a `PENDING` record.
+Resolution:
+
+1. Pre-execution receipt emitted → `trail_status: PENDING`, `tx_hash: null`
+2. Post-execution receipt arrives → status transitions to `COMMITTED`, `tx_hash` populated
+3. If post-execution receipt does not arrive within TTL → status resolves to `FAILED`
+
+No happy-path assumption is baked in. A `COMMITTED` record without a corresponding
+post-execution receipt cannot exist.
+
+### Verification reference
+
+`tx_hash` is the follow-up verification reference. Any auditor can query the chain directly
+using `tx_hash` without trusting the operator's logs or database. The on-chain anchor is
+the single source of truth for terminal state.
+
 ## Canonical key derivation
 
 All three systems converge on the same linking key:
