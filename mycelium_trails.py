@@ -145,8 +145,11 @@ def record_trail(
 
     genesis = frozenset(genesis_agents)
     if agent_id not in genesis and rate_limit_cap > 0:
-        used = count_trails_today(db_path, agent_id, now=now)
-        if used >= rate_limit_cap:
+        used_today = count_trails_today(db_path, agent_id, now=now)
+        if used_today >= rate_limit_cap:
+            return None
+        used_month = count_trails_this_month(db_path, agent_id, now=now)
+        if used_month >= MONTHLY_LIMIT_FREE:
             return None
 
     trail_id = str(uuid.uuid4())

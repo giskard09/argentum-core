@@ -1822,7 +1822,16 @@ async def nexus_trail(request: Request):
     )
 
     if trail_id is None:
-        return JSONResponse({"error": "rate limit exceeded or invalid input"}, status_code=429)
+        used_month = mycelium_trails.count_trails_this_month(TRAILS_DB, agent_id)
+        if used_month >= mycelium_trails.MONTHLY_LIMIT_FREE:
+            return JSONResponse({
+                "error": "monthly_limit_exceeded",
+                "limit": mycelium_trails.MONTHLY_LIMIT_FREE,
+                "used": used_month,
+                "tier": "free",
+                "upgrade": "https://argentum-api.rgiskard.xyz/docs#payg",
+            }, status_code=429)
+        return JSONResponse({"error": "rate limit exceeded"}, status_code=429)
 
     return JSONResponse({
         "trail_id": trail_id,
