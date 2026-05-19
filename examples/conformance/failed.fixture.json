@@ -1,0 +1,37 @@
+{
+  "_fixture": {
+    "id": "conformance-failed-v1",
+    "status": "FAILED",
+    "description": "Terminal state. Execution did not complete OR post-execution receipt never arrived within TTL. tx_hash is null — no on-chain anchor. Distinguish from PENDING/null: FAILED is terminal (TTL expired, no recovery possible). The absence of tx_hash is verifiable externally: a verifier who queries by action_ref gets this record and can assert the action did not produce a tamper-evident outcome.",
+    "spec": "docs/spec/guarantee-model.md",
+    "action_ref_spec": "docs/spec/action-ref.md",
+    "authored": "2026-05-18"
+  },
+  "_verify": {
+    "by_action_ref": "curl 'https://argentum-api.rgiskard.xyz/trails/verify?agent_id=nobulex-gogani&action_ref=a62111ca0762b095921e33c1b401bbc928e0c37c33ec303a671799ef987d5dc0'",
+    "expected_response": {
+      "verified": true,
+      "trail_status": "failed",
+      "tx_hash": null
+    },
+    "note": "tx_hash null is verifiable: the verifier can confirm no anchor exists for this action_ref. FAILED + tx_hash:null is the canonical signal that no tamper-evident outcome record exists."
+  },
+  "trail_record": {
+    "trail_status": "FAILED",
+    "agent_id": "nobulex-gogani",
+    "service": "nobulex-covenant",
+    "operation": "payment.send",
+    "action_ref": "a62111ca0762b095921e33c1b401bbc928e0c37c33ec303a671799ef987d5dc0",
+    "tx_hash": null,
+    "packet_version": "1.0",
+    "hash_algo": "sha256",
+    "preimage_format": "jcs-rfc8785",
+    "preimage": {
+      "agent_id": "nobulex-gogani",
+      "action_type": "payment.send",
+      "scope": "payment:usdc:200",
+      "timestamp": "2025-05-18T10:15:00.000Z"
+    },
+    "jcs_payload": "{\"action_type\":\"payment.send\",\"agent_id\":\"nobulex-gogani\",\"scope\":\"payment:usdc:200\",\"timestamp\":\"2025-05-18T10:15:00.000Z\"}"
+  }
+}

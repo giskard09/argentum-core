@@ -1,0 +1,37 @@
+{
+  "_fixture": {
+    "id": "conformance-pending-null-v1",
+    "status": "PENDING/null (degraded)",
+    "description": "Transitional state — degraded. Signer crashed before recovering the verification reference. Effect may have crossed the boundary but the signer has nothing to hand off. The honest record is: 'I started, I do not know if it landed, I have nothing to hand off.' This is a different quality of not-knowing than FAILED — execution may have succeeded. Externally unverifiable without operator logs.",
+    "spec": "docs/spec/guarantee-model.md",
+    "action_ref_spec": "docs/spec/action-ref.md",
+    "authored": "2026-05-18"
+  },
+  "_verify": {
+    "by_action_ref": "curl 'https://argentum-api.rgiskard.xyz/trails/verify?agent_id=nobulex-gogani&action_ref=2edaceb19f2df204cbd95a97a7de0eb21ec5bf660bc8fa77e0a8c0afa28de764'",
+    "expected_response": {
+      "verified": true,
+      "trail_status": "pending",
+      "tx_hash": null
+    },
+    "note": "tx_hash is null — signer crashed before recovering verification handle. Distinguish from FAILED: PENDING/null means execution started, outcome unknown. FAILED means execution did not complete or post-execution receipt never arrived."
+  },
+  "trail_record": {
+    "trail_status": "PENDING",
+    "agent_id": "nobulex-gogani",
+    "service": "nobulex-covenant",
+    "operation": "payment.send",
+    "action_ref": "2edaceb19f2df204cbd95a97a7de0eb21ec5bf660bc8fa77e0a8c0afa28de764",
+    "tx_hash": null,
+    "packet_version": "1.0",
+    "hash_algo": "sha256",
+    "preimage_format": "jcs-rfc8785",
+    "preimage": {
+      "agent_id": "nobulex-gogani",
+      "action_type": "payment.send",
+      "scope": "payment:usdc:100",
+      "timestamp": "2025-05-18T10:10:00.000Z"
+    },
+    "jcs_payload": "{\"action_type\":\"payment.send\",\"agent_id\":\"nobulex-gogani\",\"scope\":\"payment:usdc:100\",\"timestamp\":\"2025-05-18T10:10:00.000Z\"}"
+  }
+}

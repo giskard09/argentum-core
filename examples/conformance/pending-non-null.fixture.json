@@ -1,0 +1,37 @@
+{
+  "_fixture": {
+    "id": "conformance-pending-non-null-v1",
+    "status": "PENDING/non-null",
+    "description": "Transitional state. External call started, outcome not yet verified. tx_hash is populated — the signer recovered the verification reference before the session ended. A follow-up verifier can query tx_hash directly without trusting the operator. Resolution: when post-execution receipt arrives, transitions to COMMITTED.",
+    "spec": "docs/spec/guarantee-model.md",
+    "action_ref_spec": "docs/spec/action-ref.md",
+    "authored": "2026-05-18"
+  },
+  "_verify": {
+    "by_action_ref": "curl 'https://argentum-api.rgiskard.xyz/trails/verify?agent_id=nobulex-gogani&action_ref=30cce7e7d538d5fb3f60152335b1da47f318425ccec12155efebc8aa8ac1e42a'",
+    "expected_response": {
+      "verified": true,
+      "trail_status": "pending",
+      "tx_hash": "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890ab"
+    },
+    "note": "tx_hash present — follow-up verification handle exists. Status remains PENDING until post-execution receipt arrives or TTL expires."
+  },
+  "trail_record": {
+    "trail_status": "PENDING",
+    "agent_id": "nobulex-gogani",
+    "service": "nobulex-covenant",
+    "operation": "payment.send",
+    "action_ref": "30cce7e7d538d5fb3f60152335b1da47f318425ccec12155efebc8aa8ac1e42a",
+    "tx_hash": "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890ab",
+    "packet_version": "1.0",
+    "hash_algo": "sha256",
+    "preimage_format": "jcs-rfc8785",
+    "preimage": {
+      "agent_id": "nobulex-gogani",
+      "action_type": "payment.send",
+      "scope": "payment:usdc:75",
+      "timestamp": "2025-05-18T10:05:00.000Z"
+    },
+    "jcs_payload": "{\"action_type\":\"payment.send\",\"agent_id\":\"nobulex-gogani\",\"scope\":\"payment:usdc:75\",\"timestamp\":\"2025-05-18T10:05:00.000Z\"}"
+  }
+}

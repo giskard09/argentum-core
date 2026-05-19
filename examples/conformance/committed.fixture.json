@@ -1,0 +1,37 @@
+{
+  "_fixture": {
+    "id": "conformance-committed-v1",
+    "status": "COMMITTED",
+    "description": "Terminal state. Execution completed, on-chain anchor exists. tx_hash is a real Base mainnet transaction. A verifier who finds this TrailRecord AND a COMMITTED SafeAgent claim for the same action_ref can assert the action ran exactly once AND the outcome is tamper-evident.",
+    "spec": "docs/spec/guarantee-model.md",
+    "action_ref_spec": "docs/spec/action-ref.md",
+    "authored": "2026-05-18"
+  },
+  "_verify": {
+    "by_action_ref": "curl 'https://argentum-api.rgiskard.xyz/trails/verify?agent_id=nobulex-gogani&action_ref=31ddbd9f89f0e54700744addc7fa23f41518cf8c9d63d206e6da5cc3669defdd'",
+    "expected_response": {
+      "verified": true,
+      "trail_status": "committed",
+      "tx_hash": "0x7fd0a8ededd1feb65ab37b3324218a0386dbf124174cf122bffc40717c057b84"
+    },
+    "note": "tx_hash is a real Base mainnet anchor (pioneer-agent-001 Oasis payment, block 2026-04-13). Independently verifiable at https://basescan.org/tx/0x7fd0a8ededd1feb65ab37b3324218a0386dbf124174cf122bffc40717c057b84"
+  },
+  "trail_record": {
+    "trail_status": "COMMITTED",
+    "agent_id": "nobulex-gogani",
+    "service": "nobulex-covenant",
+    "operation": "payment.send",
+    "action_ref": "31ddbd9f89f0e54700744addc7fa23f41518cf8c9d63d206e6da5cc3669defdd",
+    "tx_hash": "0x7fd0a8ededd1feb65ab37b3324218a0386dbf124174cf122bffc40717c057b84",
+    "packet_version": "1.0",
+    "hash_algo": "sha256",
+    "preimage_format": "jcs-rfc8785",
+    "preimage": {
+      "agent_id": "nobulex-gogani",
+      "action_type": "payment.send",
+      "scope": "payment:usdc:50",
+      "timestamp": "2025-05-18T10:00:00.000Z"
+    },
+    "jcs_payload": "{\"action_type\":\"payment.send\",\"agent_id\":\"nobulex-gogani\",\"scope\":\"payment:usdc:50\",\"timestamp\":\"2025-05-18T10:00:00.000Z\"}"
+  }
+}
