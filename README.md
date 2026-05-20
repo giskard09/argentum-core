@@ -291,7 +291,7 @@ Part of [Mycelium](https://github.com/giskard09) — infrastructure for AI agent
 | [Oasis](https://github.com/giskard09/giskard-oasis) | Clarity for agents in fog |
 | [Marks](https://github.com/giskard09/giskard-marks) | Permanent on-chain identity |
 | **ARGENTUM** (this) | Karma economy |
-| [Soma](https://github.com/giskard09/soma) | Agent marketplace |
+| [Soma](https://github.com/giskard09/soma) | Agent marketplace — karma score drives routing priority and rate tiers |
 
 ## License
 
