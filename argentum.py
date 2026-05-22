@@ -8,6 +8,7 @@ Wisdom is witnessed by community, verified like open source.
 The faith is not measurable. The action is.
 """
 
+import asyncio
 import json, uuid, time, httpx, sqlite3, hmac, hashlib, os
 _started_at = time.time()
 import mycelium_trails
@@ -33,6 +34,8 @@ ARGENTUM_VERIFY_KEY  = os.environ.get("ARGENTUM_VERIFY_KEY", "")
 ARGENTUM_BASE_URL    = "https://argentum-api.rgiskard.xyz"
 ARBITRUM_CONTRACT = "0xD467CD1e34515d58F98f8Eb66C0892643ec86AD3"
 PAYG_WALLET       = os.environ.get("PAYG_WALLET", "")  # RAMA wallet — PAYG receiver Arbitrum mainnet
+ARB_RPC           = os.environ.get("ARB_RPC", "https://arb1.arbitrum.io/rpc")
+USDC_CONTRACT_ARB = "0xaf88d065e77c8cC2239327C5EDb3A432268e5831"  # USDC native Arbitrum One
 ARGT_CONTRACT     = "0x42385c1038f3fec0ecCFBD4E794dE69935e89784"
 DB_PATH           = Path(__file__).parent / "argentum.db"
 TRAILS_DB         = str(Path(__file__).parent / "trails.db")
@@ -250,11 +253,67 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
+async def _usdc_poller():
+    """Monitorea transfers USDC a PAYG_WALLET y creditea intents pendientes."""
+    USDC_TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
+    seen_tx: set[str] = set()
+
+    while True:
+        await asyncio.sleep(60)
+        if not PAYG_WALLET:
+            continue
+        try:
+            wallet_topic = "0x" + PAYG_WALLET[2:].lower().zfill(64)
+            payload = {
+                "jsonrpc": "2.0", "id": 1, "method": "eth_getLogs",
+                "params": [{
+                    "address": USDC_CONTRACT_ARB,
+                    "topics": [USDC_TRANSFER_TOPIC, None, wallet_topic],
+                    "fromBlock": hex(int(time.time() - 7200) // 12 + 185000000),  # ~2h atrás aprox
+                    "toBlock": "latest",
+                }],
+            }
+            async with httpx.AsyncClient(timeout=15) as client:
+                rpc_resp = await client.post(ARB_RPC, json=payload)
+                logs = rpc_resp.json().get("result", [])
+
+            intents = mycelium_trails.get_pending_usdc_intents(TRAILS_DB)
+            if not intents or not logs:
+                continue
+
+            intents_by_addr = {i["from_address"]: i for i in intents}
+
+            for log in logs:
+                tx_hash = log.get("transactionHash", "")
+                if tx_hash in seen_tx:
+                    continue
+                topics = log.get("topics", [])
+                if len(topics) < 3:
+                    continue
+                from_addr = "0x" + topics[1][-40:]
+                raw_amount = int(log.get("data", "0x0"), 16)
+                usdc_amount = raw_amount / 1_000_000  # USDC tiene 6 decimales
+
+                intent = intents_by_addr.get(from_addr.lower())
+                if not intent:
+                    continue
+                expected = intent["usdc_amount"]
+                if abs(usdc_amount - expected) > mycelium_trails.USDC_AMOUNT_TOLERANCE:
+                    continue
+
+                result = mycelium_trails.fulfill_usdc_intent(TRAILS_DB, intent["intent_id"], tx_hash)
+                if result:
+                    seen_tx.add(tx_hash)
+        except Exception:
+            pass  # poller nunca muere por error puntual
+
+
 @app.on_event("startup")
 async def startup():
     init_db()
     capture_config_snapshot()
     mycelium_trails.init_db(TRAILS_DB)
+    asyncio.create_task(_usdc_poller())
 
 # ── MODELS ──────────────────────────────────────────────────────────────────
 
@@ -830,6 +889,7 @@ class PaygTopupLightningReq(BaseModel):
 class PaygTopupUsdcReq(BaseModel):
     api_key: str
     trails: int
+    from_address: str  # dirección EVM desde la que se enviará el USDC
 
 @limiter.limit("10/minute")
 @app.post("/payg/topup/lightning")
@@ -859,22 +919,28 @@ async def payg_topup_lightning(request: Request, req: PaygTopupLightningReq):
 @limiter.limit("10/minute")
 @app.post("/payg/topup/usdc")
 def payg_topup_usdc(request: Request, req: PaygTopupUsdcReq):
-    """Devuelve dirección Base + amount USDC para depósito manual (v1 manual)."""
+    """Registra intent de depósito USDC. Crediting automático al detectar el transfer on-chain."""
     if req.trails < 1 or req.trails > 10000:
         raise HTTPException(400, "trails must be between 1 and 10000")
+    if not req.from_address.startswith("0x") or len(req.from_address) != 42:
+        raise HTTPException(400, "from_address must be a valid EVM address (0x + 40 hex chars)")
     account = mycelium_trails.get_payg_account(TRAILS_DB, req.api_key)
     if account is None:
         raise HTTPException(404, "api_key not found")
-    usdc_amount = round(req.trails * 0.003, 4)
+    intent = mycelium_trails.create_usdc_intent(
+        TRAILS_DB, req.api_key, req.from_address, req.trails
+    )
     return {
-        "api_key":        req.api_key,
-        "trails":         req.trails,
-        "usdc_amount":    usdc_amount,
+        "intent_id":       intent["intent_id"],
+        "api_key":         req.api_key,
+        "trails":          req.trails,
+        "usdc_amount":     intent["usdc_amount"],
         "deposit_address": PAYG_WALLET,
-        "network":        "Arbitrum mainnet (eip155:42161)",
-        "token":          "USDC",
-        "memo":           f"payg:{req.api_key}:{req.trails}",
-        "note":           "v1: manual crediting within 24h after deposit confirmed on-chain.",
+        "from_address":    intent["from_address"],
+        "network":         "Arbitrum mainnet (eip155:42161)",
+        "token":           "USDC (native)",
+        "expires_at":      intent["expires_at"],
+        "note":            "Send exactly this amount from from_address. Credited automatically within ~60s of on-chain confirmation.",
     }
 
 

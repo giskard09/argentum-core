@@ -69,6 +69,21 @@ _DDL_PAYG = """
     )
 """
 
+_DDL_USDC_INTENTS = """
+    CREATE TABLE IF NOT EXISTS payg_usdc_intents (
+        intent_id        TEXT PRIMARY KEY,
+        api_key          TEXT NOT NULL,
+        from_address     TEXT NOT NULL,
+        trails           INTEGER NOT NULL,
+        usdc_amount      REAL NOT NULL,
+        status           TEXT NOT NULL DEFAULT 'pending',
+        tx_hash          TEXT,
+        created_at       INTEGER NOT NULL,
+        expires_at       INTEGER NOT NULL,
+        fulfilled_at     INTEGER
+    )
+"""
+
 _DDL_MIGRATIONS = [
     "ALTER TABLE trails ADD COLUMN scope TEXT",
     "ALTER TABLE trails ADD COLUMN delegation_ref TEXT",
@@ -85,6 +100,7 @@ def init_db(db_path: str) -> None:
         for stmt in _DDL:
             conn.execute(stmt)
         conn.execute(_DDL_PAYG)
+        conn.execute(_DDL_USDC_INTENTS)
         for stmt in _DDL_MIGRATIONS:
             try:
                 conn.execute(stmt)
@@ -457,5 +473,82 @@ def consume_payg_credit(db_path: str, api_key: str) -> bool:
             (ts, api_key),
         )
         return True
+    finally:
+        conn.close()
+
+
+# ── PAYG USDC INTENTS ─────────────────────────────────────────────────────────
+
+USDC_INTENT_TTL = 3600  # 1 hora para completar el depósito
+USDC_AMOUNT_TOLERANCE = 0.001  # tolerancia de $0.001 para rounding
+
+
+def create_usdc_intent(db_path: str, api_key: str, from_address: str, trails: int) -> dict:
+    """Registra un intent de depósito USDC. Retorna el intent creado."""
+    intent_id = uuid.uuid4().hex
+    usdc_amount = round(trails * 0.003, 4)
+    now = int(time.time())
+    expires_at = now + USDC_INTENT_TTL
+    conn = _connect(db_path)
+    try:
+        conn.execute(
+            "INSERT INTO payg_usdc_intents "
+            "(intent_id, api_key, from_address, trails, usdc_amount, status, created_at, expires_at) "
+            "VALUES (?, ?, ?, ?, ?, 'pending', ?, ?)",
+            (intent_id, api_key, from_address.lower(), trails, usdc_amount, now, expires_at),
+        )
+        return {
+            "intent_id": intent_id,
+            "api_key": api_key,
+            "from_address": from_address.lower(),
+            "trails": trails,
+            "usdc_amount": usdc_amount,
+            "status": "pending",
+            "expires_at": expires_at,
+        }
+    finally:
+        conn.close()
+
+
+def get_pending_usdc_intents(db_path: str) -> list[dict]:
+    """Retorna todos los intents pendientes no expirados."""
+    now = int(time.time())
+    conn = _connect(db_path)
+    try:
+        rows = conn.execute(
+            "SELECT * FROM payg_usdc_intents WHERE status='pending' AND expires_at > ?",
+            (now,),
+        ).fetchall()
+        return [dict(r) for r in rows]
+    finally:
+        conn.close()
+
+
+def fulfill_usdc_intent(db_path: str, intent_id: str, tx_hash: str) -> Optional[dict]:
+    """Marca el intent como fulfilled y acredita los trails. Idempotente por intent_id."""
+    now = int(time.time())
+    conn = _connect(db_path)
+    try:
+        row = conn.execute(
+            "SELECT * FROM payg_usdc_intents WHERE intent_id=? AND status='pending'",
+            (intent_id,),
+        ).fetchone()
+        if not row:
+            return None  # ya procesado o no existe
+        intent = dict(row)
+        conn.execute(
+            "UPDATE payg_usdc_intents SET status='fulfilled', tx_hash=?, fulfilled_at=? WHERE intent_id=?",
+            (tx_hash, now, intent_id),
+        )
+        conn.execute(
+            "UPDATE payg_accounts SET credit_trails = credit_trails + ?, tier = 'payg', updated_at = ? "
+            "WHERE api_key=?",
+            (intent["trails"], now, intent["api_key"]),
+        )
+        account = conn.execute(
+            "SELECT api_key, agent_id, tier, credit_trails FROM payg_accounts WHERE api_key=?",
+            (intent["api_key"],),
+        ).fetchone()
+        return {"intent": intent, "account": dict(account) if account else None, "tx_hash": tx_hash}
     finally:
         conn.close()
