@@ -1,5 +1,7 @@
 # action_ref — derivation spec
 
+**Version:** 1.0 | **Published:** 2026-05-23 | **Stable ref:** [`action-ref-v1.0`](https://github.com/giskard09/argentum-core/blob/action-ref-v1.0/docs/spec/action-ref.md) | **Latest commit:** [96931c9](https://github.com/giskard09/argentum-core/commit/96931c9)
+
 `action_ref` is a deterministic, content-addressed identifier for an agent action. Any party with the four preimage fields can independently compute it — no trust in the emitting system required.
 
 ## Derivation
