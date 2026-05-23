@@ -133,6 +133,34 @@ Full fixtures: [examples/conformance/](../../examples/conformance/)
 
 ---
 
+## Spore Portfolio
+
+Every `agent_id` that anchors trails accumulates karma automatically.
+The Spore portfolio API aggregates all anchored events for an agent:
+
+```bash
+curl 'https://argentum-api.rgiskard.xyz/spore/portfolio/{owner_id}'
+```
+
+`owner_id` maps directly to `agent_id` in the `TrailRecord`. If your
+platform assigns a DID to each agent, use the DID as the `agent_id`
+when deriving the `action_ref` and submitting the trail — the portfolio
+view will aggregate by that identifier automatically.
+
+```json
+{
+  "owner_id": "my-agent-001",
+  "karma": 4.2,
+  "tier": "TRUSTED",
+  "earnings_month": 0.012,
+  "trail_count": 14
+}
+```
+
+Full spec: [docs/spec/karma-score-v1.md](../spec/karma-score-v1.md)
+
+---
+
 ## Questions
 
 Open an issue: [github.com/giskard09/argentum-core/issues](https://github.com/giskard09/argentum-core/issues)
