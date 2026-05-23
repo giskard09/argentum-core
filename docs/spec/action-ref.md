@@ -29,7 +29,7 @@ def compute_action_ref(
     return hashlib.sha256(canonical).hexdigest()
 ```
 
-**Safe band:** the `json.dumps` approach above produces RFC 8785-compatible bytes for the specific input shapes this spec exercises: ASCII-only field values, RFC 3339 timestamp strings, no surrogate-pair Unicode, no `-0.0`. For inputs outside this band — non-ASCII agent identifiers, surrogate-pair scope strings — use `rfc8785` (Python) or an equivalent RFC 8785-compliant library to guarantee byte-level portability across implementations.
+**Safe band:** the `json.dumps` approach above produces RFC 8785-compatible bytes for the specific input shapes this spec exercises: ASCII-only field values, RFC 3339 timestamp strings in the conformant `YYYY-MM-DDTHH:MM:SS.mmmZ` form (see [Timestamp format](#timestamp-format)), no surrogate-pair Unicode, no `-0.0`. For inputs outside this band — non-ASCII agent identifiers, surrogate-pair scope strings — use `rfc8785` (Python) or an equivalent RFC 8785-compliant library to guarantee byte-level portability across implementations.
 
 Reference implementation: [`plugins/agt_evidence_anchor/action_ref.py`](../../plugins/agt_evidence_anchor/action_ref.py)
 
@@ -101,6 +101,16 @@ def format_timestamp(dt: datetime.datetime) -> str:
 ts = format_timestamp(datetime.datetime.fromtimestamp(1747568431, tz=datetime.timezone.utc))
 # → "2025-05-18T11:40:31.000Z"
 ```
+
+**JCS determinism:** RFC 3339 without additional constraints admits multiple lexically distinct encodings of the same instant (`Z` vs `+00:00`, `.000` vs no fractional part, etc.), each producing a different SHA-256 digest under JCS RFC 8785. This spec closes that surface at the format level, not the serializer level:
+
+- Timezone: `Z` suffix only. `+00:00` or any other offset is non-conformant.
+- Fractional precision: exactly 3 digits (milliseconds). No trailing zero suppression.
+- Template: `YYYY-MM-DDTHH:MM:SS.mmmZ` — one valid byte sequence per instant.
+
+A verifier that accepts alternative RFC 3339 forms will compute a different digest and correctly reject the receipt. An emitter generating non-conformant timestamps produces an unverifiable receipt. The `format_timestamp` function above is the normative reference for conformant emission.
+
+**Interoperability note:** implementations using epoch-millisecond integers as an internal representation can convert to the conformant string format losslessly: `datetime.fromtimestamp(ms / 1000, tz=timezone.utc)` followed by `format_timestamp`. The canonical preimage always contains the string form.
 
 ## Canonical receipt envelope — v1.0
 
