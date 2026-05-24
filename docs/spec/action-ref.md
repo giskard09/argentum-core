@@ -180,6 +180,12 @@ prove the agent's credentials were valid immediately before the action was admit
 that they were valid at claim time. With this field, a verifier can establish a maximum
 window of credential exposure.
 
+**`negotiation_ref`** (string, optional) — SHA-256 hex pointer to the negotiation artifact
+(capability-grant, covenant, or agreement) that authorized this action. Derived as
+`SHA-256(JCS(negotiation_artifact))` — see [`negotiation-ref.md`](./negotiation-ref.md)
+for the full spec and derivation. Does not enter the `action_ref` preimage: changing or
+removing `negotiation_ref` does not change `action_ref`.
+
 ### Updated canonical receipt envelope — v1.0 with optional rotation fields
 
 ```json

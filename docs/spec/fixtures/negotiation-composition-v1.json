@@ -1,30 +1,63 @@
 {
-  "_comment": "Skeleton fixture — fill real values when Liuyanfeng example arrives. negotiation_ref is a SHA-256 hex of the negotiation artifact (agreement, covenant, capability-grant).",
-  "packet_version": "1.0",
-  "action_ref": "<sha256-hex — compute_action_ref(agent_id, action_type, scope, timestamp)>",
-  "negotiation_ref": "<sha256-hex — hash of the negotiation artifact>",
-  "trail_id": "<uuid — assigned by Mycelium on commit>",
-  "tx_hash": "<base-mainnet-tx-hash or lightning-payment-hash>",
-  "preimage": {
-    "agent_id": "<stable agent identifier>",
-    "action_type": "<semantic label, e.g. negotiation.accept>",
-    "scope": "<authorization boundary>",
-    "timestamp": "<RFC 3339 UTC, 3-digit ms, e.g. 2026-05-21T10:00:00.000Z>"
-  },
+  "fixture_id": "negotiation-composition-v1",
+  "version": "v1",
+  "spec": "docs/spec/negotiation-ref.md",
+  "spec_stable_ref": "https://github.com/giskard09/argentum-core/blob/negotiation-ref-v1.0/docs/spec/negotiation-ref.md",
   "hash_algo": "sha256",
-  "preimage_format": "jcs-rfc8785",
-  "extensions": {
-    "security": {
-      "risk_level": null,
-      "attestation_count": null
-    },
-    "resource": {
-      "cost_sats": null,
-      "payment_method": null
-    },
-    "protocol": {
-      "negotiation_protocol": null,
-      "rounds": null
+  "artifact_format": "jcs-rfc8785-v1",
+  "generated_at": "2026-05-24",
+  "purpose": "Formal conformance substrate for negotiation-ref-v1. An external implementer who reproduces negotiation_ref byte-identical from the stated negotiation_artifact has a conformant implementation. The action_ref is derived independently from the four preimage fields — negotiation_ref never enters the preimage.",
+  "reproduce_in_python": "import hashlib, json\ndef jcs(obj): return json.dumps(obj, separators=(',',':'), sort_keys=True, ensure_ascii=False)\nnegotiation_ref = hashlib.sha256(jcs(negotiation_artifact).encode()).hexdigest()",
+  "vectors": [
+    {
+      "id": "negotiation-001-capability-grant",
+      "description": "Synthetic capability-grant handshake: giskard-self grants pioneer-agent-001 authority to execute delegation.execute within scope mycelium:delegation, expiring 2026-05-27. This is the minimal reference artifact for negotiation-ref-v1. The negotiation_ref hash commits to the artifact only — not to the trail record. The action that follows this grant has a separate action_ref derived from its own four preimage fields.",
+      "negotiation_artifact": {
+        "capability": "delegation.execute",
+        "expires_at": "2026-05-27T00:00:00.000Z",
+        "grantee": "pioneer-agent-001",
+        "grantor": "giskard-self",
+        "scope": "mycelium:delegation",
+        "version": "negotiation-ref-v1"
+      },
+      "artifact_jcs_payload": "{\"capability\":\"delegation.execute\",\"expires_at\":\"2026-05-27T00:00:00.000Z\",\"grantee\":\"pioneer-agent-001\",\"grantor\":\"giskard-self\",\"scope\":\"mycelium:delegation\",\"version\":\"negotiation-ref-v1\"}",
+      "artifact_canonical_bytes_hex": "7b226361706162696c697479223a2264656c65676174696f6e2e65786563757465222c22657870697265735f6174223a22323032362d30352d32375430303a30303a30302e3030305a222c226772616e746565223a2270696f6e6565722d6167656e742d303031222c226772616e746f72223a226769736b6172642d73656c66222c2273636f7065223a226d7963656c69756d3a64656c65676174696f6e222c2276657273696f6e223a226e65676f74696174696f6e2d7265662d7631227d",
+      "negotiation_ref": "a0e8bc2658eee9266d87d56b205a5f01e5b1ecc445f0693b3bba46cb8764ad52",
+      "action_preimage": {
+        "action_type": "delegation.execute",
+        "agent_id": "pioneer-agent-001",
+        "scope": "mycelium:delegation",
+        "timestamp": "2026-05-24T09:00:00.000Z"
+      },
+      "action_preimage_jcs_payload": "{\"action_type\":\"delegation.execute\",\"agent_id\":\"pioneer-agent-001\",\"scope\":\"mycelium:delegation\",\"timestamp\":\"2026-05-24T09:00:00.000Z\"}",
+      "action_preimage_canonical_bytes_hex": "7b22616374696f6e5f74797065223a2264656c65676174696f6e2e65786563757465222c226167656e745f6964223a2270696f6e6565722d6167656e742d303031222c2273636f7065223a226d7963656c69756d3a64656c65676174696f6e222c2274696d657374616d70223a22323032362d30352d32345430393a30303a30302e3030305a227d",
+      "action_ref": "951aaf3602246e581a890da34b7d4336aa5e554faf192aa0cec4d6aaac966930",
+      "envelope": {
+        "action_ref": "951aaf3602246e581a890da34b7d4336aa5e554faf192aa0cec4d6aaac966930",
+        "hash_algo": "sha256",
+        "negotiation_ref": "a0e8bc2658eee9266d87d56b205a5f01e5b1ecc445f0693b3bba46cb8764ad52",
+        "packet_version": "1.0",
+        "preimage": {
+          "action_type": "delegation.execute",
+          "agent_id": "pioneer-agent-001",
+          "scope": "mycelium:delegation",
+          "timestamp": "2026-05-24T09:00:00.000Z"
+        },
+        "preimage_format": "jcs-rfc8785-v1",
+        "trail_status": "COMMITTED",
+        "tx_hash": "0x7fd0a8ededd1feb65ab37b3324218a0386dbf124174cf122bffc40717c057b84"
+      },
+      "envelope_canonical_bytes_hex": "7b22616374696f6e5f726566223a2239353161616633363032323436653538316138393064613334623764343333366161356535353466616631393261613063656334643661616163393636393330222c22686173685f616c676f223a22736861323536222c226e65676f74696174696f6e5f726566223a2261306538626332363538656565393236366438376435366232303561356630316535623165636334343566303639336233626261343663623837363461643532222c227061636b65745f76657273696f6e223a22312e30222c22707265696d616765223a7b22616374696f6e5f74797065223a2264656c65676174696f6e2e65786563757465222c226167656e745f6964223a2270696f6e6565722d6167656e742d303031222c2273636f7065223a226d7963656c69756d3a64656c65676174696f6e222c2274696d657374616d70223a22323032362d30352d32345430393a30303a30302e3030305a227d2c22707265696d6167655f666f726d6174223a226a63732d726663383738352d7631222c22747261696c5f737461747573223a22434f4d4d4954544544222c2274785f68617368223a22307837666430613865646564643166656236356162333762333332343231386130333836646266313234313734636631323262666663343037313763303537623834227d",
+      "envelope_canonical_sha256": "b32786e3041c7bf93b182cb108f66f3eb3ab1cd631d937386806de9202db6b7f",
+      "invariants": {
+        "negotiation_ref_not_in_preimage": "negotiation_ref does not appear in action_preimage — action_ref is determined solely by action_type, agent_id, scope, timestamp",
+        "independent_hashes": "negotiation_ref = SHA-256(JCS(negotiation_artifact)); action_ref = SHA-256(JCS(action_preimage)); neither hash is derived from the other"
+      },
+      "notes": {
+        "negotiation_artifact": "Synthetic capability-grant — serves as reference artifact for negotiation-ref-v1. Format is implementer-defined; only the JCS+SHA-256 derivation is normative.",
+        "tx_hash": "Real Base mainnet anchor (pioneer-agent-001 Oasis payment 2026-04-13). Used as canonical tx_hash reference across fixtures.",
+        "expires_at": "Grant expires 2026-05-27 — within the CTEF synthesis window, intentional."
+      }
     }
-  }
+  ]
 }
