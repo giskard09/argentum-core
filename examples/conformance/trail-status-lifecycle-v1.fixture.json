@@ -1,0 +1,114 @@
+{
+  "fixture_id": "trail-status-lifecycle-v1",
+  "version": "v1",
+  "spec": "docs/spec/guarantee-model.md",
+  "action_ref_spec": "docs/spec/action-ref.md",
+  "hash_algo": "sha256",
+  "preimage_format": "jcs-rfc8785-v1",
+  "generated_at": "2026-05-24",
+  "purpose": "Formal conformance substrate for the three-state trail_status lifecycle: PENDING → COMMITTED → FAILED. Each vector is a complete trail_record. An implementer who correctly models all three states and their tx_hash invariants has a conformant implementation of the guarantee model.",
+  "lifecycle_invariants": {
+    "PENDING": "Transitional. Execution started, outcome unknown. tx_hash is null (signer not yet recovered verification handle). A verifier MUST NOT treat PENDING as success or failure.",
+    "COMMITTED": "Terminal. Execution completed and on-chain anchor exists. tx_hash is non-null. A verifier who finds COMMITTED + matching tx_hash can assert the action ran exactly once and the outcome is tamper-evident.",
+    "FAILED": "Terminal. Execution did not complete OR post-execution receipt never arrived within TTL. tx_hash is null. Distinct from PENDING/null: FAILED is terminal (no recovery possible). A verifier can assert no tamper-evident outcome record exists."
+  },
+  "reproduce_in_python": "import hashlib, json\ndef jcs(obj): return json.dumps(obj, separators=(',',':'), sort_keys=True, ensure_ascii=False)\naction_ref = hashlib.sha256(jcs(preimage).encode()).hexdigest()",
+  "vectors": [
+    {
+      "id": "lifecycle-01-pending",
+      "trail_status": "PENDING",
+      "description": "Initial state. agent submitted delegation.execute — execution started but signer has not yet recovered a verification reference. tx_hash is null. This record is honest about not-knowing: execution may have succeeded or failed externally.",
+      "preimage": {
+        "action_type": "delegation.execute",
+        "agent_id": "algovoi-agent",
+        "scope": "algovoi:kyc_check",
+        "timestamp": "2026-05-24T08:00:00.000Z"
+      },
+      "jcs_payload": "{\"action_type\":\"delegation.execute\",\"agent_id\":\"algovoi-agent\",\"scope\":\"algovoi:kyc_check\",\"timestamp\":\"2026-05-24T08:00:00.000Z\"}",
+      "preimage_canonical_bytes_hex": "7b22616374696f6e5f74797065223a2264656c65676174696f6e2e65786563757465222c226167656e745f6964223a22616c676f766f692d6167656e74222c2273636f7065223a22616c676f766f693a6b79635f636865636b222c2274696d657374616d70223a22323032362d30352d32345430383a30303a30302e3030305a227d",
+      "action_ref": "199f5c692ca6dfde530627b650fb72853ae879ddb8d0222b7111f3c71eee91f0",
+      "trail_record": {
+        "trail_status": "PENDING",
+        "agent_id": "algovoi-agent",
+        "service": "algovoi-covenant",
+        "operation": "delegation.execute",
+        "action_ref": "199f5c692ca6dfde530627b650fb72853ae879ddb8d0222b7111f3c71eee91f0",
+        "tx_hash": null,
+        "packet_version": "1.0",
+        "hash_algo": "sha256",
+        "preimage_format": "jcs-rfc8785-v1",
+        "preimage": {
+          "action_type": "delegation.execute",
+          "agent_id": "algovoi-agent",
+          "scope": "algovoi:kyc_check",
+          "timestamp": "2026-05-24T08:00:00.000Z"
+        }
+      }
+    },
+    {
+      "id": "lifecycle-02-committed",
+      "trail_status": "COMMITTED",
+      "description": "Terminal state — success. Execution completed and on-chain anchor confirmed. tx_hash is non-null. A verifier who finds this record AND the corresponding on-chain anchor can assert tamper-evident outcome. Note: different timestamp from PENDING — each action_ref is unique.",
+      "preimage": {
+        "action_type": "delegation.execute",
+        "agent_id": "algovoi-agent",
+        "scope": "algovoi:kyc_check",
+        "timestamp": "2026-05-24T08:01:00.000Z"
+      },
+      "jcs_payload": "{\"action_type\":\"delegation.execute\",\"agent_id\":\"algovoi-agent\",\"scope\":\"algovoi:kyc_check\",\"timestamp\":\"2026-05-24T08:01:00.000Z\"}",
+      "preimage_canonical_bytes_hex": "7b22616374696f6e5f74797065223a2264656c65676174696f6e2e65786563757465222c226167656e745f6964223a22616c676f766f692d6167656e74222c2273636f7065223a22616c676f766f693a6b79635f636865636b222c2274696d657374616d70223a22323032362d30352d32345430383a30313a30302e3030305a227d",
+      "action_ref": "91e3a44b57db4d8fd4949246c1098ab1d6dcd90f7a1f7d22c263357793233fcc",
+      "trail_record": {
+        "trail_status": "COMMITTED",
+        "agent_id": "algovoi-agent",
+        "service": "algovoi-covenant",
+        "operation": "delegation.execute",
+        "action_ref": "91e3a44b57db4d8fd4949246c1098ab1d6dcd90f7a1f7d22c263357793233fcc",
+        "tx_hash": "0x7fd0a8ededd1feb65ab37b3324218a0386dbf124174cf122bffc40717c057b84",
+        "packet_version": "1.0",
+        "hash_algo": "sha256",
+        "preimage_format": "jcs-rfc8785-v1",
+        "preimage": {
+          "action_type": "delegation.execute",
+          "agent_id": "algovoi-agent",
+          "scope": "algovoi:kyc_check",
+          "timestamp": "2026-05-24T08:01:00.000Z"
+        }
+      },
+      "notes": {
+        "tx_hash": "Real Base mainnet anchor (pioneer-agent-001 Oasis payment 2026-04-13). Used as canonical tx_hash reference across fixtures."
+      }
+    },
+    {
+      "id": "lifecycle-03-failed",
+      "trail_status": "FAILED",
+      "description": "Terminal state — failure. Execution did not complete OR post-execution receipt did not arrive within TTL. tx_hash is null. This is distinct from PENDING/null: FAILED is terminal, no further transitions possible. A verifier can assert no tamper-evident outcome exists for this action_ref.",
+      "preimage": {
+        "action_type": "delegation.execute",
+        "agent_id": "algovoi-agent",
+        "scope": "algovoi:kyc_check",
+        "timestamp": "2026-05-24T08:02:00.000Z"
+      },
+      "jcs_payload": "{\"action_type\":\"delegation.execute\",\"agent_id\":\"algovoi-agent\",\"scope\":\"algovoi:kyc_check\",\"timestamp\":\"2026-05-24T08:02:00.000Z\"}",
+      "preimage_canonical_bytes_hex": "7b22616374696f6e5f74797065223a2264656c65676174696f6e2e65786563757465222c226167656e745f6964223a22616c676f766f692d6167656e74222c2273636f7065223a22616c676f766f693a6b79635f636865636b222c2274696d657374616d70223a22323032362d30352d32345430383a30323a30302e3030305a227d",
+      "action_ref": "9d0c5ef6860903407c78a6f86e9a75c2005728d55e136b6c0db937f2733f2fcf",
+      "trail_record": {
+        "trail_status": "FAILED",
+        "agent_id": "algovoi-agent",
+        "service": "algovoi-covenant",
+        "operation": "delegation.execute",
+        "action_ref": "9d0c5ef6860903407c78a6f86e9a75c2005728d55e136b6c0db937f2733f2fcf",
+        "tx_hash": null,
+        "packet_version": "1.0",
+        "hash_algo": "sha256",
+        "preimage_format": "jcs-rfc8785-v1",
+        "preimage": {
+          "action_type": "delegation.execute",
+          "agent_id": "algovoi-agent",
+          "scope": "algovoi:kyc_check",
+          "timestamp": "2026-05-24T08:02:00.000Z"
+        }
+      }
+    }
+  ]
+}

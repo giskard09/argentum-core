@@ -1,9 +1,12 @@
 # Mycelium Trails — Conformance Fixtures
 
-This directory contains two sets of conformance fixtures:
+This directory contains conformance fixtures for the action-ref-v1 spec and Mycelium Trails:
 
 1. **action-ref-v1 baseline** — formal substrate for the `action_ref` derivation spec. Use these to verify a conformant implementation.
-2. **CTEF vectors** — cross-extension matrix fixtures for `urn:mycelium:trail` (CTEF v0.3.3 row #2).
+2. **delegation-ref** — envelope conformance with opaque `delegation_ref` field.
+3. **trail-status lifecycle** — three-state lifecycle (PENDING → COMMITTED → FAILED) with tx_hash invariants.
+4. **negative fixtures** — cases that MUST fail validation: missing required field, tampered hash.
+5. **CTEF vectors** — cross-extension matrix fixtures for `urn:mycelium:trail` (CTEF v0.3.3 row #2).
 
 ---
 
@@ -52,6 +55,45 @@ print("all assertions pass — implementation is conformant")
 
 ---
 
+## delegation-ref-v1 — [`delegation-ref-v1.fixture.json`](./delegation-ref-v1.fixture.json)
+
+Conformance substrate for action-ref-v1 envelopes carrying an opaque `delegation_ref` field.
+
+**Key invariant:** `delegation_ref` is envelope-only — it does NOT enter the preimage. Removing or changing it does not change `action_ref` but does change `envelope_canonical_sha256`.
+
+| Vector | Description |
+|--------|-------------|
+| `0004-delegation-ref-opaque` | `delegation.execute` with opaque `dlg_opaque_a1b2c3d4e5f6` — action_ref + envelope_sha256 both verified |
+
+---
+
+## trail-status-lifecycle-v1 — [`trail-status-lifecycle-v1.fixture.json`](./trail-status-lifecycle-v1.fixture.json)
+
+Formal conformance substrate for the three-state trail_status lifecycle.
+
+| State | tx_hash | Meaning |
+|-------|---------|---------|
+| `PENDING` | `null` | Transitional — execution started, outcome unknown |
+| `COMMITTED` | non-null | Terminal success — tamper-evident anchor exists |
+| `FAILED` | `null` | Terminal failure — no anchor, no recovery possible |
+
+**Critical distinction:** PENDING/null ≠ FAILED. PENDING means "execution started, I do not know if it landed." FAILED means "TTL expired, terminal."
+
+---
+
+## negative-v1 — [`negative-v1.fixture.json`](./negative-v1.fixture.json)
+
+Cases that MUST fail validation. A conformant verifier that accepts any of these has a bug.
+
+| Vector | Failure mode | What to reject |
+|--------|-------------|----------------|
+| `neg-001-missing-scope` | Missing required field (`scope`) | `broken_action_ref` presented as valid for `complete_preimage` |
+| `neg-002-tampered-hash` | Hash tampered (last nibble flipped) | `tampered_action_ref` presented as valid for the stated preimage |
+
+**Verifier rule:** always re-derive `SHA-256(JCS(preimage))` and compare against the presented `action_ref`. Never trust the presented hash without re-derivation.
+
+---
+
 ## CTEF Conformance Fixtures
 
 Conformance vectors for `urn:mycelium:trail` — CTEF v0.3.3 cross-extension matrix row #2.
@@ -81,6 +123,9 @@ Every fixture in this directory passes the CTEF substrate gate:
 | File | Vectors | Status |
 |------|---------|--------|
 | [`urn-mycelium-trail-v1.fixture.json`](./urn-mycelium-trail-v1.fixture.json) | 3 | ✓ byte-match verified |
+| [`delegation-ref-v1.fixture.json`](./delegation-ref-v1.fixture.json) | 1 | ✓ byte-match verified |
+| [`trail-status-lifecycle-v1.fixture.json`](./trail-status-lifecycle-v1.fixture.json) | 3 | ✓ byte-match verified |
+| [`negative-v1.fixture.json`](./negative-v1.fixture.json) | 2 | ✓ byte-match verified |
 
 ### Vectors
 

@@ -1,0 +1,55 @@
+{
+  "fixture_id": "negative-v1",
+  "version": "v1",
+  "spec": "docs/spec/action-ref.md",
+  "hash_algo": "sha256",
+  "preimage_format": "jcs-rfc8785-v1",
+  "generated_at": "2026-05-24",
+  "purpose": "Negative conformance fixtures — cases that MUST fail validation. A conformant verifier that accepts any of these vectors has a bug. Two failure modes: (1) missing required preimage field, (2) tampered action_ref hash.",
+  "validation_rule": "A conformant implementation MUST reject any action_ref presented as valid if: (a) the preimage is missing any of the four required fields [action_type, agent_id, scope, timestamp], or (b) the action_ref does not equal SHA-256(JCS(preimage)).",
+  "vectors": [
+    {
+      "id": "neg-001-missing-scope",
+      "failure_mode": "missing_required_field",
+      "field_missing": "scope",
+      "description": "Preimage is missing the required 'scope' field. The broken_action_ref is the SHA-256 of the incomplete preimage (3 fields only). A verifier MUST reject this: the broken_action_ref cannot be verified against a complete preimage, and the complete preimage produces a different, non-matching hash. Any implementation that accepts broken_action_ref as valid for the complete preimage has a conformance bug.",
+      "complete_preimage": {
+        "action_type": "trail.anchor",
+        "agent_id": "giskard-self",
+        "scope": "mycelium:baseline",
+        "timestamp": "2026-05-24T00:00:00.000Z"
+      },
+      "complete_jcs_payload": "{\"action_type\":\"trail.anchor\",\"agent_id\":\"giskard-self\",\"scope\":\"mycelium:baseline\",\"timestamp\":\"2026-05-24T00:00:00.000Z\"}",
+      "complete_preimage_bytes_hex": "7b22616374696f6e5f74797065223a22747261696c2e616e63686f72222c226167656e745f6964223a226769736b6172642d73656c66222c2273636f7065223a226d7963656c69756d3a626173656c696e65222c2274696d657374616d70223a22323032362d30352d32345430303a30303a30302e3030305a227d",
+      "correct_action_ref": "55db7ddd20a66ec03a100ab71a742dfc605032e36fa707bf5307ab370a087c71",
+      "broken_preimage": {
+        "action_type": "trail.anchor",
+        "agent_id": "giskard-self",
+        "timestamp": "2026-05-24T00:00:00.000Z"
+      },
+      "broken_jcs_payload": "{\"action_type\":\"trail.anchor\",\"agent_id\":\"giskard-self\",\"timestamp\":\"2026-05-24T00:00:00.000Z\"}",
+      "broken_preimage_bytes_hex": "7b22616374696f6e5f74797065223a22747261696c2e616e63686f72222c226167656e745f6964223a226769736b6172642d73656c66222c2274696d657374616d70223a22323032362d30352d32345430303a30303a30302e3030305a227d",
+      "broken_action_ref": "1b941105d10b8ae7bb90d639dbe2d6f6ccdb4461efdf8c646f1d9f8f7b1e754e",
+      "invariant": "correct_action_ref != broken_action_ref",
+      "verifier_must": "REJECT any claim that broken_action_ref is a valid action_ref for the complete_preimage. The two hashes differ because scope was omitted from the JCS input."
+    },
+    {
+      "id": "neg-002-tampered-hash",
+      "failure_mode": "hash_tampering",
+      "description": "action_ref has been tampered: last nibble flipped from '4' to '0'. The preimage is intact and well-formed. A verifier MUST re-derive SHA-256(JCS(preimage)) and compare against the presented action_ref — they will not match. Any implementation that accepts the tampered_action_ref without re-deriving the hash has a conformance bug.",
+      "preimage": {
+        "action_type": "payment.send",
+        "agent_id": "pioneer-agent-001",
+        "scope": "nobulex:bilateral",
+        "timestamp": "2026-05-24T00:00:00.000Z"
+      },
+      "jcs_payload": "{\"action_type\":\"payment.send\",\"agent_id\":\"pioneer-agent-001\",\"scope\":\"nobulex:bilateral\",\"timestamp\":\"2026-05-24T00:00:00.000Z\"}",
+      "preimage_canonical_bytes_hex": "7b22616374696f6e5f74797065223a227061796d656e742e73656e64222c226167656e745f6964223a2270696f6e6565722d6167656e742d303031222c2273636f7065223a226e6f62756c65783a62696c61746572616c222c2274696d657374616d70223a22323032362d30352d32345430303a30303a30302e3030305a227d",
+      "correct_action_ref": "5ade73c881c6288e8b9688944fcb15f8dbdad7f8f1f94d9e31c29dcf86238424",
+      "tampered_action_ref": "5ade73c881c6288e8b9688944fcb15f8dbdad7f8f1f94d9e31c29dcf86238420",
+      "tamper_description": "Last nibble flipped: '4' → '0'. Single-character mutation — a minimal but detectable forgery attempt.",
+      "invariant": "correct_action_ref != tampered_action_ref",
+      "verifier_must": "RE-DERIVE SHA-256(JCS(preimage)) and assert it equals the presented action_ref. A verifier that skips re-derivation and trusts the presented hash is trivially forgeable."
+    }
+  ]
+}

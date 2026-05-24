@@ -1,0 +1,46 @@
+{
+  "fixture_id": "delegation-ref-v1",
+  "version": "v1",
+  "spec": "docs/spec/action-ref.md",
+  "spec_stable_ref": "https://github.com/giskard09/argentum-core/blob/action-ref-v1.0/docs/spec/action-ref.md",
+  "hash_algo": "sha256",
+  "preimage_format": "jcs-rfc8785-v1",
+  "generated_at": "2026-05-24",
+  "purpose": "Conformance substrate for action-ref-v1 envelopes that carry an opaque delegation_ref field. An external implementer who reproduces action_ref and envelope_canonical_sha256 byte-identical from the stated preimage and envelope fields has a conformant implementation.",
+  "reproduce_in_python": "import hashlib, json\ndef jcs(obj): return json.dumps(obj, separators=(',',':'), sort_keys=True, ensure_ascii=False)\naction_ref = hashlib.sha256(jcs(preimage).encode()).hexdigest()\nenvelope_sha256 = hashlib.sha256(jcs(envelope).encode()).hexdigest()",
+  "vectors": [
+    {
+      "id": "0004-delegation-ref-opaque",
+      "description": "Envelope with opaque delegation_ref field. The delegation_ref value is treated as an opaque string by the action-ref derivation: it does NOT enter the preimage. Only the four canonical preimage fields (action_type, agent_id, scope, timestamp) determine action_ref. delegation_ref is carried in the envelope for attestation linkage only.",
+      "preimage": {
+        "action_type": "delegation.execute",
+        "agent_id": "pioneer-agent-001",
+        "scope": "mycelium:delegation",
+        "timestamp": "2026-05-24T00:00:00.000Z"
+      },
+      "jcs_payload": "{\"action_type\":\"delegation.execute\",\"agent_id\":\"pioneer-agent-001\",\"scope\":\"mycelium:delegation\",\"timestamp\":\"2026-05-24T00:00:00.000Z\"}",
+      "preimage_canonical_bytes_hex": "7b22616374696f6e5f74797065223a2264656c65676174696f6e2e65786563757465222c226167656e745f6964223a2270696f6e6565722d6167656e742d303031222c2273636f7065223a226d7963656c69756d3a64656c65676174696f6e222c2274696d657374616d70223a22323032362d30352d32345430303a30303a30302e3030305a227d",
+      "action_ref": "4e286b47ea4446323ea38bda83eb2150597190560f9ecb90651f1d0acb573404",
+      "envelope": {
+        "action_ref": "4e286b47ea4446323ea38bda83eb2150597190560f9ecb90651f1d0acb573404",
+        "delegation_ref": "dlg_opaque_a1b2c3d4e5f6",
+        "hash_algo": "sha256",
+        "packet_version": "1.0",
+        "policy_version": "2026-05-01",
+        "preimage": {
+          "action_type": "delegation.execute",
+          "agent_id": "pioneer-agent-001",
+          "scope": "mycelium:delegation",
+          "timestamp": "2026-05-24T00:00:00.000Z"
+        },
+        "preimage_format": "jcs-rfc8785-v1"
+      },
+      "envelope_canonical_bytes_hex": "7b22616374696f6e5f726566223a2234653238366234376561343434363332336561333862646138336562323135303539373139303536306639656362393036353166316430616362353733343034222c2264656c65676174696f6e5f726566223a22646c675f6f70617175655f613162326333643465356636222c22686173685f616c676f223a22736861323536222c227061636b65745f76657273696f6e223a22312e30222c22706f6c6963795f76657273696f6e223a22323032362d30352d3031222c22707265696d616765223a7b22616374696f6e5f74797065223a2264656c65676174696f6e2e65786563757465222c226167656e745f6964223a2270696f6e6565722d6167656e742d303031222c2273636f7065223a226d7963656c69756d3a64656c65676174696f6e222c2274696d657374616d70223a22323032362d30352d32345430303a30303a30302e3030305a227d2c22707265696d6167655f666f726d6174223a226a63732d726663383738352d7631227d",
+      "envelope_canonical_sha256": "ec3d5bb0f5e15ad8086ab508fa6f046db8ca3917bb7f3d6af13951d9b1017173",
+      "notes": {
+        "delegation_ref": "Opaque string — arbitrary format chosen by the delegating authority. Not interpreted by action-ref derivation. The invariant: removing or changing delegation_ref does NOT change action_ref, but DOES change envelope_canonical_sha256.",
+        "scope_convention": "mycelium:delegation marks this as a first-party Mycelium delegation action. Third-party implementers should use their own namespace prefix."
+      }
+    }
+  ]
+}
