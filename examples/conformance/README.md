@@ -1,4 +1,58 @@
-# Mycelium Trails — CTEF Conformance Fixtures
+# Mycelium Trails — Conformance Fixtures
+
+This directory contains two sets of conformance fixtures:
+
+1. **action-ref-v1 baseline** — formal substrate for the `action_ref` derivation spec. Use these to verify a conformant implementation.
+2. **CTEF vectors** — cross-extension matrix fixtures for `urn:mycelium:trail` (CTEF v0.3.3 row #2).
+
+---
+
+## action-ref-v1 baseline — [`action-ref-v1-baseline.fixture.json`](./action-ref-v1-baseline.fixture.json)
+
+Formal conformance substrate for [`docs/spec/action-ref.md`](../../docs/spec/action-ref.md) (`action-ref-v1.0` stable tag).
+
+An independent implementation that reproduces all three vectors byte-identical satisfies **criterion (a)**: an independent implementation of the action-ref-v1 wire format validating against `argentum-core/examples/conformance/`.
+
+| Vector | Description |
+|--------|-------------|
+| `0001-giskard-baseline` | Minimal — 4 preimage fields, scope namespace-prefixed, no optional envelope fields |
+| `0002-dual-timestamps` | Full envelope with `authority_verified_at_ms` + `revocation_check_at_ms` + `policy_version` |
+| `0003-scope-namespace-collision-proof` | Proves that prefixed vs unprefixed scope strings produce different `action_ref` values — invariant: `prefixed_action_ref != unprefixed_action_ref` |
+
+### Quick verify
+
+```python
+import hashlib, json
+
+def jcs(obj):
+    return json.dumps(obj, separators=(',', ':'), sort_keys=True, ensure_ascii=False)
+
+# 0001-giskard-baseline
+preimage = {
+    "action_type": "trail.anchor",
+    "agent_id":    "giskard-self",
+    "scope":       "mycelium:baseline",
+    "timestamp":   "2026-05-23T00:00:00.000Z",
+}
+assert hashlib.sha256(jcs(preimage).encode()).hexdigest() == \
+    "f4ebda732e3c063bdd8547c734e4956f009bbed7f557cb949f7c8033e8c42d1d"
+
+# 0002-dual-timestamps — verify action_ref only
+preimage2 = {
+    "action_type": "payment.send",
+    "agent_id":    "pioneer-agent-001",
+    "scope":       "nobulex:bilateral",
+    "timestamp":   "2026-05-23T10:00:00.000Z",
+}
+assert hashlib.sha256(jcs(preimage2).encode()).hexdigest() == \
+    "f09eb8c50dfa27a33cdb36efa08194bcba2d7ac32eb1dd6539fb0c3bc811a8e0"
+
+print("all assertions pass — implementation is conformant")
+```
+
+---
+
+## CTEF Conformance Fixtures
 
 Conformance vectors for `urn:mycelium:trail` — CTEF v0.3.3 cross-extension matrix row #2.
 

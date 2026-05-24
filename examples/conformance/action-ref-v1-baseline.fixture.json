@@ -1,0 +1,91 @@
+{
+  "fixture_id": "action-ref-v1-baseline",
+  "version": "v1",
+  "spec": "docs/spec/action-ref.md",
+  "spec_stable_ref": "https://github.com/giskard09/argentum-core/blob/action-ref-v1.0/docs/spec/action-ref.md",
+  "hash_algo": "sha256",
+  "preimage_format": "jcs-rfc8785-v1",
+  "generated_at": "2026-05-23",
+  "purpose": "Formal conformance substrate for action-ref-v1. An external implementer who reproduces these byte-identical digests from the stated preimage fields has a conformant implementation of the spec.",
+  "reproduce_in_python": "import hashlib, json\ndef jcs(obj): return json.dumps(obj, separators=(',',':'), sort_keys=True, ensure_ascii=False)\naction_ref = hashlib.sha256(jcs(preimage).encode()).hexdigest()",
+  "vectors": [
+    {
+      "id": "0001-giskard-baseline",
+      "description": "Minimal baseline — 4 preimage fields only, scope with namespace-prefix. No optional envelope fields. Any conformant implementation must reproduce action_ref byte-identical from the stated preimage.",
+      "preimage": {
+        "action_type": "trail.anchor",
+        "agent_id": "giskard-self",
+        "scope": "mycelium:baseline",
+        "timestamp": "2026-05-23T00:00:00.000Z"
+      },
+      "jcs_payload": "{\"action_type\":\"trail.anchor\",\"agent_id\":\"giskard-self\",\"scope\":\"mycelium:baseline\",\"timestamp\":\"2026-05-23T00:00:00.000Z\"}",
+      "preimage_canonical_bytes_hex": "7b22616374696f6e5f74797065223a22747261696c2e616e63686f72222c226167656e745f6964223a226769736b6172642d73656c66222c2273636f7065223a226d7963656c69756d3a626173656c696e65222c2274696d657374616d70223a22323032362d30352d32335430303a30303a30302e3030305a227d",
+      "action_ref": "f4ebda732e3c063bdd8547c734e4956f009bbed7f557cb949f7c8033e8c42d1d"
+    },
+    {
+      "id": "0002-dual-timestamps",
+      "description": "Full canonical receipt envelope v1.0 with optional rotation fields: authority_verified_at_ms (delegation verified at issuance) and revocation_check_at_ms (last non-revocation check before execution). An implementer who emits these fields must produce the same envelope canonical_sha256.",
+      "preimage": {
+        "action_type": "payment.send",
+        "agent_id": "pioneer-agent-001",
+        "scope": "nobulex:bilateral",
+        "timestamp": "2026-05-23T10:00:00.000Z"
+      },
+      "action_ref": "f09eb8c50dfa27a33cdb36efa08194bcba2d7ac32eb1dd6539fb0c3bc811a8e0",
+      "preimage_canonical_bytes_hex": "7b22616374696f6e5f74797065223a227061796d656e742e73656e64222c226167656e745f6964223a2270696f6e6565722d6167656e742d303031222c2273636f7065223a226e6f62756c65783a62696c61746572616c222c2274696d657374616d70223a22323032362d30352d32335431303a30303a30302e3030305a227d",
+      "envelope": {
+        "action_ref": "f09eb8c50dfa27a33cdb36efa08194bcba2d7ac32eb1dd6539fb0c3bc811a8e0",
+        "authority_verified_at_ms": 1748001600000,
+        "hash_algo": "sha256",
+        "packet_version": "1.0",
+        "policy_version": "2026-05-01",
+        "preimage": {
+          "action_type": "payment.send",
+          "agent_id": "pioneer-agent-001",
+          "scope": "nobulex:bilateral",
+          "timestamp": "2026-05-23T10:00:00.000Z"
+        },
+        "preimage_format": "jcs-rfc8785-v1",
+        "revocation_check_at_ms": 1748001630000
+      },
+      "envelope_canonical_bytes_hex": "7b22616374696f6e5f726566223a2266303965623863353064666132376133336364623336656661303831393462636261326437616333326562316464363533396662306333626338313161386530222c22617574686f726974795f76657269666965645f61745f6d73223a313734383030313630303030302c22686173685f616c676f223a22736861323536222c227061636b65745f76657273696f6e223a22312e30222c22706f6c6963795f76657273696f6e223a22323032362d30352d3031222c22707265696d616765223a7b22616374696f6e5f74797065223a227061796d656e742e73656e64222c226167656e745f6964223a2270696f6e6565722d6167656e742d303031222c2273636f7065223a226e6f62756c65783a62696c61746572616c222c2274696d657374616d70223a22323032362d30352d32335431303a30303a30302e3030305a227d2c22707265696d6167655f666f726d6174223a226a63732d726663383738352d7631222c227265766f636174696f6e5f636865636b5f61745f6d73223a313734383030313633303030307d",
+      "envelope_canonical_sha256": "7b9c68a1f9ba063e5feba6854ad7ce31c282e7702c1fe05431a8cc52a9164474",
+      "notes": {
+        "authority_verified_at_ms": "Unix ms at which delegation was confirmed at issuance — 2026-05-23T12:00:00.000Z",
+        "revocation_check_at_ms": "Unix ms of last non-revocation check before execution — 2026-05-23T12:00:30.000Z (30s window)",
+        "policy_version": "Version string identifying the governing policy in force when the action was admitted"
+      }
+    },
+    {
+      "id": "0003-scope-namespace-collision-proof",
+      "description": "Demonstrates that namespace-prefixing prevents scope collisions across emitters. Two actions with identical action_type/agent_id/timestamp but different scope strings — one prefixed (algovoi:compliance_screen), one unprefixed (compliance_screen) — produce different action_refs. A verifier must NOT conflate them.",
+      "vectors": [
+        {
+          "label": "prefixed",
+          "preimage": {
+            "action_type": "compliance.screen",
+            "agent_id": "algovoi-agent",
+            "scope": "algovoi:compliance_screen",
+            "timestamp": "2026-05-23T12:00:00.000Z"
+          },
+          "jcs_payload": "{\"action_type\":\"compliance.screen\",\"agent_id\":\"algovoi-agent\",\"scope\":\"algovoi:compliance_screen\",\"timestamp\":\"2026-05-23T12:00:00.000Z\"}",
+          "preimage_canonical_bytes_hex": "7b22616374696f6e5f74797065223a22636f6d706c69616e63652e73637265656e222c226167656e745f6964223a22616c676f766f692d6167656e74222c2273636f7065223a22616c676f766f693a636f6d706c69616e63655f73637265656e222c2274696d657374616d70223a22323032362d30352d32335431323a30303a30302e3030305a227d",
+          "action_ref": "4e32a383d2174c0f106369f36bec8ab747fd1a368508adba6fa9f6798377877e"
+        },
+        {
+          "label": "unprefixed",
+          "preimage": {
+            "action_type": "compliance.screen",
+            "agent_id": "algovoi-agent",
+            "scope": "compliance_screen",
+            "timestamp": "2026-05-23T12:00:00.000Z"
+          },
+          "jcs_payload": "{\"action_type\":\"compliance.screen\",\"agent_id\":\"algovoi-agent\",\"scope\":\"compliance_screen\",\"timestamp\":\"2026-05-23T12:00:00.000Z\"}",
+          "preimage_canonical_bytes_hex": "7b22616374696f6e5f74797065223a22636f6d706c69616e63652e73637265656e222c226167656e745f6964223a22616c676f766f692d6167656e74222c2273636f7065223a22636f6d706c69616e63655f73637265656e222c2274696d657374616d70223a22323032362d30352d32335431323a30303a30302e3030305a227d",
+          "action_ref": "74cdc8adaa71e995f030e4462dc948fe590042cca13eb48ce525dd8d5cd052ff"
+        }
+      ],
+      "invariant": "prefixed_action_ref != unprefixed_action_ref"
+    }
+  ]
+}
