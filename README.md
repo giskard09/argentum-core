@@ -8,6 +8,40 @@ Post-execution audit layer: anchor a signed `TrailRecord` after every agent acti
 
 Published on the [Official MCP Registry](https://registry.modelcontextprotocol.io) · `io.github.giskard09/argentum` · Exposed as **ARGENTUM** MCP server.
 
+## Why Mycelium
+
+**The problem with every other audit trail system:** verification requires trusting the operator.
+
+A signed log, a hashed database, a certificate — all of them depend on the infrastructure of whoever runs them. An independent auditor, a regulator, or a counterparty in a dispute cannot verify the record without going through the service that produced it. That is not independent verification. That is trust dressed as evidence.
+
+**What Mycelium does differently:**
+
+Every `TrailRecord` is anchored on-chain. The `tx_hash` is public. Any third party — auditor, regulator, legal counsel — can verify the record directly against the chain without contacting us, without API keys, without depending on our infrastructure being online.
+
+This is not a feature. It is a structural property of the protocol.
+
+**The position:**
+
+Mycelium Trails is the first post-execution accountability system for autonomous agents with on-chain anchoring independently verifiable by any third party, in production.
+
+The timestamps are public. The contract is on Arbitrum. The production trails exist. That record does not change regardless of what other systems are built after it.
+
+**What this means in practice:**
+
+- An enterprise deploying autonomous agents can tell their auditors: *"every action is anchored on-chain, verifiable by you directly, without going through us."*
+- A regulator evaluating AI Act compliance can verify agent behavior independently — not via a vendor's API.
+- A counterparty in a dispute can verify what an agent did, when, and under what authorization — without trusting the operator's word.
+
+No other production system for agent accountability offers this today.
+
+**Conformance and adoption:**
+
+The protocol spec (`docs/spec/action-ref.md`) is the reference implementation recognized in the [CTEF v0.3.3 cross-extension matrix](https://github.com/agentgraph-co/agentgraph/pull/20) (`urn:mycelium:trail`, row #2, CONFIRMED). Independent implementations: SafeAgent, APS, Nobulex, SINT, Agent OS. Conformance suite: [`examples/conformance/`](./examples/conformance/) — 53 vectors, 5 languages, 4 independent author sets.
+
+See [ADOPTERS.md](./ADOPTERS.md) for verified production integrations.
+
+---
+
 ## MCP Tools
 
 ARGENTUM provides 10 MCP tools for AI agents to interact with the karma economy and Mycelium Trails:
