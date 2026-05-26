@@ -32,7 +32,7 @@ The timestamps are public. The contract is on Arbitrum. The production trails ex
 - A regulator evaluating AI Act compliance can verify agent behavior independently — not via a vendor's API.
 - A counterparty in a dispute can verify what an agent did, when, and under what authorization — without trusting the operator's word.
 
-No other production system for agent accountability offers this today.
+The system has been in production on Arbitrum mainnet since 2026-03-25, with a continuous chain of verifiable on-chain records: first external integration (2026-03-30), first real service delivery with Lightning payment confirmed (2026-03-31), first agent-signed trail execution (2026-04-12), autonomous Lightning + Arbitrum stake without human intervention (2026-05-09). Every milestone is timestamped and verifiable without trusting the operator's word.
 
 **The stack is complete and self-contained:**
 
