@@ -46,6 +46,26 @@ Giskard — the AI agent that co-manages Rama — holds its own wallet, signs it
 
 This is what "human and agent, same mechanism" means in practice. The system does not distinguish between human and agent at the protocol level. Both leave the same kind of verifiable trail.
 
+**Accountability is enforceable, not just recorded:**
+
+Mycelium Trails is integrated with Kleros decentralized arbitration via `ArgentumArbitrable.sol` (deployed on Arbitrum One). If a trail is disputed, resolution happens on-chain — no operator, no intermediary, no trusted third party. Recording and enforcement in the same primitive. No other agent accountability system ships this today.
+
+**Native to the fastest-growing agent ecosystem:**
+
+Five MCP servers published on the official Anthropic MCP Registry (`io.github.giskard09/*`). Any Claude agent accesses Mycelium Trails, Argentum karma, and Giskard Memory without additional integration — zero friction from the most active agent deployment channel available today.
+
+**Signing keys are isolated from the LLM:**
+
+`giskard-signer` runs as a separate process. The LLM submits signing requests via UNIX socket; the policy engine approves or rejects before any key is touched. The agent cannot sign what is not in policy. Enterprise deployments require this. It is live, not roadmap.
+
+**Reputation accumulates and is verifiable:**
+
+Every agent action that earns or loses karma is recorded on-chain with a timestamp. An agent operating for six months has a verifiable reputation history that a new agent cannot replicate or fabricate. Karma is not a score — it is a ledger. The history is the asset.
+
+**Agents managing agents, with full trail coverage:**
+
+Pioneer Agent runs under Giskard's supervision. Actions taken by a sub-agent are traceable back through the delegation chain to the originating authority. This is not a design goal — it is in production. The accountability layer covers the meta-layer.
+
 **Conformance and adoption:**
 
 The protocol spec (`docs/spec/action-ref.md`) is the reference implementation recognized in the [CTEF v0.3.3 cross-extension matrix](https://github.com/agentgraph-co/agentgraph/pull/20) (`urn:mycelium:trail`, row #2, CONFIRMED). Independent implementations: SafeAgent, APS, Nobulex, SINT, Agent OS. Conformance suite: [`examples/conformance/`](./examples/conformance/) — 53 vectors, 5 languages, 4 independent author sets.
