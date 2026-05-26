@@ -68,7 +68,7 @@ Pioneer Agent runs under Giskard's supervision. Actions taken by a sub-agent are
 
 **Conformance and adoption:**
 
-The protocol spec (`docs/spec/action-ref.md`) is the reference implementation recognized in the [CTEF v0.3.3 cross-extension matrix](https://github.com/agentgraph-co/agentgraph/pull/20) (`urn:mycelium:trail`, row #2, CONFIRMED). Independent implementations: SafeAgent, APS, Nobulex, SINT, Agent OS. Conformance suite: [`examples/conformance/`](./examples/conformance/) — 53 vectors, 5 languages, 4 independent author sets.
+The protocol spec (`docs/spec/action-ref.md`) is the reference implementation recognized in the [CTEF v0.3.3 cross-extension matrix](https://github.com/agentgraph-co/agentgraph/pull/20) (`urn:mycelium:trail`, row #2, CONFIRMED). Independent implementations: SafeAgent, APS, Nobulex, SINT, Agent OS. Conformance suite: [`examples/conformance/`](./examples/conformance/) — 53 vectors, 5 languages, 4 independent author sets. Additional rows in the matrix (`urn:nobulex:receipt`, `urn:x402:audit-chain`) cross-validate against these fixtures as the byte-match reference.
 
 See [ADOPTERS.md](./ADOPTERS.md) for verified production integrations.
 
