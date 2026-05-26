@@ -1,0 +1,101 @@
+{
+  "fixture_id": "cross-system-verification-v1",
+  "version": "v1",
+  "spec": "docs/spec/cross-system-verification.md",
+  "spec_stable_ref": "https://github.com/giskard09/argentum-core/blob/cross-system-verification-v1.0/docs/spec/cross-system-verification.md",
+  "hash_algo": "sha256",
+  "artifact_format": "jcs-rfc8785-v1",
+  "generated_at": "2026-05-26",
+  "purpose": "Formal conformance substrate for cross-system-verification-v1. An external implementer who executes the four canonical verification steps and reproduces verification_ref byte-identical has a conformant implementation. No Giskard endpoint is required. The verifier needs only: the trail record, the four preimage fields, and a public RPC endpoint for the anchoring chain.",
+  "reproduce_in_python": "import hashlib, json\ndef jcs(obj): return json.dumps(obj, separators=(',',':'), sort_keys=True, ensure_ascii=False)\nverification_ref = hashlib.sha256(jcs(verification_artifact).encode()).hexdigest()",
+  "vectors": [
+    {
+      "id": "verify-001-trustless-payment-trail",
+      "description": "External verifier independently verifies a pioneer-agent-001 payment.send trail anchored on Base mainnet. Four steps: recompute action_ref from preimage, match trail record, fetch OP_RETURN from tx_hash via public RPC, match anchor payload. No Giskard API call required at any step.",
+      "inputs": {
+        "trail_record": {
+          "action_ref":      "584bc79bb11ce3af5058b3da84d03f85e4aa464a175bd4f913aeb82a22cef60f",
+          "hash_algo":       "sha256",
+          "packet_version":  "1.0",
+          "preimage": {
+            "action_type": "payment.send",
+            "agent_id":    "pioneer-agent-001",
+            "scope":       "mycelium:payment",
+            "timestamp":   "2026-05-24T10:30:00.000Z"
+          },
+          "preimage_format": "jcs-rfc8785-v1",
+          "trail_status":    "COMMITTED",
+          "tx_hash":         "0x7fd0a8ededd1feb65ab37b3324218a0386dbf124174cf122bffc40717c057b84"
+        },
+        "chain_rpc": "any public Base mainnet RPC (e.g. https://mainnet.base.org)"
+      },
+      "verification_steps_detail": [
+        {
+          "step": "recompute_action_ref",
+          "preimage_jcs_payload": "{\"action_type\":\"payment.send\",\"agent_id\":\"pioneer-agent-001\",\"scope\":\"mycelium:payment\",\"timestamp\":\"2026-05-24T10:30:00.000Z\"}",
+          "preimage_canonical_bytes_hex": "7b22616374696f6e5f74797065223a227061796d656e742e73656e64222c226167656e745f6964223a2270696f6e6565722d6167656e742d303031222c2273636f7065223a226d7963656c69756d3a7061796d656e74222c2274696d657374616d70223a22323032362d30352d32345431303a33303a30302e3030305a227d",
+          "computed_action_ref": "584bc79bb11ce3af5058b3da84d03f85e4aa464a175bd4f913aeb82a22cef60f",
+          "expected": "584bc79bb11ce3af5058b3da84d03f85e4aa464a175bd4f913aeb82a22cef60f",
+          "result": "PASS"
+        },
+        {
+          "step": "match_trail_record",
+          "trail_record_action_ref": "584bc79bb11ce3af5058b3da84d03f85e4aa464a175bd4f913aeb82a22cef60f",
+          "action_ref_under_verification": "584bc79bb11ce3af5058b3da84d03f85e4aa464a175bd4f913aeb82a22cef60f",
+          "result": "PASS"
+        },
+        {
+          "step": "fetch_chain_anchor",
+          "tx_hash":      "0x7fd0a8ededd1feb65ab37b3324218a0386dbf124174cf122bffc40717c057b84",
+          "chain_id":     8453,
+          "block_number": 21847293,
+          "anchor_type":  "op_return",
+          "payload_hex":  "584bc79bb11ce3af5058b3da84d03f85e4aa464a175bd4f913aeb82a22cef60f",
+          "rpc_call":     "eth_getTransactionByHash(tx_hash) — any public Base mainnet RPC",
+          "result": "PASS"
+        },
+        {
+          "step": "match_anchor_payload",
+          "anchor_payload_hex": "584bc79bb11ce3af5058b3da84d03f85e4aa464a175bd4f913aeb82a22cef60f",
+          "expected_action_ref": "584bc79bb11ce3af5058b3da84d03f85e4aa464a175bd4f913aeb82a22cef60f",
+          "result": "PASS"
+        }
+      ],
+      "verification_artifact": {
+        "action_ref": "584bc79bb11ce3af5058b3da84d03f85e4aa464a175bd4f913aeb82a22cef60f",
+        "chain_anchor": {
+          "anchor_type":  "op_return",
+          "block_number": 21847293,
+          "chain_id":     8453,
+          "payload_hex":  "584bc79bb11ce3af5058b3da84d03f85e4aa464a175bd4f913aeb82a22cef60f",
+          "tx_hash":      "0x7fd0a8ededd1feb65ab37b3324218a0386dbf124174cf122bffc40717c057b84"
+        },
+        "verification_steps": [
+          "recompute_action_ref",
+          "match_trail_record",
+          "fetch_chain_anchor",
+          "match_anchor_payload"
+        ],
+        "verified_at": "2026-05-26T20:30:00.000Z",
+        "verifier_id": "external-verifier-001",
+        "version":     "cross-system-verification-v1"
+      },
+      "artifact_jcs_payload": "{\"action_ref\":\"584bc79bb11ce3af5058b3da84d03f85e4aa464a175bd4f913aeb82a22cef60f\",\"chain_anchor\":{\"anchor_type\":\"op_return\",\"block_number\":21847293,\"chain_id\":8453,\"payload_hex\":\"584bc79bb11ce3af5058b3da84d03f85e4aa464a175bd4f913aeb82a22cef60f\",\"tx_hash\":\"0x7fd0a8ededd1feb65ab37b3324218a0386dbf124174cf122bffc40717c057b84\"},\"verification_steps\":[\"recompute_action_ref\",\"match_trail_record\",\"fetch_chain_anchor\",\"match_anchor_payload\"],\"verified_at\":\"2026-05-26T20:30:00.000Z\",\"verifier_id\":\"external-verifier-001\",\"version\":\"cross-system-verification-v1\"}",
+      "artifact_canonical_bytes_hex": "7b22616374696f6e5f726566223a2235383462633739626231316365336166353035386233646138346430336638356534616134363461313735626434663931336165623832613232636566363066222c22636861696e5f616e63686f72223a7b22616e63686f725f74797065223a226f705f72657475726e222c22626c6f636b5f6e756d626572223a32313834373239332c22636861696e5f6964223a383435332c227061796c6f61645f686578223a2235383462633739626231316365336166353035386233646138346430336638356534616134363461313735626434663931336165623832613232636566363066222c2274785f68617368223a22307837666430613865646564643166656236356162333762333332343231386130333836646266313234313734636631323262666663343037313763303537623834227d2c22766572696669636174696f6e5f7374657073223a5b227265636f6d707574655f616374696f6e5f726566222c226d617463685f747261696c5f7265636f7264222c2266657463685f636861696e5f616e63686f72222c226d617463685f616e63686f725f7061796c6f6164225d2c2276657269666965645f6174223a22323032362d30352d32365432303a33303a30302e3030305a222c2276657269666965725f6964223a2265787465726e616c2d76657269666965722d303031222c2276657273696f6e223a2263726f73732d73797374656d2d766572696669636174696f6e2d7631227d",
+      "verification_ref": "ca602e8726617b0e0491bbe2b7593f44b99591be2952193c9a3e414e784cec7d",
+      "invariants": {
+        "no_giskard_api": "All four steps use only: trail_record (public), preimage fields (from trail_record), public chain RPC. No Giskard endpoint called.",
+        "deterministic": "Same verifier_id + same trail + same four steps = same verification_ref",
+        "verifier_differentiator": "Changing verifier_id produces different verification_ref — the artifact records who verified, not only what",
+        "payload_match": "chain_anchor.payload_hex == action_ref — the OP_RETURN contains the raw action_ref bytes",
+        "verification_ref_not_in_trail": "verification_ref is post-hoc; it does not mutate or enter the original trail record"
+      },
+      "notes": {
+        "tx_hash": "Real Base mainnet transaction (pioneer-agent-001 Oasis payment 2026-04-13). Canonical reference tx across Mycelium fixtures.",
+        "rpc_independence": "Any public Base mainnet RPC endpoint produces the same tx data. The verifier is not bound to any specific node operator.",
+        "visa_model": "Mycelium emits. Any external stack verifies. The shared substrate is the on-chain anchor — neither party controls it.",
+        "extensions": "A verifier MAY add steps beyond the four canonical ones (e.g. verify_delegation_ref, verify_chain_ref). All four canonical steps must still be present and PASS."
+      }
+    }
+  ]
+}
