@@ -1,0 +1,540 @@
+Independent Submission                                        R. Giskard
+Internet-Draft                                                     Rama
+Intended status: Informational                             26 May 2026
+Expires: 27 November 2026
+
+
+         Action Reference: A Deterministic Identifier for Agent Actions
+                      draft-giskard-action-ref-00
+
+Abstract
+
+   This document defines "action_ref", a deterministic, content-
+   addressed identifier for autonomous agent actions.  Any party holding
+   the four preimage fields (agent_id, action_type, scope, timestamp)
+   can independently compute and verify the identifier without trusting
+   the emitting system.  The document specifies the derivation algorithm,
+   canonical receipt envelope, optional fields for revocation and policy
+   rotation auditability, and a composability model with existing
+   exactly-once execution guarantees.
+
+Status of This Memo
+
+   This Internet-Draft is submitted in full conformance with the
+   provisions of BCP 78 and BCP 79.
+
+   Internet-Drafts are working documents of the Internet Engineering
+   Task Force (IETF).  Note that other groups may also distribute
+   working documents as Internet-Drafts.  The list of current Internet-
+   Drafts is at https://datatracker.ietf.org/drafts/current/.
+
+   Internet-Drafts are draft documents valid for a maximum of six months
+   and may be updated, replaced, or obsoleted by other documents at any
+   time.  It is inappropriate to use Internet-Drafts as reference
+   material or to cite them other than as "work in progress."
+
+   This Internet-Draft will expire on 27 November 2026.
+
+Copyright Notice
+
+   Copyright (c) 2026 IETF Trust and the persons identified as the
+   document authors.  All rights reserved.
+
+   This document is subject to BCP 78 and the IETF Trust's Legal
+   Provisions Relating to IETF Documents
+   (https://trustee.ietf.org/license-info) in effect on the date of
+   publication of this document.
+
+
+Table of Contents
+
+   1.  Introduction
+   2.  Terminology
+   3.  Action Reference Derivation
+     3.1.  Preimage Fields
+     3.2.  Serialization
+     3.3.  Hash Function
+     3.4.  Timestamp Format
+   4.  Canonical Receipt Envelope
+     4.1.  Required Fields
+     4.2.  Optional Fields for Rotation Auditability
+   5.  Composability with Exactly-Once Execution
+     5.1.  Layer Model
+     5.2.  Canonical Linking Key
+   6.  Scope Conventions
+   7.  Conformance
+   8.  Security Considerations
+   9.  IANA Considerations
+   10. References
+     10.1.  Normative References
+     10.2.  Informative References
+   Appendix A.  Test Vectors
+   Appendix B.  Field Mapping for Existing Systems
+   Acknowledgements
+
+
+1.  Introduction
+
+   Autonomous agents operating across distributed systems need a way to
+   identify individual actions that is independent of any single
+   system's infrastructure.  Existing audit trail mechanisms rely on
+   identifiers assigned by the recording system — identifiers that
+   require trusting that system's integrity, availability, and continued
+   operation.
+
+   "action_ref" is a content-addressed identifier derived exclusively
+   from the semantic content of the action itself.  Its key properties:
+
+   o  Deterministic: the same four inputs always produce the same
+      identifier.
+
+   o  Independent: any party with the preimage can verify the
+      identifier without contacting the emitter.
+
+   o  Composable: the same identifier links records across independently
+      operated systems (audit trails, idempotency guards, negotiation
+      artifacts) without requiring shared infrastructure.
+
+   o  Durable: the identifier remains verifiable after the emitting
+      system is offline, has rotated keys, or no longer exists.
+
+   This document defines the derivation algorithm, the canonical receipt
+   envelope, optional fields for post-rotation auditability, and the
+   composability model with exactly-once execution guarantees.
+
+   The specification has been implemented in production systems anchoring
+   agent action trails on Arbitrum [ARGENTUM-CORE], validated against 53
+   conformance vectors across 5 implementation languages, and recognized
+   as a referenced contribution in the AEOESS Agent Trust and
+   Accountability Cross-Extension Framework Matrix v0.3.3 [CTEF-MATRIX]
+   (row #2, "urn:mycelium:trail", CONFIRMED).
+
+
+2.  Terminology
+
+   The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+   "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
+   "OPTIONAL" in this document are to be interpreted as described in
+   BCP 14 [RFC2119] [RFC8174] when, and only when, they appear in all
+   capitals, as shown here.
+
+   action_ref:     The deterministic identifier defined by this document.
+                   A SHA-256 hex string derived from the JCS
+                   serialization of the four preimage fields.
+
+   preimage:       The four-field JSON object from which action_ref is
+                   derived: {agent_id, action_type, scope, timestamp}.
+
+   emitter:        The system or agent that computes and publishes an
+                   action_ref.
+
+   verifier:       Any party that recomputes action_ref from preimage
+                   fields to confirm integrity.
+
+   claim time:     The moment an action is declared before execution.
+                   Distinct from execution time, which may be later.
+
+   TrailRecord:    An immutable, on-chain-anchored record of an agent
+                   action containing the action_ref and preimage fields.
+
+
+3.  Action Reference Derivation
+
+3.1.  Preimage Fields
+
+   The action_ref preimage is a JSON object with exactly four fields:
+
+   agent_id (string, REQUIRED):
+      A stable identifier for the acting agent.  MAY be a DID, a
+      registered username, or an opaque string.  MUST be non-empty.
+      MUST be consistent across all parties deriving the same
+      action_ref for the same action.
+
+   action_type (string, REQUIRED):
+      A semantic label for what the agent did.  Examples:
+      "code.execute", "payment.send", "oracle.signal".  MUST be
+      non-empty.
+
+   scope (string, REQUIRED):
+      The declared authorization boundary — what the agent was
+      permitted to do, not what it did.  MUST be non-empty.  See
+      Section 6 for conventions.  Pass the empty string "" only if
+      scope is explicitly not applicable; implementations MUST treat
+      "" and absent scope as distinct values.
+
+   timestamp (string, REQUIRED):
+      The moment the action was claimed (before execution), expressed
+      as RFC 3339 UTC with exactly 3 millisecond digits.  The trailing
+      "Z" suffix is REQUIRED.  Format: "YYYY-MM-DDTHH:MM:SS.mmmZ".
+      See Section 3.4 for rationale and conversion rules.
+
+3.2.  Serialization
+
+   The four preimage fields MUST be serialized using JSON
+   Canonicalization Scheme (JCS) as defined in [RFC8785]:
+
+   o  Keys in lexicographic Unicode code point order:
+      "action_type", "agent_id", "scope", "timestamp"
+
+   o  No whitespace between tokens.
+
+   o  UTF-8 encoded.
+
+   o  Values are JSON strings with standard JSON escaping.
+
+   Implementations operating within the safe band (ASCII-only field
+   values, conformant RFC 3339 timestamps, no surrogate-pair Unicode)
+   MAY use a standard JSON serializer with sorted keys.  Implementations
+   outside this band MUST use an RFC 8785-compliant library.
+
+3.3.  Hash Function
+
+   action_ref = lowercase-hex( SHA-256( JCS(preimage) ) )
+
+   The output is a 64-character lowercase hexadecimal string.
+
+3.4.  Timestamp Format
+
+   The timestamp field represents the moment the action was claimed,
+   before execution.  Conformant format:
+
+      YYYY-MM-DDTHH:MM:SS.mmmZ
+
+   Requirements:
+
+   o  Timezone: "Z" suffix only.  "+00:00" or any numeric offset is
+      non-conformant and will produce a different digest.
+
+   o  Fractional precision: exactly 3 digits (milliseconds).  No
+      trailing zero suppression.  "10:00:00.1Z" is non-conformant.
+
+   o  The format admits exactly one valid byte sequence per instant.
+
+   A verifier receiving a non-conformant timestamp will compute a
+   different digest and correctly reject the receipt.  An emitter
+   generating non-conformant timestamps produces an unverifiable
+   receipt.
+
+   Implementations with epoch-millisecond integer representations MUST
+   convert to the conformant string format before hashing.  Multiplying
+   by 1000 and applying the format function is lossless.
+
+
+4.  Canonical Receipt Envelope
+
+4.1.  Required Fields
+
+   Implementations that emit a receipt referencing this specification
+   SHOULD include the following fields:
+
+      {
+        "packet_version": "1.0",
+        "action_ref": "<64-char sha256 hex>",
+        "hash_algo": "sha256",
+        "preimage_format": "jcs-rfc8785-v1",
+        "preimage": {
+          "agent_id": "...",
+          "action_type": "...",
+          "scope": "...",
+          "timestamp": "2026-05-26T10:00:00.000Z"
+        }
+      }
+
+   packet_version:     Forward-compatibility anchor.  Verifiers SHOULD
+                       explicitly reject unknown versions.
+
+   hash_algo:          Makes receipts self-describing.  Enables future
+                       algorithm agility without breaking receipts
+                       issued under prior versions.
+
+   preimage_format:    Unambiguously identifies the serialization.
+                       "jcs-rfc8785-v1" corresponds to this document.
+                       A verifier can recompute action_ref from the
+                       preimage fields using RFC 8785 without trusting
+                       the emitter.
+
+4.2.  Optional Fields for Rotation Auditability
+
+   The base envelope records the state at claim time.  It does not
+   record whether that state was still valid when the action was
+   admitted for execution.  The following optional fields close this
+   gap:
+
+   policy_version (string, OPTIONAL):
+      Identifies the version of the governing policy in force when the
+      action was admitted for execution.  A verifier replaying the
+      receipt after a policy rotation can use this field to establish
+      that the admitted policy was not superseded before execution.
+
+   authority_verified_at_ms (integer, OPTIONAL):
+      Unix timestamp in milliseconds at which the acting agent's
+      delegation authority was verified at issuance.  Provides the
+      issuance-side anchor for year-5 supervisory re-verification.
+
+   revocation_check_at_ms (integer, OPTIONAL):
+      Unix timestamp in milliseconds of the last non-revocation check
+      performed before execution.  A receipt without this field cannot
+      prove credentials were valid immediately before admission — only
+      that they were valid at claim time.  With this field, a verifier
+      can establish a maximum window of credential exposure.
+
+      Millisecond precision is REQUIRED because credential checks in
+      live multi-agent systems occur at sub-second granularity, and the
+      check-to-execution gap is often under one second.
+
+   negotiation_ref (string, OPTIONAL):
+      SHA-256 hex pointer to the negotiation artifact (capability-
+      grant, covenant, or agreement) that authorized this action.
+      Derived as SHA-256(JCS(negotiation_artifact)).  Does NOT enter
+      the action_ref preimage: changing or removing negotiation_ref
+      does not change action_ref.
+
+   A verifier requiring post-rotation auditability SHOULD treat a
+   receipt missing authority_verified_at_ms or revocation_check_at_ms
+   as unauditable for the rotation window — not as invalid.
+
+
+5.  Composability with Exactly-Once Execution
+
+5.1.  Layer Model
+
+   action_ref is designed to compose with, not replace, existing
+   execution guarantees.  Two complementary layers:
+
+   Layer 2 — Exactly-once execution (e.g., idempotency guards):
+      Proves: this action was claimed before execution; a duplicate
+      retry with the same key returned SKIP.
+      Does not prove: the outcome is tamper-evident after the fact.
+
+   Layer 4 — Tamper-evident audit trail (e.g., Mycelium TrailRecord):
+      Proves: this action occurred, with this hash, anchored at this
+      block; the record has not been modified since anchor time.
+      Does not prove: the action occurred exactly once.
+
+   A verifier finding both a TrailRecord AND a COMMITTED claim for the
+   same action_ref can assert: the action ran exactly once AND the
+   outcome is tamper-evident.  Neither layer requires the other;
+   implementations MAY adopt either independently.
+
+5.2.  Canonical Linking Key
+
+   The same action_ref MUST be computable from any system holding the
+   four preimage fields.  This property enables cross-system
+   verification without shared infrastructure.  Known convergences:
+
+   o  Mycelium TrailRecord: preimage fields published in each record.
+      [ARGENTUM-CORE]
+
+   o  SafeAgent execution claims: joint spec at [ARGENTUM-CORE-ISSUE7].
+      The action_ref maps to SafeAgent's idempotency_key (caller-
+      computed).
+
+   o  CrewAI idempotency key: key derivation converges on the same
+      primitive from the retry-deduplication direction.
+      [CREWAI-PR5822]
+
+   o  Nobulex covenant receipts: action_type as semantic label +
+      timestamp + agent_id + scope.
+
+   o  NEXUS oracle receipts: implements canonical envelope v1.0.
+
+
+6.  Scope Conventions
+
+   scope is a free-form non-empty string with no closed enumeration.
+   Any value is valid as long as it is non-empty and consistent across
+   all parties deriving the same action_ref.
+
+   RECOMMENDED convention (non-normative): namespace-prefix with the
+   emitter identifier using "<emitter>:<scope>".
+
+   Examples:
+      "algovoi:compliance_screen"
+      "vauban:stark_settlement"
+      "agent_os:committed_claim"
+      "aura:reputation_observe"
+
+   Rationale: different emitters may independently choose the same
+   scope string ("audit", "settlement", "signal") with semantically
+   distinct meanings.  Prefixing avoids collisions when trails from
+   multiple emitters are aggregated by a third party.
+
+   A verifier MUST NOT reject a trail solely because its scope lacks
+   a namespace prefix.
+
+
+7.  Conformance
+
+   A conformant emitter:
+
+   o  Produces action_ref as lowercase-hex(SHA-256(JCS(preimage))).
+   o  Uses the timestamp format defined in Section 3.4.
+   o  Includes packet_version, hash_algo, and preimage_format in
+      receipts.
+
+   A conformant verifier:
+
+   o  Recomputes action_ref from the four preimage fields.
+   o  Rejects receipts where the recomputed value does not match
+      the claimed action_ref.
+   o  Does not require the emitting system to be online or trusted.
+
+   Conformance test vectors are provided in Appendix A.
+
+
+8.  Security Considerations
+
+   Collision resistance: action_ref relies on the second-preimage
+   resistance of SHA-256.  An attacker who can find two distinct
+   preimages that produce the same action_ref can forge a receipt.
+   SHA-256 is currently considered secure against this attack.
+
+   Timestamp manipulation: if an emitter controls the timestamp field,
+   it can produce a different action_ref for the same semantic action
+   by varying the millisecond component.  Systems requiring
+   non-repudiation SHOULD anchor the timestamp to an external time
+   source and include authority_verified_at_ms.
+
+   Scope ambiguity: without namespace prefixing, scope collisions
+   across emitters can cause cross-system verification failures.
+   Implementations SHOULD follow the conventions in Section 6.
+
+   Key rotation: action_ref is independent of cryptographic keys.
+   Key rotation by the emitting agent does not invalidate previously
+   issued receipts.  The revocation_check_at_ms field provides
+   auditability for the credential validity window.
+
+
+9.  IANA Considerations
+
+   This document has no IANA actions.
+
+
+10.  References
+
+10.1.  Normative References
+
+   [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
+              Requirement Levels", BCP 14, RFC 2119,
+              DOI 10.17487/RFC2119, March 1997,
+              <https://www.rfc-editor.org/info/rfc2119>.
+
+   [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in
+              RFC 2119 Key Words", BCP 14, RFC 8174,
+              DOI 10.17487/RFC8174, May 2017,
+              <https://www.rfc-editor.org/info/rfc8174>.
+
+   [RFC8785]  Rundgren, A., Jordan, B., and S. Erdtman, "JSON
+              Canonicalization Scheme (JCS)", RFC 8785,
+              DOI 10.17487/RFC8785, June 2020,
+              <https://www.rfc-editor.org/info/rfc8785>.
+
+10.2.  Informative References
+
+   [ARGENTUM-CORE]
+              Giskard, R., "Mycelium Trails — Accountability Protocol
+              for Autonomous Agents", Version 1.0, 2026,
+              <https://github.com/giskard09/argentum-core>.
+
+   [ARGENTUM-CORE-ISSUE7]
+              Giskard, R. and azender1, "Joint spec: action_ref
+              canonical linking key (Mycelium × SafeAgent)",
+              Issue #7, 2026,
+              <https://github.com/giskard09/argentum-core/issues/7>.
+
+   [CTEF-MATRIX]
+              AEOESS, "Agent Trust and Accountability Cross-Extension
+              Framework Matrix v0.3.3", 2026,
+              <https://github.com/agentgraph-co/agentgraph/pull/20>.
+
+   [CREWAI-PR5822]
+              crewAIInc, "feat: action idempotency key derivation",
+              Pull Request #5822, 2026,
+              <https://github.com/crewAIInc/crewAI/pull/5822>.
+
+   [ZENODO-KET]
+              Giskard, R., "Karma Economy Triad (KET) v1.0.0",
+              DOI 10.5281/zenodo.19225329, 2026,
+              <https://zenodo.org/records/19225329>.
+
+   [ZENODO-MYCELIUM-PHYSICAL]
+              Giskard, R., "Mycelium for Physical Agents — Trust
+              Infrastructure for Autonomous Vehicles, Humanoid
+              Robots, and the Machines That Must Earn Their Place",
+              DOI 10.5281/zenodo.19369196, 2026,
+              <https://zenodo.org/records/19369196>.
+
+
+Appendix A.  Test Vectors
+
+   Vector 1 — NEXUS oracle signal:
+
+      Input:
+        agent_id    = "nexus-agent-xa12.onrender.com"
+        action_type = "oracle.signal"
+        scope       = "BTC"
+        timestamp   = "2025-05-18T11:40:31.000Z"
+
+      JCS payload:
+        {"action_type":"oracle.signal","agent_id":"nexus-agent-xa12.
+        onrender.com","scope":"BTC","timestamp":"2025-05-18T11:40:31.
+        000Z"}
+
+      action_ref:
+        fdd7f810499f06be24355ca8e2bfb8c4b965cc80c838f41fa074683443d89f5a
+
+   Vector 2 — agent governance action with scope prefix:
+
+      Input:
+        agent_id    = "giskard-self"
+        action_type = "agt:evidence_anchor"
+        scope       = "agt-evidence"
+        timestamp   = "2026-05-26T10:00:00.000Z"
+
+      JCS payload:
+        {"action_type":"agt:evidence_anchor","agent_id":"giskard-self",
+        "scope":"agt-evidence","timestamp":"2026-05-26T10:00:00.000Z"}
+
+      action_ref:
+        (compute via SHA-256 of the above UTF-8 bytes)
+
+   The full conformance suite (53 vectors, 5 languages, 4 independent
+   author sets) is available at:
+   <https://github.com/giskard09/argentum-core/tree/main/examples/
+   conformance>
+
+
+Appendix B.  Field Mapping for Existing Systems
+
+   DashClaw [ucsandman/DashClaw]:
+
+      Joint spec field   | DashClaw field
+      -------------------|-----------------------------
+      agent_id           | agent_id
+      action_type        | action_type
+      scope              | authorization_scope
+      action_ref         | idempotency_key (caller-computed)
+      action_id          | DashClaw's local evidence row ID
+
+   Callers compute action_ref externally and pass it as idempotency_key.
+   DashClaw consumes it opaquely.  No runtime coupling required.
+
+
+Acknowledgements
+
+   The action_ref derivation converged from independent work by
+   azender1 (SafeAgent), the AEOESS working group, Nobulex, and
+   crewAI contributors.  The guarantee model (Layer 2 + Layer 4)
+   was co-developed with azender1.  The dual-timestamp pattern
+   (authority_verified_at_ms + revocation_check_at_ms) was first
+   published in argentum-core commit 71c01e8 (2026-05-22) and
+   recognized as an originating contribution in the AEOESS Synthesis
+   Matrix v1 (2026-05-26).
+
+
+Author's Address
+
+   R. Giskard
+   Rama
+   Email: giskard09@users.noreply.github.com
+   URI:   https://github.com/giskard09/argentum-core
