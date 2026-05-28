@@ -7,6 +7,7 @@ This directory contains conformance fixtures for the action-ref-v1 spec and Myce
 3. **trail-status lifecycle** — three-state lifecycle (PENDING → COMMITTED → FAILED) with tx_hash invariants.
 4. **negative fixtures** — cases that MUST fail validation: missing required field, tampered hash.
 5. **CTEF vectors** — cross-extension matrix fixtures for `urn:mycelium:trail` (CTEF v0.3.3 row #2).
+6. **memory provenance** — `action_type: "memory_write"` + `scope: <memory_key>` pattern for content-addressed receipts per write. Covers OWASP ASI06 gap class #2. See commit [de7dd7e](https://github.com/giskard09/argentum-core/commit/de7dd7e0c09365f465d2c14c62817b1d19e4adef) and `docs/spec/action-ref.md` (memory provenance section).
 
 ---
 

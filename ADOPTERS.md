@@ -6,14 +6,6 @@ Each entry includes a public evidence link. Entries without verifiable public ev
 
 ---
 
-## NEXUS — Oracle Settlement Layer
-
-**Use case:** Automated oracle signals on Base mainnet. First financial integration of the canonical receipt envelope.  
-**Evidence:** `/receipt` endpoint live at `nexus-agent-xa12.onrender.com/receipt` — implements canonical envelope v1.0 with `action_ref`, `hash_algo`, `preimage_format: jcs-rfc8785-v1`, `preimage`. Receipt derivation spec-conformant.  
-**Status:** Receipt endpoint live. On-chain anchor pending.
-
----
-
 ## Agent OS — Trust Ledger
 
 **Contact:** [Liuyanfeng1234](https://github.com/Liuyanfeng1234)  
@@ -45,8 +37,8 @@ Each entry includes a public evidence link. Entries without verifiable public ev
 
 **Contact:** [azender1](https://github.com/azender1)  
 **Use case:** `action_ref` derivation + x402 settlement on Base mainnet.  
-**Evidence:** Joint spec [argentum-core#7](https://github.com/giskard09/argentum-core/issues/7), [ucsandman/DashClaw#105](https://github.com/ucsandman/DashClaw/issues/105).  
-**Status:** Live.
+**Evidence:** Joint spec [argentum-core#7](https://github.com/giskard09/argentum-core/issues/7), [ucsandman/DashClaw#105](https://github.com/ucsandman/DashClaw/issues/105). Reference deployment: $0.001 USDC on Base mainnet, block 45907183.  
+**Status:** Production.
 
 ---
 
