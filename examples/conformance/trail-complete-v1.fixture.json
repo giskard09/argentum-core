@@ -1,0 +1,224 @@
+{
+  "fixture_id": "trail-complete-v1",
+  "version": "v1",
+  "spec": [
+    "docs/spec/action-ref.md",
+    "docs/spec/delegation-ref.md",
+    "docs/spec/revocation-ref.md",
+    "docs/spec/guarantee-model.md"
+  ],
+  "hash_algo": "sha256",
+  "preimage_format": "jcs-rfc8785-v1",
+  "generated_at": "2026-05-27",
+  "purpose": "Post-execution log shape: complete trail record with action_ref + delegation_ref + revocation_ref + anchor_status in a single envelope. Each primitive is independently byte-verifiable. A conformant implementation that reproduces all three vectors covers the full provenance chain: authorization granted, action executed, delegation subsequently revoked, anchor committed or failed on-chain.",
+  "reproduce_in_python": "import hashlib, json\ndef jcs(obj): return json.dumps(obj, separators=(',',':'), sort_keys=True, ensure_ascii=False)\nref = hashlib.sha256(jcs(artifact).encode()).hexdigest()",
+  "vectors": [
+    {
+      "id": "complete-01-payment-delegated-revoked",
+      "description": "COMMITTED trail — payment.send executed under delegation, delegation subsequently revoked (policy_update). Covers: action_ref derivation, delegation_ref derivation, revocation_ref derivation (post-execution, append-only), anchor_status=anchored. Full provenance chain is independently replayable without external lookups.",
+      "trail_status": "COMMITTED",
+      "anchor_status": "anchored",
+      "tx_hash": "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890ab",
+      "action_preimage": {
+        "action_type": "payment.send",
+        "agent_id": "pioneer-agent-001",
+        "scope": "mycelium:payment",
+        "timestamp": "2026-05-27T14:00:00.000Z"
+      },
+      "action_jcs_payload": "{\"action_type\":\"payment.send\",\"agent_id\":\"pioneer-agent-001\",\"scope\":\"mycelium:payment\",\"timestamp\":\"2026-05-27T14:00:00.000Z\"}",
+      "action_canonical_bytes_hex": "7b22616374696f6e5f74797065223a227061796d656e742e73656e64222c226167656e745f6964223a2270696f6e6565722d6167656e742d303031222c2273636f7065223a226d7963656c69756d3a7061796d656e74222c2274696d657374616d70223a22323032362d30352d32375431343a30303a30302e3030305a227d",
+      "action_ref": "50aac898c712e6ff9ec4a8809dd0c2064fe9a7717c845b5fea5a5ca5d573a126",
+      "delegation_artifact": {
+        "capability": "payment.send",
+        "delegatee": "pioneer-agent-001",
+        "delegator": "giskard-self",
+        "expires_at": "2026-05-28T00:00:00.000Z",
+        "policy_version": "2026-05-01",
+        "scope": "mycelium:payment",
+        "version": "delegation-ref-v1"
+      },
+      "delegation_jcs_payload": "{\"capability\":\"payment.send\",\"delegatee\":\"pioneer-agent-001\",\"delegator\":\"giskard-self\",\"expires_at\":\"2026-05-28T00:00:00.000Z\",\"policy_version\":\"2026-05-01\",\"scope\":\"mycelium:payment\",\"version\":\"delegation-ref-v1\"}",
+      "delegation_canonical_bytes_hex": "7b226361706162696c697479223a227061796d656e742e73656e64222c2264656c656761746565223a2270696f6e6565722d6167656e742d303031222c2264656c656761746f72223a226769736b6172642d73656c66222c22657870697265735f6174223a22323032362d30352d32385430303a30303a30302e3030305a222c22706f6c6963795f76657273696f6e223a22323032362d30352d3031222c2273636f7065223a226d7963656c69756d3a7061796d656e74222c2276657273696f6e223a2264656c65676174696f6e2d7265662d7631227d",
+      "delegation_ref": "7b461ac83d1a7eda84c78b03798ca29df4ddf121fc7369dd2b8a5f4cd08c4a67",
+      "revocation_artifact": {
+        "reason": "policy_update",
+        "revocation_key": "rev_c7d2e8f1a3b4",
+        "revoked_action_ref": "50aac898c712e6ff9ec4a8809dd0c2064fe9a7717c845b5fea5a5ca5d573a126",
+        "revoked_at": "2026-05-27T18:00:00.000Z",
+        "revoker": "giskard-self",
+        "scope": "mycelium:payment",
+        "version": "revocation-ref-v1"
+      },
+      "revocation_jcs_payload": "{\"reason\":\"policy_update\",\"revocation_key\":\"rev_c7d2e8f1a3b4\",\"revoked_action_ref\":\"50aac898c712e6ff9ec4a8809dd0c2064fe9a7717c845b5fea5a5ca5d573a126\",\"revoked_at\":\"2026-05-27T18:00:00.000Z\",\"revoker\":\"giskard-self\",\"scope\":\"mycelium:payment\",\"version\":\"revocation-ref-v1\"}",
+      "revocation_canonical_bytes_hex": "7b22726561736f6e223a22706f6c6963795f757064617465222c227265766f636174696f6e5f6b6579223a227265765f633764326538663161336234222c227265766f6b65645f616374696f6e5f726566223a2235306161633839386337313265366666396563346138383039646430633230363466653961373731376338343562356665613561356361356435373361313236222c227265766f6b65645f6174223a22323032362d30352d32375431383a30303a30302e3030305a222c227265766f6b6572223a226769736b6172642d73656c66222c2273636f7065223a226d7963656c69756d3a7061796d656e74222c2276657273696f6e223a227265766f636174696f6e2d7265662d7631227d",
+      "revocation_ref": "49f767553eeff17db24a45f55640663ca73e2127af12e67516b73118b6443d32",
+      "revocation_action_preimage": {
+        "action_type": "authorization.revoke",
+        "agent_id": "giskard-self",
+        "scope": "mycelium:payment",
+        "timestamp": "2026-05-27T18:00:00.000Z"
+      },
+      "revocation_action_ref": "a7ddb8f7e33dccb1e14a18a8f43585d94a8ae66c305cd8b7360cf838246661e0",
+      "trail_record": {
+        "trail_status": "COMMITTED",
+        "anchor_status": "anchored",
+        "agent_id": "pioneer-agent-001",
+        "service": "mycelium-core",
+        "operation": "payment.send",
+        "action_ref": "50aac898c712e6ff9ec4a8809dd0c2064fe9a7717c845b5fea5a5ca5d573a126",
+        "delegation_ref": "7b461ac83d1a7eda84c78b03798ca29df4ddf121fc7369dd2b8a5f4cd08c4a67",
+        "revocation_ref": "49f767553eeff17db24a45f55640663ca73e2127af12e67516b73118b6443d32",
+        "tx_hash": "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890ab",
+        "packet_version": "1.0",
+        "hash_algo": "sha256",
+        "preimage_format": "jcs-rfc8785-v1",
+        "preimage": {
+          "action_type": "payment.send",
+          "agent_id": "pioneer-agent-001",
+          "scope": "mycelium:payment",
+          "timestamp": "2026-05-27T14:00:00.000Z"
+        }
+      },
+      "provenance_chain": {
+        "step_1_delegation": "delegation_ref = SHA-256(JCS(delegation_artifact)) — authorization granted before execution",
+        "step_2_execution": "action_ref = SHA-256(JCS(action_preimage)) — action executed within delegated scope",
+        "step_3_anchor": "tx_hash non-null + anchor_status=anchored — tamper-evident on-chain record exists",
+        "step_4_revocation": "revocation_ref = SHA-256(JCS(revocation_artifact)) — delegation revoked post-execution (append-only, does NOT invalidate COMMITTED trail record)",
+        "chain_invariant": "Each ref is independently replayable. No external lookups required. Revocation does not retroactively invalidate the COMMITTED trail record."
+      },
+      "invariants": {
+        "delegation_ref_not_in_action_preimage": "delegation_ref does not enter action_preimage — action_ref is determined solely by action_type, agent_id, scope, timestamp",
+        "revocation_ref_not_in_action_preimage": "revocation_ref does not enter action_preimage — same invariant",
+        "scope_match": "scope in delegation_artifact matches scope in action_preimage — conformant verifier SHOULD enforce this",
+        "committed_immutable": "COMMITTED + non-null tx_hash means the record is terminal. Post-execution revocation adds a new trail record; it does not mutate this one.",
+        "append_only": "revocation_action_ref is a new trail record (action_type=authorization.revoke), independent of the original action_ref"
+      }
+    },
+    {
+      "id": "complete-02-oracle-delegated-committed",
+      "description": "COMMITTED trail — oracle.signal executed under delegation, no revocation. Minimal complete envelope: action_ref + delegation_ref + anchor_status=anchored, revocation_ref absent. Covers the happy-path post-execution log shape.",
+      "trail_status": "COMMITTED",
+      "anchor_status": "anchored",
+      "tx_hash": "0x9f8e7d6c5b4a3210fedcba9876543210fedcba9876543210fedcba9876543210fe",
+      "action_preimage": {
+        "action_type": "oracle.signal",
+        "agent_id": "pioneer-agent-001",
+        "scope": "mycelium:oracle",
+        "timestamp": "2026-05-27T15:00:00.000Z"
+      },
+      "action_jcs_payload": "{\"action_type\":\"oracle.signal\",\"agent_id\":\"pioneer-agent-001\",\"scope\":\"mycelium:oracle\",\"timestamp\":\"2026-05-27T15:00:00.000Z\"}",
+      "action_canonical_bytes_hex": "7b22616374696f6e5f74797065223a226f7261636c652e7369676e616c222c226167656e745f6964223a2270696f6e6565722d6167656e742d303031222c2273636f7065223a226d7963656c69756d3a6f7261636c65222c2274696d657374616d70223a22323032362d30352d32375431353a30303a30302e3030305a227d",
+      "action_ref": "a428a6a3110f8207f7caaf38c65026c56b49f66cc12dcc569f7e62f1a7b7ffa4",
+      "delegation_artifact": {
+        "capability": "oracle.read",
+        "delegatee": "pioneer-agent-001",
+        "delegator": "giskard-self",
+        "expires_at": "2026-05-28T00:00:00.000Z",
+        "policy_version": "2026-05-01",
+        "scope": "mycelium:oracle",
+        "version": "delegation-ref-v1"
+      },
+      "delegation_jcs_payload": "{\"capability\":\"oracle.read\",\"delegatee\":\"pioneer-agent-001\",\"delegator\":\"giskard-self\",\"expires_at\":\"2026-05-28T00:00:00.000Z\",\"policy_version\":\"2026-05-01\",\"scope\":\"mycelium:oracle\",\"version\":\"delegation-ref-v1\"}",
+      "delegation_canonical_bytes_hex": "7b226361706162696c697479223a226f7261636c652e72656164222c2264656c656761746565223a2270696f6e6565722d6167656e742d303031222c2264656c656761746f72223a226769736b6172642d73656c66222c22657870697265735f6174223a22323032362d30352d32385430303a30303a30302e3030305a222c22706f6c6963795f76657273696f6e223a22323032362d30352d3031222c2273636f7065223a226d7963656c69756d3a6f7261636c65222c2276657273696f6e223a2264656c65676174696f6e2d7265662d7631227d",
+      "delegation_ref": "5febe2677f44608cc2324d7eecbd91a8e883800a30b62ed508d60d1f4dd48b11",
+      "revocation_ref": null,
+      "trail_record": {
+        "trail_status": "COMMITTED",
+        "anchor_status": "anchored",
+        "agent_id": "pioneer-agent-001",
+        "service": "mycelium-core",
+        "operation": "oracle.signal",
+        "action_ref": "a428a6a3110f8207f7caaf38c65026c56b49f66cc12dcc569f7e62f1a7b7ffa4",
+        "delegation_ref": "5febe2677f44608cc2324d7eecbd91a8e883800a30b62ed508d60d1f4dd48b11",
+        "revocation_ref": null,
+        "tx_hash": "0x9f8e7d6c5b4a3210fedcba9876543210fedcba9876543210fedcba9876543210fe",
+        "packet_version": "1.0",
+        "hash_algo": "sha256",
+        "preimage_format": "jcs-rfc8785-v1",
+        "preimage": {
+          "action_type": "oracle.signal",
+          "agent_id": "pioneer-agent-001",
+          "scope": "mycelium:oracle",
+          "timestamp": "2026-05-27T15:00:00.000Z"
+        }
+      },
+      "invariants": {
+        "null_revocation_ref": "revocation_ref=null is valid and expected when no post-execution revocation has occurred. A verifier MUST NOT treat null as an error.",
+        "committed_terminal": "COMMITTED + non-null tx_hash — tamper-evident anchor exists. No further state transitions possible for this record.",
+        "delegation_scope_match": "scope in delegation_artifact ('mycelium:oracle') matches scope in action_preimage — capability boundary enforced"
+      }
+    },
+    {
+      "id": "complete-03-data-write-failed-delegation-expired",
+      "description": "FAILED trail — data.write attempted under delegation whose expires_at matched the execution timestamp exactly. Execution did not complete. anchor_status=failed, tx_hash=null. Covers the failure post-execution log shape: delegation_ref present (authorization was granted), action_ref computable (preimage is known), but no tamper-evident outcome.",
+      "trail_status": "FAILED",
+      "anchor_status": "failed",
+      "tx_hash": null,
+      "action_preimage": {
+        "action_type": "data.write",
+        "agent_id": "pioneer-agent-001",
+        "scope": "mycelium:storage",
+        "timestamp": "2026-05-27T16:00:00.000Z"
+      },
+      "action_jcs_payload": "{\"action_type\":\"data.write\",\"agent_id\":\"pioneer-agent-001\",\"scope\":\"mycelium:storage\",\"timestamp\":\"2026-05-27T16:00:00.000Z\"}",
+      "action_canonical_bytes_hex": "7b22616374696f6e5f74797065223a22646174612e7772697465222c226167656e745f6964223a2270696f6e6565722d6167656e742d303031222c2273636f7065223a226d7963656c69756d3a73746f72616765222c2274696d657374616d70223a22323032362d30352d32375431363a30303a30302e3030305a227d",
+      "action_ref": "22a5a48e782f09bd7e50f1438dd21eac6c337ea2da1d337c677ce9787d518697",
+      "delegation_artifact": {
+        "capability": "data.write",
+        "delegatee": "pioneer-agent-001",
+        "delegator": "giskard-self",
+        "expires_at": "2026-05-27T16:00:00.000Z",
+        "policy_version": "2026-05-01",
+        "scope": "mycelium:storage",
+        "version": "delegation-ref-v1"
+      },
+      "delegation_jcs_payload": "{\"capability\":\"data.write\",\"delegatee\":\"pioneer-agent-001\",\"delegator\":\"giskard-self\",\"expires_at\":\"2026-05-27T16:00:00.000Z\",\"policy_version\":\"2026-05-01\",\"scope\":\"mycelium:storage\",\"version\":\"delegation-ref-v1\"}",
+      "delegation_canonical_bytes_hex": "7b226361706162696c697479223a22646174612e7772697465222c2264656c656761746565223a2270696f6e6565722d6167656e742d303031222c2264656c656761746f72223a226769736b6172642d73656c66222c22657870697265735f6174223a22323032362d30352d32375431363a30303a30302e3030305a222c22706f6c6963795f76657273696f6e223a22323032362d30352d3031222c2273636f7065223a226d7963656c69756d3a73746f72616765222c2276657273696f6e223a2264656c65676174696f6e2d7265662d7631227d",
+      "delegation_ref": "95901774913978bc3aa6988a2c8e3485fd6b582830c1959be718a2460830af3b",
+      "revocation_ref": null,
+      "trail_record": {
+        "trail_status": "FAILED",
+        "anchor_status": "failed",
+        "agent_id": "pioneer-agent-001",
+        "service": "mycelium-core",
+        "operation": "data.write",
+        "action_ref": "22a5a48e782f09bd7e50f1438dd21eac6c337ea2da1d337c677ce9787d518697",
+        "delegation_ref": "95901774913978bc3aa6988a2c8e3485fd6b582830c1959be718a2460830af3b",
+        "revocation_ref": null,
+        "tx_hash": null,
+        "packet_version": "1.0",
+        "hash_algo": "sha256",
+        "preimage_format": "jcs-rfc8785-v1",
+        "preimage": {
+          "action_type": "data.write",
+          "agent_id": "pioneer-agent-001",
+          "scope": "mycelium:storage",
+          "timestamp": "2026-05-27T16:00:00.000Z"
+        }
+      },
+      "failure_context": {
+        "reason": "delegation_expired",
+        "detail": "expires_at in delegation_artifact equals execution timestamp — delegation boundary reached at the exact moment of execution. Conformant verifier SHOULD reject this as out-of-scope.",
+        "note": "action_ref is still computable and valid — the failure is at the authorization layer, not the hash derivation layer. The trail record exists as evidence that the action was attempted and failed."
+      },
+      "invariants": {
+        "failed_has_null_tx_hash": "FAILED + null tx_hash — no tamper-evident outcome. A verifier MUST NOT assert the action completed.",
+        "failed_is_terminal": "FAILED is terminal. No retry creates a new trail record with a new timestamp and a new action_ref.",
+        "delegation_ref_present_on_failure": "delegation_ref is present even on FAILED records — the authorization was granted (delegation existed), execution failed for a different reason. This distinction matters for compliance audits.",
+        "action_ref_computable": "action_ref can be derived from action_preimage regardless of trail_status — the ref is a content address, not a success indicator"
+      }
+    }
+  ],
+  "cross_references": {
+    "action_ref_spec": "docs/spec/action-ref.md — SHA-256(JCS(preimage)) derivation",
+    "delegation_ref_spec": "docs/spec/delegation-ref.md — SHA-256(JCS(delegation_artifact)) derivation",
+    "revocation_ref_spec": "docs/spec/revocation-ref.md — SHA-256(JCS(revocation_artifact)) derivation",
+    "guarantee_model": "docs/spec/guarantee-model.md — trail_status + anchor_status lifecycle",
+    "related_fixtures": [
+      "action-ref-v1-baseline.fixture.json — action_ref primitive",
+      "delegation-ref-v2.fixture.json — delegation_ref primitive",
+      "revocation-ref-v1.fixture.json — revocation_ref primitive",
+      "trail-status-lifecycle-v1.fixture.json — trail_status three-state lifecycle"
+    ]
+  }
+}

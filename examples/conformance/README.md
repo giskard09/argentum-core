@@ -130,6 +130,7 @@ Every fixture in this directory passes the CTEF substrate gate:
 | [`negative-v1.fixture.json`](./negative-v1.fixture.json) | 2 | ✓ byte-match verified |
 | [`idempotency-ref-v1.fixture.json`](./idempotency-ref-v1.fixture.json) | 1 | ✓ byte-match verified |
 | [`revocation-ref-v1.fixture.json`](./revocation-ref-v1.fixture.json) | 1 | ✓ byte-match verified |
+| [`trail-complete-v1.fixture.json`](./trail-complete-v1.fixture.json) | 3 | ✓ byte-match verified |
 
 ### Vectors
 
