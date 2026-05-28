@@ -278,6 +278,32 @@ ARGENTUM does not care where the agent runs. The karma trace belongs to the enti
 
 Physical devices with agents participate the same way as cloud agents: `entity_id → wallet_address → ARGT on-chain`.
 
+## Memory frameworks — GuardedMemory pattern
+
+Wrap any memory backend's `put()` with a write receipt. Each write produces a content-addressed `action_ref` — independently verifiable without querying the operator. Covers OWASP ASI06 (memory poisoning defense).
+
+```python
+import hashlib, json
+from datetime import datetime, timezone
+
+def guarded_put(backend, agent_id: str, memory_key: str, content):
+    ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+    preimage = {"action_type": "memory_write", "agent_id": agent_id,
+                "scope": memory_key, "timestamp": ts}
+    action_ref = hashlib.sha256(
+        json.dumps(preimage, separators=(",", ":"), sort_keys=True).encode()
+    ).hexdigest()
+    backend.put(memory_key, content)   # existing write, unchanged
+    anchor_trail(action_ref, preimage) # POST https://argentum-api.rgiskard.xyz/nexus/trail
+    return action_ref
+```
+
+Works with **LlamaIndex**, **LangChain**, **AutoGen**, or any custom memory store.
+
+Full integration guide + LlamaIndex `GuardedMemory` class: [docs/guides/integrator-landing.md](docs/guides/integrator-landing.md#memory-frameworks--guardedmemory-pattern)
+
+Conformance fixtures: [`examples/conformance/memory-write-v1.fixture.json`](examples/conformance/memory-write-v1.fixture.json) — 3 byte-exact vectors (baseline write, LlamaIndex conversation history, delegated write with authorization chain).
+
 ## Ecosystem integrations
 
 - **Giskard Memory** (`localhost:8005`) — verified actions stored as episodic traces

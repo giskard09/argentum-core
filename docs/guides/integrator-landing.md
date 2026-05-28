@@ -161,6 +161,82 @@ Full spec: [docs/spec/karma-score-v1.md](../spec/karma-score-v1.md)
 
 ---
 
+## Memory frameworks — GuardedMemory pattern
+
+Wrap any memory backend's `put()` with a write receipt. Each write produces an independently verifiable `action_ref`. Covers OWASP ASI06 (memory poisoning defense).
+
+### LlamaIndex
+
+```python
+import hashlib, json
+from datetime import datetime, timezone
+
+class GuardedMemory:
+    """Drop-in wrapper for any LlamaIndex memory backend."""
+
+    def __init__(self, backend, agent_id: str):
+        self.backend = backend
+        self.agent_id = agent_id
+
+    def put(self, key: str, value) -> str:
+        ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+        preimage = {
+            "action_type": "memory_write",
+            "agent_id":    self.agent_id,
+            "scope":       key,           # memory key = scope
+            "timestamp":   ts,
+        }
+        action_ref = hashlib.sha256(
+            json.dumps(preimage, separators=(",", ":"), sort_keys=True).encode()
+        ).hexdigest()
+
+        self.backend.put(key, value)      # existing write, unchanged
+        self._anchor(action_ref, preimage)
+        return action_ref
+
+    def _anchor(self, action_ref: str, preimage: dict):
+        import urllib.request
+        body = json.dumps({
+            "action_ref":      action_ref,
+            "service":         "llamaindex-memory",
+            "hash_algo":       "sha256",
+            "preimage_format": "jcs-rfc8785",
+            "preimage":        preimage,
+        }).encode()
+        req = urllib.request.Request(
+            "https://argentum-api.rgiskard.xyz/nexus/trail",
+            data=body,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        urllib.request.urlopen(req)
+
+# Usage — drop-in replacement for any existing memory backend
+# from llama_index.core.memory import SimpleComposableMemory
+# raw = SimpleComposableMemory.from_defaults(...)
+# memory = GuardedMemory(raw, agent_id="my-llamaindex-agent")
+# receipt = memory.put("conversation_history", messages)
+# print(receipt)  # 64-char hex — verifiable at /trails/verify
+```
+
+**Scope convention:** `llm:memory:<key>` for cross-framework interoperability.
+
+**Verify any write:**
+
+```bash
+curl 'https://argentum-api.rgiskard.xyz/trails/verify?agent_id=my-llamaindex-agent&action_ref=<receipt>'
+```
+
+**Multi-agent / orchestrated writes** — if an orchestrator delegates `memory.write` to a sub-agent, attach `delegation_ref` to the trail submission. See [examples/conformance/memory-write-v1.fixture.json](../../examples/conformance/memory-write-v1.fixture.json) vector `mem-003`.
+
+**pip:**
+
+```bash
+pip install mycelium-agt  # includes GuardedMemory helper
+```
+
+---
+
 ## Questions
 
 Open an issue: [github.com/giskard09/argentum-core/issues](https://github.com/giskard09/argentum-core/issues)

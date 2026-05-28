@@ -1,0 +1,102 @@
+{
+  "fixture_id": "memory-write-v1",
+  "version": "v1",
+  "spec": "docs/spec/action-ref.md",
+  "spec_stable_ref": "https://github.com/giskard09/argentum-core/blob/action-ref-v1.0/docs/spec/action-ref.md",
+  "hash_algo": "sha256",
+  "preimage_format": "jcs-rfc8785-v1",
+  "generated_at": "2026-05-27",
+  "purpose": "Conformance substrate for the GuardedMemory pattern: action_type='memory_write' + scope=<memory_key> produces a content-addressed receipt per write. Covers OWASP ASI06 gap class #2 (memory provenance attestation). Designed for memory framework integrations (LlamaIndex, AutoGen, LangChain) where each memory write must be independently verifiable without trusting the operator.",
+  "pattern": "GuardedMemory",
+  "owasp_coverage": "ASI06 — memory poisoning defense via content-addressed write receipts",
+  "reproduce_in_python": "import hashlib, json\ndef jcs(obj): return json.dumps(obj, separators=(',',':'), sort_keys=True, ensure_ascii=False)\naction_ref = hashlib.sha256(jcs(preimage).encode()).hexdigest()",
+  "vectors": [
+    {
+      "id": "mem-001-baseline-write",
+      "description": "Baseline memory write receipt. action_type='memory_write', scope identifies the memory slot. Reproducing this byte-identical satisfies the memory provenance attestation requirement. This vector is byte-identical to the example in docs/spec/action-ref.md (memory provenance section, commit de7dd7e).",
+      "preimage": {
+        "action_type": "memory_write",
+        "agent_id": "giskard-self",
+        "scope": "mycelium:memory:session_context_v3",
+        "timestamp": "2026-05-26T20:15:00.000Z"
+      },
+      "jcs_payload": "{\"action_type\":\"memory_write\",\"agent_id\":\"giskard-self\",\"scope\":\"mycelium:memory:session_context_v3\",\"timestamp\":\"2026-05-26T20:15:00.000Z\"}",
+      "preimage_canonical_bytes_hex": "7b22616374696f6e5f74797065223a226d656d6f72795f7772697465222c226167656e745f6964223a226769736b6172642d73656c66222c2273636f7065223a226d7963656c69756d3a6d656d6f72793a73657373696f6e5f636f6e746578745f7633222c2274696d657374616d70223a22323032362d30352d32365432303a31353a30302e3030305a227d",
+      "action_ref": "36fe8d0559bb254c20cdb0e7a0c83e53f0434fc076e856ff769444da2a73b0b4",
+      "invariants": {
+        "scope_is_memory_key": "scope identifies the specific memory slot — different slot = different action_ref. Two writes to the same slot at the same timestamp by the same agent produce the same action_ref (idempotent receipt).",
+        "no_content_in_preimage": "The written content itself does not enter the preimage. The receipt proves what slot was written, by whom, at what time — not the content. Content integrity requires a separate commitment (e.g. content hash in claims)."
+      }
+    },
+    {
+      "id": "mem-002-llamaindex-conversation-write",
+      "description": "LlamaIndex GuardedMemory write — conversation_history slot. Models the exact pattern a LlamaIndex memory backend would use when anchoring each memory write. scope follows llm:<framework>:<key> convention for cross-framework interoperability.",
+      "preimage": {
+        "action_type": "memory_write",
+        "agent_id": "llamaindex-agent-001",
+        "scope": "llm:memory:conversation_history",
+        "timestamp": "2026-05-27T10:00:00.000Z"
+      },
+      "jcs_payload": "{\"action_type\":\"memory_write\",\"agent_id\":\"llamaindex-agent-001\",\"scope\":\"llm:memory:conversation_history\",\"timestamp\":\"2026-05-27T10:00:00.000Z\"}",
+      "preimage_canonical_bytes_hex": "7b22616374696f6e5f74797065223a226d656d6f72795f7772697465222c226167656e745f6964223a226c6c616d61696e6465782d6167656e742d303031222c2273636f7065223a226c6c6d3a6d656d6f72793a636f6e766572736174696f6e5f686973746f7279222c2274696d657374616d70223a22323032362d30352d32375431303a30303a30302e3030305a227d",
+      "action_ref": "e387ee5de2c7ed0811f528f4c0edb889e6e06bd4dd84e8cd3fae803ef489384b",
+      "companion_read": {
+        "description": "The corresponding memory_read receipt 30s later — proves the read was within scope.",
+        "preimage": {
+          "action_type": "memory_read",
+          "agent_id": "llamaindex-agent-001",
+          "scope": "llm:memory:conversation_history",
+          "timestamp": "2026-05-27T10:00:30.000Z"
+        },
+        "jcs_payload": "{\"action_type\":\"memory_read\",\"agent_id\":\"llamaindex-agent-001\",\"scope\":\"llm:memory:conversation_history\",\"timestamp\":\"2026-05-27T10:00:30.000Z\"}",
+        "preimage_canonical_bytes_hex": "7b22616374696f6e5f74797065223a226d656d6f72795f72656164222c226167656e745f6964223a226c6c616d61696e6465782d6167656e742d303031222c2273636f7065223a226c6c6d3a6d656d6f72793a636f6e766572736174696f6e5f686973746f7279222c2274696d657374616d70223a22323032362d30352d32375431303a30303a33302e3030305a227d",
+        "action_ref": "407a2a2f0fc627b069cc4f5f28628d200eeb4ac49a7a43b601c080adcbac2505"
+      },
+      "invariants": {
+        "write_read_independence": "memory_write and memory_read produce different action_refs even for the same slot — action_type differs, so the hash differs. A verifier can distinguish a write audit trail from a read audit trail.",
+        "scope_convention": "llm:<framework>:<key> — namespaced to avoid collisions across frameworks. The convention is advisory; any non-empty string is valid per spec."
+      }
+    },
+    {
+      "id": "mem-003-guarded-write-with-delegation",
+      "description": "GuardedMemory write under orchestrator delegation — tool_results_cache slot. Models a multi-agent scenario: orchestrator-001 delegates memory.write capability to llamaindex-agent-001 for a specific scope and time window. delegation_ref links the authorization chain to the write receipt.",
+      "preimage": {
+        "action_type": "memory_write",
+        "agent_id": "llamaindex-agent-001",
+        "scope": "llm:memory:tool_results_cache",
+        "timestamp": "2026-05-27T10:01:00.000Z"
+      },
+      "jcs_payload": "{\"action_type\":\"memory_write\",\"agent_id\":\"llamaindex-agent-001\",\"scope\":\"llm:memory:tool_results_cache\",\"timestamp\":\"2026-05-27T10:01:00.000Z\"}",
+      "preimage_canonical_bytes_hex": "7b22616374696f6e5f74797065223a226d656d6f72795f7772697465222c226167656e745f6964223a226c6c616d61696e6465782d6167656e742d303031222c2273636f7065223a226c6c6d3a6d656d6f72793a746f6f6c5f726573756c74735f6361636865222c2274696d657374616d70223a22323032362d30352d32375431303a30313a30302e3030305a227d",
+      "action_ref": "5ddfd36467fd292a91629c4d96daff7d9da32620fdb14f5d715bbc9ab059fe0e",
+      "delegation_artifact": {
+        "capability": "memory.write",
+        "delegatee": "llamaindex-agent-001",
+        "delegator": "orchestrator-001",
+        "expires_at": "2026-05-27T12:00:00.000Z",
+        "policy_version": "2026-05-01",
+        "scope": "llm:memory:tool_results_cache",
+        "version": "delegation-ref-v1"
+      },
+      "delegation_jcs_payload": "{\"capability\":\"memory.write\",\"delegatee\":\"llamaindex-agent-001\",\"delegator\":\"orchestrator-001\",\"expires_at\":\"2026-05-27T12:00:00.000Z\",\"policy_version\":\"2026-05-01\",\"scope\":\"llm:memory:tool_results_cache\",\"version\":\"delegation-ref-v1\"}",
+      "delegation_canonical_bytes_hex": "7b226361706162696c697479223a226d656d6f72792e7772697465222c2264656c656761746565223a226c6c616d61696e6465782d6167656e742d303031222c2264656c656761746f72223a226f7263686573747261746f722d303031222c22657870697265735f6174223a22323032362d30352d32375431323a30303a30302e3030305a222c22706f6c6963795f76657273696f6e223a22323032362d30352d3031222c2273636f7065223a226c6c6d3a6d656d6f72793a746f6f6c5f726573756c74735f6361636865222c2276657273696f6e223a2264656c65676174696f6e2d7265662d7631227d",
+      "delegation_ref": "c6d83425af0136bab09a56e9c6152e3a02570fcdc71cae59ec3b6927ae2ecf41",
+      "invariants": {
+        "delegation_ref_not_in_preimage": "delegation_ref does not enter action_preimage — action_ref is determined solely by action_type, agent_id, scope, timestamp",
+        "scope_match": "scope in delegation_artifact matches scope in action_preimage — the agent is writing only within the authorized boundary",
+        "capability_granularity": "memory.write capability is distinct from memory.read — a delegatee with only memory.write cannot produce a valid delegation_ref for a memory_read action"
+      }
+    }
+  ],
+  "guarded_memory_pattern": {
+    "summary": "Wrap any memory backend's put() method: derive action_ref before writing, anchor the trail after. The receipt is independent of the backend — S3, Redis, SQLite, LlamaIndex SimpleDocumentStore, any storage.",
+    "python_snippet": "import hashlib, json\nfrom datetime import datetime, timezone\n\ndef guarded_put(backend, agent_id, memory_key, content):\n    ts = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%S.000Z')\n    preimage = {\"action_type\": \"memory_write\", \"agent_id\": agent_id,\n                \"scope\": memory_key, \"timestamp\": ts}\n    action_ref = hashlib.sha256(\n        json.dumps(preimage, separators=(',',':'), sort_keys=True).encode()\n    ).hexdigest()\n    backend.put(memory_key, content)   # your existing write\n    anchor_trail(action_ref, preimage) # POST /nexus/trail\n    return action_ref",
+    "scope_convention": "Use <namespace>:<framework>:<key> for cross-framework interoperability. Examples: llm:memory:conversation_history, llm:memory:tool_results_cache, mycelium:memory:session_context_v3"
+  },
+  "cross_references": {
+    "spec": "docs/spec/action-ref.md (memory provenance section, commit de7dd7e)",
+    "integrator_guide": "docs/guides/integrator-landing.md (Memory frameworks section)",
+    "delegation_primitive": "examples/conformance/delegation-ref-v2.fixture.json",
+    "complete_trail": "examples/conformance/trail-complete-v1.fixture.json"
+  }
+}
