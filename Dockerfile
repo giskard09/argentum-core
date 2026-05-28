@@ -9,7 +9,8 @@ RUN pip install --no-cache-dir \
     uvicorn \
     pydantic \
     slowapi \
-    python-dotenv
+    python-dotenv \
+    pynacl
 
 COPY . .
 
