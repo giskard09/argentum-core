@@ -23,6 +23,11 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 import agent_signing
+try:
+    import smtp_notify as _smtp
+    _SMTP_OK = True
+except ImportError:
+    _SMTP_OK = False
 
 limiter = Limiter(key_func=get_remote_address)
 
@@ -966,6 +971,13 @@ async def payg_webhook_lightning(request: Request):
     result = mycelium_trails.topup_payg(TRAILS_DB, api_key, trails)
     if result is None:
         raise HTTPException(404, "api_key not found")
+    if _SMTP_OK:
+        acct = mycelium_trails.get_payg_account(TRAILS_DB, api_key)
+        _smtp.notify_payg_topup(
+            agent_id=acct.get("agent_id", api_key) if acct else api_key,
+            trails_added=trails,
+            trails_total=result["credit_trails"],
+        )
     return {"status": "ok", "api_key": api_key, "credited_trails": trails, "balance": result["credit_trails"]}
 
 
@@ -1573,6 +1585,38 @@ def rate_trail_execution(trail_id: str, req: TrailRating):
     return {"execution_id": req.execution_id, "rating": req.rating, "signed": signed}
 
 
+@app.get("/billing/summary")
+def billing_summary(client: str, month: str):
+    """
+    Uso mensual de un agente. Interno, sin autenticación.
+    month: YYYY-MM
+    """
+    import re as _re, calendar as _cal
+    if not _re.fullmatch(r"\d{4}-\d{2}", month):
+        raise HTTPException(400, "month must be YYYY-MM")
+    try:
+        year, mon = int(month[:4]), int(month[5:7])
+        month_start = int(datetime(year, mon, 1).timestamp())
+    except ValueError:
+        raise HTTPException(400, "month must be YYYY-MM")
+    last_day = _cal.monthrange(year, mon)[1]
+    month_end = int(datetime(year, mon, last_day, 23, 59, 59).timestamp())
+    conn = sqlite3.connect(TRAILS_DB)
+    conn.row_factory = sqlite3.Row
+    row = conn.execute(
+        "SELECT COUNT(*) AS n FROM trails WHERE agent_id=? AND timestamp>=? AND timestamp<=?",
+        (client, month_start, month_end),
+    ).fetchone()
+    conn.close()
+    trail_count = row["n"] if row else 0
+    return {
+        "client":     client,
+        "month":      month,
+        "trails":     trail_count,
+        "amount_usd": round(trail_count * 0.003, 6),
+    }
+
+
 @app.get("/lightning/balance")
 async def get_ln_balance():
     """Current phoenixd balance."""
@@ -1977,6 +2021,8 @@ async def nexus_trail(request: Request):
             mycelium_trails.topup_payg(TRAILS_DB, payg_account["api_key"], 1)
         used_month = mycelium_trails.count_trails_this_month(TRAILS_DB, agent_id)
         if used_month >= mycelium_trails.MONTHLY_LIMIT_FREE:
+            if _SMTP_OK:
+                _smtp.notify_trail_limit(agent_id, used_month, mycelium_trails.MONTHLY_LIMIT_FREE)
             return JSONResponse({
                 "error": "monthly_limit_exceeded",
                 "limit": mycelium_trails.MONTHLY_LIMIT_FREE,
@@ -1996,6 +2042,148 @@ async def nexus_trail(request: Request):
         "payment_hash": payment_hash or None,
         "trail_status": "committed",
     }, status_code=201)
+
+
+DOCUSEAL_TOKEN = os.environ.get("DOCUSEAL_TOKEN", "")
+PIONEER_AGENT_API = os.environ.get("PIONEER_AGENT_API", "http://localhost:8030")
+
+# Hosts autorizados para fetch de PDFs DocuSeal — SSRF allowlist
+_DOCUSEAL_ALLOWED_HOSTS = {"api.docuseal.com", "api.docuseal.co", "app.docuseal.com"}
+
+import socket as _socket
+from urllib.parse import urlparse as _urlparse
+import ipaddress as _ipaddress
+
+_PRIVATE_NETWORKS = [
+    _ipaddress.ip_network(r) for r in (
+        "127.0.0.0/8", "::1/128", "10.0.0.0/8",
+        "172.16.0.0/12", "192.168.0.0/16",
+        "169.254.0.0/16", "0.0.0.0/8", "fc00::/7",
+    )
+]
+
+def _safe_docuseal_url(url: str) -> bool:
+    """Devuelve True solo si la URL es https y apunta a un host DocuSeal conocido y público."""
+    try:
+        parsed = _urlparse(url)
+        if parsed.scheme != "https":
+            return False
+        host = parsed.hostname or ""
+        if host not in _DOCUSEAL_ALLOWED_HOSTS:
+            return False
+        # Resolver DNS y rechazar IPs privadas/loopback
+        for _, _, _, _, sockaddr in _socket.getaddrinfo(host, None):
+            ip = _ipaddress.ip_address(sockaddr[0])
+            if any(ip in net for net in _PRIVATE_NETWORKS):
+                return False
+        return True
+    except Exception:
+        return False
+
+
+@app.post("/webhook/docuseal")
+async def docuseal_webhook(request: Request):
+    """Webhook DocuSeal — dispara trail de activación RSA cuando un documento se completa.
+
+    DocuSeal envía event_type='form.completed' cuando todos los firmantes firman.
+    Computa negotiation_ref = SHA-256(PDF bytes) y delega el trail a Pioneer.
+    Autenticación: header X-DocuSeal-Token contra DOCUSEAL_TOKEN env var.
+    """
+    # Fail-closed: si el token no está configurado el endpoint no opera
+    if not DOCUSEAL_TOKEN:
+        raise HTTPException(503, "webhook not configured")
+    token = request.headers.get("X-DocuSeal-Token", "")
+    if not hmac.compare_digest(token, DOCUSEAL_TOKEN):
+        raise HTTPException(401, "Invalid DocuSeal token")
+
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"error": "invalid JSON"}, status_code=400)
+
+    event_type = body.get("event_type", "")
+    if event_type != "form.completed":
+        return JSONResponse({"status": "ignored", "event_type": event_type})
+
+    submission = body.get("data", {})
+    submission_id = submission.get("id", "")
+    document_url = submission.get("audit_log_url") or submission.get("url", "")
+    submitters = submission.get("submitters", [])
+
+    # Identificar firmante externo (azender1 / SafeAgent)
+    signer_email = ""
+    for s in submitters:
+        if s.get("role", "").lower() not in ("sender", "rama", "giskard"):
+            signer_email = s.get("email", "")
+            break
+
+    # Descargar PDF para computar SHA-256
+    # — solo si la URL pasa la allowlist SSRF; token NO se reenvía a URL externa
+    negotiation_ref = None
+    if document_url and _safe_docuseal_url(document_url):
+        try:
+            async with httpx.AsyncClient(timeout=30, follow_redirects=False) as client:
+                pdf_resp = await client.get(document_url)
+                if pdf_resp.status_code == 200:
+                    negotiation_ref = hashlib.sha256(pdf_resp.content).hexdigest()
+        except Exception:
+            pass
+
+    # Delegar trail a Pioneer via endpoint interno
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            pioneer_resp = await client.post(
+                f"{PIONEER_AGENT_API}/trigger/rsa_activation",
+                json={
+                    "submission_id": str(submission_id),
+                    "signer_email":  signer_email,
+                    "negotiation_ref": negotiation_ref,
+                    "scope": "mycelium.safeagent",
+                },
+            )
+            pioneer_ok = pioneer_resp.status_code == 200
+    except Exception:
+        pioneer_ok = False
+
+    # Fallback: registrar trail directamente desde argentum si Pioneer no está disponible
+    if not pioneer_ok:
+        import time as _t, json as _j
+        ts_str = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+        canonical = _j.dumps(
+            dict(sorted({"agent_id": "pioneer-agent-001", "action_type": "rsa_activation",
+                         "scope": "mycelium.safeagent", "timestamp": ts_str}.items())),
+            separators=(",", ":"), ensure_ascii=False,
+        ).encode("utf-8")
+        action_ref = hashlib.sha256(canonical).hexdigest()
+        trail_id = mycelium_trails.record_trail(
+            TRAILS_DB,
+            agent_id="pioneer-agent-001",
+            service="mycelium.safeagent",
+            operation="rsa_activation",
+            nonce=action_ref,
+            success=True,
+            scope="mycelium.safeagent",
+            negotiation_ref=negotiation_ref,
+        )
+    else:
+        trail_id = None
+
+    if _SMTP_OK and trail_id:
+        _smtp.notify_rsa_activation(
+            trail_id=trail_id,
+            signer_email=signer_email,
+            negotiation_ref=negotiation_ref or "",
+            action_ref="",
+        )
+
+    return JSONResponse({
+        "status":          "trail_triggered",
+        "submission_id":   str(submission_id),
+        "signer_email":    signer_email,
+        "negotiation_ref": negotiation_ref,
+        "via_pioneer":     pioneer_ok,
+        "trail_id":        trail_id,
+    })
 
 
 if __name__ == "__main__":
