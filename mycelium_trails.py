@@ -22,6 +22,12 @@ import uuid
 from typing import Iterable, Optional
 
 GENESIS_AGENTS_DEFAULT = frozenset({"giskard-self", "lightning"})
+# Enterprise agents with signed RSA — no daily/monthly rate limit
+ENTERPRISE_AGENTS = frozenset(
+    a.strip()
+    for a in os.environ.get("ENTERPRISE_AGENTS", "safeagent-prod").split(",")
+    if a.strip()
+)
 RATE_LIMIT_DEFAULT = int(os.environ.get("TRAIL_DAILY_LIMIT", "100"))
 MAX_LIMIT_PER_QUERY = 500
 MONTHLY_LIMIT_FREE = 1000
@@ -168,7 +174,7 @@ def record_trail(
         return None
 
     genesis = frozenset(genesis_agents)
-    if agent_id not in genesis and rate_limit_cap > 0:
+    if agent_id not in genesis and agent_id not in ENTERPRISE_AGENTS and rate_limit_cap > 0:
         used_today = count_trails_today(db_path, agent_id, now=now)
         if used_today >= rate_limit_cap:
             return None
