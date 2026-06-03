@@ -1,6 +1,6 @@
 # action_ref — derivation spec
 
-**Version:** 1.1 | **Published:** 2026-05-23 | **Updated:** 2026-06-03 | **Stable ref:** [`action-ref-v1.0`](https://github.com/giskard09/argentum-core/blob/action-ref-v1.0/docs/spec/action-ref.md) | **Latest commit:** [96931c9](https://github.com/giskard09/argentum-core/commit/96931c9)
+**Version:** 1.1 | **Published:** 2026-05-23 | **Updated:** 2026-06-03 (×2) | **Stable ref:** [`action-ref-v1.0`](https://github.com/giskard09/argentum-core/blob/action-ref-v1.0/docs/spec/action-ref.md) | **Latest commit:** [96931c9](https://github.com/giskard09/argentum-core/commit/96931c9)
 
 `action_ref` is a deterministic, content-addressed identifier for an agent action. Any party with the four preimage fields can independently compute it — no trust in the emitting system required.
 
@@ -41,7 +41,7 @@ Reference implementation: [`plugins/agt_evidence_anchor/action_ref.py`](../../pl
 |-------|------|-------------|
 | `agent_id` | string | Stable identifier for the **executing agent at issuance time** — the terminal executor after full delegation resolution. Not the original delegator; not a display label. In a chain A→B→C where C executes the action, `agent_id` is C. |
 | `action_type` | string | What the agent did — semantic label (`code.execute`, `payment.send`, etc.) |
-| `scope` | string | Declared authorization boundary — what the agent was allowed to do, not what it did. Free-form non-empty string; see [Scope conventions](#scope-conventions). Pass `""` if not applicable. |
+| `scope` | string | Terminal executing agent's requested-intent scope — what the agent requested to do at the point of action. Free-form non-empty string; see [Scope conventions](#scope-conventions). Pass `""` if not applicable. |
 | `timestamp` | string | RFC 3339 UTC with 3-digit millisecond precision. Format: `"2026-05-15T10:00:00.123Z"`. The trailing `Z` is mandatory. |
 
 ## Scope conventions
@@ -61,7 +61,7 @@ These examples are verified in production trails anchored on-chain via Mycelium.
 
 **Rationale:** different emitters may independently choose the same scope string (`audit`, `settlement`, `signal`) with semantically distinct meanings. Prefixing avoids collisions when trails from multiple emitters are verified or aggregated by a third party.
 
-**Conformance note — scope anti-pattern:** `scope` MUST represent the authorized boundary of the action — what the agent was *permitted* to do — not a digest of the agent's first intent. A common mistake is to hash the initial intent object and use that hash as the scope value. This produces a non-verifiable scope: a verifier holding only the intent hash cannot establish the authorization boundary the agent operated under. If the authorization narrows between intent and execution (e.g., a capability grant restricts the initial request), using the intent hash silently drops that narrowing from the receipt. The correct value is the authorized/narrowed scope string, not a hash of the intent that preceded it.
+**Conformance note — scope anti-pattern:** `scope` captures the terminal executing agent's requested-intent at the point of action — a human-readable label, not a derived hash. A common mistake is to hash the initial intent object and use that hash as the scope value. This breaks the primary verifiability property of `action_ref`: any party holding the four preimage fields must be able to recompute it independently, without retrieving any external record. With a hashed scope, a verifier cannot recompute `action_ref` from the intent tuple alone — they must also retrieve the commitment record to recover the pre-hash value. The correct value is the intent label itself (e.g., `"trade:execute:authorized"`, `"aura:reputation_observe"`), not a digest of the document that describes it.
 
 Emitters that do not namespace their scope remain valid — the convention is a recommendation, not a requirement. A verifier MUST NOT reject a trail solely because its `scope` lacks a namespace prefix.
 
