@@ -99,6 +99,7 @@ _DDL_MIGRATIONS = [
     "ALTER TABLE trails ADD COLUMN negotiation_ref TEXT",
     "ALTER TABLE trails ADD COLUMN action_ref TEXT",
     "ALTER TABLE trails ADD COLUMN tx_hash TEXT",
+    "ALTER TABLE trails ADD COLUMN origin TEXT",
 ]
 
 
@@ -162,6 +163,7 @@ def record_trail(
     root_trail_id: Optional[str] = None,
     negotiation_ref: Optional[str] = None,
     skip_monthly_limit: bool = False,
+    origin: str = "internal",
 ) -> Optional[str]:
     """Graba un trail. Retorna trail_id o None si cae por rate limit o input invalido.
 
@@ -170,6 +172,7 @@ def record_trail(
     parent_trail_id: ID del trail que generó éste (None si es raíz).
     root_trail_id:   ID del trail origen de la cadena (None si es raíz).
     negotiation_ref: SHA-256 hex del artefacto de negociación previo (opcional). No entra en el preimage de action_ref.
+    origin: "nexus" para trails de clientes externos via /nexus/trail, "internal" para trails del sistema.
     """
     if not (agent_id and service and operation and nonce):
         return None
@@ -193,8 +196,8 @@ def record_trail(
             INSERT INTO trails
               (trail_id, agent_id, service, operation, timestamp,
                karma_at_time, success, signature_ref, scope, delegation_ref,
-               parent_trail_id, root_trail_id, negotiation_ref)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+               parent_trail_id, root_trail_id, negotiation_ref, origin)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 trail_id,
@@ -210,6 +213,7 @@ def record_trail(
                 parent_trail_id,
                 root_trail_id,
                 negotiation_ref,
+                origin,
             ),
         )
         return trail_id
@@ -235,6 +239,7 @@ def _row_to_dict(row: sqlite3.Row) -> dict:
         "negotiation_ref": row["negotiation_ref"] if "negotiation_ref" in keys else None,
         "action_ref": row["action_ref"] if "action_ref" in keys else None,
         "tx_hash": row["tx_hash"] if "tx_hash" in keys else None,
+        "origin": row["origin"] if "origin" in keys else None,
     }
 
 
@@ -282,7 +287,7 @@ def get_trail_by_id(db_path: str, trail_id: str) -> Optional[dict]:
             """
             SELECT trail_id, agent_id, service, operation, timestamp,
                    karma_at_time, success, signature_ref, scope, delegation_ref,
-                   parent_trail_id, root_trail_id, negotiation_ref, action_ref, tx_hash
+                   parent_trail_id, root_trail_id, negotiation_ref, action_ref, tx_hash, origin
             FROM trails WHERE trail_id=?
             """,
             (trail_id,),

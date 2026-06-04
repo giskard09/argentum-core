@@ -1704,14 +1704,14 @@ def trails_dashboard(client: Optional[str] = None, limit: int = 50):
     conn = mycelium_trails._connect(TRAILS_DB)
     if client:
         rows = conn.execute(
-            "SELECT trail_id, agent_id, service, operation, scope, timestamp, action_ref, success "
+            "SELECT trail_id, agent_id, service, operation, scope, timestamp, action_ref, success, origin "
             "FROM trails WHERE agent_id = ? OR service = ? "
             "ORDER BY timestamp DESC LIMIT ?",
             (client, client, min(limit, 200)),
         ).fetchall()
     else:
         rows = conn.execute(
-            "SELECT trail_id, agent_id, service, operation, scope, timestamp, action_ref, success "
+            "SELECT trail_id, agent_id, service, operation, scope, timestamp, action_ref, success, origin "
             "FROM trails ORDER BY timestamp DESC LIMIT ?",
             (min(limit, 200),),
         ).fetchall()
@@ -1732,6 +1732,11 @@ def trails_dashboard(client: Optional[str] = None, limit: int = 50):
         action_ref_short = (action_ref_val[:12] + "…") if action_ref_val else "—"
         action_ref_title = e(action_ref_val, quote=True)
         success_badge = '<span class="ok">✓</span>' if r["success"] else '<span class="fail">✗</span>'
+        origin_val = r["origin"] if "origin" in r.keys() else None
+        if origin_val == "nexus":
+            origin_badge = '<span class="badge-nexus" title="Trail externo — cliente via /nexus/trail">client</span>'
+        else:
+            origin_badge = '<span class="badge-internal" title="Trail interno — generado por el sistema">internal</span>'
         rows_html += f"""<tr>
           <td class="mono dim">{e(r["trail_id"] or "")[:8]}</td>
           <td>{e(r["agent_id"])}</td>
@@ -1741,6 +1746,7 @@ def trails_dashboard(client: Optional[str] = None, limit: int = 50):
           <td class="mono dim" title="{action_ref_title}">{e(action_ref_short)}</td>
           <td class="ts">{e(fmt_ts(r["timestamp"]))}</td>
           <td>{success_badge}</td>
+          <td>{origin_badge}</td>
         </tr>"""
 
     safe_client = e(client or "", quote=True)
@@ -1778,6 +1784,8 @@ def trails_dashboard(client: Optional[str] = None, limit: int = 50):
   .ok{{color:#34d399;font-weight:700}}
   .fail{{color:#f87171;font-weight:700}}
   .empty{{text-align:center;color:#475569;padding:48px;font-size:.85rem}}
+  .badge-nexus{{background:#14532d;color:#86efac;border:1px solid #166534;border-radius:4px;padding:1px 6px;font-size:.72rem;font-weight:600}}
+  .badge-internal{{background:#1e293b;color:#64748b;border:1px solid #334155;border-radius:4px;padding:1px 6px;font-size:.72rem}}
 </style>
 </head>
 <body>
@@ -1803,6 +1811,7 @@ def trails_dashboard(client: Optional[str] = None, limit: int = 50):
       <th>action_ref</th>
       <th>Timestamp</th>
       <th></th>
+      <th>Origin</th>
     </tr>
   </thead>
   <tbody>
@@ -2389,6 +2398,7 @@ async def nexus_trail(request: Request):
         delegation_ref=payment_hash or None,  # payment_hash externo NEXUS
         negotiation_ref=negotiation_ref,
         skip_monthly_limit=payg_consumed,
+        origin="nexus",
     )
 
     if trail_id:
