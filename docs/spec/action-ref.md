@@ -44,7 +44,7 @@ Reference implementation: [`plugins/agt_evidence_anchor/action_ref.py`](../../pl
 | `scope` | string | Terminal executing agent's requested-intent scope — what the agent requested to do at the point of action. Free-form non-empty string; see [Scope conventions](#scope-conventions). Pass `""` if not applicable. |
 | `timestamp` | string | RFC 3339 UTC with 3-digit millisecond precision. Format: `"2026-05-15T10:00:00.123Z"`. The trailing `Z` is mandatory. |
 
-> **Conversion note:** Implementations holding epoch-millisecond integers MUST convert to RFC 3339 UTC (`YYYY-MM-DDTHH:MM:SS.mmmZ`) before hashing. The preimage carries the string, not the integer.
+> **Conversion note:** Implementations holding epoch-millisecond integers MUST convert to this string format before hashing. The preimage carries the string, not the integer.
 
 ## Scope conventions
 

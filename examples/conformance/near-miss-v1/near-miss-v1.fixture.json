@@ -7,8 +7,9 @@
   "attribution": "agentgraph-co/agentgraph",
   "id_ref": "draft-giskard-aeoess-action-ref",
   "generated_at": "2026-05-31",
+  "updated_at": "2026-06-04",
   "purpose": "Near-miss conformance vectors for action_ref. Each vector represents a failure mode that a verifier MUST reject (fail-closed). An implementation that reproduces the expected_error_code for each input satisfies the near-miss boundary of the action-ref-v1 spec.",
-  "action_ref_definition": "action_ref = \"sha256:\" + hex(SHA-256(JCS({agent_id, action_type, scope, timestamp_ms})))",
+  "action_ref_definition": "action_ref = \"sha256:\" + hex(SHA-256(JCS({agent_id, action_type, scope, timestamp})))",
   "canonicalization": "RFC 8785 (JCS)",
   "error_codes": {
     "AMBIGUOUS_ISSUER_BINDING": "Same action_ref bound to >1 issuer with disjoint verdicts; no injective (claim_type, evidenceType, source_provider_did).",
@@ -25,11 +26,11 @@
           "agent_id": "did:web:agent.example",
           "action_type": "behavioral_eval",
           "scope": "urn:scope:read",
-          "timestamp_ms": 1748736000000
+          "timestamp": "2025-06-01T00:00:00.000Z"
         },
-        "canonical_bytes_utf8": "{\"action_type\":\"behavioral_eval\",\"agent_id\":\"did:web:agent.example\",\"scope\":\"urn:scope:read\",\"timestamp_ms\":1748736000000}",
-        "canonical_sha256": "31d477f761ee3f1cf943acba4d78980bd566ab175ee5f92f53c1e1b1aeb26cdd",
-        "action_ref": "sha256:31d477f761ee3f1cf943acba4d78980bd566ab175ee5f92f53c1e1b1aeb26cdd"
+        "canonical_bytes_utf8": "{\"action_type\":\"behavioral_eval\",\"agent_id\":\"did:web:agent.example\",\"scope\":\"urn:scope:read\",\"timestamp\":\"2025-06-01T00:00:00.000Z\"}",
+        "canonical_sha256": "9752a870dac7100010453be9494ec631c78fd55bb7cb41355cf03592da3862ce",
+        "action_ref": "sha256:9752a870dac7100010453be9494ec631c78fd55bb7cb41355cf03592da3862ce"
       },
       "envelopes": [
         {
@@ -49,7 +50,7 @@
             "scope": "urn:scope:read"
           },
           "evidence_basis": {
-            "action_ref": "sha256:31d477f761ee3f1cf943acba4d78980bd566ab175ee5f92f53c1e1b1aeb26cdd",
+            "action_ref": "sha256:9752a870dac7100010453be9494ec631c78fd55bb7cb41355cf03592da3862ce",
             "evidenceType": "third-party"
           },
           "attestation": {
@@ -77,7 +78,7 @@
             "scope": "urn:scope:read"
           },
           "evidence_basis": {
-            "action_ref": "sha256:31d477f761ee3f1cf943acba4d78980bd566ab175ee5f92f53c1e1b1aeb26cdd",
+            "action_ref": "sha256:9752a870dac7100010453be9494ec631c78fd55bb7cb41355cf03592da3862ce",
             "evidenceType": "third-party"
           },
           "attestation": {
@@ -92,7 +93,7 @@
       "expected_result": "fail-closed",
       "expected_error_code": "AMBIGUOUS_ISSUER_BINDING",
       "expected_receipt_fields": {
-        "action_ref": "sha256:31d477f761ee3f1cf943acba4d78980bd566ab175ee5f92f53c1e1b1aeb26cdd",
+        "action_ref": "sha256:9752a870dac7100010453be9494ec631c78fd55bb7cb41355cf03592da3862ce",
         "conflicting_providers": [
           "did:web:issuer-a.example",
           "did:web:issuer-b.example"
@@ -110,22 +111,22 @@
           "agent_id": "did:web:agent.example",
           "action_type": "behavioral_eval",
           "scope": "urn:scope:read",
-          "timestamp_ms": 1748736000000
+          "timestamp": "2025-06-01T00:00:00.000Z"
         },
-        "canonical_bytes_utf8": "{\"action_type\":\"behavioral_eval\",\"agent_id\":\"did:web:agent.example\",\"scope\":\"urn:scope:read\",\"timestamp_ms\":1748736000000}",
-        "canonical_sha256": "31d477f761ee3f1cf943acba4d78980bd566ab175ee5f92f53c1e1b1aeb26cdd",
-        "action_ref": "sha256:31d477f761ee3f1cf943acba4d78980bd566ab175ee5f92f53c1e1b1aeb26cdd"
+        "canonical_bytes_utf8": "{\"action_type\":\"behavioral_eval\",\"agent_id\":\"did:web:agent.example\",\"scope\":\"urn:scope:read\",\"timestamp\":\"2025-06-01T00:00:00.000Z\"}",
+        "canonical_sha256": "9752a870dac7100010453be9494ec631c78fd55bb7cb41355cf03592da3862ce",
+        "action_ref": "sha256:9752a870dac7100010453be9494ec631c78fd55bb7cb41355cf03592da3862ce"
       },
       "presented_preimage_block": {
         "preimage": {
           "agent_id": "did:web:agent.example",
           "action_type": "behavioral_eval",
           "scope": "urn:scope:write",
-          "timestamp_ms": 1748736000000
+          "timestamp": "2025-06-01T00:00:00.000Z"
         },
-        "canonical_bytes_utf8": "{\"action_type\":\"behavioral_eval\",\"agent_id\":\"did:web:agent.example\",\"scope\":\"urn:scope:write\",\"timestamp_ms\":1748736000000}",
-        "canonical_sha256": "0d550dd25c53dc55bfdac4960548d7c2a667ca362653792513c6a739e2157ca5",
-        "action_ref": "sha256:0d550dd25c53dc55bfdac4960548d7c2a667ca362653792513c6a739e2157ca5"
+        "canonical_bytes_utf8": "{\"action_type\":\"behavioral_eval\",\"agent_id\":\"did:web:agent.example\",\"scope\":\"urn:scope:write\",\"timestamp\":\"2025-06-01T00:00:00.000Z\"}",
+        "canonical_sha256": "83113cdd87faaa14074c181182c8fe994979e45d4dca1fb4fc4339b682383ca6",
+        "action_ref": "sha256:83113cdd87faaa14074c181182c8fe994979e45d4dca1fb4fc4339b682383ca6"
       },
       "envelope": {
         "@context": [
@@ -144,7 +145,7 @@
           "scope": "urn:scope:write"
         },
         "evidence_basis": {
-          "action_ref": "sha256:31d477f761ee3f1cf943acba4d78980bd566ab175ee5f92f53c1e1b1aeb26cdd",
+          "action_ref": "sha256:9752a870dac7100010453be9494ec631c78fd55bb7cb41355cf03592da3862ce",
           "evidenceType": "third-party"
         },
         "attestation": {
@@ -158,8 +159,8 @@
       "expected_result": "fail-closed",
       "expected_error_code": "RESCOPED_REPLAY",
       "expected_receipt_fields": {
-        "embedded_action_ref": "sha256:31d477f761ee3f1cf943acba4d78980bd566ab175ee5f92f53c1e1b1aeb26cdd",
-        "recomputed_action_ref": "sha256:0d550dd25c53dc55bfdac4960548d7c2a667ca362653792513c6a739e2157ca5",
+        "embedded_action_ref": "sha256:9752a870dac7100010453be9494ec631c78fd55bb7cb41355cf03592da3862ce",
+        "recomputed_action_ref": "sha256:83113cdd87faaa14074c181182c8fe994979e45d4dca1fb4fc4339b682383ca6",
         "resolution": "rejected: presented scope not bound by action_ref"
       },
       "rationale": "scope is in the action_ref preimage precisely so a rescoped presentation cannot reuse a stale reference. A verifier MUST recompute over the presented tuple and reject on mismatch."
@@ -173,28 +174,28 @@
           "agent_id": "did:web:agent.example",
           "action_type": "behavioral_eval",
           "scope": "urn:scope:read",
-          "timestamp_ms": 1748736000000
+          "timestamp": "2025-06-01T00:00:00.000Z"
         },
-        "canonical_bytes_utf8": "{\"action_type\":\"behavioral_eval\",\"agent_id\":\"did:web:agent.example\",\"scope\":\"urn:scope:read\",\"timestamp_ms\":1748736000000}",
-        "canonical_sha256": "31d477f761ee3f1cf943acba4d78980bd566ab175ee5f92f53c1e1b1aeb26cdd",
-        "action_ref": "sha256:31d477f761ee3f1cf943acba4d78980bd566ab175ee5f92f53c1e1b1aeb26cdd"
+        "canonical_bytes_utf8": "{\"action_type\":\"behavioral_eval\",\"agent_id\":\"did:web:agent.example\",\"scope\":\"urn:scope:read\",\"timestamp\":\"2025-06-01T00:00:00.000Z\"}",
+        "canonical_sha256": "9752a870dac7100010453be9494ec631c78fd55bb7cb41355cf03592da3862ce",
+        "action_ref": "sha256:9752a870dac7100010453be9494ec631c78fd55bb7cb41355cf03592da3862ce"
       },
       "verification_preimage_block": {
         "preimage": {
           "agent_id": "did:web:agent.example",
           "action_type": "behavioral",
           "scope": "urn:scope:read",
-          "timestamp_ms": 1748736000000
+          "timestamp": "2025-06-01T00:00:00.000Z"
         },
-        "canonical_bytes_utf8": "{\"action_type\":\"behavioral\",\"agent_id\":\"did:web:agent.example\",\"scope\":\"urn:scope:read\",\"timestamp_ms\":1748736000000}",
-        "canonical_sha256": "6a5ede2c49452d6f8ac9e47353a8c509053b7e687bc04c7ad182c6039e7002c0",
-        "action_ref": "sha256:6a5ede2c49452d6f8ac9e47353a8c509053b7e687bc04c7ad182c6039e7002c0"
+        "canonical_bytes_utf8": "{\"action_type\":\"behavioral\",\"agent_id\":\"did:web:agent.example\",\"scope\":\"urn:scope:read\",\"timestamp\":\"2025-06-01T00:00:00.000Z\"}",
+        "canonical_sha256": "7ffa1e2e9cbc109ac465ff93a78739f764d406904692aa0354a7e084e7d53db3",
+        "action_ref": "sha256:7ffa1e2e9cbc109ac465ff93a78739f764d406904692aa0354a7e084e7d53db3"
       },
       "expected_result": "fail-closed",
       "expected_error_code": "SEMANTIC_DRIFT",
       "expected_receipt_fields": {
-        "issuance_action_ref": "sha256:31d477f761ee3f1cf943acba4d78980bd566ab175ee5f92f53c1e1b1aeb26cdd",
-        "verification_action_ref": "sha256:6a5ede2c49452d6f8ac9e47353a8c509053b7e687bc04c7ad182c6039e7002c0",
+        "issuance_action_ref": "sha256:9752a870dac7100010453be9494ec631c78fd55bb7cb41355cf03592da3862ce",
+        "verification_action_ref": "sha256:7ffa1e2e9cbc109ac465ff93a78739f764d406904692aa0354a7e084e7d53db3",
         "resolution": "rejected: action_type not from closed canonical vocabulary"
       },
       "rationale": "action_type MUST be a closed vocabulary with canonical values, or issuance and verification silently compute different action_refs. Normalizing-then-matching would mask the drift; fail-closed surfaces it."
