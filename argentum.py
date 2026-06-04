@@ -470,6 +470,110 @@ def root():
         "sybil_resistance": "marks + karma-weighted attestations"
     }
 
+@app.get("/docs/integration", response_class=HTMLResponse)
+def integration_guide():
+    """Guía de integración genérica — pública, sin auth."""
+    md_path = Path(__file__).parent / "docs" / "guides" / "integration.md"
+    try:
+        raw = md_path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        raise HTTPException(404, "integration guide not found")
+
+    # Render minimal markdown → HTML (headers, code blocks, tables, inline code, bold)
+    import re as _re
+
+    def _escape(s: str) -> str:
+        return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+    lines = raw.split("\n")
+    html_lines: list[str] = []
+    in_code = False
+    code_buf: list[str] = []
+    code_lang = ""
+
+    for line in lines:
+        if line.startswith("```"):
+            if not in_code:
+                in_code = True
+                code_lang = line[3:].strip()
+                code_buf = []
+            else:
+                in_code = False
+                body = _escape("\n".join(code_buf))
+                html_lines.append(f'<pre><code class="lang-{_escape(code_lang)}">{body}</code></pre>')
+            continue
+        if in_code:
+            code_buf.append(line)
+            continue
+
+        # Tables
+        if line.startswith("|") and "|" in line[1:]:
+            if line.replace("|", "").replace("-", "").replace(" ", "") == "":
+                continue  # separator row
+            cells = [c.strip() for c in line.strip("|").split("|")]
+            if not html_lines or not html_lines[-1].endswith("</tr>"):
+                html_lines.append('<table>')
+                row = "".join(f"<th>{_escape(c)}</th>" for c in cells)
+            else:
+                row = "".join(f"<td>{_escape(c)}</td>" for c in cells)
+            html_lines.append(f"<tr>{row}</tr>")
+            continue
+        if html_lines and html_lines[-1].startswith("<tr>") and not line.startswith("|"):
+            html_lines.append("</table>")
+
+        # Headers
+        m = _re.match(r'^(#{1,4})\s+(.*)', line)
+        if m:
+            level = len(m.group(1))
+            text = _escape(m.group(2))
+            html_lines.append(f"<h{level}>{text}</h{level}>")
+            continue
+
+        # HR
+        if line.strip() in ("---", "***", "___"):
+            html_lines.append("<hr>")
+            continue
+
+        # Inline formatting
+        def _inline(s: str) -> str:
+            s = _re.sub(r'`([^`]+)`', lambda x: f'<code>{_escape(x.group(1))}</code>', s)
+            s = _re.sub(r'\*\*([^*]+)\*\*', r'<strong>\1</strong>', s)
+            s = _re.sub(r'\[([^\]]+)\]\(([^)]+)\)', r'<a href="\2">\1</a>', s)
+            return s
+
+        if line.strip() == "":
+            html_lines.append("<br>")
+        else:
+            html_lines.append(f"<p>{_inline(_escape(line))}</p>")
+
+    content = "\n".join(html_lines)
+    return HTMLResponse(content=f"""<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mycelium Trails — Integration Guide</title>
+<style>
+  *{{box-sizing:border-box;margin:0;padding:0}}
+  body{{background:#0f172a;color:#e2e8f0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+       font-size:15px;line-height:1.7;padding:40px 20px;max-width:820px;margin:0 auto}}
+  h1{{font-size:1.8rem;color:#f8fafc;margin:0 0 8px}}
+  h2{{font-size:1.2rem;color:#94a3b8;margin:36px 0 12px;text-transform:uppercase;letter-spacing:.06em;font-weight:600}}
+  h3{{font-size:1rem;color:#cbd5e1;margin:20px 0 8px}}
+  h4{{font-size:.9rem;color:#94a3b8;margin:16px 0 6px}}
+  p{{margin:6px 0;color:#cbd5e1}}
+  hr{{border:none;border-top:1px solid #1e293b;margin:28px 0}}
+  pre{{background:#1e293b;border:1px solid #334155;border-radius:6px;padding:16px;overflow-x:auto;margin:12px 0}}
+  code{{font-family:'JetBrains Mono','Fira Code',monospace;font-size:.82rem;color:#7dd3fc}}
+  pre code{{color:#e2e8f0}}
+  table{{width:100%;border-collapse:collapse;margin:12px 0;font-size:.85rem}}
+  th{{background:#1e293b;color:#94a3b8;padding:8px 12px;text-align:left;border-bottom:1px solid #334155}}
+  td{{padding:8px 12px;border-bottom:1px solid #1e293b;color:#cbd5e1}}
+  a{{color:#38bdf8;text-decoration:none}}
+  a:hover{{text-decoration:underline}}
+  strong{{color:#f1f5f9}}
+  br{{display:block;margin:4px 0}}
+</style>
+</head><body>{content}</body></html>""")
+
+
 @app.get("/status")
 def get_status():
     """Estado del servicio: nombre, versión, uptime, puerto, salud, dependencias.
