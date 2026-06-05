@@ -100,6 +100,7 @@ _DDL_MIGRATIONS = [
     "ALTER TABLE trails ADD COLUMN action_ref TEXT",
     "ALTER TABLE trails ADD COLUMN tx_hash TEXT",
     "ALTER TABLE trails ADD COLUMN origin TEXT",
+    "ALTER TABLE trails ADD COLUMN notes TEXT",
 ]
 
 
