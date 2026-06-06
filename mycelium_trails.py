@@ -471,7 +471,7 @@ def get_payg_account(db_path: str, api_key: str) -> Optional[dict]:
     conn = _connect(db_path)
     try:
         row = conn.execute(
-            "SELECT api_key, agent_id, tier, credit_trails, created_at, updated_at "
+            "SELECT api_key, agent_id, tier, credit_trails, conformance_source, created_at, updated_at "
             "FROM payg_accounts WHERE api_key=?",
             (api_key,),
         ).fetchone()
