@@ -1,0 +1,118 @@
+{
+  "fixture_id": "guardrail-provider-v1",
+  "version": "v1",
+  "spec": "docs/spec/action-ref.md",
+  "spec_stable_ref": "https://github.com/giskard09/argentum-core/blob/action-ref-v1.0/docs/spec/action-ref.md",
+  "hash_algo": "sha256",
+  "preimage_format": "jcs-rfc8785-v1",
+  "generated_at": "2026-06-09",
+  "purpose": "Conformance fixture for GuardrailProvider / revise_args pattern. Demonstrates that action_ref is the correlation key across the three-record trail (pre-execution, decision, receipt) and is derived from the intent tuple — not from the args. original_args_digest and effective_args_digest are separate fields in the pre-execution record, enabling a verifier to reconstruct whether and how args were revised without trusting the agent runtime.",
+  "reproduce_in_python": "import hashlib, json\ndef jcs(obj): return json.dumps(obj, separators=(',',':'), sort_keys=True, ensure_ascii=False)\naction_ref = hashlib.sha256(jcs(preimage).encode()).hexdigest()\nargs_digest = hashlib.sha256(jcs(args).encode()).hexdigest()",
+  "scenario": {
+    "description": "An agent requests a database query tool call. The GuardrailProvider intercepts, inspects the original args (limit=1000), revises them (limit=100), and emits a pre-execution record before allowing the call to proceed. The receipt is emitted post-execution. A verifier correlates pre-execution record and receipt via action_ref — recomputable from the intent tuple alone.",
+    "actors": {
+      "agent_id": "guardrail-agent-001",
+      "guardrail": "GuardrailProvider (revise_args path)"
+    }
+  },
+  "positive_path": {
+    "description": "Full arc: intent tuple → action_ref → pre-execution record (with revision) → receipt. action_ref is stable across all three records.",
+    "step_1_action_ref": {
+      "label": "Derive action_ref from intent tuple (correlation key)",
+      "preimage": {
+        "action_type": "tool.call",
+        "agent_id": "guardrail-agent-001",
+        "scope": "autogen:guardrail",
+        "timestamp": "2026-06-09T22:00:00.000Z"
+      },
+      "jcs_payload": "{\"action_type\":\"tool.call\",\"agent_id\":\"guardrail-agent-001\",\"scope\":\"autogen:guardrail\",\"timestamp\":\"2026-06-09T22:00:00.000Z\"}",
+      "preimage_canonical_bytes_hex": "7b22616374696f6e5f74797065223a22746f6f6c2e63616c6c222c226167656e745f6964223a2267756172647261696c2d6167656e742d303031222c2273636f7065223a226175746f67656e3a67756172647261696c222c2274696d657374616d70223a22323032362d30362d30395432323a30303a30302e3030305a227d",
+      "action_ref": "104812928eb50e0e1ad28f379f8ade03ea0f479ac7abd1bbf9205e9317665c7f"
+    },
+    "step_2_args_digests": {
+      "label": "Compute separate digests for original and effective args",
+      "original_args": {
+        "limit": 1000,
+        "query": "SELECT * FROM users WHERE admin=true",
+        "target": "database"
+      },
+      "original_args_jcs": "{\"limit\":1000,\"query\":\"SELECT * FROM users WHERE admin=true\",\"target\":\"database\"}",
+      "original_args_canonical_bytes_hex": "7b226c696d6974223a313030302c227175657279223a2253454c454354202a2046524f4d2075736572732057484552452061646d696e3d74727565222c22746172676574223a226461746162617365227d",
+      "original_args_digest": "df57a577bbc3d0849aa7ce8df577d7310d57dbb06b099c14343efa343af70ee9",
+      "effective_args": {
+        "limit": 100,
+        "query": "SELECT * FROM users WHERE admin=true",
+        "target": "database"
+      },
+      "effective_args_jcs": "{\"limit\":100,\"query\":\"SELECT * FROM users WHERE admin=true\",\"target\":\"database\"}",
+      "effective_args_canonical_bytes_hex": "7b226c696d6974223a3130302c227175657279223a2253454c454354202a2046524f4d2075736572732057484552452061646d696e3d74727565222c22746172676574223a226461746162617365227d",
+      "effective_args_digest": "a208fd12e4ea22541f71ae426532adaa445058ce36b30c3b580b1371cd0ee477",
+      "invariant": "original_args_digest != effective_args_digest when guardrail revised the args"
+    },
+    "step_3_pre_execution_record": {
+      "label": "Pre-execution record — emitted before tool call executes",
+      "record": {
+        "action_ref": "104812928eb50e0e1ad28f379f8ade03ea0f479ac7abd1bbf9205e9317665c7f",
+        "effective_args_digest": "a208fd12e4ea22541f71ae426532adaa445058ce36b30c3b580b1371cd0ee477",
+        "original_args_digest": "df57a577bbc3d0849aa7ce8df577d7310d57dbb06b099c14343efa343af70ee9",
+        "record_type": "pre_execution",
+        "revised": true
+      },
+      "record_jcs": "{\"action_ref\":\"104812928eb50e0e1ad28f379f8ade03ea0f479ac7abd1bbf9205e9317665c7f\",\"effective_args_digest\":\"a208fd12e4ea22541f71ae426532adaa445058ce36b30c3b580b1371cd0ee477\",\"original_args_digest\":\"df57a577bbc3d0849aa7ce8df577d7310d57dbb06b099c14343efa343af70ee9\",\"record_type\":\"pre_execution\",\"revised\":true}",
+      "record_digest": "f46080c361d29c824ce87522e01adb86b7e5e11e508cb5e9771211446eaf601c"
+    },
+    "step_4_receipt": {
+      "label": "Receipt — emitted post-execution, same action_ref",
+      "record": {
+        "action_ref": "104812928eb50e0e1ad28f379f8ade03ea0f479ac7abd1bbf9205e9317665c7f",
+        "outcome": "success",
+        "record_type": "receipt",
+        "result_digest": "0987d5268eea55d9a5e1a8f6148b8d3b3b8e7d2bfe3088f2b4317df617673882"
+      },
+      "record_jcs": "{\"action_ref\":\"104812928eb50e0e1ad28f379f8ade03ea0f479ac7abd1bbf9205e9317665c7f\",\"outcome\":\"success\",\"record_type\":\"receipt\",\"result_digest\":\"0987d5268eea55d9a5e1a8f6148b8d3b3b8e7d2bfe3088f2b4317df617673882\"}",
+      "record_digest": "10256422c7d3629289fbd3895848ffa54422f088fce40b7d3f78c7f96e472f07",
+      "verifier_check": "action_ref in receipt == action_ref in pre_execution_record — correlation holds without operator involvement"
+    }
+  },
+  "negative_cases": [
+    {
+      "id": "NEG-1",
+      "label": "action_ref derived from args instead of intent tuple",
+      "description": "A non-conformant implementation computes action_ref = SHA-256(JCS(original_args)) instead of SHA-256(JCS({agent_id, action_type, scope, timestamp})). The resulting hash differs from the conformant action_ref. A verifier who recomputes from the intent tuple will detect the mismatch and cannot correlate the record.",
+      "wrong_computation": "SHA-256(JCS(original_args))",
+      "wrong_action_ref": "df57a577bbc3d0849aa7ce8df577d7310d57dbb06b099c14343efa343af70ee9",
+      "correct_action_ref": "104812928eb50e0e1ad28f379f8ade03ea0f479ac7abd1bbf9205e9317665c7f",
+      "invariant_violated": "wrong_action_ref != correct_action_ref",
+      "verifier_outcome": "REJECT — action_ref is not recomputable from intent tuple; implementation is non-conformant"
+    },
+    {
+      "id": "NEG-2",
+      "label": "original_args_digest masked to equal effective_args_digest",
+      "description": "A non-conformant implementation sets original_args_digest = effective_args_digest, hiding the fact that the guardrail revised the args. A verifier checking the pre-execution record sees revised=true but cannot verify the extent of the revision — the args delta is unauditable.",
+      "wrong_pre_execution_record": {
+        "action_ref": "104812928eb50e0e1ad28f379f8ade03ea0f479ac7abd1bbf9205e9317665c7f",
+        "effective_args_digest": "a208fd12e4ea22541f71ae426532adaa445058ce36b30c3b580b1371cd0ee477",
+        "original_args_digest": "a208fd12e4ea22541f71ae426532adaa445058ce36b30c3b580b1371cd0ee477",
+        "record_type": "pre_execution",
+        "revised": true
+      },
+      "invariant_violated": "original_args_digest == effective_args_digest when revised=true — revision is unauditable",
+      "verifier_outcome": "REJECT — a verifier cannot confirm args were actually revised; the record is inconsistent"
+    },
+    {
+      "id": "NEG-3",
+      "label": "Receipt carries a different action_ref — broken correlation",
+      "description": "A non-conformant implementation emits a receipt with an action_ref derived from a slightly different intent tuple (timestamp 1 second off). The pre-execution record and receipt cannot be correlated by a verifier holding only the two records — the binding key is broken.",
+      "pre_execution_action_ref": "104812928eb50e0e1ad28f379f8ade03ea0f479ac7abd1bbf9205e9317665c7f",
+      "wrong_receipt_preimage": {
+        "action_type": "tool.call",
+        "agent_id": "guardrail-agent-001",
+        "scope": "autogen:guardrail",
+        "timestamp": "2026-06-09T22:00:01.000Z"
+      },
+      "wrong_receipt_action_ref": "82f185aa17669ab79a444a0040f9a3e44e3219e24a36e786ca6506b6e40c3ced",
+      "invariant_violated": "pre_execution.action_ref != receipt.action_ref — three-record arc is broken",
+      "verifier_outcome": "REJECT — verifier cannot correlate pre-execution record to receipt; records belong to different action instances"
+    }
+  ]
+}
