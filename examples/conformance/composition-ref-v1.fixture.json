@@ -1,0 +1,58 @@
+{
+  "spec": "composition-ref-v1.0",
+  "description": "Conformance vectors for composition_ref derivation, including key_source extension.",
+  "vectors": [
+    {
+      "id": "baseline",
+      "description": "Canonical composition artifact without key_source. Hash must match spec derivation example.",
+      "composition_artifact": {
+        "action_ref":               "584bc79bb11ce3af5058b3da84d03f85e4aa464a175bd4f913aeb82a22cef60f",
+        "authority_verified_at_ms":  1748087390000,
+        "composition_key":           "comp_7a2f9c3b1d4e",
+        "delegation_ref":            "69e672d1ba7484e3620d4d4ed9b366c4d4c8b203c4176f60f000e2b793761ffb",
+        "revocation_check_at_ms":    1748087395000,
+        "revocation_ref":            "50cb4f3d564763cd11dde45950ef8298e92f468070a27f125dfd658d45d5eca5",
+        "scope":                     "mycelium:payment",
+        "version":                   "composition-ref-v1"
+      },
+      "expected_composition_ref": "234f0664ee1912cf210824112598639aca00edcf734221016cc04bb3da158e2a"
+    },
+    {
+      "id": "key_source-inline",
+      "description": "key_source=inline — self-certifying path (did:key, did:aps). No resolver on hot path, SSRF eliminated. Produces a distinct composition_ref from baseline.",
+      "composition_artifact": {
+        "action_ref":               "584bc79bb11ce3af5058b3da84d03f85e4aa464a175bd4f913aeb82a22cef60f",
+        "authority_verified_at_ms":  1748087390000,
+        "composition_key":           "comp_7a2f9c3b1d4e",
+        "delegation_ref":            "69e672d1ba7484e3620d4d4ed9b366c4d4c8b203c4176f60f000e2b793761ffb",
+        "key_source":                "inline",
+        "revocation_check_at_ms":    1748087395000,
+        "revocation_ref":            "50cb4f3d564763cd11dde45950ef8298e92f468070a27f125dfd658d45d5eca5",
+        "scope":                     "mycelium:payment",
+        "version":                   "composition-ref-v1"
+      },
+      "expected_composition_ref": "d4c2d6a2173f3e680ecc8aa356997cbb024420a492130ea500c059a31ed30d8c"
+    },
+    {
+      "id": "key_source-resolver",
+      "description": "key_source=resolver — key fetched from remote resolver at verification time. Allowlist profile required. key_source in signed artifact makes resolution method auditable across the record lifetime.",
+      "composition_artifact": {
+        "action_ref":               "584bc79bb11ce3af5058b3da84d03f85e4aa464a175bd4f913aeb82a22cef60f",
+        "authority_verified_at_ms":  1748087390000,
+        "composition_key":           "comp_7a2f9c3b1d4e",
+        "delegation_ref":            "69e672d1ba7484e3620d4d4ed9b366c4d4c8b203c4176f60f000e2b793761ffb",
+        "key_source":                "resolver",
+        "revocation_check_at_ms":    1748087395000,
+        "revocation_ref":            "50cb4f3d564763cd11dde45950ef8298e92f468070a27f125dfd658d45d5eca5",
+        "scope":                     "mycelium:payment",
+        "version":                   "composition-ref-v1"
+      },
+      "expected_composition_ref": "ac5ad545b95252eb0934891e8d6e4f47f4e170e7cec58cb628042ed693157efa"
+    }
+  ],
+  "notes": [
+    "key_source enters the JCS field set — stripping it before hashing produces a wrong composition_ref.",
+    "baseline and key_source-inline use identical fields except for key_source presence; their hashes differ by construction.",
+    "hash_algo: SHA-256(JCS(composition_artifact)) where JCS is RFC 8785 (sort_keys=True, separators=(',',':'), ensure_ascii=False)."
+  ]
+}

@@ -58,6 +58,7 @@ composition_ref = hashlib.sha256(jcs(composition_artifact).encode()).hexdigest()
 | `revocation_ref` | SHA-256 hex or `null` | Hash of the revocation artifact, if the delegation was subsequently revoked. `null` if no revocation has occurred. |
 | `scope` | string | Must match the `scope` in both the action preimage and the delegation artifact. |
 | `version` | string | Always `"composition-ref-v1"` for this spec version. |
+| `key_source` | string (optional) | Resolution method used to obtain the signing key at verification time. One of `"inline"`, `"cache"`, `"resolver"`. Omit if unknown or not applicable. |
 
 ---
 
@@ -101,6 +102,24 @@ The `scope` in the composition artifact must match: (a) the `scope` in the actio
 **5. composition_key scopes uniqueness**
 
 The `composition_key` is client-generated. Without it, recomposing the same action_ref + delegation_ref with a later `revocation_ref` would not be distinguishable as a distinct composition event.
+
+**6. key_source is part of the signed artifact when present**
+
+`key_source` enters the JCS field set and therefore changes the `composition_ref` hash. A composition artifact with `key_source: "inline"` and one without `key_source` produce different `composition_ref` values — they are distinct artifacts. Verifiers must not strip `key_source` before recomputing the hash.
+
+---
+
+## key_source extension
+
+`key_source` records the resolution method used to obtain the signing key when the composition artifact was verified. It is optional — omit it if the resolution method is unknown or irrelevant.
+
+| Value | Meaning |
+|-------|---------|
+| `"inline"` | Key was present in the artifact itself (e.g. `did:key`, `did:aps`). No resolver on the hot path. SSRF class eliminated by construction. |
+| `"cache"` | Key was retrieved from a local or in-process cache. Resolution occurred before the hot path; a stale-key window exists between cache population and use. |
+| `"resolver"` | Key was fetched from a remote resolver at verification time. An allowlist profile is required to constrain the resolver endpoint; `key_source` in the signed artifact makes the resolution method auditable across the record's lifetime. |
+
+When `key_source = "inline"` the self-certifying path holds end-to-end: the verifier needs no network access and the artifact is fully self-describing. For `"cache"` and `"resolver"`, the audit trail produced by `composition_ref` makes the trust posture explicit — the same `action_ref` with a different `key_source` represents a meaningfully different verification claim.
 
 ---
 
