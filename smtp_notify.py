@@ -1,38 +1,38 @@
-"""Notificaciones SMTP via Brevo — hello@rgiskard.xyz.
+"""Notificaciones via Brevo API HTTP — hello@rgiskard.xyz.
 
 Uso:
     from smtp_notify import send_email, notify_trail_limit, notify_payg_topup, notify_rsa_activation
 """
 import os
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+import requests
 
-SMTP_HOST   = "smtp-relay.brevo.com"
-SMTP_PORT   = 587
-SMTP_USER   = os.environ.get("BREVO_SMTP_USER", "ad5725001@smtp-brevo.com")
-SMTP_PASS   = os.environ.get("BREVO_SMTP_PASS", "")
-FROM_ADDR   = "Giskard Reventlov <hello@rgiskard.xyz>"
-ADMIN_ADDR  = os.environ.get("ADMIN_EMAIL", "playplay2736@gmail.com")
+BREVO_API_KEY = os.environ.get("BREVO_API_KEY", "")
+FROM_ADDR     = {"name": "Giskard Reventlov", "email": "hello@rgiskard.xyz"}
+ADMIN_ADDR    = os.environ.get("ADMIN_EMAIL", "playplay2736@gmail.com")
+
+_API_URL = "https://api.brevo.com/v3/smtp/email"
 
 
 def send_email(to: str, subject: str, body_text: str, body_html: str = "") -> bool:
-    """Envía un email via Brevo SMTP. Retorna True si fue exitoso."""
-    if not SMTP_PASS:
+    """Envía un email via Brevo API HTTP. Retorna True si fue exitoso."""
+    if not BREVO_API_KEY:
         return False
+    payload = {
+        "sender":      FROM_ADDR,
+        "to":          [{"email": to}],
+        "subject":     subject,
+        "textContent": body_text,
+    }
+    if body_html:
+        payload["htmlContent"] = body_html
     try:
-        msg = MIMEMultipart("alternative")
-        msg["Subject"] = subject
-        msg["From"]    = FROM_ADDR
-        msg["To"]      = to
-        msg.attach(MIMEText(body_text, "plain"))
-        if body_html:
-            msg.attach(MIMEText(body_html, "html"))
-        with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=10) as s:
-            s.starttls()
-            s.login(SMTP_USER, SMTP_PASS)
-            s.sendmail(FROM_ADDR, [to], msg.as_string())
-        return True
+        r = requests.post(
+            _API_URL,
+            json=payload,
+            headers={"api-key": BREVO_API_KEY},
+            timeout=10,
+        )
+        return r.status_code in (200, 201)
     except Exception:
         return False
 
