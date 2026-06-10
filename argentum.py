@@ -2758,9 +2758,12 @@ async def docuseal_webhook(request: Request):
     Computa negotiation_ref = SHA-256(PDF bytes) y delega el trail a Pioneer.
     Autenticación: header X-DocuSeal-Token contra DOCUSEAL_TOKEN env var.
     """
-    # Log all headers on first call to identify DocuSeal's auth header
+    # Log only header names (not values) to identify DocuSeal's auth header
     import logging as _log
-    _log.warning("DOCUSEAL_WEBHOOK headers: %s", dict(request.headers))
+    _REDACT = {"authorization", "cookie", "x-auth-token", "x-docuseal-token",
+               "x-docuseal-signature", "x-webhook-token", "x-api-key"}
+    _log.warning("DOCUSEAL_WEBHOOK header names: %s",
+                 [k for k in request.headers.keys() if k.lower() not in _REDACT])
 
     # Fail-closed: si el token no está configurado el endpoint no opera
     if not DOCUSEAL_TOKEN:
@@ -2772,7 +2775,8 @@ async def docuseal_webhook(request: Request):
         or ""
     )
     if not hmac.compare_digest(token, DOCUSEAL_TOKEN):
-        _log.warning("DOCUSEAL_WEBHOOK auth failed — token received: %r", token[:20] if token else "")
+        _log.warning("DOCUSEAL_WEBHOOK auth failed — header present: %s",
+                     [k for k in request.headers.keys() if "token" in k.lower() or "sign" in k.lower()])
         raise HTTPException(401, "Invalid DocuSeal token")
 
     try:
