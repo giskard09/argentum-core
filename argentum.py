@@ -1848,14 +1848,14 @@ def trails_dashboard(client: Optional[str] = None, limit: int = 50):
     conn = mycelium_trails._connect(TRAILS_DB)
     if client:
         rows = conn.execute(
-            "SELECT trail_id, agent_id, service, operation, scope, timestamp, action_ref, success, origin "
+            "SELECT trail_id, agent_id, service, operation, scope, timestamp, action_ref, success, origin, tx_hash "
             "FROM trails WHERE agent_id = ? OR service = ? "
             "ORDER BY timestamp DESC LIMIT ?",
             (client, client, min(limit, 200)),
         ).fetchall()
     else:
         rows = conn.execute(
-            "SELECT trail_id, agent_id, service, operation, scope, timestamp, action_ref, success, origin "
+            "SELECT trail_id, agent_id, service, operation, scope, timestamp, action_ref, success, origin, tx_hash "
             "FROM trails ORDER BY timestamp DESC LIMIT ?",
             (min(limit, 200),),
         ).fetchall()
@@ -1881,6 +1881,12 @@ def trails_dashboard(client: Optional[str] = None, limit: int = 50):
             origin_badge = '<span class="badge-nexus" title="Trail externo — cliente via /nexus/trail">client</span>'
         else:
             origin_badge = '<span class="badge-internal" title="Trail interno — generado por el sistema">internal</span>'
+        tx_hash_val = r["tx_hash"] if "tx_hash" in r.keys() else None
+        if tx_hash_val:
+            tx_short = tx_hash_val[:10] + "…" + tx_hash_val[-6:]
+            anchor_cell = f'<a class="anchor-link" href="https://arbiscan.io/tx/{e(tx_hash_val, quote=True)}" target="_blank" rel="noopener noreferrer" title="{e(tx_hash_val, quote=True)}">{e(tx_short)} ↗</a>'
+        else:
+            anchor_cell = '<span class="anchor-pending">pending</span>'
         rows_html += f"""<tr>
           <td class="mono dim">{e(r["trail_id"] or "")[:8]}</td>
           <td>{e(r["agent_id"])}</td>
@@ -1891,6 +1897,7 @@ def trails_dashboard(client: Optional[str] = None, limit: int = 50):
           <td class="ts">{e(fmt_ts(r["timestamp"]))}</td>
           <td>{success_badge}</td>
           <td>{origin_badge}</td>
+          <td>{anchor_cell}</td>
         </tr>"""
 
     safe_client = e(client or "", quote=True)
@@ -1930,6 +1937,9 @@ def trails_dashboard(client: Optional[str] = None, limit: int = 50):
   .empty{{text-align:center;color:#475569;padding:48px;font-size:.85rem}}
   .badge-nexus{{background:#14532d;color:#86efac;border:1px solid #166534;border-radius:4px;padding:1px 6px;font-size:.72rem;font-weight:600}}
   .badge-internal{{background:#1e293b;color:#64748b;border:1px solid #334155;border-radius:4px;padding:1px 6px;font-size:.72rem}}
+  .anchor-link{{color:#60a5fa;font-family:'JetBrains Mono','Fira Code',monospace;font-size:.75rem;text-decoration:none}}
+  .anchor-link:hover{{text-decoration:underline}}
+  .anchor-pending{{color:#475569;font-size:.75rem}}
 </style>
 </head>
 <body>
@@ -1956,10 +1966,11 @@ def trails_dashboard(client: Optional[str] = None, limit: int = 50):
       <th>Timestamp</th>
       <th></th>
       <th>Origin</th>
+      <th>Anchor</th>
     </tr>
   </thead>
   <tbody>
-    {"" if rows_html else '<tr><td colspan="8" class="empty">No trails found.</td></tr>'}
+    {"" if rows_html else '<tr><td colspan="10" class="empty">No trails found.</td></tr>'}
     {rows_html}
   </tbody>
 </table>
