@@ -2717,7 +2717,7 @@ PIONEER_AGENT_API = os.environ.get("PIONEER_AGENT_API", "http://localhost:8030")
 ADMIN_TOKEN       = os.environ.get("ADMIN_TOKEN", "")
 
 # Hosts autorizados para fetch de PDFs DocuSeal — SSRF allowlist
-_DOCUSEAL_ALLOWED_HOSTS = {"api.docuseal.com", "api.docuseal.co", "app.docuseal.com"}
+_DOCUSEAL_ALLOWED_HOSTS = {"api.docuseal.com", "api.docuseal.co", "app.docuseal.com", "docuseal.com"}
 
 import socket as _socket
 from urllib.parse import urlparse as _urlparse
@@ -2768,15 +2768,13 @@ async def docuseal_webhook(request: Request):
     # Fail-closed: si el token no está configurado el endpoint no opera
     if not DOCUSEAL_TOKEN:
         raise HTTPException(503, "webhook not configured")
-    token = (
-        request.headers.get("X-DocuSeal-Token")
-        or request.headers.get("X-Docuseal-Signature")
+    sig = (
+        request.headers.get("X-DocuSeal-Signature")
+        or request.headers.get("X-DocuSeal-Token")
         or request.headers.get("X-Webhook-Token")
         or ""
     )
-    if not hmac.compare_digest(token, DOCUSEAL_TOKEN):
-        _log.warning("DOCUSEAL_WEBHOOK auth failed — header present: %s",
-                     [k for k in request.headers.keys() if "token" in k.lower() or "sign" in k.lower()])
+    if not sig or not hmac.compare_digest(sig, DOCUSEAL_TOKEN):
         raise HTTPException(401, "Invalid DocuSeal token")
 
     try:
@@ -2785,20 +2783,18 @@ async def docuseal_webhook(request: Request):
         return JSONResponse({"error": "invalid JSON"}, status_code=400)
 
     event_type = body.get("event_type", "")
-    if event_type != "form.completed":
+    if event_type not in ("form.completed", "submission.completed"):
         return JSONResponse({"status": "ignored", "event_type": event_type})
 
-    submission = body.get("data", {})
-    submission_id = submission.get("id", "")
-    document_url = submission.get("audit_log_url") or submission.get("url", "")
-    submitters = submission.get("submitters", [])
+    data = body.get("data", {})
 
-    # Identificar firmante externo (azender1 / SafeAgent)
-    signer_email = ""
-    for s in submitters:
-        if s.get("role", "").lower() not in ("sender", "rama", "giskard"):
-            signer_email = s.get("email", "")
-            break
+    # Payload structure: submitter data at top level (email, role) + submission nested
+    submission_id = data.get("submission", {}).get("id") or data.get("id", "")
+    signer_email  = data.get("email", "")
+
+    # Signed contract PDF — first document in documents[], fallback to audit_log_url
+    documents = data.get("documents", [])
+    document_url = (documents[0].get("url") if documents else None) or data.get("audit_log_url", "")
 
     # Descargar PDF para computar SHA-256
     # — solo si la URL pasa la allowlist SSRF; token NO se reenvía a URL externa
