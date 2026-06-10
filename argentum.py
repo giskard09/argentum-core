@@ -2758,11 +2758,21 @@ async def docuseal_webhook(request: Request):
     Computa negotiation_ref = SHA-256(PDF bytes) y delega el trail a Pioneer.
     Autenticación: header X-DocuSeal-Token contra DOCUSEAL_TOKEN env var.
     """
+    # Log all headers on first call to identify DocuSeal's auth header
+    import logging as _log
+    _log.warning("DOCUSEAL_WEBHOOK headers: %s", dict(request.headers))
+
     # Fail-closed: si el token no está configurado el endpoint no opera
     if not DOCUSEAL_TOKEN:
         raise HTTPException(503, "webhook not configured")
-    token = request.headers.get("X-DocuSeal-Token", "")
+    token = (
+        request.headers.get("X-DocuSeal-Token")
+        or request.headers.get("X-Docuseal-Signature")
+        or request.headers.get("X-Webhook-Token")
+        or ""
+    )
     if not hmac.compare_digest(token, DOCUSEAL_TOKEN):
+        _log.warning("DOCUSEAL_WEBHOOK auth failed — token received: %r", token[:20] if token else "")
         raise HTTPException(401, "Invalid DocuSeal token")
 
     try:
@@ -2819,8 +2829,8 @@ async def docuseal_webhook(request: Request):
         import time as _t, json as _j
         ts_str = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")
         canonical = _j.dumps(
-            dict(sorted({"agent_id": "pioneer-agent-001", "action_type": "rsa_activation",
-                         "scope": "mycelium.safeagent", "timestamp": ts_str}.items())),
+            {"action_type": "rsa_activation", "agent_id": "pioneer-agent-001",
+             "scope": "mycelium.safeagent", "timestamp": ts_str},
             separators=(",", ":"), ensure_ascii=False,
         ).encode("utf-8")
         action_ref = hashlib.sha256(canonical).hexdigest()
