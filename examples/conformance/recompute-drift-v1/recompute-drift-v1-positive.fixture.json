@@ -1,0 +1,78 @@
+{
+  "fixture_id": "recompute-drift-v1-positive",
+  "version": "v1",
+  "spec": "docs/spec/action-ref.md",
+  "spec_stable_ref": "https://github.com/giskard09/argentum-core/blob/action-ref-v1.0/docs/spec/action-ref.md",
+  "hash_algo": "sha256",
+  "preimage_format": "jcs-rfc8785-v1",
+  "generated_at": "2026-06-11",
+  "purpose": "Positive recomputation vectors for the action-ref-v1 recompute property. Each action_ref was computed by two independent paths (a shipping TypeScript implementation and a stdlib-only SHA-256 over the JCS bytes) and byte-checked equal before inclusion. An external implementer who reproduces these digests byte-identical from the stated preimage fields has a conformant recomputation path.",
+  "reproduce_in_python": "import hashlib, json\ndef jcs(obj): return json.dumps(obj, separators=(',',':'), sort_keys=True, ensure_ascii=False)\naction_ref = hashlib.sha256(jcs(preimage).encode()).hexdigest()",
+  "vectors": [
+    {
+      "id": "0001-basic",
+      "description": "Minimal baseline, 4 preimage fields, namespace-prefixed scope, mid-range millisecond value. Any conformant implementation must reproduce action_ref byte-identical from the stated preimage.",
+      "preimage": {
+        "action_type": "trail.anchor",
+        "agent_id": "recompute-agent-001",
+        "scope": "argentum:recompute_baseline",
+        "timestamp": "2026-06-11T10:00:00.123Z"
+      },
+      "jcs_payload": "{\"action_type\":\"trail.anchor\",\"agent_id\":\"recompute-agent-001\",\"scope\":\"argentum:recompute_baseline\",\"timestamp\":\"2026-06-11T10:00:00.123Z\"}",
+      "preimage_canonical_bytes_hex": "7b22616374696f6e5f74797065223a22747261696c2e616e63686f72222c226167656e745f6964223a227265636f6d707574652d6167656e742d303031222c2273636f7065223a22617267656e74756d3a7265636f6d707574655f626173656c696e65222c2274696d657374616d70223a22323032362d30362d31315431303a30303a30302e3132335a227d",
+      "action_ref": "de7d7f40147b9b7f41134b14752aa36e3435bda89c51938ba358a69be04dccf6"
+    },
+    {
+      "id": "0002-unicode-fields",
+      "description": "Non-ASCII BMP characters in agent_id and scope (no surrogate pairs). JCS RFC 8785 emits the raw UTF-8 code points without escaping; an implementation that ASCII-escapes produces a different digest and is non-conformant.",
+      "preimage": {
+        "action_type": "negotiation.accept",
+        "agent_id": "agentur-zürich-07",
+        "scope": "mycelium:übergabe:été",
+        "timestamp": "2026-06-11T10:15:00.500Z"
+      },
+      "jcs_payload": "{\"action_type\":\"negotiation.accept\",\"agent_id\":\"agentur-zürich-07\",\"scope\":\"mycelium:übergabe:été\",\"timestamp\":\"2026-06-11T10:15:00.500Z\"}",
+      "preimage_canonical_bytes_hex": "7b22616374696f6e5f74797065223a226e65676f74696174696f6e2e616363657074222c226167656e745f6964223a226167656e7475722d7ac3bc726963682d3037222c2273636f7065223a226d7963656c69756d3ac3bc626572676162653ac3a974c3a9222c2274696d657374616d70223a22323032362d30362d31315431303a31353a30302e3530305a227d",
+      "action_ref": "a5c0ec37b01673b6ca9d593d4dba6e6f40dafdfc25fde3ad3673dceb79b72cc4"
+    },
+    {
+      "id": "0003-empty-scope",
+      "description": "Empty-string scope, valid per the spec field table (pass \"\" if not applicable). The empty string still occupies its JCS position; omitting the key instead produces a different digest.",
+      "preimage": {
+        "action_type": "oracle.signal",
+        "agent_id": "recompute-agent-001",
+        "scope": "",
+        "timestamp": "2026-06-11T10:30:00.250Z"
+      },
+      "jcs_payload": "{\"action_type\":\"oracle.signal\",\"agent_id\":\"recompute-agent-001\",\"scope\":\"\",\"timestamp\":\"2026-06-11T10:30:00.250Z\"}",
+      "preimage_canonical_bytes_hex": "7b22616374696f6e5f74797065223a226f7261636c652e7369676e616c222c226167656e745f6964223a227265636f6d707574652d6167656e742d303031222c2273636f7065223a22222c2274696d657374616d70223a22323032362d30362d31315431303a33303a30302e3235305a227d",
+      "action_ref": "8a5e53417ae5a4e1cdfc1659980ece6518611d7610c173ccf7d14121924b241e"
+    },
+    {
+      "id": "0004-ms-floor",
+      "description": "Millisecond floor edge: fractional part .000. Trailing-zero suppression (emitting .0, or no fractional part) changes the bytes and the digest; exactly three digits are required.",
+      "preimage": {
+        "action_type": "payment.send",
+        "agent_id": "pioneer-agent-001",
+        "scope": "nobulex:bilateral",
+        "timestamp": "2026-06-11T23:59:59.000Z"
+      },
+      "jcs_payload": "{\"action_type\":\"payment.send\",\"agent_id\":\"pioneer-agent-001\",\"scope\":\"nobulex:bilateral\",\"timestamp\":\"2026-06-11T23:59:59.000Z\"}",
+      "preimage_canonical_bytes_hex": "7b22616374696f6e5f74797065223a227061796d656e742e73656e64222c226167656e745f6964223a2270696f6e6565722d6167656e742d303031222c2273636f7065223a226e6f62756c65783a62696c61746572616c222c2274696d657374616d70223a22323032362d30362d31315432333a35393a35392e3030305a227d",
+      "action_ref": "01eb9688d2a1ababeb993c900bd7b7836f9b334f179030fafec2ecc8b33c4f6c"
+    },
+    {
+      "id": "0005-ms-ceiling",
+      "description": "Millisecond ceiling edge: fractional part .999. Checks that no rounding or carry into the seconds field happens anywhere in the pipeline.",
+      "preimage": {
+        "action_type": "payment.send",
+        "agent_id": "pioneer-agent-001",
+        "scope": "nobulex:bilateral",
+        "timestamp": "2026-06-11T23:59:59.999Z"
+      },
+      "jcs_payload": "{\"action_type\":\"payment.send\",\"agent_id\":\"pioneer-agent-001\",\"scope\":\"nobulex:bilateral\",\"timestamp\":\"2026-06-11T23:59:59.999Z\"}",
+      "preimage_canonical_bytes_hex": "7b22616374696f6e5f74797065223a227061796d656e742e73656e64222c226167656e745f6964223a2270696f6e6565722d6167656e742d303031222c2273636f7065223a226e6f62756c65783a62696c61746572616c222c2274696d657374616d70223a22323032362d30362d31315432333a35393a35392e3939395a227d",
+      "action_ref": "0cc0a719600948603fbefabb5167145df36215f63b7f677a0e84466540b445e5"
+    }
+  ]
+}

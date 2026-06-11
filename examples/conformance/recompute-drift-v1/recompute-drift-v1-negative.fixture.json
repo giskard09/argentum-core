@@ -1,0 +1,267 @@
+{
+  "fixture_id": "recompute-drift-v1-negative",
+  "version": "v1",
+  "spec": "docs/spec/action-ref.md",
+  "spec_stable_ref": "https://github.com/giskard09/argentum-core/blob/action-ref-v1.0/docs/spec/action-ref.md",
+  "hash_algo": "sha256",
+  "preimage_format": "jcs-rfc8785-v1",
+  "generated_at": "2026-06-11",
+  "purpose": "Negative recomputation vectors for the action-ref-v1 recompute property. A verifier recomputes action_ref from the invocation payload tuple and MUST fail closed, before invocation, when the claimed action_ref does not match. It must never retry alternative preimages, coerce, or normalize to force a match. Every claimed_action_ref here is a real SHA-256 digest of a stated drifted byte form, not an invented value, so the forbidden behavior each vector targets is explicit.",
+  "validation_rule": "A conformant verifier computes SHA-256(JCS(invocation_payload)) exactly once, after checking the timestamp grammar, and compares it to the claimed action_ref. Any grammar violation or digest mismatch is a terminal failure before invocation. A verifier that accepts any vector in this file has a conformance bug.",
+  "drift_families": {
+    "field_order_drift": "Claim computed over a serialization with fields in received order, no JCS key sort.",
+    "timestamp_form_drift": "Claim computed over an epoch-integer, second-precision, or six-digit-microsecond rendering of the same instant.",
+    "casing_drift": "agent_id letter casing differs between the invocation payload and the tuple behind the claim.",
+    "payload_drift": "A tuple field (scope or action_type) in the invocation payload differs from the preimage behind the claim."
+  },
+  "vectors": [
+    {
+      "id": "neg-a01-received-order",
+      "failure_mode": "field_order_drift",
+      "description": "The claimed action_ref is a real SHA-256, but it was computed over a non-canonical serialization with fields in received order: agent_id, action_type, scope, timestamp and no JCS key sort. The canonical recomputation over the same four values mismatches. Matching the claim would require retrying the hash over the drifted byte order, which is a forbidden preimage retry.",
+      "invocation_payload": {
+        "action_type": "payment.send",
+        "agent_id": "pioneer-agent-001",
+        "scope": "nobulex:bilateral",
+        "timestamp": "2026-06-11T12:00:00.000Z"
+      },
+      "canonical_jcs_payload": "{\"action_type\":\"payment.send\",\"agent_id\":\"pioneer-agent-001\",\"scope\":\"nobulex:bilateral\",\"timestamp\":\"2026-06-11T12:00:00.000Z\"}",
+      "canonical_bytes_hex": "7b22616374696f6e5f74797065223a227061796d656e742e73656e64222c226167656e745f6964223a2270696f6e6565722d6167656e742d303031222c2273636f7065223a226e6f62756c65783a62696c61746572616c222c2274696d657374616d70223a22323032362d30362d31315431323a30303a30302e3030305a227d",
+      "correct_action_ref": "fefa13abb3765bc5f9279b49ea5507a406799b7076611e1238e482cbd5dfb32d",
+      "claimed_action_ref": "5fcfb5213cbb304570a3cf4e2f472feba3cf9fd8c13410f14a45431fc9f72dd6",
+      "drift_note": "drifted_serialization is the exact byte string behind claimed_action_ref. It contains the same four field values as invocation_payload; only the key order differs.",
+      "invariant": "claimed_action_ref != correct_action_ref",
+      "expected_result": "fail-closed before invocation",
+      "expected_failure_stage": "recompute_mismatch",
+      "expected_reason": "recomputed canonical action_ref does not match the claimed action_ref",
+      "verifier_must": "Recompute SHA-256(JCS(invocation_payload)) exactly once over the payload tuple as received. Reject on mismatch or grammar violation. Never retry alternative preimages, reorder, coerce, or normalize to force a match.",
+      "drifted_serialization": "{\"agent_id\":\"pioneer-agent-001\",\"action_type\":\"payment.send\",\"scope\":\"nobulex:bilateral\",\"timestamp\":\"2026-06-11T12:00:00.000Z\"}",
+      "drifted_bytes_hex": "7b226167656e745f6964223a2270696f6e6565722d6167656e742d303031222c22616374696f6e5f74797065223a227061796d656e742e73656e64222c2273636f7065223a226e6f62756c65783a62696c61746572616c222c2274696d657374616d70223a22323032362d30362d31315431323a30303a30302e3030305a227d"
+    },
+    {
+      "id": "neg-a02-reversed-order",
+      "failure_mode": "field_order_drift",
+      "description": "The claimed action_ref is a real SHA-256, but it was computed over a non-canonical serialization with fields in received order: timestamp, scope, agent_id, action_type and no JCS key sort. The canonical recomputation over the same four values mismatches. Matching the claim would require retrying the hash over the drifted byte order, which is a forbidden preimage retry.",
+      "invocation_payload": {
+        "action_type": "trail.anchor",
+        "agent_id": "giskard-self",
+        "scope": "mycelium:baseline",
+        "timestamp": "2026-06-11T12:05:00.000Z"
+      },
+      "canonical_jcs_payload": "{\"action_type\":\"trail.anchor\",\"agent_id\":\"giskard-self\",\"scope\":\"mycelium:baseline\",\"timestamp\":\"2026-06-11T12:05:00.000Z\"}",
+      "canonical_bytes_hex": "7b22616374696f6e5f74797065223a22747261696c2e616e63686f72222c226167656e745f6964223a226769736b6172642d73656c66222c2273636f7065223a226d7963656c69756d3a626173656c696e65222c2274696d657374616d70223a22323032362d30362d31315431323a30353a30302e3030305a227d",
+      "correct_action_ref": "6f028fc93f87cca54a0251da90a8de03c50c4cb19a8a915fa28b382959ce8c92",
+      "claimed_action_ref": "9c34dad62de307e4c65e34a56b83fa91be9efe221682580d8ed6813ecb9d1288",
+      "drift_note": "drifted_serialization is the exact byte string behind claimed_action_ref. It contains the same four field values as invocation_payload; only the key order differs.",
+      "invariant": "claimed_action_ref != correct_action_ref",
+      "expected_result": "fail-closed before invocation",
+      "expected_failure_stage": "recompute_mismatch",
+      "expected_reason": "recomputed canonical action_ref does not match the claimed action_ref",
+      "verifier_must": "Recompute SHA-256(JCS(invocation_payload)) exactly once over the payload tuple as received. Reject on mismatch or grammar violation. Never retry alternative preimages, reorder, coerce, or normalize to force a match.",
+      "drifted_serialization": "{\"timestamp\":\"2026-06-11T12:05:00.000Z\",\"scope\":\"mycelium:baseline\",\"agent_id\":\"giskard-self\",\"action_type\":\"trail.anchor\"}",
+      "drifted_bytes_hex": "7b2274696d657374616d70223a22323032362d30362d31315431323a30353a30302e3030305a222c2273636f7065223a226d7963656c69756d3a626173656c696e65222c226167656e745f6964223a226769736b6172642d73656c66222c22616374696f6e5f74797065223a22747261696c2e616e63686f72227d"
+    },
+    {
+      "id": "neg-b01-epoch-integer",
+      "failure_mode": "timestamp_form_drift",
+      "description": "The invocation payload carries the timestamp as an epoch-millisecond integer instead of the canonical RFC 3339 string. The claimed action_ref is the real digest of that integer-form tuple, so a verifier that skips the grammar gate and hashes the payload verbatim would see a match. A conformant verifier rejects the timestamp grammar before hashing and never converts the integer to the string form to retry.",
+      "invocation_payload": {
+        "action_type": "oracle.signal",
+        "agent_id": "nexus-agent-xa12.onrender.com",
+        "scope": "BTC",
+        "timestamp": 1781166600123
+      },
+      "drifted_jcs_payload": "{\"action_type\":\"oracle.signal\",\"agent_id\":\"nexus-agent-xa12.onrender.com\",\"scope\":\"BTC\",\"timestamp\":1781166600123}",
+      "drifted_bytes_hex": "7b22616374696f6e5f74797065223a226f7261636c652e7369676e616c222c226167656e745f6964223a226e657875732d6167656e742d786131322e6f6e72656e6465722e636f6d222c2273636f7065223a22425443222c2274696d657374616d70223a313738313136363630303132337d",
+      "claimed_action_ref": "d807275082611d69aa0cf3fbd265ac52df68c380eb32e7e6614bc9df61415763",
+      "canonical_form_payload": {
+        "action_type": "oracle.signal",
+        "agent_id": "nexus-agent-xa12.onrender.com",
+        "scope": "BTC",
+        "timestamp": "2026-06-11T08:30:00.123Z"
+      },
+      "canonical_jcs_payload": "{\"action_type\":\"oracle.signal\",\"agent_id\":\"nexus-agent-xa12.onrender.com\",\"scope\":\"BTC\",\"timestamp\":\"2026-06-11T08:30:00.123Z\"}",
+      "correct_action_ref": "d461626a9ef4b3ab7fe59f2c5392d24143efc98306720bfa1f41373ce2326e10",
+      "drift_note": "Same instant: epoch-ms integer 1781166600123 versus canonical string \"2026-06-11T08:30:00.123Z\". canonical_form_payload and correct_action_ref show what a conformant emitter would have produced.",
+      "invariant": "claimed_action_ref != correct_action_ref",
+      "expected_result": "fail-closed before invocation",
+      "expected_failure_stage": "grammar_reject",
+      "expected_reason": "timestamp is not an RFC 3339 UTC string with exactly three fractional digits and a Z suffix",
+      "verifier_must": "Reject the payload at the timestamp grammar gate. Never coerce the epoch integer into the canonical string form to obtain a matching digest; that is a forbidden normalization retry."
+    },
+    {
+      "id": "neg-b02-second-precision",
+      "failure_mode": "timestamp_form_drift",
+      "description": "The invocation payload carries the canonical three-digit-millisecond timestamp, but the claimed action_ref was computed over the same instant rendered as second-precision RFC 3339 (no fractional digits). The bytes differ, so the canonical recomputation mismatches. Matching the claim would require re-rendering the timestamp into the drifted form and rehashing, which is a forbidden normalization retry.",
+      "invocation_payload": {
+        "action_type": "oracle.signal",
+        "agent_id": "nexus-agent-xa12.onrender.com",
+        "scope": "BTC",
+        "timestamp": "2026-06-11T08:45:00.000Z"
+      },
+      "canonical_jcs_payload": "{\"action_type\":\"oracle.signal\",\"agent_id\":\"nexus-agent-xa12.onrender.com\",\"scope\":\"BTC\",\"timestamp\":\"2026-06-11T08:45:00.000Z\"}",
+      "canonical_bytes_hex": "7b22616374696f6e5f74797065223a226f7261636c652e7369676e616c222c226167656e745f6964223a226e657875732d6167656e742d786131322e6f6e72656e6465722e636f6d222c2273636f7065223a22425443222c2274696d657374616d70223a22323032362d30362d31315430383a34353a30302e3030305a227d",
+      "correct_action_ref": "d73b70c4c8fc900c54de705cb5d53bb735f774e1b248e9c975cc39bd06e9485b",
+      "claimed_action_ref": "48862e6601dcdf9b951fbe1b41a9113231e02e775567813531ad8eb3ad8ee451",
+      "drift_note": "drifted_preimage is identical to invocation_payload except timestamp = \"2026-06-11T08:45:00Z\". claimed_action_ref is the real digest of that drifted tuple.",
+      "invariant": "claimed_action_ref != correct_action_ref",
+      "expected_result": "fail-closed before invocation",
+      "expected_failure_stage": "recompute_mismatch",
+      "expected_reason": "recomputed canonical action_ref does not match the claimed action_ref",
+      "verifier_must": "Recompute SHA-256(JCS(invocation_payload)) exactly once over the payload tuple as received. Reject on mismatch or grammar violation. Never retry alternative preimages, reorder, coerce, or normalize to force a match.",
+      "drifted_preimage": {
+        "action_type": "oracle.signal",
+        "agent_id": "nexus-agent-xa12.onrender.com",
+        "scope": "BTC",
+        "timestamp": "2026-06-11T08:45:00Z"
+      },
+      "drifted_jcs_payload": "{\"action_type\":\"oracle.signal\",\"agent_id\":\"nexus-agent-xa12.onrender.com\",\"scope\":\"BTC\",\"timestamp\":\"2026-06-11T08:45:00Z\"}",
+      "drifted_bytes_hex": "7b22616374696f6e5f74797065223a226f7261636c652e7369676e616c222c226167656e745f6964223a226e657875732d6167656e742d786131322e6f6e72656e6465722e636f6d222c2273636f7065223a22425443222c2274696d657374616d70223a22323032362d30362d31315430383a34353a30305a227d"
+    },
+    {
+      "id": "neg-b03-microsecond-precision",
+      "failure_mode": "timestamp_form_drift",
+      "description": "The invocation payload carries the canonical three-digit-millisecond timestamp, but the claimed action_ref was computed over the same instant rendered as six-digit-microsecond RFC 3339. The bytes differ, so the canonical recomputation mismatches. Matching the claim would require re-rendering the timestamp into the drifted form and rehashing, which is a forbidden normalization retry.",
+      "invocation_payload": {
+        "action_type": "oracle.signal",
+        "agent_id": "nexus-agent-xa12.onrender.com",
+        "scope": "BTC",
+        "timestamp": "2026-06-11T08:30:00.123Z"
+      },
+      "canonical_jcs_payload": "{\"action_type\":\"oracle.signal\",\"agent_id\":\"nexus-agent-xa12.onrender.com\",\"scope\":\"BTC\",\"timestamp\":\"2026-06-11T08:30:00.123Z\"}",
+      "canonical_bytes_hex": "7b22616374696f6e5f74797065223a226f7261636c652e7369676e616c222c226167656e745f6964223a226e657875732d6167656e742d786131322e6f6e72656e6465722e636f6d222c2273636f7065223a22425443222c2274696d657374616d70223a22323032362d30362d31315430383a33303a30302e3132335a227d",
+      "correct_action_ref": "d461626a9ef4b3ab7fe59f2c5392d24143efc98306720bfa1f41373ce2326e10",
+      "claimed_action_ref": "fa3f63e9b37fe877bb8ffdc855577f031d022bee993989c01d98916c7eea2d16",
+      "drift_note": "drifted_preimage is identical to invocation_payload except timestamp = \"2026-06-11T08:30:00.123000Z\". claimed_action_ref is the real digest of that drifted tuple.",
+      "invariant": "claimed_action_ref != correct_action_ref",
+      "expected_result": "fail-closed before invocation",
+      "expected_failure_stage": "recompute_mismatch",
+      "expected_reason": "recomputed canonical action_ref does not match the claimed action_ref",
+      "verifier_must": "Recompute SHA-256(JCS(invocation_payload)) exactly once over the payload tuple as received. Reject on mismatch or grammar violation. Never retry alternative preimages, reorder, coerce, or normalize to force a match.",
+      "drifted_preimage": {
+        "action_type": "oracle.signal",
+        "agent_id": "nexus-agent-xa12.onrender.com",
+        "scope": "BTC",
+        "timestamp": "2026-06-11T08:30:00.123000Z"
+      },
+      "drifted_jcs_payload": "{\"action_type\":\"oracle.signal\",\"agent_id\":\"nexus-agent-xa12.onrender.com\",\"scope\":\"BTC\",\"timestamp\":\"2026-06-11T08:30:00.123000Z\"}",
+      "drifted_bytes_hex": "7b22616374696f6e5f74797065223a226f7261636c652e7369676e616c222c226167656e745f6964223a226e657875732d6167656e742d786131322e6f6e72656e6465722e636f6d222c2273636f7065223a22425443222c2274696d657374616d70223a22323032362d30362d31315430383a33303a30302e3132333030305a227d"
+    },
+    {
+      "id": "neg-c01-agent-id-lowercased",
+      "failure_mode": "casing_drift",
+      "description": "agent_id casing changed between the invocation payload and the tuple behind the claimed action_ref: the claim was computed with agent_id lowercased (\"did:aps:zagentexample\") relative to the payload value \"did:aps:zAgentExample\". agent_id is opaque bytes in the preimage; the digests differ. No case folding is allowed at verification time.",
+      "invocation_payload": {
+        "action_type": "delegation.execute",
+        "agent_id": "did:aps:zAgentExample",
+        "scope": "aps:delegation",
+        "timestamp": "2026-06-11T14:00:00.000Z"
+      },
+      "canonical_jcs_payload": "{\"action_type\":\"delegation.execute\",\"agent_id\":\"did:aps:zAgentExample\",\"scope\":\"aps:delegation\",\"timestamp\":\"2026-06-11T14:00:00.000Z\"}",
+      "canonical_bytes_hex": "7b22616374696f6e5f74797065223a2264656c65676174696f6e2e65786563757465222c226167656e745f6964223a226469643a6170733a7a4167656e744578616d706c65222c2273636f7065223a226170733a64656c65676174696f6e222c2274696d657374616d70223a22323032362d30362d31315431343a30303a30302e3030305a227d",
+      "correct_action_ref": "b5499f92b80552fa63518f9bf54095895cfd3f5b0c928914ae0b5789f8a54e28",
+      "claimed_action_ref": "b63e4aba6b21f718cbd425972fe536b77645578d2cf4320074a9f9a01b887c65",
+      "drift_note": "drifted_preimage is identical to invocation_payload except for agent_id letter casing. claimed_action_ref is the real digest of that drifted tuple.",
+      "invariant": "claimed_action_ref != correct_action_ref",
+      "expected_result": "fail-closed before invocation",
+      "expected_failure_stage": "recompute_mismatch",
+      "expected_reason": "recomputed canonical action_ref does not match the claimed action_ref",
+      "verifier_must": "Recompute SHA-256(JCS(invocation_payload)) exactly once over the payload tuple as received. Reject on mismatch or grammar violation. Never retry alternative preimages, reorder, coerce, or normalize to force a match.",
+      "drifted_preimage": {
+        "action_type": "delegation.execute",
+        "agent_id": "did:aps:zagentexample",
+        "scope": "aps:delegation",
+        "timestamp": "2026-06-11T14:00:00.000Z"
+      },
+      "drifted_jcs_payload": "{\"action_type\":\"delegation.execute\",\"agent_id\":\"did:aps:zagentexample\",\"scope\":\"aps:delegation\",\"timestamp\":\"2026-06-11T14:00:00.000Z\"}",
+      "drifted_bytes_hex": "7b22616374696f6e5f74797065223a2264656c65676174696f6e2e65786563757465222c226167656e745f6964223a226469643a6170733a7a6167656e746578616d706c65222c2273636f7065223a226170733a64656c65676174696f6e222c2274696d657374616d70223a22323032362d30362d31315431343a30303a30302e3030305a227d"
+    },
+    {
+      "id": "neg-c02-agent-id-uppercased",
+      "failure_mode": "casing_drift",
+      "description": "agent_id casing changed between the invocation payload and the tuple behind the claimed action_ref: the claim was computed with agent_id recased (\"did:aps:zAgent\") relative to the payload value \"did:aps:zagent\". agent_id is opaque bytes in the preimage; the digests differ. No case folding is allowed at verification time.",
+      "invocation_payload": {
+        "action_type": "payment.send",
+        "agent_id": "did:aps:zagent",
+        "scope": "aps:payments",
+        "timestamp": "2026-06-11T14:05:00.000Z"
+      },
+      "canonical_jcs_payload": "{\"action_type\":\"payment.send\",\"agent_id\":\"did:aps:zagent\",\"scope\":\"aps:payments\",\"timestamp\":\"2026-06-11T14:05:00.000Z\"}",
+      "canonical_bytes_hex": "7b22616374696f6e5f74797065223a227061796d656e742e73656e64222c226167656e745f6964223a226469643a6170733a7a6167656e74222c2273636f7065223a226170733a7061796d656e7473222c2274696d657374616d70223a22323032362d30362d31315431343a30353a30302e3030305a227d",
+      "correct_action_ref": "a7351a1d995d00e650a0c6051e9301e42880538068fdaa262d69cbed6c96e4c7",
+      "claimed_action_ref": "2d555e3e5191b7ebd935f3e2d9aaddaf7c3fb8fd478e8b6c0b407e22266b1303",
+      "drift_note": "drifted_preimage is identical to invocation_payload except for agent_id letter casing. claimed_action_ref is the real digest of that drifted tuple.",
+      "invariant": "claimed_action_ref != correct_action_ref",
+      "expected_result": "fail-closed before invocation",
+      "expected_failure_stage": "recompute_mismatch",
+      "expected_reason": "recomputed canonical action_ref does not match the claimed action_ref",
+      "verifier_must": "Recompute SHA-256(JCS(invocation_payload)) exactly once over the payload tuple as received. Reject on mismatch or grammar violation. Never retry alternative preimages, reorder, coerce, or normalize to force a match.",
+      "drifted_preimage": {
+        "action_type": "payment.send",
+        "agent_id": "did:aps:zAgent",
+        "scope": "aps:payments",
+        "timestamp": "2026-06-11T14:05:00.000Z"
+      },
+      "drifted_jcs_payload": "{\"action_type\":\"payment.send\",\"agent_id\":\"did:aps:zAgent\",\"scope\":\"aps:payments\",\"timestamp\":\"2026-06-11T14:05:00.000Z\"}",
+      "drifted_bytes_hex": "7b22616374696f6e5f74797065223a227061796d656e742e73656e64222c226167656e745f6964223a226469643a6170733a7a4167656e74222c2273636f7065223a226170733a7061796d656e7473222c2274696d657374616d70223a22323032362d30362d31315431343a30353a30302e3030305a227d"
+    },
+    {
+      "id": "neg-d01-scope-changed",
+      "failure_mode": "payload_drift",
+      "description": "The invocation payload's scope (\"argentum:payments:send\") differs from the scope behind the claimed action_ref (\"argentum:payments:refund\"). The claim is a real digest of the original tuple, but the payload tuple the verifier recomputes over has changed, so the recomputation mismatches. The action the claim was bound to is not the action being invoked.",
+      "invocation_payload": {
+        "action_type": "payment.send",
+        "agent_id": "pioneer-agent-001",
+        "scope": "argentum:payments:send",
+        "timestamp": "2026-06-11T16:00:00.000Z"
+      },
+      "canonical_jcs_payload": "{\"action_type\":\"payment.send\",\"agent_id\":\"pioneer-agent-001\",\"scope\":\"argentum:payments:send\",\"timestamp\":\"2026-06-11T16:00:00.000Z\"}",
+      "canonical_bytes_hex": "7b22616374696f6e5f74797065223a227061796d656e742e73656e64222c226167656e745f6964223a2270696f6e6565722d6167656e742d303031222c2273636f7065223a22617267656e74756d3a7061796d656e74733a73656e64222c2274696d657374616d70223a22323032362d30362d31315431363a30303a30302e3030305a227d",
+      "correct_action_ref": "4aea72656c085069fca26571158db1319c33456f704d78587904f1c2a28b16fe",
+      "claimed_action_ref": "1bf527c864278ecbb6a1da5158264efd966fc29db453d88b6e7b658654493c7a",
+      "drift_note": "drifted_preimage is the original tuple behind the claim, with scope = \"argentum:payments:refund\". claimed_action_ref is its real digest.",
+      "invariant": "claimed_action_ref != correct_action_ref",
+      "expected_result": "fail-closed before invocation",
+      "expected_failure_stage": "recompute_mismatch",
+      "expected_reason": "recomputed canonical action_ref does not match the claimed action_ref",
+      "verifier_must": "Recompute SHA-256(JCS(invocation_payload)) exactly once over the payload tuple as received. Reject on mismatch or grammar violation. Never retry alternative preimages, reorder, coerce, or normalize to force a match.",
+      "drifted_preimage": {
+        "action_type": "payment.send",
+        "agent_id": "pioneer-agent-001",
+        "scope": "argentum:payments:refund",
+        "timestamp": "2026-06-11T16:00:00.000Z"
+      },
+      "drifted_jcs_payload": "{\"action_type\":\"payment.send\",\"agent_id\":\"pioneer-agent-001\",\"scope\":\"argentum:payments:refund\",\"timestamp\":\"2026-06-11T16:00:00.000Z\"}",
+      "drifted_bytes_hex": "7b22616374696f6e5f74797065223a227061796d656e742e73656e64222c226167656e745f6964223a2270696f6e6565722d6167656e742d303031222c2273636f7065223a22617267656e74756d3a7061796d656e74733a726566756e64222c2274696d657374616d70223a22323032362d30362d31315431363a30303a30302e3030305a227d"
+    },
+    {
+      "id": "neg-d02-action-type-changed",
+      "failure_mode": "payload_drift",
+      "description": "The invocation payload's action_type (\"payment.send\") differs from the action_type behind the claimed action_ref (\"payment.preauth\"). The claim is a real digest of the original tuple, but the payload tuple the verifier recomputes over has changed, so the recomputation mismatches. The action the claim was bound to is not the action being invoked.",
+      "invocation_payload": {
+        "action_type": "payment.send",
+        "agent_id": "pioneer-agent-001",
+        "scope": "nobulex:bilateral",
+        "timestamp": "2026-06-11T16:05:00.000Z"
+      },
+      "canonical_jcs_payload": "{\"action_type\":\"payment.send\",\"agent_id\":\"pioneer-agent-001\",\"scope\":\"nobulex:bilateral\",\"timestamp\":\"2026-06-11T16:05:00.000Z\"}",
+      "canonical_bytes_hex": "7b22616374696f6e5f74797065223a227061796d656e742e73656e64222c226167656e745f6964223a2270696f6e6565722d6167656e742d303031222c2273636f7065223a226e6f62756c65783a62696c61746572616c222c2274696d657374616d70223a22323032362d30362d31315431363a30353a30302e3030305a227d",
+      "correct_action_ref": "e578a0a48ecc30530189109a54ea47e2476213ca5819640302a9c850e485605a",
+      "claimed_action_ref": "202f0cc855fc50602cfb3d96298381fb959f90447c916eadba86e147de340c1d",
+      "drift_note": "drifted_preimage is the original tuple behind the claim, with action_type = \"payment.preauth\". claimed_action_ref is its real digest.",
+      "invariant": "claimed_action_ref != correct_action_ref",
+      "expected_result": "fail-closed before invocation",
+      "expected_failure_stage": "recompute_mismatch",
+      "expected_reason": "recomputed canonical action_ref does not match the claimed action_ref",
+      "verifier_must": "Recompute SHA-256(JCS(invocation_payload)) exactly once over the payload tuple as received. Reject on mismatch or grammar violation. Never retry alternative preimages, reorder, coerce, or normalize to force a match.",
+      "drifted_preimage": {
+        "action_type": "payment.preauth",
+        "agent_id": "pioneer-agent-001",
+        "scope": "nobulex:bilateral",
+        "timestamp": "2026-06-11T16:05:00.000Z"
+      },
+      "drifted_jcs_payload": "{\"action_type\":\"payment.preauth\",\"agent_id\":\"pioneer-agent-001\",\"scope\":\"nobulex:bilateral\",\"timestamp\":\"2026-06-11T16:05:00.000Z\"}",
+      "drifted_bytes_hex": "7b22616374696f6e5f74797065223a227061796d656e742e70726561757468222c226167656e745f6964223a2270696f6e6565722d6167656e742d303031222c2273636f7065223a226e6f62756c65783a62696c61746572616c222c2274696d657374616d70223a22323032362d30362d31315431363a30353a30302e3030305a227d"
+    }
+  ]
+}

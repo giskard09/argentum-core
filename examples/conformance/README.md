@@ -9,6 +9,7 @@ This directory contains conformance fixtures for the action-ref-v1 spec and Myce
 5. **CTEF vectors** — cross-extension matrix fixtures for `urn:mycelium:trail` (CTEF v0.3.3 row #2).
 6. **memory provenance** — `action_type: "memory_write"` + `scope: <memory_key>` pattern for content-addressed receipts per write. Covers OWASP ASI06 gap class #2. See commit [de7dd7e](https://github.com/giskard09/argentum-core/commit/de7dd7e0c09365f465d2c14c62817b1d19e4adef) and `docs/spec/action-ref.md` (memory provenance section).
 7. **near-miss vectors** — failure-mode boundary fixtures (`AMBIGUOUS_ISSUER_BINDING`, `RESCOPED_REPLAY`, `SEMANTIC_DRIFT`). Source: [agentgraph-co/agentgraph](https://github.com/agentgraph-co/agentgraph) @ `a07cdf8`.
+8. **recompute-drift vectors** - recomputation-property fixtures: 5 positive baselines (basic, unicode, empty scope, `.000` / `.999` millisecond edges) plus 9 negatives across four drift families (field order, timestamp form, casing, payload). Standalone stdlib runner included. See [`recompute-drift-v1/`](./recompute-drift-v1/).
 
 ---
 
@@ -212,3 +213,20 @@ Near-miss conformance vectors for the `action_ref` verifier boundary. Each vecto
 | `semantic_drift` | `SEMANTIC_DRIFT` | `behavioral_eval` at issuance vs `behavioral` at verification — vocabulary drift from A2A #1786 |
 
 All three `canonical_sha256` values are byte-match verified (JCS + SHA-256). See [`near-miss-v1/README.md`](./near-miss-v1/README.md) for full spec.
+
+---
+
+## recompute-drift-v1 - [`recompute-drift-v1/`](./recompute-drift-v1/)
+
+Recomputation-property fixtures: a verifier recomputes `action_ref` from the
+invocation payload tuple and MUST fail closed, before invocation, on any
+mismatch, with no preimage retries, no coercion, and no normalization.
+
+| File | Vectors | What it holds |
+|------|---------|---------------|
+| `recompute-drift-v1-positive.fixture.json` | 5 | Tuples that recompute byte-identical (basic, unicode, empty scope, `.000` / `.999` ms edges) |
+| `recompute-drift-v1-negative.fixture.json` | 9 | Real digests over drifted byte forms (field order, timestamp form, casing, payload drift) that MUST be rejected |
+
+Standalone runner: `python3 recompute-drift-v1/verify.py` (stdlib only,
+deterministic, exit 0 on full pass). See [`recompute-drift-v1/README.md`](./recompute-drift-v1/README.md)
+for the drift-family table and the explicit not-covered list.
