@@ -1131,20 +1131,27 @@ def create_payg_account(request: Request, agent_id: str):
     return {"api_key": api_key, "agent_id": agent_id, "tier": "free", "credit_trails": 0}
 
 
-@app.post("/payg/account/{api_key}/conformance")
-def set_account_conformance(api_key: str, request: Request, source: str):
+class ConformanceRequest(BaseModel):
+    api_key: str
+    source: Optional[str] = None
+
+
+@app.post("/payg/account/conformance")
+def set_account_conformance(body: ConformanceRequest, request: Request):
     """Admin — setea conformance_source en una cuenta PAYG.
 
-    Requiere header X-Admin-Token. Source debe ser uno de los tiers en CONFORMANCE_TIER
-    (aps, nobulex, safeagent…) o vacío para resetear.
+    Requiere header X-Admin-Token. api_key y source van en el body JSON.
+    Source debe ser uno de los tiers en CONFORMANCE_TIER (aps, nobulex, safeagent…)
+    o ausente/vacío para resetear.
     """
     token = request.headers.get("X-Admin-Token", "")
     if not ADMIN_TOKEN or not hmac.compare_digest(token, ADMIN_TOKEN):
         raise HTTPException(401, "invalid or missing X-Admin-Token")
-    account = mycelium_trails.set_conformance_source(TRAILS_DB, api_key, source)
+    source = body.source or ""
+    account = mycelium_trails.set_conformance_source(TRAILS_DB, body.api_key, source)
     if account is None:
         raise HTTPException(404, "api_key not found")
-    weight = CONFORMANCE_TIER.get((source or "").lower(), KARMA_DEFAULT_WEIGHT)
+    weight = CONFORMANCE_TIER.get(source.lower(), KARMA_DEFAULT_WEIGHT)
     return {
         "api_key":            account["api_key"],
         "agent_id":           account["agent_id"],
