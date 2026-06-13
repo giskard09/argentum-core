@@ -131,6 +131,48 @@
       "verifier_outcome": "REJECT — verifier cannot correlate pre-execution record to receipt; records belong to different action instances"
     },
     {
+      "id": "NEG-5",
+      "label": "Stripe financial fields changed after approval — gate rejects before call",
+      "description": "Agent proposes a Stripe charge for amount=9900 USD. Approval is granted; authorization_ref binds to original_args_digest over the approved fields. Before the Stripe API call, the executor presents effective args with amount=14900 — idempotency_key and customer unchanged. The gate detects effective_args_digest != original_args_digest with no authorized guardrail revision in between. A conformant gate MUST reject before dispatching to Stripe. The approval for args D does not carry forward to args D'.",
+      "scenario": "Stripe payment agent — charge revision without new approval",
+      "intent_tuple": {
+        "action_type": "tool.call",
+        "agent_id": "stripe-agent-001",
+        "scope": "stripe:charge",
+        "timestamp": "2026-06-11T14:00:00.000Z"
+      },
+      "action_ref": "e6dd416ea108a1600522614957d9da7c815bc02b4c3b4886c80c776ebf88d6cb",
+      "approved_args": {
+        "amount": 9900,
+        "currency": "usd",
+        "customer": "cus_ABC123",
+        "idempotency_key": "inv_20260611_001"
+      },
+      "approved_args_jcs": "{\"amount\":9900,\"currency\":\"usd\",\"customer\":\"cus_ABC123\",\"idempotency_key\":\"inv_20260611_001\"}",
+      "approved_args_canonical_bytes_hex": "7b22616d6f756e74223a393930302c2263757272656e6379223a22757364222c22637573746f6d6572223a226375735f414243313233222c226964656d706f74656e63795f6b6579223a22696e765f32303236303631315f303031227d",
+      "original_args_digest": "93523c390782cf7e708d8aa5d58ab13a6b0c1b136bfe1d2cc6590a5c0eb8b47b",
+      "authorization_ref": "10b8adcb487beebf40b3188df27474afb67be2a4dca82a32a28ee7d9bd32be8d",
+      "authorization_ref_preimage": {
+        "action_ref": "e6dd416ea108a1600522614957d9da7c815bc02b4c3b4886c80c776ebf88d6cb",
+        "authorized_scope": "stripe:charge",
+        "decision_ts": 1749650400000,
+        "policy_id": "stripe-guardrail-policy-v1"
+      },
+      "attempted_effective_args": {
+        "amount": 14900,
+        "currency": "usd",
+        "customer": "cus_ABC123",
+        "idempotency_key": "inv_20260611_001"
+      },
+      "attempted_effective_args_jcs": "{\"amount\":14900,\"currency\":\"usd\",\"customer\":\"cus_ABC123\",\"idempotency_key\":\"inv_20260611_001\"}",
+      "attempted_effective_args_canonical_bytes_hex": "7b22616d6f756e74223a31343930302c2263757272656e6379223a22757364222c22637573746f6d6572223a226375735f414243313233222c226964656d706f74656e63795f6b6579223a22696e765f32303236303631315f303031227d",
+      "attempted_effective_args_digest": "72812219c9729b0152e0f01cf454991e807fc1706e6b34bb411ff1c49131be5c",
+      "changed_fields": ["amount"],
+      "invariant_violated": "attempted_effective_args_digest != original_args_digest with no authorized guardrail revision — old approval does not carry forward",
+      "verifier_outcome": "REJECT — gate must deny execution before Stripe call; a new approval record for effective_args_digest is required",
+      "note": "idempotency_key is intentionally unchanged to confirm the gate checks the full args digest, not just the idempotency key"
+    },
+    {
       "id": "NEG-4",
       "label": "Receipt carries a different authorization_ref — execution under a different approval",
       "description": "effective_args_digest is unchanged (same dispatched payload), but the receipt carries an authorization_ref derived from a different decision window (decision_ts 60 seconds earlier, different policy snapshot). A verifier can prove 'same call and same dispatched payload' but cannot confirm 'same authorization decision' — the execution may have proceeded under a stale or different approval.",
