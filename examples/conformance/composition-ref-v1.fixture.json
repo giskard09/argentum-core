@@ -105,6 +105,43 @@
       "expected_composition_ref": "cf5dfa598f0b9ff8f3a86069e2e24686174440cd4449934e7f07501c4e1b4c39"
     },
     {
+      "id": "inline-no-origin-proof",
+      "description": "key_source=inline but no key_origin_proof or key_origin_type present. The signer controls both key material and source label — the verifier cannot distinguish a genuinely pinned inline key from a resolver-origin key relabeled as inline. Non-conformant: verifier MUST reject.",
+      "conformant": false,
+      "failure_mode": "INLINE_WITHOUT_ORIGIN_PROOF",
+      "composition_artifact": {
+        "action_ref":               "584bc79bb11ce3af5058b3da84d03f85e4aa464a175bd4f913aeb82a22cef60f",
+        "authority_verified_at_ms":  1748087390000,
+        "composition_key":           "comp_1f6d4a8e2b3c",
+        "delegation_ref":            "69e672d1ba7484e3620d4d4ed9b366c4d4c8b203c4176f60f000e2b793761ffb",
+        "key_source":                "inline",
+        "revocation_check_at_ms":    1748087395000,
+        "revocation_ref":            "50cb4f3d564763cd11dde45950ef8298e92f468070a27f125dfd658d45d5eca5",
+        "scope":                     "mycelium:payment",
+        "version":                   "composition-ref-v1"
+      },
+      "expected_composition_ref": "9e01cc856fc5cc93eca826deff49e8728735c13c4e4b3fd9dbd1574e9c435da6"
+    },
+    {
+      "id": "inline-with-origin-attestation",
+      "description": "key_source=inline with key_origin_type=self-generated and key_origin_proof (SHA-256 of the self-signed creation statement). Verifier confirms: creation timestamp predates first use, no resolver fetch event in receipt chain for this key. Conformant: verifier MUST accept.",
+      "conformant": true,
+      "composition_artifact": {
+        "action_ref":               "584bc79bb11ce3af5058b3da84d03f85e4aa464a175bd4f913aeb82a22cef60f",
+        "authority_verified_at_ms":  1748087390000,
+        "composition_key":           "comp_3d9b5e7f1a2c",
+        "delegation_ref":            "69e672d1ba7484e3620d4d4ed9b366c4d4c8b203c4176f60f000e2b793761ffb",
+        "key_origin_proof":          "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "key_origin_type":           "self-generated",
+        "key_source":                "inline",
+        "revocation_check_at_ms":    1748087395000,
+        "revocation_ref":            "50cb4f3d564763cd11dde45950ef8298e92f468070a27f125dfd658d45d5eca5",
+        "scope":                     "mycelium:payment",
+        "version":                   "composition-ref-v1"
+      },
+      "expected_composition_ref": "e7abd4420ec14b76a8e7fd82e79b44f43064eb3c8637aaa029a10ffd165b4be5"
+    },
+    {
       "id": "resolver-to-cache-valid",
       "description": "key_source=cache with cache_parent_ref pointing to the prior key_source=resolver event (composition_ref ac5ad545... from vector key_source-resolver). Provenance chain intact — population event audited, cache hit references back. Conformant: verifier MUST accept.",
       "conformant": true,
@@ -129,6 +166,9 @@
     "hash_algo: SHA-256(JCS(composition_artifact)) where JCS is RFC 8785 (sort_keys=True, separators=(',',':'), ensure_ascii=False).",
     "Non-conformant vectors carry conformant=false and failure_mode. Hash still recomputes — the failure is semantic, not hash-level.",
     "resolver-to-cache-valid: cache_parent_ref references the composition_ref of the key_source=resolver population event (vector key_source-resolver). A verifier traces the chain to confirm the cache hit is grounded.",
-    "stale-revocation: revocation_check_at_ms < authority_verified_at_ms violates the invariant authority_verified_at_ms <= revocation_check_at_ms <= action_timestamp_ms."
+    "stale-revocation: revocation_check_at_ms < authority_verified_at_ms violates the invariant authority_verified_at_ms <= revocation_check_at_ms <= action_timestamp_ms.",
+    "inline-no-origin-proof: key_source=inline without key_origin_proof is non-conformant — the enum is bypassable if the signer controls both key material and source label. A verifier cannot distinguish a genuinely pinned inline key from a resolver-origin key relabeled as inline.",
+    "inline-with-origin-attestation: key_origin_type ∈ {self-generated, operator-pinned, resolver-attested, hardware-bound}. key_origin_proof = SHA-256 of the signed creation or pinning statement. Verifier checks: creation timestamp predates first use, no resolver fetch event in receipt chain for this key material.",
+    "inline vs cache vs resolver: three provenance profiles, not an enum of trust levels. resolver proves through allowlist + fetch evidence. cache proves through a parent population event (cache_parent_ref). inline proves through origin attestation (key_origin_proof + key_origin_type)."
   ]
 }
