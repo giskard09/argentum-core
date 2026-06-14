@@ -216,6 +216,20 @@ All three `canonical_sha256` values are byte-match verified (JCS + SHA-256). See
 
 ---
 
+## talos — [`talos/vectors.json`](./talos/vectors.json)
+
+External conformance set from [konstantinos193/Talos](https://github.com/konstantinos193/Talos) — x402 governance layer with budget caps and Mycelium anchor support.
+
+**Source:** `packages/core/src/action-ref.ts` (`main` branch, `feat/mycelium-anchor` merged 2026-06-14)
+**Verification:** Independent cross-verify — giskard09 sent expected hex, konstantinos193 computed via `describeActionRef` primitive. Byte-identical match confirmed in stripe/ai#356. No shared code path.
+**Mainnet anchor:** `0xbeff35180e1d8902615a906c4703d4d01afded3efb0aa2be67339887807438ba` (Arbitrum One, autonomous — no operator in the loop)
+
+| Vector | Description |
+|--------|-------------|
+| `talos-001-transfer-execute` | Real `payment:approved` preimage — same fields behind the live mainnet anchor |
+
+---
+
 ## recompute-drift-v1 - [`recompute-drift-v1/`](./recompute-drift-v1/)
 
 Recomputation-property fixtures: a verifier recomputes `action_ref` from the

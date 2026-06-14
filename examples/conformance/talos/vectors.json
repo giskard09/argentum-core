@@ -1,0 +1,38 @@
+{
+  "fixture_id": "talos-action-ref-v1",
+  "version": "v1",
+  "spec": "docs/spec/action-ref.md",
+  "spec_stable_ref": "https://github.com/giskard09/argentum-core/blob/action-ref-v1.0/docs/spec/action-ref.md",
+  "hash_algo": "sha256",
+  "preimage_format": "jcs-rfc8785-v1",
+  "generated_at": "2026-06-14",
+  "implementer": "konstantinos193",
+  "implementer_repo": "https://github.com/konstantinos193/Talos",
+  "implementer_source": "packages/core/src/action-ref.ts (main branch, feat/mycelium-anchor merged 2026-06-14)",
+  "verification_method": "Independent cross-verify: giskard09 sent expected hex, konstantinos193 computed via describeActionRef primitive — byte-identical match confirmed in stripe/ai#356 comment 4703193xxx. No shared code path.",
+  "mainnet_anchor": "0xbeff35180e1d8902615a906c4703d4d01afded3efb0aa2be67339887807438ba",
+  "purpose": "External conformance set for Talos (konstantinos193/Talos). Talos derived action_ref from a real payment:approved event using the same JCS+SHA-256 primitive as argentum-core. Byte-identical match verified independently by both parties on 2026-06-14.",
+  "vectors": [
+    {
+      "id": "talos-001-transfer-execute",
+      "description": "Real Talos payment:approved preimage — the same preimage behind the live mainnet anchor tx 0xbeff35... on Arbitrum One. agent_id passes through unchanged (lowercase, no normalization needed). Verified byte-identical by konstantinos193 via describeActionRef and independently by giskard09.",
+      "preimage": {
+        "action_type": "transfer.execute",
+        "agent_id": "talos-agent",
+        "scope": "talos:transfer",
+        "timestamp": "2026-06-14T00:00:00.000Z"
+      },
+      "jcs_payload": "{\"action_type\":\"transfer.execute\",\"agent_id\":\"talos-agent\",\"scope\":\"talos:transfer\",\"timestamp\":\"2026-06-14T00:00:00.000Z\"}",
+      "preimage_canonical_bytes_hex": "7b22616374696f6e5f74797065223a227472616e736665722e65786563757465222c226167656e745f6964223a2274616c6f732d6167656e74222c2273636f7065223a2274616c6f733a7472616e73666572222c2274696d657374616d70223a22323032362d30362d31345430303a30303a30302e3030305a227d",
+      "action_ref": "ab3a2fb3e3db34fb8993e5d171f3d8fa926c2727e907d7a7521ed184562bfc13",
+      "verified_by": ["giskard09", "konstantinos193"],
+      "verified_at": "2026-06-14",
+      "notes": {
+        "agent_id_casing": "lowercase pass-through — no normalization applied, no-op confirmed",
+        "timestamp_precision": "millisecond .000Z — correct per spec",
+        "anchor_status": "COMMITTED — tx 0xbeff35180e1d8902615a906c4703d4d01afded3efb0aa2be67339887807438ba on Arbitrum One via giskard-payments v2 facilitator whitelist"
+      }
+    }
+  ],
+  "reproduce_in_python": "import hashlib, json\ndef jcs(obj): return json.dumps(obj, separators=(',',':'), sort_keys=True, ensure_ascii=False)\npreimage = {'action_type': 'transfer.execute', 'agent_id': 'talos-agent', 'scope': 'talos:transfer', 'timestamp': '2026-06-14T00:00:00.000Z'}\nassert hashlib.sha256(jcs(preimage).encode()).hexdigest() == 'ab3a2fb3e3db34fb8993e5d171f3d8fa926c2727e907d7a7521ed184562bfc13'"
+}
