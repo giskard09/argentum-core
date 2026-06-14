@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/presidio-v/presidio-hardened-x402/schemas/audit-entry-v1.json",
+  "title": "presidio-hardened-x402 audit-log entry",
+  "description": "One line of the HMAC-chained, fsync-durable JSON-L pre-execution decision log emitted by presidio_x402.audit_log.AuditLog. Each entry records the agent's decision before a payment is signed and chains to the previous entry via prev_entry_hmac. The four action-ref-v1 preimage fields are derived from this entry (see presidio-audit-entry -> action_ref mapping in README.md).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "timestamp",
+    "event_type",
+    "resource_url",
+    "amount_usd",
+    "network",
+    "agent_id",
+    "outcome",
+    "pii_entities_found",
+    "policy_limit_usd",
+    "replay_fingerprint",
+    "error_message",
+    "prev_entry_hmac"
+  ],
+  "properties": {
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Decision time. Emitted via datetime.isoformat() on a UTC-aware value: microsecond precision with a numeric +00:00 offset (e.g. 2026-06-14T21:23:27.890123+00:00). NOTE: action-ref-v1 requires RFC 3339 with exactly 3 fractional digits and a literal Z, so this value MUST be normalized before it enters the action_ref preimage."
+    },
+    "event_type": {
+      "type": "string",
+      "description": "The pre-execution control outcome (the agent's decision), NOT a post-settlement action label. Known values: PAYMENT_ALLOWED, PII_REDACTED, PII_BLOCKED, WALLET_BLOCKED, POLICY_BLOCKED, REPLAY_BLOCKED, MPA_BLOCKED, PAYMENT_ERROR. Open list — additive."
+    },
+    "resource_url": {
+      "type": "string",
+      "description": "Post-redaction resource URL (PII in the URL is already masked when event_type is PII_REDACTED)."
+    },
+    "amount_usd": {
+      "type": "number",
+      "description": "Advertised payment amount in USD as evaluated by the policy engine."
+    },
+    "network": {
+      "type": "string",
+      "description": "Settlement network label (e.g. base). May be empty."
+    },
+    "agent_id": {
+      "type": ["string", "null"],
+      "description": "Stable identifier for the terminal executing agent. Optional; null when not configured. Maps verbatim to the action-ref-v1 agent_id preimage field."
+    },
+    "outcome": {
+      "type": "string",
+      "enum": ["allowed", "blocked"],
+      "description": "Whether the decision permitted the payment to proceed to signing."
+    },
+    "pii_entities_found": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Presidio entity types detected in the payment metadata (e.g. EMAIL_ADDRESS, US_SSN). Empty when none."
+    },
+    "policy_limit_usd": {
+      "type": ["number", "null"],
+      "description": "The spending-policy limit the decision was checked against, when a POLICY event. Note: this is a single limit value, not the full policy envelope; action-ref-v1 scope is derived from the envelope, not read from this field."
+    },
+    "replay_fingerprint": {
+      "type": ["string", "null"],
+      "description": "HMAC fingerprint over the canonicalized (resource_url, pay_to, amount, currency, deadline) tuple, when recorded."
+    },
+    "error_message": {
+      "type": ["string", "null"],
+      "description": "Truncated, PII-safe failure message, when event_type is an error/blocked outcome."
+    },
+    "prev_entry_hmac": {
+      "type": ["string", "null"],
+      "description": "HMAC-SHA256 of the previous entry's canonical JSON (the chain link). null for the first entry in a process-scoped chain. The whole entry — not a field subset — is the HMAC content."
+    }
+  }
+}

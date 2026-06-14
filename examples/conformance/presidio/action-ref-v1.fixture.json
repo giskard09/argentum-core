@@ -1,0 +1,52 @@
+{
+  "fixture_id": "presidio-x402-action-ref-v1",
+  "version": "v1",
+  "spec": "docs/spec/action-ref.md",
+  "spec_stable_ref": "https://github.com/giskard09/argentum-core/blob/action-ref-v1.0/docs/spec/action-ref.md",
+  "hash_algo": "sha256",
+  "preimage_format": "jcs-rfc8785-v1",
+  "generated_at": "2026-06-14",
+  "source": "presidio-hardened-x402 audit_log chain head (real entry); library 0.5.0",
+  "purpose": "Demonstrates action-ref-v1 derived from a real presidio-hardened-x402 pre-execution decision log, cross-checked against the APS verifier (verify.py) and SDK (verify.mjs). See x402-foundation/x402#2332.",
+  "reproduce_in_python": "import hashlib, json\ndef jcs(obj): return json.dumps(dict(sorted(obj.items())), separators=(',',':'), ensure_ascii=False)\naction_ref = hashlib.sha256(jcs(preimage).encode()).hexdigest()",
+  "vectors": [
+    {
+      "id": "presidio-x402-001",
+      "description": "A PII_REDACTED screening decision record (recorded before signing), NOT a post-execution result. action_type is the audit event_type verbatim; scope is the requested-intent label for the policy envelope (human-readable, not a hash); timestamp normalized to mmmZ.",
+      "preimage": {
+        "action_type": "PII_REDACTED",
+        "agent_id": "did:presidio:x402:agent-7f3a9c",
+        "scope": "presidio:x402.pay:api.merchant.example",
+        "timestamp": "2026-06-14T21:37:52.465Z"
+      },
+      "jcs_payload": "{\"action_type\":\"PII_REDACTED\",\"agent_id\":\"did:presidio:x402:agent-7f3a9c\",\"scope\":\"presidio:x402.pay:api.merchant.example\",\"timestamp\":\"2026-06-14T21:37:52.465Z\"}",
+      "preimage_canonical_bytes_hex": "7b22616374696f6e5f74797065223a225049495f5245444143544544222c226167656e745f6964223a226469643a707265736964696f3a783430323a6167656e742d376633613963222c2273636f7065223a22707265736964696f3a783430322e7061793a6170692e6d65726368616e742e6578616d706c65222c2274696d657374616d70223a22323032362d30362d31345432313a33373a35322e3436355a227d",
+      "action_ref": "25b9c32fe6ea1df6fd81de158fa2082656fafa5cf419db3a5cd3540e6df0f8b7"
+    }
+  ],
+  "derived_from": {
+    "presidio_audit_entry": {
+      "timestamp": "2026-06-14T21:37:52.465688+00:00",
+      "event_type": "PII_REDACTED",
+      "resource_url": "https://api.merchant.example/v1/invoice",
+      "amount_usd": 2.5,
+      "network": "base",
+      "agent_id": "did:presidio:x402:agent-7f3a9c",
+      "outcome": "allowed",
+      "pii_entities_found": [
+        "EMAIL_ADDRESS",
+        "US_SSN"
+      ],
+      "policy_limit_usd": null,
+      "replay_fingerprint": null,
+      "error_message": null,
+      "prev_entry_hmac": "7fc91e602262fc3ec1deffd0e8a9aaab394695f80316d880d69191cf0c454b85"
+    },
+    "field_mapping": {
+      "agent_id": "AuditEvent.agent_id (verbatim; terminal executing agent)",
+      "action_type": "AuditEvent.event_type (verbatim; pre-execution control outcome / decision, NOT a post-settlement action)",
+      "scope": "presidio:x402.pay:<resource origin> — requested-intent label from the policy envelope + resource_url; human-readable, not a hash",
+      "timestamp": "AuditEvent.timestamp normalized from isoformat() (us,+00:00) to RFC 3339 mmmZ (== spec format_timestamp)"
+    }
+  }
+}
