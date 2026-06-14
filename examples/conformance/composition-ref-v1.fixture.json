@@ -131,7 +131,7 @@
         "authority_verified_at_ms":  1748087390000,
         "composition_key":           "comp_3d9b5e7f1a2c",
         "delegation_ref":            "69e672d1ba7484e3620d4d4ed9b366c4d4c8b203c4176f60f000e2b793761ffb",
-        "key_origin_proof":          "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "key_origin_proof":          "sha256:c82ee3ab33b18f8d5e73b5947849b4fe952f63a94e57032984473f5e371d29e5",
         "key_origin_type":           "self-generated",
         "key_source":                "inline",
         "revocation_check_at_ms":    1748087395000,
@@ -139,7 +139,7 @@
         "scope":                     "mycelium:payment",
         "version":                   "composition-ref-v1"
       },
-      "expected_composition_ref": "e7abd4420ec14b76a8e7fd82e79b44f43064eb3c8637aaa029a10ffd165b4be5"
+      "expected_composition_ref": "f7f8c2c7ef6ac594eb1924d5397ce2812bc993ea3e78c76717686e3a7c65bb02"
     },
     {
       "id": "resolver-to-cache-valid",
