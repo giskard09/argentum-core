@@ -22,6 +22,19 @@
       "jcs_payload": "{\"action_type\":\"PII_REDACTED\",\"agent_id\":\"did:presidio:x402:agent-7f3a9c\",\"scope\":\"presidio:x402.pay:api.merchant.example\",\"timestamp\":\"2026-06-14T21:37:52.465Z\"}",
       "preimage_canonical_bytes_hex": "7b22616374696f6e5f74797065223a225049495f5245444143544544222c226167656e745f6964223a226469643a707265736964696f3a783430323a6167656e742d376633613963222c2273636f7065223a22707265736964696f3a783430322e7061793a6170692e6d65726368616e742e6578616d706c65222c2274696d657374616d70223a22323032362d30362d31345432313a33373a35322e3436355a227d",
       "action_ref": "25b9c32fe6ea1df6fd81de158fa2082656fafa5cf419db3a5cd3540e6df0f8b7"
+    },
+    {
+      "id": "presidio-x402-002",
+      "description": "A PII_BLOCKED screening REFUSAL (recorded before signing): the screen blocked the payment because a US_SSN was detected in the metadata (outcome=blocked). A preserved negative action — a refused payment that is recorded, not silent — in the same screening-decision record type as presidio-x402-001. Same agent and chokepoint; distinct evidence basis from any settlement receipt or reputation update that might share the payment. Derived from a real PII_BLOCKED chain head; action_ref independently re-verified by the maintainer (x402-foundation/x402#2332).",
+      "preimage": {
+        "action_type": "PII_BLOCKED",
+        "agent_id": "did:presidio:x402:agent-7f3a9c",
+        "scope": "presidio:x402.pay:api.merchant.example",
+        "timestamp": "2026-06-15T19:13:50.564Z"
+      },
+      "jcs_payload": "{\"action_type\":\"PII_BLOCKED\",\"agent_id\":\"did:presidio:x402:agent-7f3a9c\",\"scope\":\"presidio:x402.pay:api.merchant.example\",\"timestamp\":\"2026-06-15T19:13:50.564Z\"}",
+      "preimage_canonical_bytes_hex": "7b22616374696f6e5f74797065223a225049495f424c4f434b4544222c226167656e745f6964223a226469643a707265736964696f3a783430323a6167656e742d376633613963222c2273636f7065223a22707265736964696f3a783430322e7061793a6170692e6d65726368616e742e6578616d706c65222c2274696d657374616d70223a22323032362d30362d31355431393a31333a35302e3536345a227d",
+      "action_ref": "a7e567423b04cf71d34ae1d8dfec97a4d51f176dff0cffe516be008010f36c25"
     }
   ],
   "derived_from": {

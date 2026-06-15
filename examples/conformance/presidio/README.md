@@ -1,10 +1,14 @@
-# presidio action-ref-v1 conformance vector
+# presidio action-ref-v1 conformance vectors
 
-An `action_ref` (per [`docs/spec/action-ref.md`](../../../docs/spec/action-ref.md))
-derived from a **real** [`presidio-hardened-x402`](https://github.com/presidio-v/presidio-hardened-x402)
-audit chain head — a pre-execution payment-screening decision recorded before
+`action_ref` vectors (per [`docs/spec/action-ref.md`](../../../docs/spec/action-ref.md))
+derived from **real** [`presidio-hardened-x402`](https://github.com/presidio-v/presidio-hardened-x402)
+audit chain heads — pre-execution payment-screening decisions recorded before
 signing. Contributed per discussion in
 [x402-foundation/x402#2332](https://github.com/x402-foundation/x402/issues/2332).
+
+Two vectors, both in the same screening-decision record type:
+- `presidio-x402-001` — `PII_REDACTED`, an **allow** (PII masked, payment proceeds).
+- `presidio-x402-002` — `PII_BLOCKED`, a **refusal** (US_SSN detected, payment blocked). A preserved negative action — a refused payment recorded, not silent — kept distinct from any settlement receipt or reputation update that shares the payment.
 
 | File | What |
 |------|------|
