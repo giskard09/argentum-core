@@ -33,16 +33,21 @@ node verify.mjs
 Both exit 0 on a full pass and print:
 
 ```
-PASS: 13 vectors (8 accept recomputed byte-identical, 5 reject correctly refused)
+PASS: 15 vectors (10 accept recomputed byte-identical, 5 reject correctly refused)
 ```
 
-## Relationship to the baseline
+## Relationship to the draft and the baseline
 
-The same AEOESS implementation reproduces the argentum-core
+The set includes the two test vectors from Appendix A of
+[`draft-giskard-aeoess-action-ref-00`](https://github.com/giskard09/draft-giskard-aeoess-action-ref)
+(`draft-appendix-a-v1`, `draft-appendix-a-v2`). The implementation reproduces
+the draft's Vector 1 (`fdd7f810...`) byte-for-byte and derives Vector 2, which
+the draft leaves as an exercise.
+
+The same implementation also reproduces the argentum-core
 `action-ref-v1-baseline.fixture.json` vectors byte-identical, including the
 `0003` namespace-collision pair, satisfying criterion (a) in
-[`../README.md`](../README.md): an independent implementation of the
-action-ref-v1 wire format validating against this conformance directory.
+[`../README.md`](../README.md).
 
-The vectors here are AEOESS's own, so the two sets together give independent
-recomputation on independent inputs.
+The remaining vectors are AEOESS's own, so the sets together give independent
+recomputation on both the normative draft inputs and independent inputs.
