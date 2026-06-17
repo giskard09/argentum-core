@@ -1,0 +1,175 @@
+{
+  "suite": "agentoracle-v1-action-ref-binding",
+  "version": "1.0",
+  "spec": "../../../docs/spec/action-ref.md (argentum-core action-ref-v1) + verification.v0.3 envelope (draft-krausz-verification-state)",
+  "description": "Conformance vectors for verification.v0.3 receipts that carry a forward-pointing action_ref. Accept vectors carry the four-field preimage (agent_id, action_type, scope, timestamp), the RFC 8785 JCS canonical form, and the lowercase-hex SHA-256 that AgentOracle and AgentTrust emit as context.action_ref (prefixed sha256-) inside the verification.v0.3 receipt envelope. Reject vectors carry reject:true and must fail the timestamp grammar (YYYY-MM-DDTHH:MM:SS.mmmZ, Z suffix mandatory) rather than be coerced. Receipts include the action_ref BEFORE the action settles; argentum-api.rgiskard.xyz/trails/verify?agent_id=X&action_ref=Y resolves it post-execution. Two-receipt composition: verification.v0.3 proves the gate verdict + basis; argentum-core trails/verify proves the post-payment work happened.",
+  "vectors": [
+    {
+      "id": "ao-001",
+      "description": "Pre-action factual-claim verification gate. Verdict 'act' authorizes the downstream calendar action; action_ref binds the verdict to the action that will follow.",
+      "input": {
+        "agent_id": "did:web:agentoracle.co:agents:gate-fixture-01",
+        "action_type": "calendar.create_event",
+        "scope": "calendar:work",
+        "timestamp": "2026-06-08T00:00:00.000Z"
+      },
+      "canonical": "{\"action_type\":\"calendar.create_event\",\"agent_id\":\"did:web:agentoracle.co:agents:gate-fixture-01\",\"scope\":\"calendar:work\",\"timestamp\":\"2026-06-08T00:00:00.000Z\"}",
+      "expected": "5f5ff225130888931cc746b021c6dfe9926b3b267bd45f94295ca2d4007ae91a",
+      "receipt_context": {
+        "v_gate": "act",
+        "v_gate_mapping": "agentoracle-v0.3-2026-05-30",
+        "embedded_as": "context.action_ref",
+        "verification_v0_3_field": "sha256-5f5ff225130888931cc746b021c6dfe9926b3b267bd45f94295ca2d4007ae91a"
+      }
+    },
+    {
+      "id": "ao-002",
+      "description": "Pre-action factual-claim verification gate, 'halt' verdict. Receipt still emits action_ref because the verdict explicitly forbids the action_type+scope+timestamp tuple the agent had proposed.",
+      "input": {
+        "agent_id": "did:web:agentoracle.co:agents:gate-fixture-02",
+        "action_type": "medical.dosage_advice",
+        "scope": "patient:demo-001",
+        "timestamp": "2026-06-08T14:23:17.456Z"
+      },
+      "canonical": "{\"action_type\":\"medical.dosage_advice\",\"agent_id\":\"did:web:agentoracle.co:agents:gate-fixture-02\",\"scope\":\"patient:demo-001\",\"timestamp\":\"2026-06-08T14:23:17.456Z\"}",
+      "expected": "0337726c26a2739d2c7f39bc8001331622eb2fd43910884ab4fd3b224cb11a8c",
+      "receipt_context": {
+        "v_gate": "halt",
+        "v_gate_mapping": "agentoracle-v0.3-2026-05-30",
+        "embedded_as": "context.action_ref",
+        "verification_v0_3_field": "sha256-0337726c26a2739d2c7f39bc8001331622eb2fd43910884ab4fd3b224cb11a8c"
+      }
+    },
+    {
+      "id": "ao-003",
+      "description": "Cross-issuer interop. Receipt issued by AgentTrust (sibling implementer under verification.v0.3 envelope), same action_ref computation rule.",
+      "input": {
+        "agent_id": "did:web:agenttrust.uk:agents:scan-001",
+        "action_type": "mcp.tool_invoke",
+        "scope": "mcp:github/create_pr",
+        "timestamp": "2026-06-07T09:15:42.812Z"
+      },
+      "canonical": "{\"action_type\":\"mcp.tool_invoke\",\"agent_id\":\"did:web:agenttrust.uk:agents:scan-001\",\"scope\":\"mcp:github/create_pr\",\"timestamp\":\"2026-06-07T09:15:42.812Z\"}",
+      "expected": "40bf8e175ad56287f7ab0475c7b41d9043d0012f03f3923b0305d2f440f59ab5",
+      "receipt_context": {
+        "v_gate": "act",
+        "v_gate_mapping": "agenttrust-v0.3-2026-06-07",
+        "embedded_as": "context.action_ref",
+        "verification_v0_3_field": "sha256-40bf8e175ad56287f7ab0475c7b41d9043d0012f03f3923b0305d2f440f59ab5"
+      }
+    },
+    {
+      "id": "ao-004",
+      "description": "Key-order independence. Same preimage in three different JSON key orders MUST canonicalize to identical bytes (verified against expected canonical form below).",
+      "input": {
+        "agent_id": "did:web:agentoracle.co:agents:gate-fixture-01",
+        "action_type": "calendar.create_event",
+        "scope": "calendar:work",
+        "timestamp": "2026-06-08T00:00:00.000Z"
+      },
+      "canonical": "{\"action_type\":\"calendar.create_event\",\"agent_id\":\"did:web:agentoracle.co:agents:gate-fixture-01\",\"scope\":\"calendar:work\",\"timestamp\":\"2026-06-08T00:00:00.000Z\"}",
+      "expected": "5f5ff225130888931cc746b021c6dfe9926b3b267bd45f94295ca2d4007ae91a",
+      "receipt_context": {
+        "v_gate": "act",
+        "v_gate_mapping": "agentoracle-v0.3-2026-05-30",
+        "embedded_as": "context.action_ref",
+        "verification_v0_3_field": "sha256-5f5ff225130888931cc746b021c6dfe9926b3b267bd45f94295ca2d4007ae91a"
+      },
+      "input_json_variants": [
+        "{\"agent_id\":\"did:web:agentoracle.co:agents:gate-fixture-01\",\"action_type\":\"calendar.create_event\",\"scope\":\"calendar:work\",\"timestamp\":\"2026-06-08T00:00:00.000Z\"}",
+        "{\"timestamp\":\"2026-06-08T00:00:00.000Z\",\"scope\":\"calendar:work\",\"action_type\":\"calendar.create_event\",\"agent_id\":\"did:web:agentoracle.co:agents:gate-fixture-01\"}",
+        "{\"scope\":\"calendar:work\",\"agent_id\":\"did:web:agentoracle.co:agents:gate-fixture-01\",\"timestamp\":\"2026-06-08T00:00:00.000Z\",\"action_type\":\"calendar.create_event\"}"
+      ]
+    },
+    {
+      "id": "ao-005",
+      "description": "Unicode in action_type and scope (Cyrillic plus emoji). JCS does not normalize Unicode; UTF-8 bytes of literal strings are hashed.",
+      "input": {
+        "agent_id": "did:web:agentoracle.co:agents:unicode-01",
+        "action_type": "медичний.діагноз",
+        "scope": "patient:звіт/📋",
+        "timestamp": "2026-06-09T12:00:00.500Z"
+      },
+      "canonical": "{\"action_type\":\"медичний.діагноз\",\"agent_id\":\"did:web:agentoracle.co:agents:unicode-01\",\"scope\":\"patient:звіт/📋\",\"timestamp\":\"2026-06-09T12:00:00.500Z\"}",
+      "expected": "1cb5f617e03006cf8596a7598ec12eacb4e2a61138c2f84130e7a8e1f07245b1",
+      "receipt_context": {
+        "v_gate": "act",
+        "v_gate_mapping": "agentoracle-v0.3-2026-05-30",
+        "embedded_as": "context.action_ref",
+        "verification_v0_3_field": "sha256-1cb5f617e03006cf8596a7598ec12eacb4e2a61138c2f84130e7a8e1f07245b1"
+      }
+    },
+    {
+      "id": "ao-006",
+      "description": "Timestamp edge: midnight rollover. Three-digit millisecond fraction written in full (.000 not omitted).",
+      "input": {
+        "agent_id": "did:web:agentoracle.co:agents:rollover-01",
+        "action_type": "ledger.append",
+        "scope": "audit:write",
+        "timestamp": "2026-01-01T00:00:00.000Z"
+      },
+      "canonical": "{\"action_type\":\"ledger.append\",\"agent_id\":\"did:web:agentoracle.co:agents:rollover-01\",\"scope\":\"audit:write\",\"timestamp\":\"2026-01-01T00:00:00.000Z\"}",
+      "expected": "f920a79fca489f3ff8c70d81e139e467f5755e95873d675ee9b9c8991ca0669e",
+      "receipt_context": {
+        "v_gate": "act",
+        "v_gate_mapping": "agentoracle-v0.3-2026-05-30",
+        "embedded_as": "context.action_ref",
+        "verification_v0_3_field": "sha256-f920a79fca489f3ff8c70d81e139e467f5755e95873d675ee9b9c8991ca0669e"
+      }
+    },
+    {
+      "id": "ao-007",
+      "description": "Empty-string scope. Load-bearing in the preimage; not equivalent to absent.",
+      "input": {
+        "agent_id": "did:web:agentoracle.co:agents:emptyscope-01",
+        "action_type": "noop.heartbeat",
+        "scope": "",
+        "timestamp": "2026-03-15T08:45:30.123Z"
+      },
+      "canonical": "{\"action_type\":\"noop.heartbeat\",\"agent_id\":\"did:web:agentoracle.co:agents:emptyscope-01\",\"scope\":\"\",\"timestamp\":\"2026-03-15T08:45:30.123Z\"}",
+      "expected": "5c918bf64d6d5cf8708081d03dab161590f6a0614c9c8caafd0660b8c579666b",
+      "receipt_context": {
+        "v_gate": "act",
+        "v_gate_mapping": "agentoracle-v0.3-2026-05-30",
+        "embedded_as": "context.action_ref",
+        "verification_v0_3_field": "sha256-5c918bf64d6d5cf8708081d03dab161590f6a0614c9c8caafd0660b8c579666b"
+      }
+    },
+    {
+      "id": "ao-r01",
+      "description": "Timestamp missing millisecond digits — emitter forgot to normalize before canonicalization.",
+      "input": {
+        "agent_id": "did:web:agentoracle.co:agents:bad-ts-01",
+        "action_type": "calendar.create_event",
+        "scope": "calendar:work",
+        "timestamp": "2026-06-08T00:00:00Z"
+      },
+      "reject": true,
+      "reason": "Timestamp missing millisecond digits — emitter forgot to normalize before canonicalization."
+    },
+    {
+      "id": "ao-r02",
+      "description": "Timestamp uses comma fraction separator (RFC 3339 permits it; JCS preimage spec does not).",
+      "input": {
+        "agent_id": "did:web:agentoracle.co:agents:bad-ts-02",
+        "action_type": "calendar.create_event",
+        "scope": "calendar:work",
+        "timestamp": "2026-06-08T00:00:00,123Z"
+      },
+      "reject": true,
+      "reason": "Timestamp uses comma fraction separator (RFC 3339 permits it; JCS preimage spec does not)."
+    },
+    {
+      "id": "ao-r03",
+      "description": "Timestamp uses +00:00 offset instead of Z suffix. Canonical preimage MUST use Z.",
+      "input": {
+        "agent_id": "did:web:agentoracle.co:agents:bad-ts-03",
+        "action_type": "calendar.create_event",
+        "scope": "calendar:work",
+        "timestamp": "2026-06-08T00:00:00.000+00:00"
+      },
+      "reject": true,
+      "reason": "Timestamp uses +00:00 offset instead of Z suffix. Canonical preimage MUST use Z."
+    }
+  ]
+}
