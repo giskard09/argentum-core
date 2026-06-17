@@ -170,7 +170,21 @@
       "changed_fields": ["amount"],
       "invariant_violated": "attempted_effective_args_digest != original_args_digest with no authorized guardrail revision — old approval does not carry forward",
       "verifier_outcome": "REJECT — gate must deny execution before Stripe call; a new approval record for effective_args_digest is required",
-      "note": "idempotency_key is intentionally unchanged to confirm the gate checks the full args digest, not just the idempotency key"
+      "note": "idempotency_key is intentionally unchanged to confirm the gate checks the full args digest, not just the idempotency key",
+      "independent_reproductions": [
+        {
+          "implementer": "AEOESS / Agent Passport System (APS)",
+          "method": "JCS (RFC 8785) canonicalization + SHA-256, computed with an independent implementation that shares no code with this fixture's generator",
+          "reproduced_byte_identical": {
+            "action_ref": "e6dd416ea108a1600522614957d9da7c815bc02b4c3b4886c80c776ebf88d6cb",
+            "original_args_digest": "93523c390782cf7e708d8aa5d58ab13a6b0c1b136bfe1d2cc6590a5c0eb8b47b",
+            "attempted_effective_args_digest": "72812219c9729b0152e0f01cf454991e807fc1706e6b34bb411ff1c49131be5c",
+            "authorization_ref": "10b8adcb487beebf40b3188df27474afb67be2a4dca82a32a28ee7d9bd32be8d"
+          },
+          "result": "All four NEG-5 digests reproduce byte-identical from the stated preimages. Two independent stacks now sit on the deny condition: attempted_effective_args_digest does not equal original_args_digest with no authorized revision in between, so a conformant gate rejects before the Stripe call. The prior approval over original_args_digest does not carry forward to the changed args.",
+          "implementer_ref": "https://github.com/aeoess/agent-passport-system"
+        }
+      ]
     },
     {
       "id": "NEG-4",
