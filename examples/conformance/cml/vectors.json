@@ -1,0 +1,22 @@
+{
+  "conformance_set_id": "cml-action-ref-v1",
+  "implementer": "safal207/Causal-Memory-Layer",
+  "spec": "draft-giskard-aeoess-action-ref-v1",
+  "submitted": "2026-06-18",
+  "source": "https://github.com/safal207/Causal-Memory-Layer",
+  "notes": "CML integration for CrewAI. timestamp field is RFC 3339 UTC with millisecond precision; the CrewAI listener normalizes started_at to that form before deriving the reference. Structural graph validation (uniqueness, parent resolution, acyclicity) is independent of signatures and external anchors.",
+  "vectors": [
+    {
+      "id": "cml-001-baseline",
+      "description": "Pinned baseline vector from CML test suite — confirms byte-identical derivation against action-ref-v1 spec.",
+      "preimage": {
+        "action_type": "tool_call",
+        "agent_id": "researcher-agent",
+        "scope": "search:task-42",
+        "timestamp": "2026-06-18T10:40:00.123Z"
+      },
+      "jcs_payload": "{\"action_type\":\"tool_call\",\"agent_id\":\"researcher-agent\",\"scope\":\"search:task-42\",\"timestamp\":\"2026-06-18T10:40:00.123Z\"}",
+      "action_ref": "c6fb63e34b2d61446745d86dd90ececf4c321f15e5023f8ffb897e5b0a32a16b"
+    }
+  ]
+}
