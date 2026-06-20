@@ -323,6 +323,22 @@ Payment is on-chain (Base or Arbitrum). The trail anchor and the payment record 
 
 The full chain: **Marks (identity) → Argentum (karma) → Oasis (service price)**
 
+## Mycelium Provider Protocol
+
+SDKs and frameworks that use Mycelium as their verifiability backend can declare **Mycelium Provider** status in their README.
+
+The integration surface is minimal: compute `action_ref` locally using the four-field canonical derivation, then submit to the external trail endpoint:
+
+```
+POST https://argentum.rgiskard.xyz/external/trail
+{ "action_ref": "<64-hex>", "api_key": "<key>" }
+→ { "mycelium_trail_id": "<id>", "anchored": true }
+```
+
+The full spec — field derivation, request/response table, error codes, badge text, and conformance vectors — is in [`docs/mycelium-provider-protocol.md`](docs/mycelium-provider-protocol.md).
+
+Conformance vectors are in [`examples/conformance/provider-protocol/`](examples/conformance/provider-protocol/). Implementations already satisfying the conformance requirement: [CML](https://github.com/safal207/cml) · [Nobulex](https://github.com/Gogani/nobulex).
+
 ## External references
 
 - [agent-passport-system](https://github.com/aeoess/agent-passport-system) — APS receipt structure uses Mycelium TrailRecords as the on-chain persistence layer. Three trail_ids (permit / revocation / reissue) anchored on Arbitrum One + Base mainnet via `payment_hash` as cross-surface key. ([PR #24](https://github.com/aeoess/agent-passport-system/pull/24))
