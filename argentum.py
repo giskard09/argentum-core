@@ -63,7 +63,8 @@ CONFORMANCE_TIER: dict[str, float] = {
     "aps":     0.7,   # AEOESS / APS — conformance-verified
     "nobulex": 0.7,   # Gogani/Nobulex — conformance-verified
 }
-KARMA_DEFAULT_WEIGHT: float = 0.2   # valid action_ref, unverified implementation
+KARMA_PROVIDER_WEIGHT: float = 0.7  # verified provider not in explicit tier dict
+KARMA_DEFAULT_WEIGHT: float  = 0.2  # valid action_ref, unverified implementation
 
 WEIGHT_THRESHOLD          = 2.0  # total weighted attestations needed to verify
 KARMA_WEIGHT_BASE         = 50   # karma units for weight = 1.0
@@ -1159,6 +1160,110 @@ def set_account_conformance(body: ConformanceRequest, request: Request):
         "karma_weight":       weight,
         "tier":               "conformance_verified" if source in CONFORMANCE_TIER else "default",
     }
+
+
+_SELF_CERTIFY_REPO = "giskard09/argentum-core"
+_CONFORMANCE_BASE  = "examples/conformance"
+
+# Rate-limit: 1 self-certify per api_key per 60s — prevents GH API hammering
+_self_certify_last: dict[str, float] = {}
+
+
+@app.post("/payg/account/self-certify")
+async def self_certify_provider(request: Request):
+    """Auto-declaración de conformance para Providers.
+
+    El integrador declara la ruta de su carpeta de conformance en argentum-core.
+    El sistema verifica vía GitHub API que esa ruta existe con al menos un archivo,
+    extrae el conformance_source del nombre de la carpeta, y activa trails ilimitados.
+
+    Body: { "api_key": "...", "conformance_path": "examples/conformance/<folder>/" }
+    conformance_repo debe ser "giskard09/argentum-core" — solo nuestro repo cuenta.
+
+    Gate real: el PR con los vectores byte-identical debe estar mergeado en argentum-core.
+    La auto-declaración solo automatiza el paso de activación manual.
+    """
+    import time as _time_mod
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"error": "invalid JSON"}, status_code=400)
+
+    api_key            = (body.get("api_key") or "").strip()
+    conformance_repo   = (body.get("conformance_repo") or "").strip()
+    conformance_path   = (body.get("conformance_path") or "").strip().strip("/")
+
+    if not (api_key and conformance_repo and conformance_path):
+        return JSONResponse(
+            {"error": "api_key, conformance_repo, conformance_path required"},
+            status_code=400,
+        )
+
+    if conformance_repo != _SELF_CERTIFY_REPO:
+        return JSONResponse(
+            {"error": f"conformance_repo must be {_SELF_CERTIFY_REPO!r}"},
+            status_code=422,
+        )
+
+    # path debe estar bajo examples/conformance/
+    if not conformance_path.startswith(_CONFORMANCE_BASE + "/"):
+        return JSONResponse(
+            {"error": f"conformance_path must be under {_CONFORMANCE_BASE!r}"},
+            status_code=422,
+        )
+
+    # conformance_source = nombre de la carpeta inmediatamente después del base
+    folder = conformance_path[len(_CONFORMANCE_BASE) + 1:].split("/")[0].lower().strip()
+    if not folder:
+        return JSONResponse({"error": "could not extract folder name from conformance_path"}, status_code=422)
+
+    account = mycelium_trails.get_payg_account(TRAILS_DB, api_key)
+    if not account:
+        return JSONResponse({"error": "api_key not found"}, status_code=401)
+
+    # Rate-limit: 1 call por api_key por 60s
+    now_ts = _time_mod.time()
+    last = _self_certify_last.get(api_key, 0.0)
+    if now_ts - last < 60:
+        return JSONResponse({"error": "rate limited — wait 60s between self-certify calls"}, status_code=429)
+    _self_certify_last[api_key] = now_ts
+
+    # Verificar vía GitHub API que la carpeta existe y tiene contenido
+    gh_url = f"https://api.github.com/repos/{_SELF_CERTIFY_REPO}/contents/{_CONFORMANCE_BASE}/{folder}"
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            r = await client.get(gh_url, headers={"Accept": "application/vnd.github+json",
+                                                   "X-GitHub-Api-Version": "2022-11-28"})
+    except Exception:
+        return JSONResponse({"error": "could not reach GitHub API"}, status_code=502)
+
+    if r.status_code == 404:
+        return JSONResponse(
+            {"error": f"conformance folder not found in argentum-core: {_CONFORMANCE_BASE}/{folder}"},
+            status_code=422,
+        )
+    if r.status_code != 200:
+        return JSONResponse({"error": f"GitHub API error: {r.status_code}"}, status_code=502)
+
+    items = r.json()
+    if not isinstance(items, list) or len(items) == 0:
+        return JSONResponse({"error": "conformance folder exists but is empty"}, status_code=422)
+
+    # Activar conformance_source
+    updated = mycelium_trails.set_conformance_source(TRAILS_DB, api_key, folder)
+    if updated is None:
+        return JSONResponse({"error": "failed to update account"}, status_code=500)
+
+    weight = CONFORMANCE_TIER.get(folder, KARMA_PROVIDER_WEIGHT)
+    return JSONResponse({
+        "ok": True,
+        "api_key": api_key,
+        "agent_id": updated["agent_id"],
+        "conformance_source": folder,
+        "conformance_path": f"{_CONFORMANCE_BASE}/{folder}",
+        "karma_weight": weight,
+        "trail_limit": "unlimited",
+    }, status_code=200)
 
 
 # ── LIGHTNING ────────────────────────────────────────────────────────────────
@@ -2564,10 +2669,15 @@ async def external_trail(request: Request):
 
     # tier viene del registro de la cuenta, no del cuerpo
     conformance_source = (account.get("conformance_source") or "").strip().lower()
-    weight = CONFORMANCE_TIER.get(conformance_source, KARMA_DEFAULT_WEIGHT)
-    # Providers verificados: ilimitado mientras conformance_source activo — rate_limit_cap=0
-    # salta el bloque entero de chequeos diario+mensual en record_trail.
-    is_verified_provider = conformance_source in CONFORMANCE_TIER
+    if conformance_source in CONFORMANCE_TIER:
+        weight = CONFORMANCE_TIER[conformance_source]
+    elif conformance_source:
+        weight = KARMA_PROVIDER_WEIGHT   # self-certified provider, folder name as source
+    else:
+        weight = KARMA_DEFAULT_WEIGHT
+    # cualquier conformance_source no vacío = verificado = ilimitado (rate_limit_cap=0
+    # salta el bloque entero diario+mensual en record_trail)
+    is_verified_provider = bool(conformance_source)
 
     mycelium_trails.record_external_nonce(TRAILS_DB, action_ref, agent_id)
 

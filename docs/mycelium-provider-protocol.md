@@ -23,7 +23,46 @@ Returns your `api_key` immediately. No signup required.
 }
 ```
 
-Once your conformance vectors are merged into `argentum-core` and your account is flagged as a verified provider, trail submission is **unlimited** with no credit management — as long as your `conformance_source` is active.
+Once your conformance vectors are merged into `argentum-core`, activate unlimited trails with `self-certify` (see §0.1 below).
+
+### 0.1 Activate as a verified Provider
+
+After your conformance PR is merged:
+
+```
+POST https://argentum-api.rgiskard.xyz/payg/account/self-certify
+Content-Type: application/json
+
+{
+  "api_key": "ark_...",
+  "conformance_repo": "giskard09/argentum-core",
+  "conformance_path": "examples/conformance/<your-folder>/"
+}
+```
+
+The system verifies via GitHub API that the folder exists in `argentum-core` with at least one file, extracts the `conformance_source` from the folder name, and activates unlimited trail submission immediately.
+
+**Response:**
+
+```json
+{
+  "ok": true,
+  "api_key": "ark_...",
+  "agent_id": "your-agent-id",
+  "conformance_source": "your-folder",
+  "conformance_path": "examples/conformance/your-folder",
+  "karma_weight": 0.7,
+  "trail_limit": "unlimited"
+}
+```
+
+**Rules:**
+- `conformance_repo` must be `"giskard09/argentum-core"` — only our repo counts as the gate
+- `conformance_path` must be under `examples/conformance/`
+- The folder must exist and be non-empty (your PR must be merged before calling this)
+- Rate-limited to 1 call per `api_key` per 60 seconds
+
+**The gate is the merged PR, not this endpoint.** Any folder that exists in `argentum-core` passed the review. Self-certify just automates the activation step.
 
 ---
 
