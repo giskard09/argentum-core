@@ -1217,6 +1217,14 @@ async def self_certify_provider(request: Request):
     if not folder:
         return JSONResponse({"error": "could not extract folder name from conformance_path"}, status_code=422)
 
+    # Reservado: los tiers explícitos (aps, nobulex, nexus) requieren activación admin.
+    # Self-certify es para providers nuevos — no puede impersonar un tier existente.
+    if folder in CONFORMANCE_TIER:
+        return JSONResponse(
+            {"error": f"folder {folder!r} is reserved for tier-verified providers — contact admin"},
+            status_code=409,
+        )
+
     account = mycelium_trails.get_payg_account(TRAILS_DB, api_key)
     if not account:
         return JSONResponse({"error": "api_key not found"}, status_code=401)
@@ -1254,7 +1262,10 @@ async def self_certify_provider(request: Request):
     if updated is None:
         return JSONResponse({"error": "failed to update account"}, status_code=500)
 
-    weight = CONFORMANCE_TIER.get(folder, KARMA_PROVIDER_WEIGHT)
+    # self-certify siempre recibe KARMA_PROVIDER_WEIGHT — nunca peso de tier explícito
+    # (el check de CONFORMANCE_TIER arriba ya bloquea impersonation, pero hacerlo
+    # explícito acá hace que el peso sea correcto independientemente del dict)
+    weight = KARMA_PROVIDER_WEIGHT
     return JSONResponse({
         "ok": True,
         "api_key": api_key,
