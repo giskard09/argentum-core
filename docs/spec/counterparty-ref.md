@@ -101,6 +101,71 @@ that the action was admitted after evaluating the counterparty's reputation snap
 
 ---
 
+## counterparty_ref_anchor (optional extension field)
+
+`counterparty_ref_anchor` is an optional companion field to `counterparty_ref`.
+When present, it provides a verifiable on-chain pointer to the `markUsed(bytes32)`
+transaction that anchored the preimage hash at snapshot time.
+
+### Purpose
+
+A `counterparty_ref` without an anchor is locally-trusted: a verifier cannot confirm
+the snapshot was not post-dated. `counterparty_ref_anchor` resolves this by pointing
+to the chain transaction that made the commitment immutable and timestamped.
+
+### Schema
+
+```json
+"counterparty_ref_anchor": {
+  "chain_id": 8453,
+  "contract": "0x90Fa32a9568c6aE6BEa915DF8737acfd7EEA97De",
+  "tx_hash":  "<markUsed tx hash>"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `chain_id` | integer | EVM chain ID where the anchor tx was submitted. Base = 8453, Arbitrum One = 42161. |
+| `contract` | string | Checksummed address of the `GiskardPayments` contract on that chain. |
+| `tx_hash` | string | Hash of the `markUsed(bytes32)` transaction that anchored `counterparty_ref`. |
+
+### Verification
+
+A verifier who holds `counterparty_ref` and `counterparty_ref_anchor` can:
+
+1. Recompute `counterparty_ref` from the preimage fields (JCS + SHA-256).
+2. Query `chain_id` for `tx_hash`.
+3. Confirm the transaction called `markUsed(bytes32(counterparty_ref))` on `contract`.
+4. Read the block timestamp — this is the commitment time, independent of the provider.
+
+No operator cooperation required after step 1. The anchor is verifiable by any party
+with access to a public RPC for the declared `chain_id`.
+
+### GiskardPayments deployments
+
+| Chain | chain_id | Contract |
+|-------|----------|----------|
+| Base mainnet | 8453 | `0x90Fa32a9568c6aE6BEa915DF8737acfd7EEA97De` |
+| Arbitrum One | 42161 | `0xe40E376cD32b03E3084F9E0d646155D0Ba0A63ae` |
+
+### Usage example
+
+```json
+{
+  "action_type":      "token_transfer",
+  "agent_id":         "pioneer-agent-001",
+  "counterparty_ref": "f969b8828e9c23a07cce4b1e2f10e7771ceca6ef9d924b2461819f548227fee0",
+  "counterparty_ref_anchor": {
+    "chain_id": 8453,
+    "contract": "0x90Fa32a9568c6aE6BEa915DF8737acfd7EEA97De",
+    "tx_hash":  "0x3b24cfcef0a9ea0843c2d4d684cfb9b85e71e0ee153d5563acea439ebbd5330e"
+  },
+  "scope": "mycelium.safeagent"
+}
+```
+
+---
+
 ## Relationship to other primitives
 
 | Primitive | What it points to |
