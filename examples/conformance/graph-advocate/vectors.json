@@ -1,0 +1,56 @@
+{
+  "suite": "graph-advocate-counterparty-ref-v1",
+  "version": "1.0",
+  "spec": "../../../docs/spec/counterparty-ref.md (argentum-core counterparty-ref-v1)",
+  "provider": {
+    "provider_id": "graph-advocate.agent-score.v1",
+    "rubric_version": "graph-advocate.rubric.v1",
+    "endpoint": "POST https://graphadvocate.com/agent/score",
+    "price": "$0.02 USDC on Base via x402",
+    "docs": "https://docs.graphadvocate.com/agent-score"
+  },
+  "description": "Conformance vectors for the Graph Advocate counterparty reputation provider. Demonstrates that POST /agent/score returns a counterparty-ref-v1 conformant SHA-256 hex pointer over the canonical JCS preimage. Each accept vector carries the five-field preimage (provider_id, rubric_version, timestamp, trailing_days, wallet), the RFC 8785 JCS canonical form, and the lowercase-hex SHA-256. The reject vector exercises the timestamp-omission failure mode from the provider side.",
+  "vectors": [
+    {
+      "id": "ga-001",
+      "description": "Graph Advocate self-score (ERC-8004 agent #41034 on Base). 90-day trailing window, midnight UTC anchor.",
+      "input": {
+        "provider_id": "graph-advocate.agent-score.v1",
+        "rubric_version": "graph-advocate.rubric.v1",
+        "timestamp": "2026-06-21T00:00:00.000Z",
+        "trailing_days": 90,
+        "wallet": "0x575267eED09c338FAE5716A486A7B58A5749A292"
+      },
+      "canonical": "{\"provider_id\":\"graph-advocate.agent-score.v1\",\"rubric_version\":\"graph-advocate.rubric.v1\",\"timestamp\":\"2026-06-21T00:00:00.000Z\",\"trailing_days\":90,\"wallet\":\"0x575267eED09c338FAE5716A486A7B58A5749A292\"}",
+      "expected": "c6a81942043b65897da05736c06fba698c8f7fa8dde9a5c1cc61aabf34372112",
+      "notes": "Live endpoint POST https://graphadvocate.com/agent/score returns the same preimage + counterparty_ref when called with this wallet + trailing_days at the recorded timestamp (subject to 24h cache TTL)."
+    },
+    {
+      "id": "ga-002",
+      "description": "Wallet-behavior-score peer agent (owner of 12 ERC-8004-registered agents on Base, latest #55656). 30-day trailing window, midnight UTC anchor. Demonstrates owner-level aggregation: feedback accrues to whichever agent users hit (here #51123, not the latest), so the per-wallet score aggregates across the owner's full agent set.",
+      "input": {
+        "provider_id": "graph-advocate.agent-score.v1",
+        "rubric_version": "graph-advocate.rubric.v1",
+        "timestamp": "2026-06-21T00:00:00.000Z",
+        "trailing_days": 30,
+        "wallet": "0xE69F9cC5e073B4a41D9e888A91159D0706161F18"
+      },
+      "canonical": "{\"provider_id\":\"graph-advocate.agent-score.v1\",\"rubric_version\":\"graph-advocate.rubric.v1\",\"timestamp\":\"2026-06-21T00:00:00.000Z\",\"trailing_days\":30,\"wallet\":\"0xE69F9cC5e073B4a41D9e888A91159D0706161F18\"}",
+      "expected": "11220ffceb9b9d1db415e9dad7556bf0e0fd9a2e46bda3edbcce8a7c87ef83a8",
+      "notes": "Same provider_id and rubric_version as ga-001 but different (wallet, trailing_days, timestamp) triple produces a distinct ref — multi-vector confirmation that the preimage components all contribute."
+    },
+    {
+      "id": "ga-reject-001",
+      "reject": true,
+      "description": "Reject: preimage missing the timestamp field. counterparty-ref-v1 §'Why timestamp is required': without timestamp the hash is floating and cannot satisfy the anchor requirement. A spec-conformant verifier MUST refuse to hash this rather than substitute a default value.",
+      "input": {
+        "provider_id": "graph-advocate.agent-score.v1",
+        "rubric_version": "graph-advocate.rubric.v1",
+        "trailing_days": 90,
+        "wallet": "0x575267eED09c338FAE5716A486A7B58A5749A292"
+      },
+      "expected_failure": "missing_timestamp",
+      "notes": "Companion to giskard09/argentum-core examples/conformance/counterparty-ref/reject-missing-timestamp.json — same failure mode, exercised from the provider-side (graph-advocate)."
+    }
+  ]
+}
