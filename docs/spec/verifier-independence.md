@@ -119,6 +119,7 @@ The full fixture set (53 vectors, 5 languages) is at
 ## References
 
 - `action-ref.md` — canonical field set and derivation
+- `signing-trust-ref.md` — layer above `action_ref`: makes signer identity and key model part of the verifiable record, enabling verifier assessment of signing trust independently of the operator assertion
 - `cross-system-verification.md` — verifier that requires no operator endpoint
 - `guarantee-model.md` — composability with pre-execution enforcement layers
 - Regulatory mapping: `docs/compliance/regulatory-compliance.md`

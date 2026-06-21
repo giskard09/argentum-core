@@ -1,0 +1,51 @@
+{
+  "fixture_id": "signing-trust-ref-v1",
+  "version": "v1",
+  "spec": "docs/spec/signing-trust-ref.md",
+  "hash_algo": "sha256",
+  "preimage_format": "jcs-rfc8785-v1",
+  "generated_at": "2026-06-21",
+  "purpose": "Conformance vectors for signing-trust-ref-v1: content-addressed pointer to a signing-trust assertion. Covers operator_key, agent_keypair, and multi_party signer types. action_ref values reference existing presidio-x402 fixtures.",
+  "reproduce_in_python": "import hashlib, json\ndef jcs(obj): return json.dumps(dict(sorted(obj.items())), separators=(',',':'), ensure_ascii=False)\nsigning_trust_ref = hashlib.sha256(jcs(preimage).encode()).hexdigest()",
+  "vectors": [
+    {
+      "id": "str-001",
+      "description": "operator_key base case: signing trust assertion for an operator-controlled EVM key. action_ref is presidio-x402-001. Trust is bounded by operator key management — a verifier must trust the operator's key custody.",
+      "preimage": {
+        "action_ref": "25b9c32fe6ea1df6fd81de158fa2082656fafa5cf419db3a5cd3540e6df0f8b7",
+        "signer_id": "0xDcc84E9798E8eB1b1b48A31B8f35e5AA7b83DBF4",
+        "signer_type": "operator_key",
+        "timestamp_ms": 1750448700000
+      },
+      "jcs_payload": "{\"action_ref\":\"25b9c32fe6ea1df6fd81de158fa2082656fafa5cf419db3a5cd3540e6df0f8b7\",\"signer_id\":\"0xDcc84E9798E8eB1b1b48A31B8f35e5AA7b83DBF4\",\"signer_type\":\"operator_key\",\"timestamp_ms\":1750448700000}",
+      "preimage_canonical_bytes_hex": "7b22616374696f6e5f726566223a2232356239633332666536656131646636666438316465313538666132303832363536666166613563663431396462336135636433353430653664663066386237222c227369676e65725f6964223a22307844636338344539373938453865423162316234384133314238663335653541413762383344424634222c227369676e65725f74797065223a226f70657261746f725f6b6579222c2274696d657374616d705f6d73223a313735303434383730303030307d",
+      "signing_trust_ref": "1d1becb32090150f0b71456f5ff2520a77d3a13553c139dc57cc2528522b7b36"
+    },
+    {
+      "id": "str-002",
+      "description": "agent_keypair: signing trust assertion where the agent holds its own key (EVM wallet). action_ref is presidio-x402-003 (pii_screen PII_REDACTED). The operator does not hold the private key — verifier trust does not depend on operator key custody.",
+      "preimage": {
+        "action_ref": "c832ef8610c6989f8c6f5cea51ac019b8ac9860e389110079a895e67595950a2",
+        "signer_id": "0xD6Da69759005DCab1172990C75eE66338E3ade60",
+        "signer_type": "agent_keypair",
+        "timestamp_ms": 1750448700001
+      },
+      "jcs_payload": "{\"action_ref\":\"c832ef8610c6989f8c6f5cea51ac019b8ac9860e389110079a895e67595950a2\",\"signer_id\":\"0xD6Da69759005DCab1172990C75eE66338E3ade60\",\"signer_type\":\"agent_keypair\",\"timestamp_ms\":1750448700001}",
+      "preimage_canonical_bytes_hex": "7b22616374696f6e5f726566223a2263383332656638363130633639383966386336663563656135316163303139623861633938363065333839313130303739613839356536373539353935306132222c227369676e65725f6964223a22307844364461363937353930303544436162313137323939304337356545363633333845336164653630222c227369676e65725f74797065223a226167656e745f6b657970616972222c2274696d657374616d705f6d73223a313735303434383730303030317d",
+      "signing_trust_ref": "22ab9e275ec27f16591be768bbc4b7c6fa73bc8b069b5c746f46809047615492"
+    },
+    {
+      "id": "str-003",
+      "description": "multi_party: 2-of-3 threshold signing assertion. signer_id encodes scheme, threshold, and participant keys as 'tkc:2-of-3:<key1>;<key2>;<key3>'. action_ref is presidio-x402-004 (pii_screen PII_BLOCKED). No single party can forge the record — two independent signers must agree.",
+      "preimage": {
+        "action_ref": "729b8c8ddaa4b136916aaa5175e72041a7c142bb4903ee32ae9ff7b6e2d13da0",
+        "signer_id": "tkc:2-of-3:0x4a9b3c1d2e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b;0xb5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4;0xc7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6",
+        "signer_type": "multi_party",
+        "timestamp_ms": 1750448700002
+      },
+      "jcs_payload": "{\"action_ref\":\"729b8c8ddaa4b136916aaa5175e72041a7c142bb4903ee32ae9ff7b6e2d13da0\",\"signer_id\":\"tkc:2-of-3:0x4a9b3c1d2e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b;0xb5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4;0xc7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6\",\"signer_type\":\"multi_party\",\"timestamp_ms\":1750448700002}",
+      "preimage_canonical_bytes_hex": "7b22616374696f6e5f726566223a2237323962386338646461613462313336393136616161353137356537323034316137633134326262343930336565333261653966663762366532643133646130222c227369676e65725f6964223a22746b633a322d6f662d333a3078346139623363316432653566366137623863396430653166326133623463356436653766386139623b3078623563366437653866396130623163326433653466356136623763386439653066316132623363343b307863376438653966306131623263336434653566366137623863396430653166326133623463356436222c227369676e65725f74797065223a226d756c74695f7061727479222c2274696d657374616d705f6d73223a313735303434383730303030327d",
+      "signing_trust_ref": "46c83b520a52b6f8ac6067690b027c21237199578d5a5f43f887640ccb96f57d"
+    }
+  ]
+}
