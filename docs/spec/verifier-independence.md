@@ -123,3 +123,45 @@ The full fixture set (53 vectors, 5 languages) is at
 - `guarantee-model.md` — composability with pre-execution enforcement layers
 - Regulatory mapping: `docs/compliance/regulatory-compliance.md`
   (Art. 12 EU AI Act, FCA SYSC 9.1, DORA)
+
+## Preimage honesty boundary
+
+The content-addressed guarantee covers two properties: recomputability and
+anchor immutability.
+
+**Recomputability:** any party who holds the four preimage fields can derive
+the same `action_ref` independently, without operator infrastructure.
+
+**Anchor immutability:** once `markUsed(action_ref)` is on-chain, the hash
+cannot be retroactively removed or altered. A verifier can confirm the hash
+existed at a specific block without contacting the operator.
+
+**What neither property covers:** the spec defines the hash surface and the
+anchor layer. Preimage honesty — whether the fields accurately reflect what
+the agent executed — is a property of the signing trust model, which is
+intentionally out of scope. An operator who controls the fields — `agent_id`,
+`action_type`, `scope`, `timestamp_ms` — can produce any `action_ref` they
+choose and anchor it. The anchor makes that record immutable; it does not make
+it honest.
+
+This is a deliberate design boundary. Three approaches address the preimage
+honesty question at the signing layer, in increasing order of
+verifier-independence:
+
+| Approach | What it adds | What a verifier trusts |
+|---|---|---|
+| Operator-held key (Model A above) | Signature over the record | Operator's key custody |
+| Agent-held keypair | Agent signs with a key it controls; operator never touches the private key | Agent's key custody |
+| TEE attestation | Hardware-bound key signs the preimage inside a trusted execution environment | TEE manufacturer + attestation report |
+
+The spec is compatible with all three. Conformance fixtures do not prescribe
+a signing trust model — `issuer_signature` is an opaque field. Implementations
+that require stronger preimage honesty guarantees should document their signing
+trust model alongside their conformance vectors.
+
+**Note on agent-held keypairs:** using a wallet address as the `agent_id`
+field in the preimage is valid and enables on-chain verification of the
+signer's identity. The wallet address should be a named field in the JCS
+object, not concatenated into the hash directly — concatenation breaks the
+exactly-once and idempotency properties if the agent rotates its wallet
+between calls.
