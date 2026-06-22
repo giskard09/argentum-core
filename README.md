@@ -319,7 +319,7 @@ Payment is on-chain (Base or Arbitrum). The trail anchor and the payment record 
 - **Giskard Memory** (`localhost:8005`) — verified actions stored as episodic traces
 - **Giskard Marks** (`localhost:8015`) — permanent proof on verified actions
 - **Giskard Oasis** (`localhost:8002`) — karma-tiered pricing: higher karma = lower cost per query
-- **Arbitrum** — contract `0xD467CD1e34515d58F98f8Eb66C0892643ec86AD3`
+- **GiskardPayments** (`markUsed(bytes32)` anchor) — Arbitrum mainnet `0xe40E376cD32b03E3084F9E0d646155D0Ba0A63ae` · Base mainnet `0x90Fa32a9568c6aE6BEa915DF8737acfd7EEA97De`
 
 The full chain: **Marks (identity) → Argentum (karma) → Oasis (service price)**
 
