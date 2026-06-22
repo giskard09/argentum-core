@@ -14,7 +14,8 @@
   "error_codes": {
     "AMBIGUOUS_ISSUER_BINDING": "Same action_ref bound to >1 issuer with disjoint verdicts; no injective (claim_type, evidenceType, source_provider_did).",
     "RESCOPED_REPLAY": "Presented scope not bound by the embedded action_ref.",
-    "SEMANTIC_DRIFT": "action_type / field semantics differ between issuance and verification, yielding divergent action_refs for one action."
+    "SEMANTIC_DRIFT": "action_type / field semantics differ between issuance and verification, yielding divergent action_refs for one action.",
+    "KNOWN_DESIGN_PROPERTY": "Observed behavior is correct by spec — not a failure mode. Used for vectors that document intentional properties a naive verifier might misread as errors."
   },
   "vectors": [
     {
@@ -199,6 +200,42 @@
         "resolution": "rejected: action_type not from closed canonical vocabulary"
       },
       "rationale": "action_type MUST be a closed vocabulary with canonical values, or issuance and verification silently compute different action_refs. Normalizing-then-matching would mask the drift; fail-closed surfaces it."
+    },
+    {
+      "name": "same_action_ref_different_state",
+      "failure_mode": "KNOWN_DESIGN_PROPERTY",
+      "description": "Two receipts share the same preimage (agent_id, action_type, scope, timestamp) but differ in execution state — one in-progress, one terminal (completed). They produce the same action_ref. This is correct by spec: action_ref identifies the action, not the state of it. A verifier that treats the shared action_ref as a collision or replay MUST NOT reject on that basis alone.",
+      "preimage_block": {
+        "preimage": {
+          "agent_id": "did:web:agent.example",
+          "action_type": "task.execute",
+          "scope": "mycelium:task:process_payment",
+          "timestamp": "2026-06-01T12:00:00.000Z"
+        },
+        "canonical_bytes_utf8": "{\"action_type\":\"task.execute\",\"agent_id\":\"did:web:agent.example\",\"scope\":\"mycelium:task:process_payment\",\"timestamp\":\"2026-06-01T12:00:00.000Z\"}",
+        "canonical_sha256": "a5bfa2dde39933a363c435d8035ee43898c5d7960b3d0de3230d940921a4259e",
+        "action_ref": "sha256:a5bfa2dde39933a363c435d8035ee43898c5d7960b3d0de3230d940921a4259e"
+      },
+      "receipts": [
+        {
+          "label": "in-progress",
+          "action_ref": "sha256:a5bfa2dde39933a363c435d8035ee43898c5d7960b3d0de3230d940921a4259e",
+          "state": "in-progress",
+          "terminal": false,
+          "issued_at": "2026-06-01T12:00:01.000Z"
+        },
+        {
+          "label": "terminal",
+          "action_ref": "sha256:a5bfa2dde39933a363c435d8035ee43898c5d7960b3d0de3230d940921a4259e",
+          "state": "completed",
+          "terminal": true,
+          "issued_at": "2026-06-01T12:00:05.000Z"
+        }
+      ],
+      "expected_result": "KNOWN_DESIGN_PROPERTY",
+      "expected_error_code": null,
+      "verifier_rule": "A verifier MUST NOT reject the shared action_ref as a collision or replay. To determine whether an action reached a terminal state, inspect the `terminal` field (or equivalent) in the signed receipt — not action_ref alone.",
+      "rationale": "action_ref is state-agnostic by design. It identifies what action was claimed (who, what type, what scope, when) — not the execution outcome. Multiple receipts for the same action instance in different states are expected and correct. The signing layer (signing-trust-ref-v1) covers the full envelope including the terminal field, which is the authoritative signal for state. See docs/spec/action-ref.md §State vs Identity."
     }
   ]
 }

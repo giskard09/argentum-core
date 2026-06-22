@@ -14,6 +14,7 @@ Near-miss conformance vectors for the `action_ref` spec. Each vector represents 
 | `ambiguous_issuer_binding` | `AMBIGUOUS_ISSUER_BINDING` | Same `action_ref` bound to two issuers with disjoint verdicts — injectivity violation |
 | `rescoped_replay` | `RESCOPED_REPLAY` | Attestation issued for `read` scope presented against `write` scope — `action_ref` mismatch |
 | `semantic_drift` | `SEMANTIC_DRIFT` | `action_type` differs between issuance (`behavioral_eval`) and verification (`behavioral`) — vocabulary drift |
+| `same_action_ref_different_state` | `KNOWN_DESIGN_PROPERTY` | Same preimage, different execution state (in-progress vs terminal) → same `action_ref`. Correct by design; a verifier MUST NOT reject on this basis |
 
 ## Verification
 
