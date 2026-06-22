@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+### Added — Accountability primitives & multi-chain anchor (2026-06)
+
+- `counterparty_ref` (`docs/spec/counterparty-ref.md`) — content-addressed pointer to a counterparty snapshot at action time. JCS-canonical preimage with timestamp.
+- `counterparty_ref_anchor` (optional extension on `counterparty_ref`) — verifiable on-chain pointer to the `markUsed(bytes32)` transaction that anchored the preimage. Chain-agnostic via `chain_id`. `GiskardPayments` deployed on Base mainnet (`0x90Fa32a9568c6aE6BEa915DF8737acfd7EEA97De`, chain_id 8453) alongside the existing Arbitrum deployment.
+- `signing_trust_ref` (`docs/spec/signing-trust-ref.md`) — signer-type pointer (`operator_key` / `agent_keypair` / `multi_party`) for composed multi-signer envelopes.
+- `verification_mode` (`docs/spec/verification-semantics.md`) — distinguishes producer-`asserted` from independently-`enforced` records.
+- All fields optional and backward-compatible; existing consumers unaffected.
+
 ### Added — Schema v2 (2026-05-12)
 
 - `scope` (string | null): optional field on TrailRecord — what the agent was authorized to do
