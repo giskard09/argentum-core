@@ -25,8 +25,9 @@ actions — it is a snapshot of standing. This distinction matters for verifiabi
 wallet reputation survives provider churn; action trails require provider continuity.
 
 **Anchor requirement:** for long-term verifiability, the preimage SHOULD be anchored
-on-chain (e.g. via `GiskardPayments.markUsed(bytes32)` or equivalent) at the time of
-snapshot. A `counterparty_ref` without an anchor degrades to a locally-trusted hash —
+on-chain at the time of snapshot via a permissionless anchor (see
+[counterparty_ref_anchor](#counterparty_ref_anchor-optional-extension-field) below).
+A `counterparty_ref` without an anchor degrades to a locally-trusted hash —
 a verifier cannot confirm the snapshot was not post-dated.
 
 ---
@@ -103,9 +104,16 @@ that the action was admitted after evaluating the counterparty's reputation snap
 
 ## counterparty_ref_anchor (optional extension field)
 
+> **Status: under specification.** The anchoring mechanism below is being finalized.
+> The companion contract is a dedicated, permissionless anchor registry — not
+> `GiskardPayments` and not the karma/identity registry. Concrete contract addresses
+> and a worked example will be published here once the registry is deployed and a real
+> anchoring transaction exists on-chain. Until then, treat `counterparty_ref` as a
+> locally-trusted hash.
+
 `counterparty_ref_anchor` is an optional companion field to `counterparty_ref`.
-When present, it provides a verifiable on-chain pointer to the `markUsed(bytes32)`
-transaction that anchored the preimage hash at snapshot time.
+When present, it provides a verifiable on-chain pointer to the transaction that
+anchored the preimage hash at snapshot time.
 
 ### Purpose
 
@@ -113,21 +121,30 @@ A `counterparty_ref` without an anchor is locally-trusted: a verifier cannot con
 the snapshot was not post-dated. `counterparty_ref_anchor` resolves this by pointing
 to the chain transaction that made the commitment immutable and timestamped.
 
+### Mechanism (permissionless anchor)
+
+The anchor is recorded by calling `anchor(bytes32 ref)` on a dedicated anchor registry
+contract. The call is **permissionless** — any party can anchor any hash — and emits an
+`Anchored(bytes32 indexed ref, address indexed anchoredBy, uint256 timestamp)` event.
+Permissionlessness is deliberate: the anchor's verifiability must not depend on the
+operator that produced the snapshot. This is what separates an operator-independent
+anchor from an operator-gated one.
+
 ### Schema
 
 ```json
 "counterparty_ref_anchor": {
-  "chain_id": 8453,
-  "contract": "0x90Fa32a9568c6aE6BEa915DF8737acfd7EEA97De",
-  "tx_hash":  "<markUsed tx hash>"
+  "chain_id": "<integer — EVM chain ID where the anchor tx was submitted>",
+  "contract": "<checksummed address of the anchor registry on that chain>",
+  "tx_hash":  "<hash of the anchor(bytes32) transaction>"
 }
 ```
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `chain_id` | integer | EVM chain ID where the anchor tx was submitted. Base = 8453, Arbitrum One = 42161. |
-| `contract` | string | Checksummed address of the `GiskardPayments` contract on that chain. |
-| `tx_hash` | string | Hash of the `markUsed(bytes32)` transaction that anchored `counterparty_ref`. |
+| `chain_id` | integer | EVM chain ID where the anchor tx was submitted. |
+| `contract` | string | Checksummed address of the anchor registry on that chain. |
+| `tx_hash` | string | Hash of the `anchor(bytes32)` transaction that anchored `counterparty_ref`. |
 
 ### Verification
 
@@ -135,34 +152,12 @@ A verifier who holds `counterparty_ref` and `counterparty_ref_anchor` can:
 
 1. Recompute `counterparty_ref` from the preimage fields (JCS + SHA-256).
 2. Query `chain_id` for `tx_hash`.
-3. Confirm the transaction called `markUsed(bytes32(counterparty_ref))` on `contract`.
+3. Confirm the transaction called `anchor(bytes32(counterparty_ref))` on `contract`,
+   or read the `Anchored` event with `ref == counterparty_ref`.
 4. Read the block timestamp — this is the commitment time, independent of the provider.
 
 No operator cooperation required after step 1. The anchor is verifiable by any party
 with access to a public RPC for the declared `chain_id`.
-
-### GiskardPayments deployments
-
-| Chain | chain_id | Contract |
-|-------|----------|----------|
-| Base mainnet | 8453 | `0x90Fa32a9568c6aE6BEa915DF8737acfd7EEA97De` |
-| Arbitrum One | 42161 | `0xe40E376cD32b03E3084F9E0d646155D0Ba0A63ae` |
-
-### Usage example
-
-```json
-{
-  "action_type":      "token_transfer",
-  "agent_id":         "pioneer-agent-001",
-  "counterparty_ref": "f969b8828e9c23a07cce4b1e2f10e7771ceca6ef9d924b2461819f548227fee0",
-  "counterparty_ref_anchor": {
-    "chain_id": 8453,
-    "contract": "0x90Fa32a9568c6aE6BEa915DF8737acfd7EEA97De",
-    "tx_hash":  "0x3b24cfcef0a9ea0843c2d4d684cfb9b85e71e0ee153d5563acea439ebbd5330e"
-  },
-  "scope": "mycelium.safeagent"
-}
-```
 
 ---
 
