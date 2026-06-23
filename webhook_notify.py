@@ -6,9 +6,15 @@ Sistema-a-sistema: no requiere humano en el loop (a diferencia del email).
 
 SEGURIDAD (SSRF): el daemon corre en el VPS junto a servicios internos
 (argentum-core:8017, memory, marks, RPC, metadata 169.254.169.254). La URL la declara
-un externo, así que ANTES de hacer el POST se resuelve el host y se rechaza si apunta a
-loopback / rangos privados / link-local / reservados. Sin esto, un integrador podría
-usar el webhook para alcanzar la red interna del VPS.
+un externo. Defensas:
+
+  1. Validación de destino: se resuelve el host y se rechaza si CUALQUIER IP resuelta
+     es loopback / privada / link-local (incl. metadata) / reservada / multicast.
+  2. IP pinning: se conecta a la IP validada exacta (no se vuelve a resolver), lo que
+     cierra el DNS rebinding / TOCTOU entre la validación y el POST. Se preserva el
+     Host header y la validación de cert TLS contra el hostname real.
+  3. Sin redirects: allow_redirects=False — un 3xx hacia un destino interno no se sigue;
+     se trata como entrega fallida.
 """
 import ipaddress
 import logging
@@ -16,37 +22,47 @@ import socket
 from urllib.parse import urlparse
 
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.connectionpool import HTTPConnectionPool, HTTPSConnectionPool
 
 _log = logging.getLogger(__name__)
 
 _TIMEOUT = 5  # segundos — best-effort, no bloquea el daemon de anchor
 
 
-def _host_is_public(host: str) -> bool:
-    """True solo si TODAS las IPs resueltas del host son públicas y ruteables."""
+def _resolve_safe_ip(host: str):
+    """Resuelve el host y retorna UNA IP segura para pinnear, o None.
+
+    Devuelve None si la resolución falla o si CUALQUIER IP resuelta no es pública y
+    ruteable (loopback/privada/link-local/reservada/multicast/unspecified). Devolver
+    la IP validada permite conectarse a ella directamente sin re-resolver.
+    """
     try:
         infos = socket.getaddrinfo(host, None)
     except Exception:
-        return False
+        return None
     if not infos:
-        return False
+        return None
+    safe_ip = None
     for info in infos:
         ip_str = info[4][0]
         try:
             ip = ipaddress.ip_address(ip_str)
         except ValueError:
-            return False
-        # Bloquea loopback, privadas (10/8, 172.16/12, 192.168/16), link-local
-        # (169.254/16 — incluye metadata 169.254.169.254), reservadas, multicast,
-        # unspecified (0.0.0.0).
+            return None
         if (ip.is_private or ip.is_loopback or ip.is_link_local
                 or ip.is_reserved or ip.is_multicast or ip.is_unspecified):
-            return False
-    return True
+            return None
+        if safe_ip is None:
+            safe_ip = ip_str
+    return safe_ip
 
 
 def is_safe_webhook_url(url: str) -> bool:
-    """Valida que la URL sea http(s), con host, y que no apunte a red interna."""
+    """Valida que la URL sea http(s), con host, y que no resuelva a red interna.
+
+    Usada al registrar el webhook (feedback rápido). El envío revalida + pinnea.
+    """
     if not url:
         return False
     try:
@@ -57,23 +73,68 @@ def is_safe_webhook_url(url: str) -> bool:
         return False
     if not p.hostname:
         return False
-    return _host_is_public(p.hostname)
+    return _resolve_safe_ip(p.hostname) is not None
+
+
+class _PinnedIPAdapter(HTTPAdapter):
+    """Pinnea la conexión a una IP pre-validada, evitando DNS rebinding entre la
+    validación SSRF y la request. Preserva el Host header (lo setea requests desde la
+    URL) y, en https, el SNI + la validación de cert contra el hostname real."""
+
+    def __init__(self, hostname: str, pinned_ip: str, **kwargs):
+        self._hostname = hostname
+        self._pinned_ip = pinned_ip
+        super().__init__(**kwargs)
+
+    def get_connection(self, url, proxies=None):
+        parsed = urlparse(url)
+        if parsed.scheme == "https":
+            return HTTPSConnectionPool(
+                self._pinned_ip,
+                port=parsed.port or 443,
+                timeout=_TIMEOUT,
+                server_hostname=self._hostname,
+                assert_hostname=self._hostname,
+                cert_reqs="CERT_REQUIRED",
+            )
+        return HTTPConnectionPool(
+            self._pinned_ip,
+            port=parsed.port or 80,
+            timeout=_TIMEOUT,
+        )
 
 
 def notify_anchor(url: str, trail_id: str, tx_hash: str, anchored_at: str) -> bool:
     """POST {trail_id, tx_hash, anchored_at} al webhook del integrador.
 
-    Best-effort: revalida SSRF en el momento del envío (no solo al registrar la URL,
-    para acotar DNS rebinding), traga cualquier excepción y nunca propaga al daemon.
-    Retorna True si el endpoint respondió 2xx.
+    Best-effort: valida + pinnea la IP en el momento del envío, no sigue redirects,
+    traga cualquier excepción y nunca propaga al daemon. Retorna True solo con 2xx.
     """
-    if not is_safe_webhook_url(url):
+    if not url:
+        return False
+    try:
+        p = urlparse(url)
+    except Exception:
+        return False
+    if p.scheme not in ("http", "https") or not p.hostname:
+        _log.warning("webhook url inválida: %s", url)
+        return False
+
+    pinned_ip = _resolve_safe_ip(p.hostname)
+    if pinned_ip is None:
         _log.warning("webhook bloqueado por SSRF guard: %s", url)
         return False
+
     payload = {"trail_id": trail_id, "tx_hash": tx_hash, "anchored_at": anchored_at}
+    prefix = f"{p.scheme}://{p.hostname}" + (f":{p.port}" if p.port else "")
+    session = requests.Session()
+    session.mount(prefix, _PinnedIPAdapter(p.hostname, pinned_ip))
     try:
-        r = requests.post(url, json=payload, timeout=_TIMEOUT,
-                          headers={"User-Agent": "mycelium-anchor-webhook/1"})
+        r = session.post(
+            url, json=payload, timeout=_TIMEOUT,
+            allow_redirects=False,
+            headers={"User-Agent": "mycelium-anchor-webhook/1"},
+        )
         ok = 200 <= r.status_code < 300
         if not ok:
             _log.warning("webhook %s respondió %s", url, r.status_code)
@@ -81,3 +142,5 @@ def notify_anchor(url: str, trail_id: str, tx_hash: str, anchored_at: str) -> bo
     except Exception as exc:
         _log.warning("webhook POST falló (%s): %s", url, exc)
         return False
+    finally:
+        session.close()
