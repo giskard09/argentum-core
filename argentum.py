@@ -35,6 +35,11 @@ try:
     _SMTP_OK = True
 except ImportError:
     _SMTP_OK = False
+try:
+    import webhook_notify as _webhook
+    _WEBHOOK_OK = True
+except ImportError:
+    _WEBHOOK_OK = False
 
 limiter = Limiter(key_func=get_remote_address)
 
@@ -1159,6 +1164,34 @@ def set_account_conformance(body: ConformanceRequest, request: Request):
         "conformance_source": account["conformance_source"],
         "karma_weight":       weight,
         "tier":               "conformance_verified" if source in CONFORMANCE_TIER else "default",
+    }
+
+
+class WebhookRequest(BaseModel):
+    api_key: str
+    url: Optional[str] = None
+
+
+@app.post("/payg/account/webhook")
+def set_account_webhook(body: WebhookRequest):
+    """Registra (o limpia, con url ausente/vacía) el notify_webhook de una cuenta PAYG.
+
+    Cada vez que un trail de esta cuenta se ancla on-chain, el VPS hace
+    POST {trail_id, tx_hash, anchored_at} a esta URL. Sistema-a-sistema.
+
+    La URL se valida contra SSRF: debe ser http(s) y no resolver a loopback / rangos
+    privados / link-local / reservados.
+    """
+    url = (body.url or "").strip()
+    if url and not (_WEBHOOK_OK and _webhook.is_safe_webhook_url(url)):
+        raise HTTPException(422, "invalid webhook url — must be http(s) and resolve to a public host")
+    account = mycelium_trails.set_payg_webhook(TRAILS_DB, body.api_key, url or None)
+    if account is None:
+        raise HTTPException(404, "api_key not found")
+    return {
+        "api_key":        account["api_key"],
+        "agent_id":       account["agent_id"],
+        "notify_webhook": account["notify_webhook"],
     }
 
 
@@ -2827,6 +2860,14 @@ async def nexus_trail(request: Request):
                                       last_action=datetime.now(timezone.utc).isoformat())
                         conn.commit()
                         conn.close()
+                    # Notificación webhook al integrador (sistema-a-sistema, best-effort)
+                    if _WEBHOOK_OK:
+                        hook = mycelium_trails.get_notify_webhook(TRAILS_DB, aid)
+                        if hook:
+                            _webhook.notify_anchor(
+                                hook, tid, tx,
+                                datetime.now(timezone.utc).isoformat(),
+                            )
             _threading.Thread(target=_do_anchor, args=(trail_id, action_ref, agent_id, "nexus"), daemon=True).start()
         else:
             # Anchor deshabilitado — no sumar karma (sin verificación on-chain)

@@ -110,6 +110,7 @@ _DDL_MIGRATIONS = [
     "ALTER TABLE trails ADD COLUMN origin TEXT",
     "ALTER TABLE trails ADD COLUMN notes TEXT",
     "ALTER TABLE payg_accounts ADD COLUMN conformance_source TEXT",
+    "ALTER TABLE payg_accounts ADD COLUMN notify_webhook TEXT",
 ]
 
 
@@ -530,6 +531,51 @@ def consume_payg_credit(db_path: str, api_key: str) -> bool:
             (ts, api_key),
         )
         return True
+    finally:
+        conn.close()
+
+
+def set_payg_webhook(db_path: str, api_key: str, url: Optional[str]) -> Optional[dict]:
+    """Setea (o limpia, con url=None) el notify_webhook de una cuenta PAYG.
+
+    El webhook recibe un POST {trail_id, tx_hash, anchored_at} cada vez que un trail
+    de esta cuenta se ancla on-chain. Retorna la cuenta actualizada, o None si la
+    api_key no existe.
+    """
+    ts = int(time.time())
+    conn = _connect(db_path)
+    try:
+        cur = conn.execute(
+            "UPDATE payg_accounts SET notify_webhook = ?, updated_at = ? WHERE api_key=?",
+            (url or None, ts, api_key),
+        )
+        if cur.rowcount == 0:
+            return None
+        row = conn.execute(
+            "SELECT api_key, agent_id, tier, credit_trails, notify_webhook FROM payg_accounts WHERE api_key=?",
+            (api_key,),
+        ).fetchone()
+        return dict(row) if row else None
+    finally:
+        conn.close()
+
+
+def get_notify_webhook(db_path: str, agent_id: str) -> Optional[str]:
+    """Retorna el notify_webhook de la cuenta de un agent_id, o None si no hay.
+
+    Si hay varias cuentas para el agent_id, devuelve la del webhook más reciente
+    (updated_at DESC). Permissionless por diseño: el anchor notifica al dueño de la
+    cuenta, no a quien dispara el trail.
+    """
+    conn = _connect(db_path)
+    try:
+        row = conn.execute(
+            "SELECT notify_webhook FROM payg_accounts "
+            "WHERE agent_id=? AND notify_webhook IS NOT NULL AND notify_webhook != '' "
+            "ORDER BY updated_at DESC LIMIT 1",
+            (agent_id,),
+        ).fetchone()
+        return row["notify_webhook"] if row else None
     finally:
         conn.close()
 
