@@ -6,7 +6,7 @@
   "hash_algo": "sha256",
   "preimage_format": "jcs-rfc8785-v1",
   "generated_at": "2026-06-09",
-  "purpose": "Conformance fixture for GuardrailProvider / revise_args pattern. Demonstrates that action_ref is the correlation key across the three-record trail (pre-execution, decision, receipt) and is derived from the intent tuple — not from the args. original_args_digest and effective_args_digest are separate fields in the pre-execution record, enabling a verifier to reconstruct whether and how args were revised without trusting the agent runtime. authorization_ref binds both records to the specific authorization decision — a verifier can confirm not just same call and same dispatched payload, but same approval.",
+  "purpose": "Conformance fixture for GuardrailProvider / revise_args pattern. Demonstrates that action_ref is the correlation key across the three-record trail (pre-execution, decision, receipt) and is derived from the intent tuple — not from the args. original_args_digest and effective_args_digest are separate fields in the pre-execution record, enabling a verifier to reconstruct whether and how args were revised without trusting the agent runtime. authorization_ref binds both records to the specific authorization decision — a verifier can confirm not just same call and same dispatched payload, but same approval. Three verifier states: AUTHORIZED_EXECUTION (matching decision_binding_ref, unexpired, effective_args_digest == original_args_digest under same live decision), OBSERVABLE_NOT_AUTHORIZED (well-formed receipt, no matching decision_binding_ref), QUIET_SWAP_OR_STALE (decision exists but effective args, expiry, policy_id, or decision_ts no longer match).",
   "reproduce_in_python": "import hashlib, json\ndef jcs(obj): return json.dumps(obj, separators=(',',':'), sort_keys=True, ensure_ascii=False)\naction_ref = hashlib.sha256(jcs(preimage).encode()).hexdigest()\nargs_digest = hashlib.sha256(jcs(args).encode()).hexdigest()\nauthorization_ref = hashlib.sha256(jcs(auth_preimage).encode()).hexdigest()",
   "scenario": {
     "description": "An agent requests a database query tool call. The GuardrailProvider intercepts, inspects the original args (limit=1000), revises them (limit=100), and emits a pre-execution record before allowing the call to proceed. The receipt is emitted post-execution. A verifier correlates pre-execution record and receipt via action_ref — recomputable from the intent tuple alone — and confirms both records reference the same authorization decision via authorization_ref.",
@@ -207,6 +207,43 @@
       },
       "invariant_violated": "pre_execution.authorization_ref != receipt.authorization_ref — execution was tied to a different authorization decision",
       "verifier_outcome": "REJECT — verifier can confirm same call and same dispatched payload, but cannot confirm same authorization decision; the approval binding is broken"
+    },
+    {
+      "id": "NEG-6",
+      "label": "Missing decision_binding_ref — receipt is observable but not authorized",
+      "description": "A well-formed receipt carries a valid action_ref recomputable from the intent tuple, but no decision_binding_ref field. The receipt proves the action was observed; it does not prove the action was authorized. A verifier that requires decision_binding_ref to classify AUTHORIZED_EXECUTION must classify this as OBSERVABLE_NOT_AUTHORIZED. Absence of the field is the condition — not a format error.",
+      "receipt": {
+        "action_ref": "104812928eb50e0e1ad28f379f8ade03ea0f479ac7abd1bbf9205e9317665c7f",
+        "outcome": "success",
+        "record_type": "receipt",
+        "result_digest": "0987d5268eea55d9a5e1a8f6148b8d3b3b8e7d2bfe3088f2b4317df617673882"
+      },
+      "note": "action_ref is valid and recomputable; decision_binding_ref is absent — not malformed, just unbound to any authorization decision",
+      "invariant_violated": "receipt.decision_binding_ref is absent — no authorization decision is bound to this execution",
+      "verifier_outcome": "OBSERVABLE_NOT_AUTHORIZED — receipt is well-formed and action_ref is valid, but the execution cannot be classified as authorized without a matching decision_binding_ref"
+    },
+    {
+      "id": "NEG-7",
+      "label": "decision_binding_ref resolves to a block/review decision — receipt cannot claim authorized execution",
+      "description": "The pre-execution decision record carries outcome: 'block' (or 'review'). A terminal receipt is later presented with a decision_binding_ref that resolves back to that block decision. A verifier holding the decision record can confirm the referenced decision did not authorize execution — outcome 'block' means the action was explicitly denied. The receipt cannot be used as proof of authorized execution regardless of whether decision_binding_ref is formally valid.",
+      "pre_execution_decision_record": {
+        "action_ref": "104812928eb50e0e1ad28f379f8ade03ea0f479ac7abd1bbf9205e9317665c7f",
+        "authorized_scope": "autogen:guardrail",
+        "decision_ts": 1749513600000,
+        "outcome": "block",
+        "policy_id": "guardrail-policy-v1",
+        "record_type": "decision"
+      },
+      "terminal_receipt": {
+        "action_ref": "104812928eb50e0e1ad28f379f8ade03ea0f479ac7abd1bbf9205e9317665c7f",
+        "decision_binding_ref": "b9f8494a4a5943687d105769556be2963271e37f2216d2afd279e5b260261327",
+        "outcome": "success",
+        "record_type": "receipt",
+        "result_digest": "0987d5268eea55d9a5e1a8f6148b8d3b3b8e7d2bfe3088f2b4317df617673882"
+      },
+      "note": "decision_binding_ref in receipt resolves to a decision with outcome='block'. The binding is structurally valid but semantically denying. A verifier must inspect the referenced decision outcome, not just confirm the ref resolves.",
+      "invariant_violated": "pre_execution_decision_record.outcome == 'block' — decision_binding_ref resolves to a denial, not an authorization; receipt cannot claim AUTHORIZED_EXECUTION",
+      "verifier_outcome": "QUIET_SWAP_OR_STALE — decision exists and decision_binding_ref resolves, but the referenced decision did not authorize execution; presenting this receipt as proof of authorization is a quiet swap"
     }
   ]
 }
