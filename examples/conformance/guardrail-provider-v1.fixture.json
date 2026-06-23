@@ -8,6 +8,18 @@
   "generated_at": "2026-06-09",
   "purpose": "Conformance fixture for GuardrailProvider / revise_args pattern. Demonstrates that action_ref is the correlation key across the three-record trail (pre-execution, decision, receipt) and is derived from the intent tuple — not from the args. original_args_digest and effective_args_digest are separate fields in the pre-execution record, enabling a verifier to reconstruct whether and how args were revised without trusting the agent runtime. authorization_ref binds both records to the specific authorization decision — a verifier can confirm not just same call and same dispatched payload, but same approval. Three verifier states: AUTHORIZED_EXECUTION (matching decision_binding_ref, unexpired, effective_args_digest == original_args_digest under same live decision), OBSERVABLE_NOT_AUTHORIZED (well-formed receipt, no matching decision_binding_ref), QUIET_SWAP_OR_STALE (decision exists but effective args, expiry, policy_id, or decision_ts no longer match).",
   "reproduce_in_python": "import hashlib, json\ndef jcs(obj): return json.dumps(obj, separators=(',',':'), sort_keys=True, ensure_ascii=False)\naction_ref = hashlib.sha256(jcs(preimage).encode()).hexdigest()\nargs_digest = hashlib.sha256(jcs(args).encode()).hexdigest()\nauthorization_ref = hashlib.sha256(jcs(auth_preimage).encode()).hexdigest()",
+  "verifier_precedence": {
+    "description": "Canonical order in which a verifier must evaluate reason codes. The first failing check wins; lower-precedence checks are not evaluated once a higher-precedence failure is detected.",
+    "order": [
+      {"step": 1, "reason_code": "missing_decision_binding_ref", "condition": "receipt has no decision_binding_ref field"},
+      {"step": 2, "reason_code": "action_ref_mismatch", "condition": "decision_binding_ref resolves to a decision whose embedded action_ref != receipt.action_ref"},
+      {"step": 3, "reason_code": "decision_expired", "condition": "decision_binding_ref resolves to a decision whose decision_ts is outside the allowed window"},
+      {"step": 4, "reason_code": "argument_digest_mismatch", "condition": "effective_args_digest != original_args_digest with no authorized guardrail revision"},
+      {"step": 5, "reason_code": "policy_binding_mismatch", "condition": "policy_id or authorized_scope in the decision does not match the current live policy"},
+      {"step": 6, "reason_code": "decision_outcome_not_allow", "condition": "decision_binding_ref resolves to a decision with outcome block or review"}
+    ],
+    "note": "NEG-4 triggers both decision_expired (step 3) and policy_binding_mismatch (step 5); decision_expired takes precedence as the earlier check."
+  },
   "scenario": {
     "description": "An agent requests a database query tool call. The GuardrailProvider intercepts, inspects the original args (limit=1000), revises them (limit=100), and emits a pre-execution record before allowing the call to proceed. The receipt is emitted post-execution. A verifier correlates pre-execution record and receipt via action_ref — recomputable from the intent tuple alone — and confirms both records reference the same authorization decision via authorization_ref.",
     "actors": {
@@ -98,6 +110,11 @@
       "wrong_action_ref": "df57a577bbc3d0849aa7ce8df577d7310d57dbb06b099c14343efa343af70ee9",
       "correct_action_ref": "104812928eb50e0e1ad28f379f8ade03ea0f479ac7abd1bbf9205e9317665c7f",
       "invariant_violated": "wrong_action_ref != correct_action_ref",
+      "format_valid": true,
+      "observation_valid": true,
+      "authorization_valid": false,
+      "dispatch_allowed": false,
+      "reason_code": "action_ref_mismatch",
       "verifier_outcome": "REJECT — action_ref is not recomputable from intent tuple; implementation is non-conformant"
     },
     {
@@ -113,6 +130,11 @@
         "revised": true
       },
       "invariant_violated": "original_args_digest == effective_args_digest when revised=true — revision is unauditable",
+      "format_valid": true,
+      "observation_valid": true,
+      "authorization_valid": false,
+      "dispatch_allowed": false,
+      "reason_code": "args_revision_unauditable",
       "verifier_outcome": "REJECT — a verifier cannot confirm args were actually revised; the record is inconsistent"
     },
     {
@@ -128,6 +150,11 @@
       },
       "wrong_receipt_action_ref": "82f185aa17669ab79a444a0040f9a3e44e3219e24a36e786ca6506b6e40c3ced",
       "invariant_violated": "pre_execution.action_ref != receipt.action_ref — three-record arc is broken",
+      "format_valid": true,
+      "observation_valid": true,
+      "authorization_valid": false,
+      "dispatch_allowed": false,
+      "reason_code": "action_ref_mismatch",
       "verifier_outcome": "REJECT — verifier cannot correlate pre-execution record to receipt; records belong to different action instances"
     },
     {
@@ -169,7 +196,11 @@
       "attempted_effective_args_digest": "72812219c9729b0152e0f01cf454991e807fc1706e6b34bb411ff1c49131be5c",
       "changed_fields": ["amount"],
       "invariant_violated": "attempted_effective_args_digest != original_args_digest with no authorized guardrail revision — old approval does not carry forward",
-      "verifier_reason": ["argument_digest_mismatch"],
+      "format_valid": true,
+      "observation_valid": true,
+      "authorization_valid": false,
+      "dispatch_allowed": false,
+      "reason_code": "argument_digest_mismatch",
       "verifier_outcome": "REJECT — gate must deny execution before Stripe call; a new approval record for effective_args_digest is required",
       "note": "idempotency_key is intentionally unchanged to confirm the gate checks the full args digest, not just the idempotency key",
       "independent_reproductions": [
@@ -207,7 +238,12 @@
         "result_digest": "0987d5268eea55d9a5e1a8f6148b8d3b3b8e7d2bfe3088f2b4317df617673882"
       },
       "invariant_violated": "pre_execution.authorization_ref != receipt.authorization_ref — execution was tied to a different authorization decision",
-      "verifier_reason": ["decision_expired", "policy_binding_mismatch"],
+      "format_valid": true,
+      "observation_valid": true,
+      "authorization_valid": false,
+      "dispatch_allowed": false,
+      "reason_code": "decision_expired",
+      "reason_code_secondary": "policy_binding_mismatch",
       "verifier_outcome": "REJECT — verifier can confirm same call and same dispatched payload, but cannot confirm same authorization decision; the approval binding is broken"
     },
     {
@@ -223,7 +259,11 @@
       "positive_control": "receipt is format-valid; action_ref recomputes correctly from intent tuple — this is not a malformed record",
       "note": "action_ref is valid and recomputable; decision_binding_ref is absent — not malformed, just unbound to any authorization decision",
       "invariant_violated": "receipt.decision_binding_ref is absent — no authorization decision is bound to this execution",
-      "verifier_reason": ["missing_decision_binding_ref"],
+      "format_valid": true,
+      "observation_valid": true,
+      "authorization_valid": false,
+      "dispatch_allowed": false,
+      "reason_code": "missing_decision_binding_ref",
       "verifier_outcome": "OBSERVABLE_NOT_AUTHORIZED — receipt is well-formed and action_ref is valid, but the execution cannot be classified as authorized without a matching decision_binding_ref"
     },
     {
@@ -248,7 +288,11 @@
       "positive_control": "receipt is format-valid and decision_binding_ref resolves to a real decision record — this is not a malformed receipt",
       "note": "decision_binding_ref in receipt resolves to a decision with outcome='block'. The binding is structurally valid but semantically denying. A verifier must inspect the referenced decision outcome, not just confirm the ref resolves.",
       "invariant_violated": "pre_execution_decision_record.outcome == 'block' — decision_binding_ref resolves to a denial, not an authorization; receipt cannot claim AUTHORIZED_EXECUTION",
-      "verifier_reason": ["decision_outcome_not_allow"],
+      "format_valid": true,
+      "observation_valid": true,
+      "authorization_valid": false,
+      "dispatch_allowed": false,
+      "reason_code": "decision_outcome_not_allow",
       "verifier_outcome": "QUIET_SWAP_OR_STALE — decision exists and decision_binding_ref resolves, but the referenced decision did not authorize execution; presenting this receipt as proof of authorization is a quiet swap"
     },
     {
@@ -271,8 +315,38 @@
       "note": "decision_binding_ref resolves correctly to the NEG-5 Stripe decision (action_ref e6dd416e…). The receipt action_ref is 104812928e… (autogen:guardrail intent). The two action_refs do not match — this decision was not issued for this action.",
       "positive_control": "decision_binding_ref is structurally valid and resolves to a real decision record — this is not a malformed ref",
       "invariant_violated": "decision.action_ref (e6dd416e…) != receipt.action_ref (104812928e…) — the referenced authorization was issued for a different action instance",
-      "verifier_reason": ["action_ref_mismatch"],
+      "format_valid": true,
+      "observation_valid": true,
+      "authorization_valid": false,
+      "dispatch_allowed": false,
+      "reason_code": "action_ref_mismatch",
       "verifier_outcome": "QUIET_SWAP_OR_STALE — decision_binding_ref resolves but the bound decision was issued for a different action_ref; this receipt cannot claim authorization for the current action instance"
+    }
+  ],
+  "positive_cases": [
+    {
+      "id": "POS-1",
+      "label": "Well-formed receipt with valid decision_binding_ref — authorized execution",
+      "description": "A receipt carries a valid action_ref recomputable from the intent tuple and a decision_binding_ref that resolves to an authorization decision whose embedded action_ref matches, whose outcome is allow, and whose policy snapshot is live. All verifier checks pass. This is the baseline authorized-execution case against which all NEG vectors are negative controls.",
+      "receipt": {
+        "action_ref": "104812928eb50e0e1ad28f379f8ade03ea0f479ac7abd1bbf9205e9317665c7f",
+        "decision_binding_ref": "b9f8494a4a5943687d105769556be2963271e37f2216d2afd279e5b260261327",
+        "outcome": "success",
+        "record_type": "receipt",
+        "result_digest": "0987d5268eea55d9a5e1a8f6148b8d3b3b8e7d2bfe3088f2b4317df617673882"
+      },
+      "referenced_decision_preimage": {
+        "action_ref": "104812928eb50e0e1ad28f379f8ade03ea0f479ac7abd1bbf9205e9317665c7f",
+        "authorized_scope": "autogen:guardrail",
+        "decision_ts": 1749513600000,
+        "policy_id": "guardrail-policy-v1"
+      },
+      "format_valid": true,
+      "observation_valid": true,
+      "authorization_valid": true,
+      "dispatch_allowed": true,
+      "reason_code": null,
+      "verifier_outcome": "AUTHORIZED_EXECUTION — action_ref recomputes from intent tuple, decision_binding_ref resolves to a matching allow decision with live policy, effective_args_digest == original_args_digest under the same authorization"
     }
   ]
 }
