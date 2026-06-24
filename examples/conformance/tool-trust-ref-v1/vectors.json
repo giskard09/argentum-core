@@ -1,0 +1,92 @@
+{
+  "fixture_id": "tool-trust-ref-v1",
+  "version": "v1",
+  "spec": "docs/spec/tool-trust-ref.md",
+  "hash_algo": "sha256",
+  "preimage_format": "jcs-rfc8785-v1",
+  "generated_at": "2026-06-23",
+  "purpose": "Conformance vectors for tool-trust-ref-v1. A tool trust reference answers a distinct question from authorization: is this target trustworthy to invoke at all? tool_trust_ref = SHA-256(JCS({tool_id, posture_version, checked_at_ms, verifier_id, verdict})). tool_id is content-addressed where available (package digest, MCP server URI, image digest, resource URI). A different digest is a different tool — prior safety decisions do not transfer.",
+  "reproduce_in_python": "import hashlib, json\ndef jcs(obj): return json.dumps(obj, separators=(',',':'), sort_keys=True, ensure_ascii=False)\ntool_trust_ref = hashlib.sha256(jcs(preimage).encode()).hexdigest()",
+  "vectors": [
+    {
+      "id": "TT-ACCEPT-001",
+      "label": "Tool authorized, call allowed, posture safe — dispatch_allowed",
+      "description": "Posture check passes (verdict: safe), check is within the validity window, and the authorization layer has approved the action. All conditions satisfied — dispatch proceeds. tool_trust_ref is recomputable from the preimage.",
+      "preimage": {
+        "checked_at_ms": 1749513600000,
+        "posture_version": "posture-v1.0",
+        "tool_id": "sha256:a3f1b2c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2",
+        "verdict": "safe",
+        "verifier_id": "giskard-trust-verifier-001"
+      },
+      "jcs_payload": "{\"checked_at_ms\":1749513600000,\"posture_version\":\"posture-v1.0\",\"tool_id\":\"sha256:a3f1b2c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2\",\"verdict\":\"safe\",\"verifier_id\":\"giskard-trust-verifier-001\"}",
+      "preimage_canonical_bytes_hex": "7b22636865636b65645f61745f6d73223a313734393531333630303030302c22706f73747572655f76657273696f6e223a22706f73747572652d76312e30222c22746f6f6c5f6964223a227368613235363a61336631623263346435653666376138623963306431653266336134623563366437653866396130623163326433653466356136623763386439653066316132222c2276657264696374223a2273616665222c2276657269666965725f6964223a226769736b6172642d74727573742d76657269666965722d303031227d",
+      "tool_trust_ref": "efcf5efb5190a8d49eed57f0706a77065d2199ab064b4f77e2b99aab8567143e",
+      "conformant": true,
+      "verdict": "safe",
+      "dispatch_outcome": "dispatch_allowed — posture safe, within validity window, authorization passed",
+      "reason_code": null
+    },
+    {
+      "id": "TT-REJECT-001",
+      "label": "Tool authorized, call allowed, posture unsafe — never invoked (posture_override)",
+      "description": "The authorization layer approved the action, but the posture check returned verdict: unsafe. A conformant dispatch layer MUST NOT invoke the tool regardless of authorization status. Authorization does not override a failed posture check.",
+      "preimage": {
+        "checked_at_ms": 1749513600000,
+        "posture_version": "posture-v1.0",
+        "tool_id": "sha256:a3f1b2c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2",
+        "verdict": "unsafe",
+        "verifier_id": "giskard-trust-verifier-001"
+      },
+      "jcs_payload": "{\"checked_at_ms\":1749513600000,\"posture_version\":\"posture-v1.0\",\"tool_id\":\"sha256:a3f1b2c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2\",\"verdict\":\"unsafe\",\"verifier_id\":\"giskard-trust-verifier-001\"}",
+      "preimage_canonical_bytes_hex": "7b22636865636b65645f61745f6d73223a313734393531333630303030302c22706f73747572655f76657273696f6e223a22706f73747572652d76312e30222c22746f6f6c5f6964223a227368613235363a61336631623263346435653666376138623963306431653266336134623563366437653866396130623163326433653466356136623763386439653066316132222c2276657264696374223a22756e73616665222c2276657269666965725f6964223a226769736b6172642d74727573742d76657269666965722d303031227d",
+      "tool_trust_ref": "436cbde2b86cbffafe6a8f631807da1f2436d1f0be4748762375814bf0631b97",
+      "conformant": true,
+      "verdict": "unsafe",
+      "dispatch_outcome": "dispatch_allowed: false — posture_override; authorization does not carry forward when posture fails",
+      "reason_code": "posture_override"
+    },
+    {
+      "id": "TT-REJECT-002",
+      "label": "Same tool_id name, different package digest — prior safety decision does not transfer (tool_identity_mismatch)",
+      "description": "A prior tool_trust_ref exists for the canonical tool_id (TT-ACCEPT-001). This vector has the same tool name but a different package digest — the tool_id is different. A conformant verifier MUST treat this as a distinct tool requiring its own posture check. The prior 'safe' verdict for the original digest does not transfer. Reusing a prior tool_trust_ref across different digests is non-conformant.",
+      "preimage": {
+        "checked_at_ms": 1749513600000,
+        "posture_version": "posture-v1.0",
+        "tool_id": "sha256:deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+        "verdict": "unverified",
+        "verifier_id": "giskard-trust-verifier-001"
+      },
+      "jcs_payload": "{\"checked_at_ms\":1749513600000,\"posture_version\":\"posture-v1.0\",\"tool_id\":\"sha256:deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef\",\"verdict\":\"unverified\",\"verifier_id\":\"giskard-trust-verifier-001\"}",
+      "preimage_canonical_bytes_hex": "7b22636865636b65645f61745f6d73223a313734393531333630303030302c22706f73747572655f76657273696f6e223a22706f73747572652d76312e30222c22746f6f6c5f6964223a227368613235363a64656164626565666465616462656566646561646265656664656164626565666465616462656566646561646265656664656164626565666465616462656566222c2276657264696374223a22756e7665726966696564222c2276657269666965725f6964223a226769736b6172642d74727573742d76657269666965722d303031227d",
+      "tool_trust_ref": "e4afa48c69dc40f84ff3907d737dbff10227ec8ad436e0507dbfd1ead1d42f9e",
+      "conformant": true,
+      "verdict": "unverified",
+      "dispatch_outcome": "dispatch_allowed: false — tool_identity_mismatch; unverified verdict fails closed",
+      "reason_code": "tool_identity_mismatch",
+      "note": "tool_id digest (deadbeef…) differs from TT-ACCEPT-001 (a3f1b2c4…). Different digest = different tool. Fails closed as unverified."
+    },
+    {
+      "id": "TT-REJECT-003",
+      "label": "checked_at outside validity window — fails closed (posture_expired)",
+      "description": "The posture check returned verdict: safe, but checked_at_ms is 86400000ms (24 hours) before the current invocation time. If the validity window is shorter than 24 hours, the check is stale. A conformant dispatch layer MUST treat an expired safe verdict as posture_expired and fail closed — it does not treat a stale 'safe' as safe.",
+      "preimage": {
+        "checked_at_ms": 1749427200000,
+        "posture_version": "posture-v1.0",
+        "tool_id": "sha256:a3f1b2c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2",
+        "verdict": "safe",
+        "verifier_id": "giskard-trust-verifier-001"
+      },
+      "jcs_payload": "{\"checked_at_ms\":1749427200000,\"posture_version\":\"posture-v1.0\",\"tool_id\":\"sha256:a3f1b2c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2\",\"verdict\":\"safe\",\"verifier_id\":\"giskard-trust-verifier-001\"}",
+      "preimage_canonical_bytes_hex": "7b22636865636b65645f61745f6d73223a313734393432373230303030302c22706f73747572655f76657273696f6e223a22706f73747572652d76312e30222c22746f6f6c5f6964223a227368613235363a61336631623263346435653666376138623963306431653266336134623563366437653866396130623163326433653466356136623763386439653066316132222c2276657264696374223a2273616665222c2276657269666965725f6964223a226769736b6172642d74727573742d76657269666965722d303031227d",
+      "tool_trust_ref": "660387f0d5606cb9354b3981e0de6dc49c1a9d0f895e2c9608d768f6dc1a3fa6",
+      "conformant": true,
+      "verdict": "safe",
+      "invocation_time_ms": 1749513600000,
+      "staleness_ms": 86400000,
+      "dispatch_outcome": "dispatch_allowed: false — posture_expired; checked_at is 86400000ms before invocation, outside validity window",
+      "reason_code": "posture_expired",
+      "note": "tool_id matches TT-ACCEPT-001 but checked_at is 24h earlier. Same tool, same verifier, same policy — different check time. Fails closed."
+    }
+  ]
+}
