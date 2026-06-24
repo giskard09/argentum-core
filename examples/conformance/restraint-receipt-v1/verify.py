@@ -51,6 +51,23 @@ def verify_vector(vector: dict) -> dict:
                 "reason": f"field mismatch: '{field}' — preimage={pre_val!r} vs submitted={sub_val!r}",
             }
 
+    # --- Decision-surface consistency (moved before generic comparison for precise 005/006 rejection) ---
+    expected_surface = vector.get("expected_decision_surface")
+    if expected_surface and "audit_checkpoints" in submitted_receipt:
+        ac = submitted_receipt["audit_checkpoints"]
+        if ac.get("verifier") != expected_surface.get("verifier"):
+            return {
+                "conformant": False,
+                "verifier_outcome": "REJECT",
+                "reason": "verifier identity does not match expected decision surface",
+            }
+        if ac.get("policy_bundle") != expected_surface.get("policy_bundle"):
+            return {
+                "conformant": False,
+                "verifier_outcome": "REJECT",
+                "reason": "policy_bundle digest does not match expected decision surface",
+            }
+
     # --- Content-addressed verifier path validation (ACR audit_checkpoints) ---
     if "audit_checkpoints" in preimage:
         checkpoints = preimage["audit_checkpoints"]
@@ -88,23 +105,6 @@ def verify_vector(vector: dict) -> dict:
                     "verifier_outcome": "REJECT",
                     "reason": "audit_checkpoints policy_bundle hash mismatch",
                 }
-
-    # Check 3: Decision-surface consistency (if expected_decision_surface is present)
-    expected_surface = vector.get("expected_decision_surface")
-    if expected_surface and "audit_checkpoints" in submitted_receipt:
-        ac = submitted_receipt["audit_checkpoints"]
-        if ac.get("verifier") != expected_surface.get("verifier"):
-            return {
-                "conformant": False,
-                "verifier_outcome": "REJECT",
-                "reason": "verifier identity does not match expected decision surface",
-            }
-        if ac.get("policy_bundle") != expected_surface.get("policy_bundle"):
-            return {
-                "conformant": False,
-                "verifier_outcome": "REJECT",
-                "reason": "policy_bundle digest does not match expected decision surface",
-            }
 
     # Check 4: Explicit hash recomputation for conformant rows
     if vector.get("conformant") and "restraint_receipt_ref" in vector:
