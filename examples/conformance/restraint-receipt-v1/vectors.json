@@ -56,6 +56,60 @@
       "invariant_violated": "decision_id is required — without it the preimage is incomplete and restraint_receipt_ref cannot be recomputed",
       "conformant": false,
       "verifier_outcome": "REJECT — missing required field decision_id; receipt is non-conformant and restraint_receipt_ref cannot be verified"
+    },
+    {
+      "id": "RR-ACCEPT-003",
+      "description": "Denied receipt with valid audit_checkpoints containing content-addressed verifier identity and policy bundle reference",
+      "conformant": true,
+      "preimage": {
+        "action_ref": "sha256-abc123def456",
+        "decision_id": "deny-20260624-001",
+        "verdict": "denied",
+        "reason_code": "TRUST_THRESHOLD_UNMET",
+        "timestamp_ms": 1750771200000,
+        "audit_checkpoints": {
+          "verifier": "sha256-verifier-identity-abcdef1234567890",
+          "policy_bundle": "sha256-policy-bundle-fedcba0987654321"
+        }
+      },
+      "submitted_receipt": {
+        "action_ref": "sha256-abc123def456",
+        "decision_id": "deny-20260624-001",
+        "verdict": "denied",
+        "reason_code": "TRUST_THRESHOLD_UNMET",
+        "timestamp_ms": 1750771200000,
+        "audit_checkpoints": {
+          "verifier": "sha256-verifier-identity-abcdef1234567890",
+          "policy_bundle": "sha256-policy-bundle-fedcba0987654321"
+        }
+      }
+    },
+    {
+      "id": "RR-REJECT-002",
+      "description": "Receipt with audit_checkpoints where policy_bundle hash references a non-existent bundle — content-addressed integrity violation",
+      "conformant": false,
+      "verifier_outcome": "REJECT",
+      "preimage": {
+        "action_ref": "sha256-abc123def456",
+        "decision_id": "deny-20260624-002",
+        "verdict": "denied",
+        "reason_code": "TRUST_THRESHOLD_UNMET",
+        "timestamp_ms": 1750771300000,
+        "audit_checkpoints": {
+          "verifier": "sha256-verifier-identity-abcdef1234567890",
+          "policy_bundle": "sha256-non-existent-bundle-deadbeef00000000"
+        }
+      },
+      "submitted_receipt": {
+        "action_ref": "sha256-abc123def456",
+        "decision_id": "deny-20260624-002",
+        "verdict": "denied",
+        "reason_code": "TRUST_THRESHOLD_UNMET",
+        "timestamp_ms": 1750771300000,
+        "audit_checkpoints": {
+          "verifier": "sha256-verifier-identity-abcdef1234567890"
+        }
+      }
     }
   ]
 }
