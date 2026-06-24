@@ -1,0 +1,61 @@
+{
+  "fixture_id": "restraint-receipt-v1",
+  "version": "v1",
+  "spec": "docs/spec/restraint-receipt.md",
+  "hash_algo": "sha256",
+  "preimage_format": "jcs-rfc8785-v1",
+  "generated_at": "2026-06-23",
+  "purpose": "Conformance vectors for restraint-receipt-v1. A restraint receipt is the verifiable record produced when an agent receives a deny or defer verdict. Silence is not conformant — the accountability layer covers denied and deferred actions with the same fidelity as executed ones. restraint_receipt_ref = SHA-256(JCS({action_ref, decision_id, verdict, reason_code, timestamp_ms})). All five fields are required.",
+  "reproduce_in_python": "import hashlib, json\ndef jcs(obj): return json.dumps(obj, separators=(',',':'), sort_keys=True, ensure_ascii=False)\nrestraint_receipt_ref = hashlib.sha256(jcs(preimage).encode()).hexdigest()",
+  "vectors": [
+    {
+      "id": "RR-ACCEPT-001",
+      "label": "Denied verdict — all required fields present",
+      "description": "An agent receives a deny verdict from a guardrail. It emits a restraint receipt with all five required fields. restraint_receipt_ref is recomputable from the preimage by any verifier. action_ref is carried forward unchanged from the pre-execution record.",
+      "preimage": {
+        "action_ref": "104812928eb50e0e1ad28f379f8ade03ea0f479ac7abd1bbf9205e9317665c7f",
+        "decision_id": "decision-guardrail-001",
+        "reason_code": "decision_outcome_not_allow",
+        "timestamp_ms": 1749513600000,
+        "verdict": "denied"
+      },
+      "jcs_payload": "{\"action_ref\":\"104812928eb50e0e1ad28f379f8ade03ea0f479ac7abd1bbf9205e9317665c7f\",\"decision_id\":\"decision-guardrail-001\",\"reason_code\":\"decision_outcome_not_allow\",\"timestamp_ms\":1749513600000,\"verdict\":\"denied\"}",
+      "preimage_canonical_bytes_hex": "7b22616374696f6e5f726566223a2231303438313239323865623530653065316164323866333739663861646530336561306634373961633761626431626266393230356539333137363635633766222c226465636973696f6e5f6964223a226465636973696f6e2d67756172647261696c2d303031222c22726561736f6e5f636f6465223a226465636973696f6e5f6f7574636f6d655f6e6f745f616c6c6f77222c2274696d657374616d705f6d73223a313734393531333630303030302c2276657264696374223a2264656e696564227d",
+      "restraint_receipt_ref": "03c00cc37d34833bb0338fd373efecd72128cf256aced98f48c68c5c9b075aae",
+      "conformant": true,
+      "note": "action_ref matches the guardrail-provider-v1 fixture positive path — same action instance, deny path"
+    },
+    {
+      "id": "RR-ACCEPT-002",
+      "label": "Deferred verdict — all required fields present",
+      "description": "An agent receives a defer verdict (action pending review). It emits a restraint receipt with verdict='deferred'. The receipt is conformant and restraint_receipt_ref is recomputable.",
+      "preimage": {
+        "action_ref": "e6dd416ea108a1600522614957d9da7c815bc02b4c3b4886c80c776ebf88d6cb",
+        "decision_id": "decision-stripe-review-001",
+        "reason_code": "policy_binding_mismatch",
+        "timestamp_ms": 1749650400000,
+        "verdict": "deferred"
+      },
+      "jcs_payload": "{\"action_ref\":\"e6dd416ea108a1600522614957d9da7c815bc02b4c3b4886c80c776ebf88d6cb\",\"decision_id\":\"decision-stripe-review-001\",\"reason_code\":\"policy_binding_mismatch\",\"timestamp_ms\":1749650400000,\"verdict\":\"deferred\"}",
+      "preimage_canonical_bytes_hex": "7b22616374696f6e5f726566223a2265366464343136656131303861313630303532323631343935376439646137633831356263303262346333623438383663383063373736656266383864366362222c226465636973696f6e5f6964223a226465636973696f6e2d7374726970652d7265766965772d303031222c22726561736f6e5f636f6465223a22706f6c6963795f62696e64696e675f6d69736d61746368222c2274696d657374616d705f6d73223a313734393635303430303030302c2276657264696374223a226465666572726564227d",
+      "restraint_receipt_ref": "24196f610b0ded06e1abccfa4a49388163e35d45206313e15c9deda92ddad726",
+      "conformant": true,
+      "note": "action_ref matches the guardrail-provider-v1 NEG-5 Stripe scenario — same action instance, deferred path"
+    },
+    {
+      "id": "RR-REJECT-001",
+      "label": "Missing decision_id — non-conformant",
+      "description": "A restraint receipt is emitted without decision_id. The preimage is incomplete; restraint_receipt_ref is not recomputable by a verifier holding only the receipt. A conformant verifier MUST reject this receipt.",
+      "submitted_receipt": {
+        "action_ref": "104812928eb50e0e1ad28f379f8ade03ea0f479ac7abd1bbf9205e9317665c7f",
+        "reason_code": "decision_outcome_not_allow",
+        "timestamp_ms": 1749513600000,
+        "verdict": "denied"
+      },
+      "missing_field": "decision_id",
+      "invariant_violated": "decision_id is required — without it the preimage is incomplete and restraint_receipt_ref cannot be recomputed",
+      "conformant": false,
+      "verifier_outcome": "REJECT — missing required field decision_id; receipt is non-conformant and restraint_receipt_ref cannot be verified"
+    }
+  ]
+}
