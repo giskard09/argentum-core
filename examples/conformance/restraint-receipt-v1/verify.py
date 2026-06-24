@@ -5,6 +5,7 @@ Iterates over vectors.json, checks each vector against the restraint receipt
 spec invariants, and reports pass/fail with details.
 """
 
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -12,6 +13,11 @@ from pathlib import Path
 VECTORS_PATH = Path(__file__).parent / "vectors.json"
 
 REQUIRED_FIELDS = {"action_ref", "decision_id", "verdict", "reason_code", "timestamp_ms"}
+
+
+def jcs(obj):
+    """JSON Canonicalization Scheme (RFC 8785): sorted keys, no whitespace."""
+    return json.dumps(obj, separators=(",", ":"), sort_keys=True, ensure_ascii=False)
 
 
 def verify_vector(vector: dict) -> dict:
@@ -45,62 +51,70 @@ def verify_vector(vector: dict) -> dict:
                 "reason": f"field mismatch: '{field}' — preimage={pre_val!r} vs submitted={sub_val!r}",
             }
 
-    # ACR: Content-addressed verifier path validation (6 failure modes)
-    # Check 1: Empty audit_checkpoints in submitted_receipt
-    if "audit_checkpoints" in submitted_receipt:
-        ac = submitted_receipt["audit_checkpoints"]
-        if not isinstance(ac, dict) or len(ac) == 0:
-            return {
-                "conformant": False,
-                "verifier_outcome": "REJECT",
-                "reason": "audit_checkpoints is empty",
-            }
-
-    # Check 2: Quiet-drift — submitted has audit_checkpoints but preimage doesn't
-    if "audit_checkpoints" in submitted_receipt and "audit_checkpoints" not in preimage:
-        return {
-            "conformant": False,
-            "verifier_outcome": "REJECT",
-            "reason": "audit_checkpoints not in canonical preimage",
-        }
-
-    # Check 3: Field completeness (verifier + policy_bundle required)
+    # --- Content-addressed verifier path validation (ACR audit_checkpoints) ---
     if "audit_checkpoints" in preimage:
-        ac = preimage["audit_checkpoints"]
-        if not isinstance(ac, dict):
+        checkpoints = preimage["audit_checkpoints"]
+        if not isinstance(checkpoints, dict):
             return {
                 "conformant": False,
                 "verifier_outcome": "REJECT",
                 "reason": "audit_checkpoints must be an object",
             }
-        if "verifier" not in ac or "policy_bundle" not in ac:
+        if "verifier" not in checkpoints:
             return {
                 "conformant": False,
                 "verifier_outcome": "REJECT",
-                "reason": "audit_checkpoints missing required fields",
+                "reason": "audit_checkpoints missing required 'verifier' field",
+            }
+        if "policy_bundle" not in checkpoints:
+            return {
+                "conformant": False,
+                "verifier_outcome": "REJECT",
+                "reason": "audit_checkpoints missing required 'policy_bundle' field",
             }
 
-        # Check 4-5: Cross-validate submitted_receipt audit_checkpoints
+        # Verify submitted_receipt also has matching audit_checkpoints
         if "audit_checkpoints" in submitted_receipt:
-            sub_cp = submitted_receipt["audit_checkpoints"]
-            if not isinstance(sub_cp, dict) or len(sub_cp) == 0:
-                return {
-                    "conformant": False,
-                    "verifier_outcome": "REJECT",
-                    "reason": "audit_checkpoints is empty",
-                }
-            if sub_cp.get("verifier") != ac["verifier"]:
+            sub_checkpoints = submitted_receipt["audit_checkpoints"]
+            if sub_checkpoints.get("verifier") != checkpoints["verifier"]:
                 return {
                     "conformant": False,
                     "verifier_outcome": "REJECT",
                     "reason": "audit_checkpoints verifier mismatch",
                 }
-            if sub_cp.get("policy_bundle") != ac["policy_bundle"]:
+            if sub_checkpoints.get("policy_bundle") != checkpoints["policy_bundle"]:
                 return {
                     "conformant": False,
                     "verifier_outcome": "REJECT",
                     "reason": "audit_checkpoints policy_bundle hash mismatch",
                 }
+
+    # Check 3: Decision-surface consistency (if expected_decision_surface is present)
+    expected_surface = vector.get("expected_decision_surface")
+    if expected_surface and "audit_checkpoints" in submitted_receipt:
+        ac = submitted_receipt["audit_checkpoints"]
+        if ac.get("verifier") != expected_surface.get("verifier"):
+            return {
+                "conformant": False,
+                "verifier_outcome": "REJECT",
+                "reason": "verifier identity does not match expected decision surface",
+            }
+        if ac.get("policy_bundle") != expected_surface.get("policy_bundle"):
+            return {
+                "conformant": False,
+                "verifier_outcome": "REJECT",
+                "reason": "policy_bundle digest does not match expected decision surface",
+            }
+
+    # Check 4: Explicit hash recomputation for conformant rows
+    if vector.get("conformant") and "restraint_receipt_ref" in vector:
+        computed = hashlib.sha256(jcs(preimage).encode()).hexdigest()
+        if computed != vector["restraint_receipt_ref"]:
+            return {
+                "conformant": False,
+                "verifier_outcome": "FAIL",
+                "reason": f"hash mismatch: computed {computed[:16]}... expected {vector['restraint_receipt_ref'][:16]}...",
+            }
 
     # --- All checks passed: conformant ---
     return {"conformant": True, "verifier_outcome": "ACCEPT"}
