@@ -5,12 +5,12 @@
   "hash_algo": "sha256",
   "preimage_format": "jcs-rfc8785-v1",
   "generated_at": "2026-06-23",
-  "purpose": "Conformance vectors for restraint-receipt-v1. A restraint receipt is the verifiable record produced when an agent receives a deny or defer verdict. Silence is not conformant \u2014 the accountability layer covers denied and deferred actions with the same fidelity as executed ones. restraint_receipt_ref = SHA-256(JCS({action_ref, decision_id, verdict, reason_code, timestamp_ms})). All five fields are required.",
+  "purpose": "Conformance vectors for restraint-receipt-v1. A restraint receipt is the verifiable record produced when an agent receives a deny or defer verdict. Silence is not conformant — the accountability layer covers denied and deferred actions with the same fidelity as executed ones. restraint_receipt_ref = SHA-256(JCS({action_ref, decision_id, verdict, reason_code, timestamp_ms})). All five fields are required.",
   "reproduce_in_python": "import hashlib, json\ndef jcs(obj): return json.dumps(obj, separators=(',',':'), sort_keys=True, ensure_ascii=False)\nrestraint_receipt_ref = hashlib.sha256(jcs(preimage).encode()).hexdigest()",
   "vectors": [
     {
       "id": "RR-ACCEPT-001",
-      "label": "Denied verdict \u2014 all required fields present",
+      "label": "Denied verdict — all required fields present",
       "description": "An agent receives a deny verdict from a guardrail. It emits a restraint receipt with all five required fields. restraint_receipt_ref is recomputable from the preimage by any verifier. action_ref is carried forward unchanged from the pre-execution record.",
       "preimage": {
         "action_ref": "104812928eb50e0e1ad28f379f8ade03ea0f479ac7abd1bbf9205e9317665c7f",
@@ -23,11 +23,11 @@
       "preimage_canonical_bytes_hex": "7b22616374696f6e5f726566223a2231303438313239323865623530653065316164323866333739663861646530336561306634373961633761626431626266393230356539333137363635633766222c226465636973696f6e5f6964223a226465636973696f6e2d67756172647261696c2d303031222c22726561736f6e5f636f6465223a226465636973696f6e5f6f7574636f6d655f6e6f745f616c6c6f77222c2274696d657374616d705f6d73223a313734393531333630303030302c2276657264696374223a2264656e696564227d",
       "restraint_receipt_ref": "03c00cc37d34833bb0338fd373efecd72128cf256aced98f48c68c5c9b075aae",
       "conformant": true,
-      "note": "action_ref matches the guardrail-provider-v1 fixture positive path \u2014 same action instance, deny path"
+      "note": "action_ref matches the guardrail-provider-v1 fixture positive path — same action instance, deny path"
     },
     {
       "id": "RR-ACCEPT-002",
-      "label": "Deferred verdict \u2014 all required fields present",
+      "label": "Deferred verdict — all required fields present",
       "description": "An agent receives a defer verdict (action pending review). It emits a restraint receipt with verdict='deferred'. The receipt is conformant and restraint_receipt_ref is recomputable.",
       "preimage": {
         "action_ref": "e6dd416ea108a1600522614957d9da7c815bc02b4c3b4886c80c776ebf88d6cb",
@@ -40,11 +40,11 @@
       "preimage_canonical_bytes_hex": "7b22616374696f6e5f726566223a2265366464343136656131303861313630303532323631343935376439646137633831356263303262346333623438383663383063373736656266383864366362222c226465636973696f6e5f6964223a226465636973696f6e2d7374726970652d7265766965772d303031222c22726561736f6e5f636f6465223a22706f6c6963795f62696e64696e675f6d69736d61746368222c2274696d657374616d705f6d73223a313734393635303430303030302c2276657264696374223a226465666572726564227d",
       "restraint_receipt_ref": "24196f610b0ded06e1abccfa4a49388163e35d45206313e15c9deda92ddad726",
       "conformant": true,
-      "note": "action_ref matches the guardrail-provider-v1 NEG-5 Stripe scenario \u2014 same action instance, deferred path"
+      "note": "action_ref matches the guardrail-provider-v1 NEG-5 Stripe scenario — same action instance, deferred path"
     },
     {
       "id": "RR-REJECT-001",
-      "label": "Missing decision_id \u2014 non-conformant",
+      "label": "Missing decision_id — non-conformant",
       "description": "A restraint receipt is emitted without decision_id. The preimage is incomplete; restraint_receipt_ref is not recomputable by a verifier holding only the receipt. A conformant verifier MUST reject this receipt.",
       "submitted_receipt": {
         "action_ref": "104812928eb50e0e1ad28f379f8ade03ea0f479ac7abd1bbf9205e9317665c7f",
@@ -53,9 +53,9 @@
         "verdict": "denied"
       },
       "missing_field": "decision_id",
-      "invariant_violated": "decision_id is required \u2014 without it the preimage is incomplete and restraint_receipt_ref cannot be recomputed",
+      "invariant_violated": "decision_id is required — without it the preimage is incomplete and restraint_receipt_ref cannot be recomputed",
       "conformant": false,
-      "verifier_outcome": "REJECT \u2014 missing required field decision_id; receipt is non-conformant and restraint_receipt_ref cannot be verified"
+      "verifier_outcome": "REJECT — missing required field decision_id; receipt is non-conformant and restraint_receipt_ref cannot be verified"
     },
     {
       "id": "RR-ACCEPT-003",
@@ -82,11 +82,16 @@
           "verifier": "sha256-verifier-identity-abcdef1234567890",
           "policy_bundle": "sha256-policy-bundle-fedcba0987654321"
         }
-      }
+      },
+      "expected_decision_surface": {
+        "verifier": "sha256-verifier-identity-abcdef1234567890",
+        "policy_bundle": "sha256-policy-bundle-fedcba0987654321"
+      },
+      "restraint_receipt_ref": "45752588e00c6b16d00dbb6d80ba8e06c55e1be92cfd3950893a7bb4d8b9e48e"
     },
     {
       "id": "RR-REJECT-002",
-      "description": "Receipt with audit_checkpoints where policy_bundle hash references a non-existent bundle \u2014 content-addressed integrity violation",
+      "description": "Receipt with audit_checkpoints where policy_bundle hash references a non-existent bundle — content-addressed integrity violation",
       "conformant": false,
       "verifier_outcome": "REJECT",
       "preimage": {
@@ -113,9 +118,8 @@
     },
     {
       "id": "RR-REJECT-003",
-      "description": "Receipt with audit_checkpoints present but empty \u2014 presence without substance",
-      "conformant": false,
-      "verifier_outcome": "REJECT \u2014 audit_checkpoints is empty; verifier identity and policy bundle reference are required",
+      "label": "Empty audit_checkpoints object — non-conformant",
+      "description": "submitted_receipt has audit_checkpoints present but it is an empty object. A conformant verifier MUST reject this receipt.",
       "preimage": {
         "action_ref": "sha256-abc123def456",
         "decision_id": "deny-20260624-003",
@@ -131,19 +135,23 @@
         "reason_code": "TRUST_THRESHOLD_UNMET",
         "timestamp_ms": 1750771400000,
         "audit_checkpoints": {}
-      }
+      },
+      "conformant": false,
+      "verifier_outcome": "REJECT — audit_checkpoints missing required fields"
     },
     {
       "id": "RR-REJECT-004",
-      "description": "Receipt where audit_checkpoints is present in submitted_receipt but absent from the canonical preimage \u2014 quiet-drift failure",
-      "conformant": false,
-      "verifier_outcome": "REJECT \u2014 audit_checkpoints not included in canonical preimage; hash consistency violation",
+      "label": "audit_checkpoints missing verifier — non-conformant",
+      "description": "submitted_receipt has audit_checkpoints but it is missing the verifier field. A conformant verifier MUST reject this receipt.",
       "preimage": {
         "action_ref": "sha256-abc123def456",
         "decision_id": "deny-20260624-004",
         "verdict": "denied",
         "reason_code": "TRUST_THRESHOLD_UNMET",
-        "timestamp_ms": 1750771500000
+        "timestamp_ms": 1750771500000,
+        "audit_checkpoints": {
+          "policy_bundle": "sha256-policy-bundle-fedcba0987654321"
+        }
       },
       "submitted_receipt": {
         "action_ref": "sha256-abc123def456",
@@ -152,16 +160,16 @@
         "reason_code": "TRUST_THRESHOLD_UNMET",
         "timestamp_ms": 1750771500000,
         "audit_checkpoints": {
-          "verifier": "sha256-verifier-identity-abcdef1234567890",
           "policy_bundle": "sha256-policy-bundle-fedcba0987654321"
         }
-      }
+      },
+      "conformant": false,
+      "verifier_outcome": "REJECT — audit_checkpoints missing required 'verifier' field"
     },
     {
       "id": "RR-REJECT-005",
-      "description": "Receipt where verifier identity matches but policy_bundle digest does not match the referenced bundle",
-      "conformant": false,
-      "verifier_outcome": "REJECT \u2014 policy_bundle digest mismatch",
+      "label": "policy_bundle digest mismatch — decision-surface rejected",
+      "description": "submitted_receipt has audit_checkpoints with an incorrect policy_bundle hash that does not match the expected_decision_surface. This is a decision-surface integrity violation.",
       "preimage": {
         "action_ref": "sha256-abc123def456",
         "decision_id": "deny-20260624-005",
@@ -170,7 +178,7 @@
         "timestamp_ms": 1750771600000,
         "audit_checkpoints": {
           "verifier": "sha256-verifier-identity-abcdef1234567890",
-          "policy_bundle": "sha256-wrong-bundle-deadbeef00000000"
+          "policy_bundle": "sha256-policy-bundle-fedcba0987654321"
         }
       },
       "submitted_receipt": {
@@ -183,13 +191,18 @@
           "verifier": "sha256-verifier-identity-abcdef1234567890",
           "policy_bundle": "sha256-wrong-bundle-deadbeef00000000"
         }
-      }
+      },
+      "expected_decision_surface": {
+        "verifier": "sha256-verifier-identity-abcdef1234567890",
+        "policy_bundle": "sha256-policy-bundle-fedcba0987654321"
+      },
+      "conformant": false,
+      "verifier_outcome": "REJECT — policy_bundle digest does not match expected decision surface"
     },
     {
       "id": "RR-REJECT-006",
-      "description": "Receipt where policy_bundle digest matches but verifier identity is not the verifier selected in the decision record",
-      "conformant": false,
-      "verifier_outcome": "REJECT \u2014 verifier identity does not match the verifier recorded in the pre-execution decision",
+      "label": "verifier identity mismatch — decision-surface rejected",
+      "description": "submitted_receipt has audit_checkpoints with an incorrect verifier identity that does not match the expected_decision_surface. This is a decision-surface integrity violation.",
       "preimage": {
         "action_ref": "sha256-abc123def456",
         "decision_id": "deny-20260624-006",
@@ -197,7 +210,7 @@
         "reason_code": "TRUST_THRESHOLD_UNMET",
         "timestamp_ms": 1750771700000,
         "audit_checkpoints": {
-          "verifier": "sha256-unexpected-verifier-0000000000000000",
+          "verifier": "sha256-verifier-identity-abcdef1234567890",
           "policy_bundle": "sha256-policy-bundle-fedcba0987654321"
         }
       },
@@ -211,7 +224,13 @@
           "verifier": "sha256-unexpected-verifier-0000000000000000",
           "policy_bundle": "sha256-policy-bundle-fedcba0987654321"
         }
-      }
+      },
+      "expected_decision_surface": {
+        "verifier": "sha256-verifier-identity-abcdef1234567890",
+        "policy_bundle": "sha256-policy-bundle-fedcba0987654321"
+      },
+      "conformant": false,
+      "verifier_outcome": "REJECT — verifier identity does not match expected decision surface"
     }
   ]
 }
