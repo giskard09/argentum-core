@@ -45,38 +45,57 @@ def verify_vector(vector: dict) -> dict:
                 "reason": f"field mismatch: '{field}' — preimage={pre_val!r} vs submitted={sub_val!r}",
             }
 
-    # --- Content-addressed verifier path validation (ACR audit_checkpoints) ---
+    # ACR: Content-addressed verifier path validation (6 failure modes)
+    # Check 1: Empty audit_checkpoints in submitted_receipt
+    if "audit_checkpoints" in submitted_receipt:
+        ac = submitted_receipt["audit_checkpoints"]
+        if not isinstance(ac, dict) or len(ac) == 0:
+            return {
+                "conformant": False,
+                "verifier_outcome": "REJECT",
+                "reason": "audit_checkpoints is empty",
+            }
+
+    # Check 2: Quiet-drift — submitted has audit_checkpoints but preimage doesn't
+    if "audit_checkpoints" in submitted_receipt and "audit_checkpoints" not in preimage:
+        return {
+            "conformant": False,
+            "verifier_outcome": "REJECT",
+            "reason": "audit_checkpoints not in canonical preimage",
+        }
+
+    # Check 3: Field completeness (verifier + policy_bundle required)
     if "audit_checkpoints" in preimage:
-        checkpoints = preimage["audit_checkpoints"]
-        if not isinstance(checkpoints, dict):
+        ac = preimage["audit_checkpoints"]
+        if not isinstance(ac, dict):
             return {
                 "conformant": False,
                 "verifier_outcome": "REJECT",
                 "reason": "audit_checkpoints must be an object",
             }
-        if "verifier" not in checkpoints:
+        if "verifier" not in ac or "policy_bundle" not in ac:
             return {
                 "conformant": False,
                 "verifier_outcome": "REJECT",
-                "reason": "audit_checkpoints missing required 'verifier' field",
-            }
-        if "policy_bundle" not in checkpoints:
-            return {
-                "conformant": False,
-                "verifier_outcome": "REJECT",
-                "reason": "audit_checkpoints missing required 'policy_bundle' field",
+                "reason": "audit_checkpoints missing required fields",
             }
 
-        # Verify submitted_receipt also has matching audit_checkpoints
+        # Check 4-5: Cross-validate submitted_receipt audit_checkpoints
         if "audit_checkpoints" in submitted_receipt:
-            sub_checkpoints = submitted_receipt["audit_checkpoints"]
-            if sub_checkpoints.get("verifier") != checkpoints["verifier"]:
+            sub_cp = submitted_receipt["audit_checkpoints"]
+            if not isinstance(sub_cp, dict) or len(sub_cp) == 0:
+                return {
+                    "conformant": False,
+                    "verifier_outcome": "REJECT",
+                    "reason": "audit_checkpoints is empty",
+                }
+            if sub_cp.get("verifier") != ac["verifier"]:
                 return {
                     "conformant": False,
                     "verifier_outcome": "REJECT",
                     "reason": "audit_checkpoints verifier mismatch",
                 }
-            if sub_checkpoints.get("policy_bundle") != checkpoints["policy_bundle"]:
+            if sub_cp.get("policy_bundle") != ac["policy_bundle"]:
                 return {
                     "conformant": False,
                     "verifier_outcome": "REJECT",
