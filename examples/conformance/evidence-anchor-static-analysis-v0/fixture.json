@@ -1,0 +1,139 @@
+{
+  "fixture_id": "evidence-anchor-static-analysis-v0",
+  "version": "v0",
+  "spec": "AgentGraph CTEF + argentum-core action-ref-v1",
+  "hash_algo": "sha256",
+  "preimage_format": "jcs-rfc8785-v1",
+  "generated_at": "2026-06-24",
+  "purpose": "Conformance fixture for anchoring an AgentGraph static-analysis SCAN event as an EvidenceAnchor. action_ref is the correlation key, derived from the intent tuple {agent_id, action_type, scope, timestamp} per action-ref-v1 \u2014 NOT from the verdict. The verdict (grade/findings/cve_list/outcome) is a separate field, so the correlation key stays stable across re-scans of the same target while the evidence it points at can change. action_type encodes the scanner operation (static_analysis.scan); scope is the target tool identity (MCP server URI / package ref). A verifier confirms identity (the anchor) and evidence (the verdict) independently, with no access to AgentGraph infrastructure.",
+  "reproduce_in_python": "import hashlib, rfc8785\naction_ref = hashlib.sha256(rfc8785.dumps(preimage)).hexdigest()  # rfc8785 = true RFC 8785; for these flat preimages it equals json.dumps(sort_keys=True)",
+  "verifier_precedence": {
+    "description": "First failing check wins.",
+    "order": [
+      {
+        "step": 1,
+        "reason_code": "action_ref_mismatch",
+        "condition": "recomputed SHA-256(JCS(preimage)) != vector.action_ref"
+      },
+      {
+        "step": 2,
+        "reason_code": "verdict_in_preimage",
+        "condition": "any verdict field (grade/findings/outcome) appears inside the action_ref preimage"
+      },
+      {
+        "step": 3,
+        "reason_code": "deny_high_or_critical",
+        "condition": "verdict.findings.critical + verdict.findings.high > 0 \u2192 gate outcome is DENY (NEG vectors)"
+      }
+    ]
+  },
+  "invariants": [
+    "rescan_idempotency: same {agent_id, action_type, scope, timestamp} \u2192 same action_ref (POS-1 == INV-1)",
+    "distinct_events: later timestamp \u2192 different action_ref (POS-1 != INV-2)",
+    "evidence_independence: verdict is never part of the action_ref preimage"
+  ],
+  "vectors": [
+    {
+      "label": "POS-1_clean_mcp",
+      "expectation": "PASS",
+      "note": "clean target \u2192 gate admits",
+      "preimage": {
+        "agent_id": "did:web:agentgraph.co",
+        "action_type": "static_analysis.scan",
+        "scope": "mcp://github.com/example/clean-mcp-server",
+        "timestamp": "2026-06-23T12:00:00.000Z"
+      },
+      "jcs_payload": "{\"action_type\":\"static_analysis.scan\",\"agent_id\":\"did:web:agentgraph.co\",\"scope\":\"mcp://github.com/example/clean-mcp-server\",\"timestamp\":\"2026-06-23T12:00:00.000Z\"}",
+      "preimage_canonical_bytes_hex": "7b22616374696f6e5f74797065223a227374617469635f616e616c797369732e7363616e222c226167656e745f6964223a226469643a7765623a6167656e7467726170682e636f222c2273636f7065223a226d63703a2f2f6769746875622e636f6d2f6578616d706c652f636c65616e2d6d63702d736572766572222c2274696d657374616d70223a22323032362d30362d32335431323a30303a30302e3030305a227d",
+      "action_ref": "64e29b6d1ed28c9fbeebbd0c98bdc1a97acaa4b4630371d51d2dede39fdfcc62",
+      "verdict": {
+        "grade": "A",
+        "findings": {
+          "critical": 0,
+          "high": 0,
+          "medium": 1,
+          "total": 1
+        },
+        "cve_list": [],
+        "outcome": "clean"
+      }
+    },
+    {
+      "label": "NEG-1_critical_mcp",
+      "expectation": "FAIL",
+      "note": "critical/high \u2192 gate denies",
+      "preimage": {
+        "agent_id": "did:web:agentgraph.co",
+        "action_type": "static_analysis.scan",
+        "scope": "mcp://github.com/example/leaky-mcp-server",
+        "timestamp": "2026-06-23T12:00:00.000Z"
+      },
+      "jcs_payload": "{\"action_type\":\"static_analysis.scan\",\"agent_id\":\"did:web:agentgraph.co\",\"scope\":\"mcp://github.com/example/leaky-mcp-server\",\"timestamp\":\"2026-06-23T12:00:00.000Z\"}",
+      "preimage_canonical_bytes_hex": "7b22616374696f6e5f74797065223a227374617469635f616e616c797369732e7363616e222c226167656e745f6964223a226469643a7765623a6167656e7467726170682e636f222c2273636f7065223a226d63703a2f2f6769746875622e636f6d2f6578616d706c652f6c65616b792d6d63702d736572766572222c2274696d657374616d70223a22323032362d30362d32335431323a30303a30302e3030305a227d",
+      "action_ref": "daea703a63a24cf16e872800b1d75c44b983caf62e4a2d31281d54fc2e000e2b",
+      "verdict": {
+        "grade": "F",
+        "findings": {
+          "critical": 2,
+          "high": 3,
+          "medium": 4,
+          "total": 9
+        },
+        "cve_list": [
+          "CVE-2026-31000"
+        ],
+        "outcome": "high_or_critical"
+      }
+    },
+    {
+      "label": "INV-1_rescan_stable_ref",
+      "expectation": "PASS",
+      "note": "same target/type/timestamp \u2192 same action_ref even though verdict differs",
+      "preimage": {
+        "agent_id": "did:web:agentgraph.co",
+        "action_type": "static_analysis.scan",
+        "scope": "mcp://github.com/example/clean-mcp-server",
+        "timestamp": "2026-06-23T12:00:00.000Z"
+      },
+      "jcs_payload": "{\"action_type\":\"static_analysis.scan\",\"agent_id\":\"did:web:agentgraph.co\",\"scope\":\"mcp://github.com/example/clean-mcp-server\",\"timestamp\":\"2026-06-23T12:00:00.000Z\"}",
+      "preimage_canonical_bytes_hex": "7b22616374696f6e5f74797065223a227374617469635f616e616c797369732e7363616e222c226167656e745f6964223a226469643a7765623a6167656e7467726170682e636f222c2273636f7065223a226d63703a2f2f6769746875622e636f6d2f6578616d706c652f636c65616e2d6d63702d736572766572222c2274696d657374616d70223a22323032362d30362d32335431323a30303a30302e3030305a227d",
+      "action_ref": "64e29b6d1ed28c9fbeebbd0c98bdc1a97acaa4b4630371d51d2dede39fdfcc62",
+      "verdict": {
+        "grade": "B",
+        "findings": {
+          "critical": 0,
+          "high": 0,
+          "medium": 2,
+          "total": 2
+        },
+        "cve_list": [],
+        "outcome": "clean"
+      }
+    },
+    {
+      "label": "INV-2_later_distinct_ref",
+      "expectation": "PASS",
+      "note": "later timestamp \u2192 distinct action_ref",
+      "preimage": {
+        "agent_id": "did:web:agentgraph.co",
+        "action_type": "static_analysis.scan",
+        "scope": "mcp://github.com/example/clean-mcp-server",
+        "timestamp": "2026-06-24T12:00:00.000Z"
+      },
+      "jcs_payload": "{\"action_type\":\"static_analysis.scan\",\"agent_id\":\"did:web:agentgraph.co\",\"scope\":\"mcp://github.com/example/clean-mcp-server\",\"timestamp\":\"2026-06-24T12:00:00.000Z\"}",
+      "preimage_canonical_bytes_hex": "7b22616374696f6e5f74797065223a227374617469635f616e616c797369732e7363616e222c226167656e745f6964223a226469643a7765623a6167656e7467726170682e636f222c2273636f7065223a226d63703a2f2f6769746875622e636f6d2f6578616d706c652f636c65616e2d6d63702d736572766572222c2274696d657374616d70223a22323032362d30362d32345431323a30303a30302e3030305a227d",
+      "action_ref": "f4f27298194d90077b599e9b4c1cd525e4c5859167272745fb0dc042009e2e44",
+      "verdict": {
+        "grade": "A",
+        "findings": {
+          "critical": 0,
+          "high": 0,
+          "medium": 1,
+          "total": 1
+        },
+        "cve_list": [],
+        "outcome": "clean"
+      }
+    }
+  ]
+}
