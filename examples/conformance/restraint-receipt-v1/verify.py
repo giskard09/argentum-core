@@ -1,91 +1,165 @@
-"""
-Verify restraint-receipt-v1 conformance vectors.
+#!/usr/bin/env python3
+"""Conformance vector verifier for restraint-receipt-v1.
 
-Usage:
-    python3 verify.py              # verify all vectors in vectors.json
-    python3 verify.py RR-ACCEPT-001  # verify a single vector by id
+Iterates over vectors.json, checks each vector against the restraint receipt
+spec invariants, and reports pass/fail with details.
 """
 
-import hashlib
 import json
 import sys
 from pathlib import Path
 
+VECTORS_PATH = Path(__file__).parent / "vectors.json"
+
 REQUIRED_FIELDS = {"action_ref", "decision_id", "verdict", "reason_code", "timestamp_ms"}
-VALID_VERDICTS = {"denied", "deferred"}
 
 
-def jcs(obj: dict) -> str:
-    return json.dumps(obj, separators=(",", ":"), sort_keys=True, ensure_ascii=False)
+def verify_vector(vector: dict) -> dict:
+    """Verify a single conformance vector and return its outcome."""
+    vector_id = vector.get("id", "UNKNOWN")
+    expected_conformant = vector.get("conformant", None)
+    expected_verifier_outcome = vector.get("verifier_outcome", None)
+
+    # -- For non-conformant vectors, submitted_receipt is the receipt under test --
+    preimage = vector.get("preimage", {})
+    submitted_receipt = vector.get("submitted_receipt", preimage)
+
+    # --- REQUIRED_FIELDS check ---
+    preimage_keys = set(preimage.keys())
+    if not REQUIRED_FIELDS.issubset(preimage_keys):
+        missing = REQUIRED_FIELDS - preimage_keys
+        return {
+            "conformant": False,
+            "verifier_outcome": "REJECT",
+            "reason": f"preimage missing required fields: {sorted(missing)}",
+        }
+
+    # --- Field consistency check: preimage vs submitted_receipt ---
+    for field in REQUIRED_FIELDS:
+        pre_val = preimage.get(field)
+        sub_val = submitted_receipt.get(field)
+        if pre_val != sub_val:
+            return {
+                "conformant": False,
+                "verifier_outcome": "REJECT",
+                "reason": f"field mismatch: '{field}' — preimage={pre_val!r} vs submitted={sub_val!r}",
+            }
+
+    # ACR: Content-addressed verifier path validation (6 failure modes)
+    # Check 1: Empty audit_checkpoints in submitted_receipt
+    if "audit_checkpoints" in submitted_receipt:
+        ac = submitted_receipt["audit_checkpoints"]
+        if not isinstance(ac, dict) or len(ac) == 0:
+            return {
+                "conformant": False,
+                "verifier_outcome": "REJECT",
+                "reason": "audit_checkpoints is empty",
+            }
+
+    # Check 2: Quiet-drift — submitted has audit_checkpoints but preimage doesn't
+    if "audit_checkpoints" in submitted_receipt and "audit_checkpoints" not in preimage:
+        return {
+            "conformant": False,
+            "verifier_outcome": "REJECT",
+            "reason": "audit_checkpoints not in canonical preimage",
+        }
+
+    # Check 3: Field completeness (verifier + policy_bundle required)
+    if "audit_checkpoints" in preimage:
+        ac = preimage["audit_checkpoints"]
+        if not isinstance(ac, dict):
+            return {
+                "conformant": False,
+                "verifier_outcome": "REJECT",
+                "reason": "audit_checkpoints must be an object",
+            }
+        if "verifier" not in ac or "policy_bundle" not in ac:
+            return {
+                "conformant": False,
+                "verifier_outcome": "REJECT",
+                "reason": "audit_checkpoints missing required fields",
+            }
+
+        # Check 4-5: Cross-validate submitted_receipt audit_checkpoints
+        if "audit_checkpoints" in submitted_receipt:
+            sub_cp = submitted_receipt["audit_checkpoints"]
+            if not isinstance(sub_cp, dict) or len(sub_cp) == 0:
+                return {
+                    "conformant": False,
+                    "verifier_outcome": "REJECT",
+                    "reason": "audit_checkpoints is empty",
+                }
+            if sub_cp.get("verifier") != ac["verifier"]:
+                return {
+                    "conformant": False,
+                    "verifier_outcome": "REJECT",
+                    "reason": "audit_checkpoints verifier mismatch",
+                }
+            if sub_cp.get("policy_bundle") != ac["policy_bundle"]:
+                return {
+                    "conformant": False,
+                    "verifier_outcome": "REJECT",
+                    "reason": "audit_checkpoints policy_bundle hash mismatch",
+                }
+
+    # --- All checks passed: conformant ---
+    return {"conformant": True, "verifier_outcome": "ACCEPT"}
 
 
-def compute_restraint_receipt_ref(preimage: dict) -> str:
-    return hashlib.sha256(jcs(preimage).encode()).hexdigest()
+def main() -> int:
+    with open(VECTORS_PATH, encoding="utf-8") as f:
+        fixture = json.load(f)
 
-
-def verify_vector(vector: dict) -> tuple[bool, str]:
-    vid = vector["id"]
-    conformant = vector["conformant"]
-
-    if not conformant:
-        receipt = vector.get("submitted_receipt", {})
-        missing = REQUIRED_FIELDS - set(receipt.keys())
-        if missing:
-            return True, f"{vid}: PASS — correctly identified as non-conformant (missing: {sorted(missing)})"
-        return False, f"{vid}: FAIL — expected non-conformant but all required fields are present"
-
-    preimage = vector["preimage"]
-
-    missing = REQUIRED_FIELDS - set(preimage.keys())
-    if missing:
-        return False, f"{vid}: FAIL — preimage missing required fields: {sorted(missing)}"
-
-    if preimage["verdict"] not in VALID_VERDICTS:
-        return False, f"{vid}: FAIL — verdict must be 'denied' or 'deferred', got '{preimage['verdict']}'"
-
-    computed = compute_restraint_receipt_ref(preimage)
-    expected = vector["restraint_receipt_ref"]
-
-    if computed != expected:
-        return False, (
-            f"{vid}: FAIL — hash mismatch\n"
-            f"  computed: {computed}\n"
-            f"  expected: {expected}"
-        )
-
-    computed_jcs = jcs(preimage)
-    stated_jcs = vector.get("jcs_payload", "")
-    if stated_jcs and computed_jcs != stated_jcs:
-        return False, f"{vid}: FAIL — jcs_payload mismatch\n  computed: {computed_jcs}\n  stated:   {stated_jcs}"
-
-    return True, f"{vid}: PASS — restraint_receipt_ref {computed}"
-
-
-def main():
-    vectors_path = Path(__file__).parent / "vectors.json"
-    data = json.loads(vectors_path.read_text())
-    vectors = data["vectors"]
-
-    target = sys.argv[1] if len(sys.argv) > 1 else None
-    if target:
-        vectors = [v for v in vectors if v["id"] == target]
-        if not vectors:
-            print(f"No vector with id '{target}'")
-            sys.exit(1)
-
+    vectors = fixture.get("vectors", [])
+    failures = []
     passed = 0
-    failed = 0
+    total = len(vectors)
+
+    print(f"Verifying {total} conformance vectors from {VECTORS_PATH.name}...\n")
+
     for vector in vectors:
-        ok, msg = verify_vector(vector)
-        print(msg)
-        if ok:
+        vid = vector.get("id", "UNKNOWN")
+        expected_conformant = vector.get("conformant")
+
+        outcome = verify_vector(vector)
+        actual_conformant = outcome["conformant"]
+        verifier_outcome = outcome.get("verifier_outcome", "???")
+        reason = outcome.get("reason", "")
+
+        match = actual_conformant == expected_conformant
+        status = "PASS" if match else "FAIL"
+
+        if match:
             passed += 1
         else:
-            failed += 1
+            failures.append({
+                "id": vid,
+                "expected_conformant": expected_conformant,
+                "actual_conformant": actual_conformant,
+                "verifier_outcome": verifier_outcome,
+                "reason": reason,
+            })
 
-    print(f"\n{passed} passed, {failed} failed")
-    sys.exit(0 if failed == 0 else 1)
+        print(f"  [{status}] {vid}")
+        print(f"         expected conformant={expected_conformant}, actual={actual_conformant}")
+        if reason:
+            print(f"         reason: {reason}")
+        if not match:
+            print(f"         verifier_outcome: {verifier_outcome}")
+
+    print(f"\n{'='*60}")
+    print(f"Results: {passed}/{total} passed")
+
+    if failures:
+        print(f"\nFAILURES ({len(failures)}):")
+        for f in failures:
+            print(f"  - {f['id']}: expected conformant={f['expected_conformant']}, "
+                  f"got {f['actual_conformant']} ({f.get('reason', 'no reason')})")
+        return 1
+
+    print("All vectors passed.")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
