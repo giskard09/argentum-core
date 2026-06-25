@@ -4,8 +4,8 @@
   "spec": "docs/spec/restraint-receipt.md",
   "hash_algo": "sha256",
   "preimage_format": "jcs-rfc8785-v1",
-  "generated_at": "2026-06-23",
-  "purpose": "Conformance vectors for restraint-receipt-v1. A restraint receipt is the verifiable record produced when an agent receives a deny or defer verdict. Silence is not conformant — the accountability layer covers denied and deferred actions with the same fidelity as executed ones. restraint_receipt_ref = SHA-256(JCS({action_ref, decision_id, verdict, reason_code, timestamp_ms})). All five fields are required.",
+  "generated_at": "2026-06-25",
+  "purpose": "Conformance vectors for restraint-receipt-v1. A restraint receipt is the verifiable record produced when an agent receives a deny or defer verdict. Silence is not conformant — the accountability layer covers denied and deferred actions with the same fidelity as executed ones. restraint_receipt_ref = SHA-256(JCS({action_ref, decision_id, verdict, reason_code, timestamp_ms})). All five fields are required. Vectors RR-ACCEPT-003 through RR-REJECT-006 cover the content-addressed verifier path: a verifier MUST recompute restraint_receipt_ref from the preimage fields and verify it matches the value in the receipt — trusting the hash as presented is not conformant.",
   "reproduce_in_python": "import hashlib, json\ndef jcs(obj): return json.dumps(obj, separators=(',',':'), sort_keys=True, ensure_ascii=False)\nrestraint_receipt_ref = hashlib.sha256(jcs(preimage).encode()).hexdigest()",
   "vectors": [
     {
@@ -43,6 +43,36 @@
       "note": "action_ref matches the guardrail-provider-v1 NEG-5 Stripe scenario — same action instance, deferred path"
     },
     {
+      "id": "RR-ACCEPT-003",
+      "label": "Content-addressed verifier path — extra envelope fields do not affect hash",
+      "description": "A receipt carrying audit_checkpoints (additional metadata) is still conformant. The verifier recomputes restraint_receipt_ref from the five core preimage fields only — audit_checkpoints does not enter the preimage. The recomputed hash matches the presented value. This vector establishes that extra envelope fields are transparent to the content-addressed verifier path.",
+      "preimage": {
+        "action_ref": "ce369232b1006eabdb310f57852e534cf20a982c7b73ea6a81336c6bb45c8d0c",
+        "decision_id": "decision-safeagent-screen-001",
+        "reason_code": "content_policy_violation",
+        "timestamp_ms": 1750845600000,
+        "verdict": "denied"
+      },
+      "jcs_payload": "{\"action_ref\":\"ce369232b1006eabdb310f57852e534cf20a982c7b73ea6a81336c6bb45c8d0c\",\"decision_id\":\"decision-safeagent-screen-001\",\"reason_code\":\"content_policy_violation\",\"timestamp_ms\":1750845600000,\"verdict\":\"denied\"}",
+      "preimage_canonical_bytes_hex": "7b22616374696f6e5f726566223a2263653336393233326231303036656162646233313066353738353265353334636632306139383263376237336561366138313333366336626234356338643063222c226465636973696f6e5f6964223a226465636973696f6e2d736166656167656e742d73637265656e2d303031222c22726561736f6e5f636f6465223a22636f6e74656e745f706f6c6963795f76696f6c6174696f6e222c2274696d657374616d705f6d73223a313735303834353630303030302c2276657264696374223a2264656e696564227d",
+      "restraint_receipt_ref": "cf3f2a5a5abdf8053f019a55958a283c9990a6d14bdddc2528468a5323f8168f",
+      "envelope_additional_fields": {
+        "audit_checkpoints": {
+          "verifier_id": "guardrail-agent-v2.safeagent.io",
+          "policy_bundle": "sha256:a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
+          "checkpoint_ts_ms": 1750845601000
+        }
+      },
+      "conformant": true,
+      "action_ref_preimage": {
+        "agent_id": "guardrail-agent-v2.safeagent.io",
+        "action_type": "content.screen",
+        "scope": "mycelium.safeagent",
+        "timestamp": "2026-06-25T08:00:00.000Z"
+      },
+      "note": "audit_checkpoints is an envelope-level field. It does not enter the restraint_receipt_ref preimage. A verifier recomputing from the five core fields obtains cf3f2a5a… regardless of what audit_checkpoints contains."
+    },
+    {
       "id": "RR-REJECT-001",
       "label": "Missing decision_id — non-conformant",
       "description": "A restraint receipt is emitted without decision_id. The preimage is incomplete; restraint_receipt_ref is not recomputable by a verifier holding only the receipt. A conformant verifier MUST reject this receipt.",
@@ -56,6 +86,112 @@
       "invariant_violated": "decision_id is required — without it the preimage is incomplete and restraint_receipt_ref cannot be recomputed",
       "conformant": false,
       "verifier_outcome": "REJECT — missing required field decision_id; receipt is non-conformant and restraint_receipt_ref cannot be verified"
+    },
+    {
+      "id": "RR-REJECT-002",
+      "label": "Tampered restraint_receipt_ref — verifier recompute detects mismatch",
+      "description": "An attacker intercepts a conformant receipt and replaces the restraint_receipt_ref with a different value. The preimage fields are intact. A content-addressed verifier recomputes SHA-256(JCS(preimage)) from the five fields and obtains 03c00cc3… — which does not match the tampered value in the receipt. REJECT.",
+      "submitted_receipt": {
+        "action_ref": "104812928eb50e0e1ad28f379f8ade03ea0f479ac7abd1bbf9205e9317665c7f",
+        "decision_id": "decision-guardrail-001",
+        "reason_code": "decision_outcome_not_allow",
+        "timestamp_ms": 1749513600000,
+        "verdict": "denied",
+        "restraint_receipt_ref": "deadbeef7d34833bb0338fd373efecd72128cf256aced98f48c68c5c9b075aae"
+      },
+      "expected_restraint_receipt_ref": "03c00cc37d34833bb0338fd373efecd72128cf256aced98f48c68c5c9b075aae",
+      "invariant_violated": "restraint_receipt_ref in receipt does not match SHA-256(JCS(preimage)) recomputed by verifier — content-addressed verification fails",
+      "conformant": false,
+      "verifier_outcome": "REJECT — recomputed hash 03c00cc3… does not match submitted hash deadbeef… — receipt has been tampered"
+    },
+    {
+      "id": "RR-REJECT-003",
+      "label": "Preimage field substitution — verdict changed, hash unchanged",
+      "description": "An attacker modifies the verdict field from 'denied' to 'allow' in the submitted receipt, but leaves the restraint_receipt_ref unchanged (the original hash was computed from 'denied'). A content-addressed verifier recomputes SHA-256(JCS({…, verdict: 'allow', …})) and obtains 6d32c9ef… — which does not match 03c00cc3…. The substitution is detected structurally, without trusting any operator claim.",
+      "submitted_receipt": {
+        "action_ref": "104812928eb50e0e1ad28f379f8ade03ea0f479ac7abd1bbf9205e9317665c7f",
+        "decision_id": "decision-guardrail-001",
+        "reason_code": "decision_outcome_not_allow",
+        "timestamp_ms": 1749513600000,
+        "verdict": "allow",
+        "restraint_receipt_ref": "03c00cc37d34833bb0338fd373efecd72128cf256aced98f48c68c5c9b075aae"
+      },
+      "verifier_recomputes_from_submitted_fields": "6d32c9efdf4f6f29786f2a09160650d4c36a8d0366c7e597ded879e029fa619a",
+      "invariant_violated": "verdict='allow' is not a valid restraint verdict (MUST be 'denied' or 'deferred'); additionally, recomputed hash from submitted preimage 6d32c9ef… does not match stated 03c00cc3…",
+      "conformant": false,
+      "verifier_outcome": "REJECT — verdict 'allow' is non-conformant; recompute from submitted fields produces a different hash, confirming field substitution"
+    },
+    {
+      "id": "RR-REJECT-004",
+      "label": "Quiet drift — audit_checkpoints present but verifier surface not anchored",
+      "description": "A receipt carries audit_checkpoints claiming a policy_bundle and verifier_id, but the restraint_receipt_ref was computed without anchoring those claims. The verifier surface that produced the deny/defer decision is declared in the envelope but unverifiable — a verifier cannot confirm which policy governed the decision from the receipt alone. This is the quiet-drift failure mode: the receipt appears complete but the verifier surface is floating.",
+      "submitted_receipt": {
+        "action_ref": "10a8adedeb58f8d40a595b654c1a096b096ca0777d231f8eb3d00099cdec837d",
+        "decision_id": "decision-policy-bind-001",
+        "reason_code": "policy_binding_required",
+        "timestamp_ms": 1750849200000,
+        "verdict": "deferred",
+        "restraint_receipt_ref": "571e287b00886831ce3d50233319e7dcf82e24098bd0464c55ad5f30a519c4a4",
+        "audit_checkpoints": {
+          "verifier_id": "policy-verifier-01.mycelium.io",
+          "policy_bundle": "sha256:9f4d2c1a8b3e7f6d5c0a2b9e4f8d1c7a3b6e9d2f5c8a1b4e7f0c3a6d9f2e5b8",
+          "checkpoint_ts_ms": 1750849201000
+        }
+      },
+      "invariant_violated": "The verifier surface (policy_bundle, verifier_id) is declared in the envelope but is not anchored in the restraint_receipt_ref preimage. A verifier cannot prove which policy governed the decision. Per the restraint-receipt-v1 invariant: a terminal receipt cannot be interpreted independently from the verifier surface that produced the decision.",
+      "conformant": false,
+      "verifier_outcome": "REJECT — audit_checkpoints declares a verifier surface that is not anchored in the five-field preimage; the policy binding cannot be verified from the receipt alone"
+    },
+    {
+      "id": "RR-REJECT-005",
+      "label": "policy_bundle digest mismatch — stated hash does not match presented bundle",
+      "description": "A receipt's audit_checkpoints declares a policy_bundle hash. The verifier independently hashes the presented policy bundle and obtains sha256:c3fb74fc… — which does not match the stated sha256:000000…a. The policy binding claim in the receipt is false. A content-addressed verifier MUST reject.",
+      "submitted_receipt": {
+        "action_ref": "388c354e4d9176e5792e535d50204c5fde9aa2c959451d46cae15516c78024cd",
+        "decision_id": "decision-policy-eval-001",
+        "reason_code": "policy_version_expired",
+        "timestamp_ms": 1750850400000,
+        "verdict": "denied",
+        "restraint_receipt_ref": "26d9b84b0ec840a1a3123adc53ea870478e1db4bb259a320d04d5383ad839fa9",
+        "audit_checkpoints": {
+          "verifier_id": "guardrail-agent-v2.safeagent.io",
+          "policy_bundle": "sha256:000000000000000000000000000000000000000000000000000000000000000a",
+          "checkpoint_ts_ms": 1750850401000
+        }
+      },
+      "presented_policy_bundle": {
+        "policy_id": "compliance-v3",
+        "rules": ["no-pii", "rate-limit-100"]
+      },
+      "actual_policy_bundle_hash": "sha256:c3fb74fc664a3ed59a8cb1a46c6c239b930c41f5920269c53120c5fd71af1db9",
+      "invariant_violated": "policy_bundle hash in audit_checkpoints (sha256:000000…a) does not match SHA-256(JCS(presented_bundle)) = sha256:c3fb74fc… — the policy binding claim is false",
+      "conformant": false,
+      "verifier_outcome": "REJECT — policy_bundle digest mismatch; verifier recomputes actual bundle hash c3fb74fc… which does not match stated 000000…a"
+    },
+    {
+      "id": "RR-REJECT-006",
+      "label": "Verifier identity mismatch — audit_checkpoints verifier_id does not match decision record",
+      "description": "A receipt's audit_checkpoints claims verifier_id='policy-verifier-01.mycelium.io', but the decision record referenced by decision_id was produced by 'guardrail-agent-v2.safeagent.io'. A verifier cross-checking the audit_checkpoints against the decision record detects the mismatch and MUST reject. This prevents receipt forgery by swapping verifier identity claims.",
+      "submitted_receipt": {
+        "action_ref": "0ce5df3066d991a034a3bdd00341e2d0ceca4c59db01fe906632c988ec850736",
+        "decision_id": "decision-auth-check-001",
+        "reason_code": "authorization_scope_exceeded",
+        "timestamp_ms": 1750845600000,
+        "verdict": "denied",
+        "restraint_receipt_ref": "6d448dd6fb5235d1e5f83caaadeabb1ecb0a94aa508bb7eaf5d9d0bad07dbee1",
+        "audit_checkpoints": {
+          "verifier_id": "policy-verifier-01.mycelium.io",
+          "policy_bundle": "sha256:b1c2d3e4f5a6b1c2d3e4f5a6b1c2d3e4f5a6b1c2d3e4f5a6b1c2d3e4f5a6b1c2",
+          "checkpoint_ts_ms": 1750845601000
+        }
+      },
+      "decision_record": {
+        "decision_id": "decision-auth-check-001",
+        "verifier_id": "guardrail-agent-v2.safeagent.io"
+      },
+      "invariant_violated": "audit_checkpoints.verifier_id ('policy-verifier-01.mycelium.io') does not match the verifier_id in the decision record ('guardrail-agent-v2.safeagent.io') — verifier identity claim is inconsistent with the decision record",
+      "conformant": false,
+      "verifier_outcome": "REJECT — verifier_id in audit_checkpoints does not match decision record; receipt verifier identity cannot be confirmed"
     }
   ]
 }
