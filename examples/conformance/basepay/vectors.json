@@ -132,5 +132,32 @@
       ],
       "verification_mode": "asserted"
     }
+  ],
+  "negative_vectors": [
+    {
+      "id": "basepay-permit-batch-negative",
+      "status": "PENDING — awaiting osr21 confirmation of calldata fields",
+      "failure_mode": "RECIPIENT_SET_MISMATCH",
+      "description": "A batch permit where the recipient set in the signed calldata differs from the recipient_count declared in the pre-action claim. A verifier MUST reject this: the claim authorized N recipients but the calldata encodes a different set.",
+      "pending_fields": [
+        "calldata field names in the ERC-2612 permit struct (osr21/basepay contract)",
+        "how recipient_count is encoded in calldata — array length vs explicit uint"
+      ],
+      "invariant": "len(calldata.recipients) == claim.recipient_count",
+      "expected_error_code": "RECIPIENT_SET_MISMATCH",
+      "verification_mode": "pending"
+    },
+    {
+      "id": "basepay-x402-relay-negative",
+      "status": "PENDING — awaiting confirmation of API response field name",
+      "failure_mode": "ACTION_REF_MISMATCH",
+      "description": "An x402 relay where the action_ref in the post-execution API response does not match the action_ref computed from the payment header fields. A verifier MUST reject this: the receipt does not correspond to the authorized payment.",
+      "pending_fields": [
+        "field name in x402 API response that carries the action_ref (osr21/basepay — 'action_ref', 'ref', or other)"
+      ],
+      "invariant": "compute_action_ref(payment_header_fields) == api_response.<field>",
+      "expected_error_code": "ACTION_REF_MISMATCH",
+      "verification_mode": "pending"
+    }
   ]
 }

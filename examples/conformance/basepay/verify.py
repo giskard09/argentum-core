@@ -20,6 +20,7 @@ data = json.loads(vectors_path.read_text())
 
 passed = 0
 failed = 0
+pending = 0
 
 for v in data["vectors"]:
     vid = v["id"]
@@ -46,5 +47,11 @@ for v in data["vectors"]:
     print(f"PASS [{vid}] action_ref={computed[:16]}…")
     passed += 1
 
-print(f"\n{passed}/{passed+failed} vectors passed")
+for v in data.get("negative_vectors", []):
+    vid = v["id"]
+    if v.get("verification_mode") == "pending":
+        print(f"SKIP [{vid}] pending — {v.get('status', '')}")
+        pending += 1
+
+print(f"\n{passed}/{passed+failed} positive vectors passed, {pending} negative vectors pending")
 sys.exit(0 if failed == 0 else 1)
