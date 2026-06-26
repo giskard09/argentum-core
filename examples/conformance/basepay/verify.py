@@ -97,5 +97,37 @@ for v in data.get("negative_vectors", []):
             print(f"PASS [{vid}] ACTION_REF_MISMATCH confirmed (relay={relay_ref[:16]}… != stale={stale_ref[:16]}…)")
             passed += 1
 
+    elif vid == "basepay-dispatch-binding-negative":
+        approved = v["approved_envelope"]
+        executed = v["executed_envelope"]
+        # verify approved action_ref matches its preimage
+        ok_hex, actual_hex = verify_bytes_hex(approved["preimage"], approved["preimage_canonical_bytes_hex"])
+        if not ok_hex:
+            print(f"FAIL [{vid}] approved preimage bytes mismatch")
+            failed += 1
+            continue
+        computed_approved = compute_action_ref(approved["preimage"])
+        if computed_approved != approved["action_ref"]:
+            print(f"FAIL [{vid}] approved action_ref doesn't match its own preimage")
+            failed += 1
+            continue
+        # verify executed recomputed_action_ref matches its preimage
+        ok_hex2, actual_hex2 = verify_bytes_hex(executed["preimage"], executed["preimage_canonical_bytes_hex"])
+        if not ok_hex2:
+            print(f"FAIL [{vid}] executed preimage bytes mismatch")
+            failed += 1
+            continue
+        computed_executed = compute_action_ref(executed["preimage"])
+        if computed_executed != executed["recomputed_action_ref"]:
+            print(f"FAIL [{vid}] executed recomputed_action_ref doesn't match preimage")
+            failed += 1
+            continue
+        if computed_approved == computed_executed:
+            print(f"FAIL [{vid}] expected DISPATCH_BINDING_VIOLATION but hashes match")
+            failed += 1
+        else:
+            print(f"PASS [{vid}] DISPATCH_BINDING_VIOLATION confirmed (approved={computed_approved[:16]}… != executed={computed_executed[:16]}…)")
+            passed += 1
+
 print(f"\n{passed}/{passed+failed} vectors passed, {pending} pending")
 sys.exit(0 if failed == 0 else 1)

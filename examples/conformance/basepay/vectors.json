@@ -210,6 +210,38 @@
       "invariant": "compute_action_ref(payment_header_fields) == relay_response.action_ref",
       "expected_error_code": "ACTION_REF_MISMATCH",
       "verification_mode": "asserted"
+    },
+    {
+      "id": "basepay-dispatch-binding-negative",
+      "failure_mode": "DISPATCH_BINDING_VIOLATION",
+      "description": "Transfer where the approved envelope committed scope=basepay:eip3009_gasless_usdc but the executed call used scope=basepay:permit_batch_pay_usdc (different transfer mechanism). The action_ref in the receipt reflects the approved envelope; the verifier recomputes from executed fields and gets a different hash. Verifier MUST reject: approved action_ref != recomputed from executed envelope.",
+      "notes": {
+        "invariant": "The envelope fields committed at approval time (action_type, agent_id, scope, timestamp) MUST match the fields present in the executed transaction. Any field substitution after approval constitutes a dispatch binding violation.",
+        "field": "scope — mechanism substitution between approval and dispatch"
+      },
+      "approved_envelope": {
+        "action_ref": "9e4a428fae35b6657592e05e5efde790b6acd121ef0b5d0aebb8f49d2a93f7ff",
+        "preimage": {
+          "action_type": "basepay:transfer.gasless",
+          "agent_id": "basepay-agentkit",
+          "scope": "basepay:eip3009_gasless_usdc",
+          "timestamp": "2026-06-26T16:00:00.000Z"
+        },
+        "preimage_canonical_bytes_hex": "7b22616374696f6e5f74797065223a22626173657061793a7472616e736665722e6761736c657373222c226167656e745f6964223a22626173657061792d6167656e746b6974222c2273636f7065223a22626173657061793a656970333030395f6761736c6573735f75736463222c2274696d657374616d70223a22323032362d30362d32365431363a30303a30302e3030305a227d"
+      },
+      "executed_envelope": {
+        "preimage": {
+          "action_type": "basepay:transfer.gasless",
+          "agent_id": "basepay-agentkit",
+          "scope": "basepay:permit_batch_pay_usdc",
+          "timestamp": "2026-06-26T16:00:00.000Z"
+        },
+        "preimage_canonical_bytes_hex": "7b22616374696f6e5f74797065223a22626173657061793a7472616e736665722e6761736c657373222c226167656e745f6964223a22626173657061792d6167656e746b6974222c2273636f7065223a22626173657061793a7065726d69745f62617463685f7061795f75736463222c2274696d657374616d70223a22323032362d30362d32365431363a30303a30302e3030305a227d",
+        "recomputed_action_ref": "57a60c990b8462e1c5d0285a04752e40ebccb2a6e722c7210e4c2c3ae9bfc5f9"
+      },
+      "invariant": "compute_action_ref(approved_envelope) == compute_action_ref(executed_envelope)",
+      "expected_error_code": "DISPATCH_BINDING_VIOLATION",
+      "verification_mode": "asserted"
     }
   ]
 }
