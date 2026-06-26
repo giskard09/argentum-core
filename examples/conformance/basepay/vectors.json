@@ -1,0 +1,136 @@
+{
+  "fixture_id": "action-ref-basepay-v1",
+  "version": "v1",
+  "spec": "docs/spec/action-ref.md",
+  "source": "https://github.com/osr21/basepay",
+  "attribution": "osr21/basepay (coinbase/agentkit#1168 comments 4812053464 + 4812153924)",
+  "generated_at": "2026-06-26",
+  "purpose": "Conformance vectors for BasePay payment scenarios. Each vector models a pre-action claim + post-execution receipt pattern. Implementers integrating BasePay with action_ref must reproduce these action_refs byte-identical from the stated preimage fields.",
+  "hash_algo": "sha256",
+  "preimage_format": "jcs-rfc8785-v1",
+  "reproduce_in_python": "import hashlib, json\ndef jcs(obj): return json.dumps(obj, separators=(',',':'), sort_keys=True, ensure_ascii=False)\naction_ref = hashlib.sha256(jcs(preimage).encode()).hexdigest()",
+  "vectors": [
+    {
+      "id": "basepay-eip3009-gasless",
+      "description": "Gasless EIP-3009 transfer. The pre-action claim carries transfer_mechanism, from, to, value, nonce, and valid_before. The relayer address MUST NOT appear in any claim field — the verifier checks relayer_not_in_claim == true.",
+      "preimage": {
+        "action_type": "basepay:transfer.gasless",
+        "agent_id": "basepay-agent",
+        "scope": "basepay:eip3009_gasless_usdc",
+        "timestamp": "2026-06-26T00:00:00.000Z"
+      },
+      "jcs_payload": "{\"action_type\":\"basepay:transfer.gasless\",\"agent_id\":\"basepay-agent\",\"scope\":\"basepay:eip3009_gasless_usdc\",\"timestamp\":\"2026-06-26T00:00:00.000Z\"}",
+      "preimage_canonical_bytes_hex": "7b22616374696f6e5f74797065223a22626173657061793a7472616e736665722e6761736c657373222c226167656e745f6964223a22626173657061792d6167656e74222c2273636f7065223a22626173657061793a656970333030395f6761736c6573735f75736463222c2274696d657374616d70223a22323032362d30362d32365430303a30303a30302e3030305a227d",
+      "action_ref": "71559e4a008ad0cd5976b05404943cc7b585258c4555abc24f425e806c733309",
+      "pre_action_claim": {
+        "transfer_mechanism": "eip3009",
+        "from": "<sender_address>",
+        "to": "<recipient_address>",
+        "value": "<usdc_amount_wei>",
+        "nonce": "<eip3009_nonce>",
+        "valid_before": "<unix_timestamp>"
+      },
+      "invariants": [
+        {
+          "id": "relayer_not_in_claim",
+          "description": "The relayer address that submits the meta-transaction on-chain MUST NOT appear in from, to, or any other field of the pre-action claim. This preserves operator-independence: a verifier can confirm the claim without knowing which relayer was used.",
+          "verify": "relayer_address not in {claim.from, claim.to}"
+        }
+      ],
+      "verification_mode": "asserted"
+    },
+    {
+      "id": "basepay-permit-batch",
+      "description": "Batch pay via ERC-2612 permit. The pre-action claim carries transfer_mechanism, action type, recipient_count, aggregate_usdc_value, per_recipient_max, and memo_hash (SHA-256 of the memo — no secrets in the claim). The gate condition aggregate_usdc_value < session_limit MUST be checked before the permit is signed.",
+      "preimage": {
+        "action_type": "basepay:transfer.batch",
+        "agent_id": "basepay-agent",
+        "scope": "basepay:permit_batch_pay_usdc",
+        "timestamp": "2026-06-26T00:00:00.000Z"
+      },
+      "jcs_payload": "{\"action_type\":\"basepay:transfer.batch\",\"agent_id\":\"basepay-agent\",\"scope\":\"basepay:permit_batch_pay_usdc\",\"timestamp\":\"2026-06-26T00:00:00.000Z\"}",
+      "preimage_canonical_bytes_hex": "7b22616374696f6e5f74797065223a22626173657061793a7472616e736665722e6261746368222c226167656e745f6964223a22626173657061792d6167656e74222c2273636f7065223a22626173657061793a7065726d69745f62617463685f7061795f75736463222c2274696d657374616d70223a22323032362d30362d32365430303a30303a30302e3030305a227d",
+      "action_ref": "8860d83f6f750735157aeab0e931a0a50363efc808b2fe01ee39d32c635078e1",
+      "pre_action_claim": {
+        "transfer_mechanism": "permit",
+        "action": "basepay_batch_pay_usdc",
+        "recipient_count": "<N>",
+        "aggregate_usdc_value": "<total_wei>",
+        "per_recipient_max": "<max_per_recipient_wei>",
+        "memo_hash": "<sha256_of_memo>"
+      },
+      "invariants": [
+        {
+          "id": "aggregate_below_session_limit",
+          "description": "aggregate_usdc_value MUST be strictly less than session_limit before the ERC-2612 permit is signed. A claim that exceeds the session limit MUST be rejected pre-authorization.",
+          "verify": "claim.aggregate_usdc_value < session_limit"
+        },
+        {
+          "id": "memo_hash_no_secrets",
+          "description": "memo_hash is the SHA-256 of the plaintext memo. The plaintext MUST NOT appear in the claim.",
+          "verify": "memo_hash == sha256(plaintext_memo) and plaintext_memo not in claim"
+        }
+      ],
+      "verification_mode": "asserted"
+    },
+    {
+      "id": "basepay-subscription",
+      "description": "Subscription / recurring obligation. The pre-action claim sets creates_recurring_obligation: true, interval_seconds, and amount_per_interval. The post-execution receipt carries the contract address and timestamp of the first charge. Any claim with creates_recurring_obligation == true MUST be routed to human approval before execution.",
+      "preimage": {
+        "action_type": "basepay:subscription.create",
+        "agent_id": "basepay-agent",
+        "scope": "basepay:recurring_obligation",
+        "timestamp": "2026-06-26T00:00:00.000Z"
+      },
+      "jcs_payload": "{\"action_type\":\"basepay:subscription.create\",\"agent_id\":\"basepay-agent\",\"scope\":\"basepay:recurring_obligation\",\"timestamp\":\"2026-06-26T00:00:00.000Z\"}",
+      "preimage_canonical_bytes_hex": "7b22616374696f6e5f74797065223a22626173657061793a737562736372697074696f6e2e637265617465222c226167656e745f6964223a22626173657061792d6167656e74222c2273636f7065223a22626173657061793a726563757272696e675f6f626c69676174696f6e222c2274696d657374616d70223a22323032362d30362d32365430303a30303a30302e3030305a227d",
+      "action_ref": "6e39959dbc5e37f80e8d0bded0ec731f95fd52ff8e1759f8cc999869969e1408",
+      "pre_action_claim": {
+        "creates_recurring_obligation": true,
+        "interval_seconds": "<seconds_between_charges>",
+        "amount_per_interval": "<usdc_amount_wei>"
+      },
+      "post_execution_receipt": {
+        "contract_address": "<subscription_contract_address>",
+        "first_charge_timestamp": "<unix_timestamp>"
+      },
+      "invariants": [
+        {
+          "id": "recurring_requires_human_approval",
+          "description": "Any claim where creates_recurring_obligation == true MUST be routed to a human approval step before the subscription contract is deployed or activated.",
+          "verify": "if claim.creates_recurring_obligation == true then human_approval_confirmed == true"
+        }
+      ],
+      "verification_mode": "asserted"
+    },
+    {
+      "id": "basepay-x402-relay",
+      "description": "x402 relay settlement. The HTTP payment header is the pre-authorization claim (transfer_mechanism: x402). The post-execution receipt anchors the settlement via action_ref. Verifier checks that the payment header fields hash to the same action_ref as the receipt.",
+      "preimage": {
+        "action_type": "basepay:relay.x402",
+        "agent_id": "basepay-agent",
+        "scope": "basepay:x402_settlement",
+        "timestamp": "2026-06-26T00:00:00.000Z"
+      },
+      "jcs_payload": "{\"action_type\":\"basepay:relay.x402\",\"agent_id\":\"basepay-agent\",\"scope\":\"basepay:x402_settlement\",\"timestamp\":\"2026-06-26T00:00:00.000Z\"}",
+      "preimage_canonical_bytes_hex": "7b22616374696f6e5f74797065223a22626173657061793a72656c61792e78343032222c226167656e745f6964223a22626173657061792d6167656e74222c2273636f7065223a22626173657061793a783430325f736574746c656d656e74222c2274696d657374616d70223a22323032362d30362d32365430303a30303a30302e3030305a227d",
+      "action_ref": "b7957abe872f962f2fbdfd21e4f904e62d2743edc7519f2b9f6eda5b5236a98a",
+      "pre_action_claim": {
+        "transfer_mechanism": "x402",
+        "payment_header": "<http_x_payment_header_value>"
+      },
+      "post_execution_receipt": {
+        "action_ref": "b7957abe872f962f2fbdfd21e4f904e62d2743edc7519f2b9f6eda5b5236a98a",
+        "settlement_tx_hash": "<on_chain_tx_hash>"
+      },
+      "invariants": [
+        {
+          "id": "payment_header_action_ref_match",
+          "description": "The action_ref derived from the x402 payment header fields MUST match the action_ref in the post-execution receipt. A mismatch indicates the receipt does not correspond to the authorized payment.",
+          "verify": "compute_action_ref(payment_header_fields) == receipt.action_ref"
+        }
+      ],
+      "verification_mode": "asserted"
+    }
+  ]
+}
