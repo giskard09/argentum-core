@@ -35,6 +35,23 @@
           "id": "relayer_not_in_claim",
           "description": "The relayer address that submits the meta-transaction on-chain MUST NOT appear in from, to, or any other field of the pre-action claim. This preserves operator-independence: a verifier can confirm the claim without knowing which relayer was used.",
           "verify": "relayer_address not in {claim.from, claim.to}"
+        },
+        {
+          "id": "ecrecover_signer_match",
+          "description": "The EIP-712 signature (v, r, s) over the TransferWithAuthorization struct MUST recover to claim.from. Verifier performs this check pre-submission without RPC — pure cryptographic check on the signed struct hash.",
+          "verify": "ecrecover(eip712_hash(from, to, value, validAfter, validBefore, nonce), v, r, s) == claim.from",
+          "note": "Off-chain verifier check only. The on-chain contract (USDC transferWithAuthorization) performs the same ecrecover — verifier replicates it to catch signer mismatches before broadcast."
+        },
+        {
+          "id": "valid_before_not_expired",
+          "description": "block.timestamp at submission MUST be strictly less than validBefore. Verifier checks this against current time before broadcasting.",
+          "verify": "block.timestamp < claim.valid_before"
+        },
+        {
+          "id": "nonce_not_spent",
+          "description": "authorizationState(from, nonce) MUST be false at submission time. Verifier checks on-chain state to prevent replay.",
+          "verify": "authorizationState(claim.from, claim.nonce) == false",
+          "requires": "rpc"
         }
       ],
       "verification_mode": "asserted"
@@ -241,6 +258,70 @@
       },
       "invariant": "compute_action_ref(approved_envelope) == compute_action_ref(executed_envelope)",
       "expected_error_code": "DISPATCH_BINDING_VIOLATION",
+      "verification_mode": "asserted"
+    },
+    {
+      "id": "basepay-eip3009-expired",
+      "failure_mode": "AUTHORIZATION_EXPIRED",
+      "description": "EIP-3009 transfer where block.timestamp >= validBefore at submission time. The authorization window has closed. Verifier MUST reject without RPC — pure timestamp check against current time. Threat model: time-bounded window, not replay.",
+      "notes": {
+        "check": "Pure timestamp comparison — no RPC required. block.timestamp >= claim.valid_before → reject.",
+        "threat_model": "Time-bounded authorization window. Distinct from nonce-spent (replay)."
+      },
+      "claim": {
+        "transfer_mechanism": "eip3009",
+        "from": "0xaaaa000000000000000000000000000000000001",
+        "to": "0xbbbb000000000000000000000000000000000002",
+        "value": "1000000",
+        "nonce": "0xdeadbeef00000000000000000000000000000000000000000000000000000001",
+        "valid_before": 1750953600
+      },
+      "submission_context": {
+        "block_timestamp": 1750953601,
+        "note": "block.timestamp (1750953601) >= validBefore (1750953600) — window expired by 1 second"
+      },
+      "action_ref": "17e3f2b74eba17d1693eebda0aaaf89581bea6b7375732472d3cb85e8d76cfcc",
+      "action_ref_preimage": {
+        "action_type": "basepay:transfer.gasless",
+        "agent_id": "basepay-agentkit",
+        "scope": "basepay:eip3009_gasless_usdc",
+        "timestamp": "2026-06-26T17:00:00.000Z"
+      },
+      "action_ref_preimage_canonical_bytes_hex": "7b22616374696f6e5f74797065223a22626173657061793a7472616e736665722e6761736c657373222c226167656e745f6964223a22626173657061792d6167656e746b6974222c2273636f7065223a22626173657061793a656970333030395f6761736c6573735f75736463222c2274696d657374616d70223a22323032362d30362d32365431373a30303a30302e3030305a227d",
+      "invariant": "block.timestamp < claim.valid_before",
+      "expected_error_code": "AUTHORIZATION_EXPIRED",
+      "verification_mode": "asserted"
+    },
+    {
+      "id": "basepay-eip3009-nonce-spent",
+      "failure_mode": "NONCE_SPENT",
+      "description": "EIP-3009 transfer where authorizationState(from, nonce) == true — the nonce was already used in a prior transfer. Verifier MUST reject after on-chain DB lookup. Threat model: replay attack, not a time window issue.",
+      "notes": {
+        "check": "Requires RPC call: authorizationState(from, nonce) on the USDC contract. Returns bool — true means nonce consumed.",
+        "threat_model": "Replay attack. Distinct from expired (time window). Same nonce, second submission."
+      },
+      "claim": {
+        "transfer_mechanism": "eip3009",
+        "from": "0xcccc000000000000000000000000000000000003",
+        "to": "0xdddd000000000000000000000000000000000004",
+        "value": "2000000",
+        "nonce": "0xdeadbeef00000000000000000000000000000000000000000000000000000002",
+        "valid_before": 1750957200
+      },
+      "on_chain_state": {
+        "authorizationState": true,
+        "note": "authorizationState(0xcccc...0003, 0xdeadbeef...0002) == true — nonce already consumed by a prior transferWithAuthorization"
+      },
+      "action_ref": "42c8c81c91c0773b30800bd062c9d3e8ae3fb8f94d64c7f5678c122097bf867f",
+      "action_ref_preimage": {
+        "action_type": "basepay:transfer.gasless",
+        "agent_id": "basepay-agentkit",
+        "scope": "basepay:eip3009_gasless_usdc",
+        "timestamp": "2026-06-26T18:00:00.000Z"
+      },
+      "action_ref_preimage_canonical_bytes_hex": "7b22616374696f6e5f74797065223a22626173657061793a7472616e736665722e6761736c657373222c226167656e745f6964223a22626173657061792d6167656e746b6974222c2273636f7065223a22626173657061793a656970333030395f6761736c6573735f75736463222c2274696d657374616d70223a22323032362d30362d32365431383a30303a30302e3030305a227d",
+      "invariant": "authorizationState(claim.from, claim.nonce) == false",
+      "expected_error_code": "NONCE_SPENT",
       "verification_mode": "asserted"
     }
   ]

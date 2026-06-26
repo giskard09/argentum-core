@@ -129,5 +129,38 @@ for v in data.get("negative_vectors", []):
             print(f"PASS [{vid}] DISPATCH_BINDING_VIOLATION confirmed (approved={computed_approved[:16]}… != executed={computed_executed[:16]}…)")
             passed += 1
 
+    elif vid in ("basepay-eip3009-expired", "basepay-eip3009-nonce-spent"):
+        # Verify action_ref preimage is internally consistent
+        preimage = v["action_ref_preimage"]
+        ok_hex, actual_hex = verify_bytes_hex(preimage, v["action_ref_preimage_canonical_bytes_hex"])
+        if not ok_hex:
+            print(f"FAIL [{vid}] action_ref preimage bytes mismatch")
+            failed += 1
+            continue
+        computed = compute_action_ref(preimage)
+        if computed != v["action_ref"]:
+            print(f"FAIL [{vid}] action_ref doesn't match preimage")
+            failed += 1
+            continue
+        # Verify the stated failure condition is structurally present
+        if vid == "basepay-eip3009-expired":
+            ctx = v["submission_context"]
+            claim = v["claim"]
+            expired = ctx["block_timestamp"] >= claim["valid_before"]
+            if not expired:
+                print(f"FAIL [{vid}] expected block_timestamp >= valid_before but condition not met")
+                failed += 1
+                continue
+            print(f"PASS [{vid}] AUTHORIZATION_EXPIRED confirmed (block_ts={ctx['block_timestamp']} >= valid_before={claim['valid_before']}, action_ref={computed[:16]}…)")
+            passed += 1
+        elif vid == "basepay-eip3009-nonce-spent":
+            on_chain = v["on_chain_state"]
+            if not on_chain["authorizationState"]:
+                print(f"FAIL [{vid}] expected authorizationState==true but got false")
+                failed += 1
+                continue
+            print(f"PASS [{vid}] NONCE_SPENT confirmed (authorizationState=true, action_ref={computed[:16]}…)")
+            passed += 1
+
 print(f"\n{passed}/{passed+failed} vectors passed, {pending} pending")
 sys.exit(0 if failed == 0 else 1)
