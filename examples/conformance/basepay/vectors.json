@@ -55,9 +55,14 @@
         "transfer_mechanism": "permit",
         "action": "basepay_batch_pay_usdc",
         "recipient_count": "<N>",
+        "recipient_set_hash": "<sha256(json(sort(recipients.map(a=>a.toLowerCase()))))>",
         "aggregate_usdc_value": "<total_wei>",
         "per_recipient_max": "<max_per_recipient_wei>",
         "memo_hash": "<sha256_of_memo>"
+      },
+      "notes": {
+        "recipient_set_hash": "SHA-256 of the JSON-serialized sorted (lowercase) address list. recipient_count == recipients.length in calldata — no explicit field.",
+        "contract": "BatchPayV2 0xe40d...06c68, function batchSendWithPermit"
       },
       "invariants": [
         {
@@ -136,28 +141,75 @@
   "negative_vectors": [
     {
       "id": "basepay-permit-batch-negative",
-      "status": "PENDING — awaiting osr21 confirmation of calldata fields",
       "failure_mode": "RECIPIENT_SET_MISMATCH",
-      "description": "A batch permit where the recipient set in the signed calldata differs from the recipient_count declared in the pre-action claim. A verifier MUST reject this: the claim authorized N recipients but the calldata encodes a different set.",
-      "pending_fields": [
-        "calldata field names in the ERC-2612 permit struct (osr21/basepay contract)",
-        "how recipient_count is encoded in calldata — array length vs explicit uint"
+      "description": "Batch permit where calldata.recipients differs from the set committed in claim.recipient_set_hash. Same recipient_count (3) but address #3 substituted. Verifier MUST reject: sha256(sort(calldata.recipients)) != claim.recipient_set_hash.",
+      "contract": "BatchPayV2 0xe40d...06c68, function batchSendWithPermit",
+      "claim": {
+        "recipient_count": 3,
+        "recipient_set_hash": "dfbdb2c10ac83d4b68a04588c709e774462a5e289077a58cb8bc18b3cc9b65a2",
+        "recipients_sorted": [
+          "0xaaa0000000000000000000000000000000000001",
+          "0xbbb0000000000000000000000000000000000002",
+          "0xccc0000000000000000000000000000000000003"
+        ]
+      },
+      "calldata": {
+        "recipients": [
+          "0xaaa0000000000000000000000000000000000001",
+          "0xbbb0000000000000000000000000000000000002",
+          "0xddd0000000000000000000000000000000000099"
+        ],
+        "recipients_sorted": [
+          "0xaaa0000000000000000000000000000000000001",
+          "0xbbb0000000000000000000000000000000000002",
+          "0xddd0000000000000000000000000000000000099"
+        ],
+        "computed_set_hash": "dea7cc5a6baa206f688dc2e4ea77e2ae31cb50f23722059628379cf03538e238"
+      },
+      "invariants": [
+        {
+          "id": "recipient_set_hash_match",
+          "verify": "sha256(json(sort(calldata.recipients.map(a=>a.toLowerCase())))) == claim.recipient_set_hash"
+        },
+        {
+          "id": "aggregate_within_permit",
+          "verify": "sum(calldata.amounts) <= permitAmount"
+        }
       ],
-      "invariant": "len(calldata.recipients) == claim.recipient_count",
       "expected_error_code": "RECIPIENT_SET_MISMATCH",
-      "verification_mode": "pending"
+      "verification_mode": "asserted"
     },
     {
       "id": "basepay-x402-relay-negative",
-      "status": "PENDING — awaiting confirmation of API response field name",
       "failure_mode": "ACTION_REF_MISMATCH",
-      "description": "An x402 relay where the action_ref in the post-execution API response does not match the action_ref computed from the payment header fields. A verifier MUST reject this: the receipt does not correspond to the authorized payment.",
-      "pending_fields": [
-        "field name in x402 API response that carries the action_ref (osr21/basepay — 'action_ref', 'ref', or other)"
-      ],
-      "invariant": "compute_action_ref(payment_header_fields) == api_response.<field>",
+      "description": "x402 relay where the verifier recomputes action_ref from stale fields (timestamp 60s behind the per-call timestamp used at tx time). relay_response.action_ref carries the real hash; verifier produces a different hash. MUST reject.",
+      "notes": {
+        "timestamp": "per-call — new Date().toISOString() at tx time. Verifier must use the exact timestamp from the relay response, not a cached or reconstructed one.",
+        "field": "relay_response.action_ref (confirmed live in osr21/basepay)"
+      },
+      "relay_response": {
+        "action_ref": "af16646a535d63ee01c1d97a7fe3443300c06be776f3fc36d919073fdf97764f",
+        "preimage": {
+          "action_type": "basepay:relay.x402",
+          "agent_id": "basepay-agent",
+          "scope": "basepay:x402_settlement",
+          "timestamp": "2026-06-26T15:00:00.000Z"
+        },
+        "preimage_canonical_bytes_hex": "7b22616374696f6e5f74797065223a22626173657061793a72656c61792e78343032222c226167656e745f6964223a22626173657061792d6167656e74222c2273636f7065223a22626173657061793a783430325f736574746c656d656e74222c2274696d657374616d70223a22323032362d30362d32365431353a30303a30302e3030305a227d"
+      },
+      "verifier_attempt": {
+        "stale_preimage": {
+          "action_type": "basepay:relay.x402",
+          "agent_id": "basepay-agent",
+          "scope": "basepay:x402_settlement",
+          "timestamp": "2026-06-26T14:59:00.000Z"
+        },
+        "stale_canonical_bytes_hex": "7b22616374696f6e5f74797065223a22626173657061793a72656c61792e78343032222c226167656e745f6964223a22626173657061792d6167656e74222c2273636f7065223a22626173657061793a783430325f736574746c656d656e74222c2274696d657374616d70223a22323032362d30362d32365431343a35393a30302e3030305a227d",
+        "recomputed_action_ref": "fc6b2d45d33af4949446063a7d1c94272dba14d6d89c3e64e9ba8f52ff5196e2"
+      },
+      "invariant": "compute_action_ref(payment_header_fields) == relay_response.action_ref",
       "expected_error_code": "ACTION_REF_MISMATCH",
-      "verification_mode": "pending"
+      "verification_mode": "asserted"
     }
   ]
 }

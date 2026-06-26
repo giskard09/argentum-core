@@ -52,6 +52,50 @@ for v in data.get("negative_vectors", []):
     if v.get("verification_mode") == "pending":
         print(f"SKIP [{vid}] pending — {v.get('status', '')}")
         pending += 1
+        continue
 
-print(f"\n{passed}/{passed+failed} positive vectors passed, {pending} negative vectors pending")
+    if vid == "basepay-permit-batch-negative":
+        claim_hash = v["claim"]["recipient_set_hash"]
+        calldata_hash = v["calldata"]["computed_set_hash"]
+        if claim_hash == calldata_hash:
+            print(f"FAIL [{vid}] expected RECIPIENT_SET_MISMATCH but hashes match")
+            failed += 1
+        else:
+            print(f"PASS [{vid}] RECIPIENT_SET_MISMATCH confirmed (claim={claim_hash[:16]}… != calldata={calldata_hash[:16]}…)")
+            passed += 1
+
+    elif vid == "basepay-x402-relay-negative":
+        relay_ref = v["relay_response"]["action_ref"]
+        # verify relay_response action_ref matches its own preimage
+        relay_preimage = v["relay_response"]["preimage"]
+        ok_hex, actual_hex = verify_bytes_hex(relay_preimage, v["relay_response"]["preimage_canonical_bytes_hex"])
+        if not ok_hex:
+            print(f"FAIL [{vid}] relay_response preimage bytes mismatch")
+            failed += 1
+            continue
+        computed_real = compute_action_ref(relay_preimage)
+        if computed_real != relay_ref:
+            print(f"FAIL [{vid}] relay_response.action_ref doesn't match its own preimage")
+            failed += 1
+            continue
+        # verify stale produces different hash
+        stale_preimage = v["verifier_attempt"]["stale_preimage"]
+        ok_hex2, actual_hex2 = verify_bytes_hex(stale_preimage, v["verifier_attempt"]["stale_canonical_bytes_hex"])
+        if not ok_hex2:
+            print(f"FAIL [{vid}] stale preimage bytes mismatch")
+            failed += 1
+            continue
+        stale_ref = compute_action_ref(stale_preimage)
+        if stale_ref != v["verifier_attempt"]["recomputed_action_ref"]:
+            print(f"FAIL [{vid}] stale action_ref doesn't match expected")
+            failed += 1
+            continue
+        if stale_ref == relay_ref:
+            print(f"FAIL [{vid}] expected ACTION_REF_MISMATCH but hashes match")
+            failed += 1
+        else:
+            print(f"PASS [{vid}] ACTION_REF_MISMATCH confirmed (relay={relay_ref[:16]}… != stale={stale_ref[:16]}…)")
+            passed += 1
+
+print(f"\n{passed}/{passed+failed} vectors passed, {pending} pending")
 sys.exit(0 if failed == 0 else 1)
