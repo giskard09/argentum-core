@@ -162,7 +162,7 @@
   "negative_vectors": [
     {
       "id": "basepay-permit-batch-negative",
-      "authority_source": "ERC-2612 permit signature + calldata (recipient set, amounts, memo)",
+      "authority_source": "calldata recipient set binding",
       "failure_mode": "RECIPIENT_SET_MISMATCH",
       "description": "Batch permit where calldata.recipients differs from the set committed in claim.recipient_set_hash. Same recipient_count (3) but address #3 substituted. Verifier MUST reject: sha256(sort(calldata.recipients)) != claim.recipient_set_hash.",
       "contract": "BatchPayV2 0xe40d...06c68, function batchSendWithPermit",
@@ -203,7 +203,7 @@
     },
     {
       "id": "basepay-x402-relay-negative",
-      "authority_source": "payment header + receipt action_ref binding",
+      "authority_source": "receipt action_ref binding",
       "failure_mode": "ACTION_REF_MISMATCH",
       "description": "x402 relay where the verifier recomputes action_ref from stale fields (timestamp 60s behind the per-call timestamp used at tx time). relay_response.action_ref carries the real hash; verifier produces a different hash. MUST reject.",
       "notes": {
@@ -236,7 +236,7 @@
     },
     {
       "id": "basepay-dispatch-binding-negative",
-      "authority_source": "cross-mechanism — scope field",
+      "authority_source": "scope field — cross-mechanism boundary",
       "failure_mode": "DISPATCH_BINDING_VIOLATION",
       "description": "Transfer where the approved envelope committed scope=basepay:eip3009_gasless_usdc but the executed call used scope=basepay:permit_batch_pay_usdc (different transfer mechanism). The action_ref in the receipt reflects the approved envelope; the verifier recomputes from executed fields and gets a different hash. Verifier MUST reject: approved action_ref != recomputed from executed envelope.",
       "notes": {
@@ -269,7 +269,7 @@
     },
     {
       "id": "basepay-eip3009-expired",
-      "authority_source": "EIP-712 signature over (token, from, to, value, validAfter, validBefore, nonce)",
+      "authority_source": "validBefore timestamp check",
       "failure_mode": "AUTHORIZATION_EXPIRED",
       "description": "EIP-3009 transfer where block.timestamp >= validBefore at submission time. The authorization window has closed. Verifier MUST reject without RPC — pure timestamp check against current time. Threat model: time-bounded window, not replay.",
       "notes": {
@@ -302,7 +302,7 @@
     },
     {
       "id": "basepay-eip3009-nonce-spent",
-      "authority_source": "EIP-712 signature over (token, from, to, value, validAfter, validBefore, nonce)",
+      "authority_source": "authorizationState(from, nonce) == false",
       "failure_mode": "NONCE_SPENT",
       "description": "EIP-3009 transfer where authorizationState(from, nonce) == true — the nonce was already used in a prior transfer. Verifier MUST reject after on-chain DB lookup. Threat model: replay attack, not a time window issue.",
       "notes": {
