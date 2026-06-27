@@ -4,7 +4,7 @@
   "spec": "docs/spec/action-ref.md",
   "source": "https://github.com/osr21/basepay",
   "attribution": "osr21/basepay (coinbase/agentkit#1168 comments 4812053464 + 4812153924)",
-  "generated_at": "2026-06-26",
+  "generated_at": "2026-06-27",
   "purpose": "Conformance vectors for BasePay payment scenarios. Each vector models a pre-action claim + post-execution receipt pattern. Implementers integrating BasePay with action_ref must reproduce these action_refs byte-identical from the stated preimage fields.",
   "hash_algo": "sha256",
   "preimage_format": "jcs-rfc8785-v1",
@@ -16,13 +16,13 @@
       "description": "Gasless EIP-3009 transfer. The pre-action claim carries transfer_mechanism, from, to, value, nonce, and valid_before. The relayer address MUST NOT appear in any claim field — the verifier checks relayer_not_in_claim == true.",
       "preimage": {
         "action_type": "basepay:transfer.gasless",
-        "agent_id": "basepay-agent",
+        "agent_id": "basepay-agentkit",
         "scope": "basepay:eip3009_gasless_usdc",
         "timestamp": "2026-06-26T00:00:00.000Z"
       },
-      "jcs_payload": "{\"action_type\":\"basepay:transfer.gasless\",\"agent_id\":\"basepay-agent\",\"scope\":\"basepay:eip3009_gasless_usdc\",\"timestamp\":\"2026-06-26T00:00:00.000Z\"}",
-      "preimage_canonical_bytes_hex": "7b22616374696f6e5f74797065223a22626173657061793a7472616e736665722e6761736c657373222c226167656e745f6964223a22626173657061792d6167656e74222c2273636f7065223a22626173657061793a656970333030395f6761736c6573735f75736463222c2274696d657374616d70223a22323032362d30362d32365430303a30303a30302e3030305a227d",
-      "action_ref": "71559e4a008ad0cd5976b05404943cc7b585258c4555abc24f425e806c733309",
+      "jcs_payload": "{\"action_type\":\"basepay:transfer.gasless\",\"agent_id\":\"basepay-agentkit\",\"scope\":\"basepay:eip3009_gasless_usdc\",\"timestamp\":\"2026-06-26T00:00:00.000Z\"}",
+      "preimage_canonical_bytes_hex": "7b22616374696f6e5f74797065223a22626173657061793a7472616e736665722e6761736c657373222c226167656e745f6964223a22626173657061792d6167656e746b6974222c2273636f7065223a22626173657061793a656970333030395f6761736c6573735f75736463222c2274696d657374616d70223a22323032362d30362d32365430303a30303a30302e3030305a227d",
+      "action_ref": "bc2821200526e4c26fd289506282941118a0a08230268e1987c3a03cbb529c2b",
       "pre_action_claim": {
         "transfer_mechanism": "eip3009",
         "from": "<sender_address>",
@@ -63,13 +63,13 @@
       "description": "Batch pay via ERC-2612 permit. The pre-action claim carries transfer_mechanism, action type, recipient_count, aggregate_usdc_value, per_recipient_max, and memo_hash (SHA-256 of the memo — no secrets in the claim). The gate condition aggregate_usdc_value < session_limit MUST be checked before the permit is signed.",
       "preimage": {
         "action_type": "basepay:transfer.batch",
-        "agent_id": "basepay-agent",
+        "agent_id": "basepay-agentkit",
         "scope": "basepay:permit_batch_pay_usdc",
         "timestamp": "2026-06-26T00:00:00.000Z"
       },
-      "jcs_payload": "{\"action_type\":\"basepay:transfer.batch\",\"agent_id\":\"basepay-agent\",\"scope\":\"basepay:permit_batch_pay_usdc\",\"timestamp\":\"2026-06-26T00:00:00.000Z\"}",
-      "preimage_canonical_bytes_hex": "7b22616374696f6e5f74797065223a22626173657061793a7472616e736665722e6261746368222c226167656e745f6964223a22626173657061792d6167656e74222c2273636f7065223a22626173657061793a7065726d69745f62617463685f7061795f75736463222c2274696d657374616d70223a22323032362d30362d32365430303a30303a30302e3030305a227d",
-      "action_ref": "8860d83f6f750735157aeab0e931a0a50363efc808b2fe01ee39d32c635078e1",
+      "jcs_payload": "{\"action_type\":\"basepay:transfer.batch\",\"agent_id\":\"basepay-agentkit\",\"scope\":\"basepay:permit_batch_pay_usdc\",\"timestamp\":\"2026-06-26T00:00:00.000Z\"}",
+      "preimage_canonical_bytes_hex": "7b22616374696f6e5f74797065223a22626173657061793a7472616e736665722e6261746368222c226167656e745f6964223a22626173657061792d6167656e746b6974222c2273636f7065223a22626173657061793a7065726d69745f62617463685f7061795f75736463222c2274696d657374616d70223a22323032362d30362d32365430303a30303a30302e3030305a227d",
+      "action_ref": "2715a8165324471a96ef711f34fab94de43f2a864c50ff82efc26dd12d971c05",
       "pre_action_claim": {
         "transfer_mechanism": "permit",
         "action": "basepay_batch_pay_usdc",
@@ -103,13 +103,13 @@
       "description": "Subscription / recurring obligation. The pre-action claim sets creates_recurring_obligation: true, interval_seconds, and amount_per_interval. The post-execution receipt carries the contract address and timestamp of the first charge. Any claim with creates_recurring_obligation == true MUST be routed to human approval before execution.",
       "preimage": {
         "action_type": "basepay:subscription.create",
-        "agent_id": "basepay-agent",
+        "agent_id": "basepay-agentkit",
         "scope": "basepay:recurring_obligation",
         "timestamp": "2026-06-26T00:00:00.000Z"
       },
-      "jcs_payload": "{\"action_type\":\"basepay:subscription.create\",\"agent_id\":\"basepay-agent\",\"scope\":\"basepay:recurring_obligation\",\"timestamp\":\"2026-06-26T00:00:00.000Z\"}",
-      "preimage_canonical_bytes_hex": "7b22616374696f6e5f74797065223a22626173657061793a737562736372697074696f6e2e637265617465222c226167656e745f6964223a22626173657061792d6167656e74222c2273636f7065223a22626173657061793a726563757272696e675f6f626c69676174696f6e222c2274696d657374616d70223a22323032362d30362d32365430303a30303a30302e3030305a227d",
-      "action_ref": "6e39959dbc5e37f80e8d0bded0ec731f95fd52ff8e1759f8cc999869969e1408",
+      "jcs_payload": "{\"action_type\":\"basepay:subscription.create\",\"agent_id\":\"basepay-agentkit\",\"scope\":\"basepay:recurring_obligation\",\"timestamp\":\"2026-06-26T00:00:00.000Z\"}",
+      "preimage_canonical_bytes_hex": "7b22616374696f6e5f74797065223a22626173657061793a737562736372697074696f6e2e637265617465222c226167656e745f6964223a22626173657061792d6167656e746b6974222c2273636f7065223a22626173657061793a726563757272696e675f6f626c69676174696f6e222c2274696d657374616d70223a22323032362d30362d32365430303a30303a30302e3030305a227d",
+      "action_ref": "d9b5431e71a931cc7403654adfc841f5f1e76c6aa123566234c9da448ca3905e",
       "pre_action_claim": {
         "creates_recurring_obligation": true,
         "interval_seconds": "<seconds_between_charges>",
@@ -134,19 +134,19 @@
       "description": "x402 relay settlement. The HTTP payment header is the pre-authorization claim (transfer_mechanism: x402). The post-execution receipt anchors the settlement via action_ref. Verifier checks that the payment header fields hash to the same action_ref as the receipt.",
       "preimage": {
         "action_type": "basepay:relay.x402",
-        "agent_id": "basepay-agent",
+        "agent_id": "basepay-agentkit",
         "scope": "basepay:x402_settlement",
         "timestamp": "2026-06-26T00:00:00.000Z"
       },
-      "jcs_payload": "{\"action_type\":\"basepay:relay.x402\",\"agent_id\":\"basepay-agent\",\"scope\":\"basepay:x402_settlement\",\"timestamp\":\"2026-06-26T00:00:00.000Z\"}",
-      "preimage_canonical_bytes_hex": "7b22616374696f6e5f74797065223a22626173657061793a72656c61792e78343032222c226167656e745f6964223a22626173657061792d6167656e74222c2273636f7065223a22626173657061793a783430325f736574746c656d656e74222c2274696d657374616d70223a22323032362d30362d32365430303a30303a30302e3030305a227d",
-      "action_ref": "b7957abe872f962f2fbdfd21e4f904e62d2743edc7519f2b9f6eda5b5236a98a",
+      "jcs_payload": "{\"action_type\":\"basepay:relay.x402\",\"agent_id\":\"basepay-agentkit\",\"scope\":\"basepay:x402_settlement\",\"timestamp\":\"2026-06-26T00:00:00.000Z\"}",
+      "preimage_canonical_bytes_hex": "7b22616374696f6e5f74797065223a22626173657061793a72656c61792e78343032222c226167656e745f6964223a22626173657061792d6167656e746b6974222c2273636f7065223a22626173657061793a783430325f736574746c656d656e74222c2274696d657374616d70223a22323032362d30362d32365430303a30303a30302e3030305a227d",
+      "action_ref": "b7d2184e8a4e89fd39d64fe493bd656b4e6700e72ffde78acef3866e07585dcf",
       "pre_action_claim": {
         "transfer_mechanism": "x402",
         "payment_header": "<http_x_payment_header_value>"
       },
       "post_execution_receipt": {
-        "action_ref": "b7957abe872f962f2fbdfd21e4f904e62d2743edc7519f2b9f6eda5b5236a98a",
+        "action_ref": "b7d2184e8a4e89fd39d64fe493bd656b4e6700e72ffde78acef3866e07585dcf",
         "settlement_tx_hash": "<on_chain_tx_hash>"
       },
       "invariants": [
@@ -228,109 +228,157 @@
           "timestamp": "2026-06-26T14:59:00.000Z"
         },
         "stale_canonical_bytes_hex": "7b22616374696f6e5f74797065223a22626173657061793a72656c61792e78343032222c226167656e745f6964223a22626173657061792d6167656e746b6974222c2273636f7065223a22626173657061793a783430325f736574746c656d656e74222c2274696d657374616d70223a22323032362d30362d32365431343a35393a30302e3030305a227d",
-        "recomputed_action_ref": "70e42544123de2761cecd1077d91e4205438d2fa7ed398bbaa12ea8e6a8f8235"
+        "recomputed_action_ref": "c4c1da52b5f14df82ea65f89b40d844c58ee5d9a8f462b5a6ef98a0fd08f45a1"
       },
-      "invariant": "compute_action_ref(payment_header_fields) == relay_response.action_ref",
       "expected_error_code": "ACTION_REF_MISMATCH",
       "verification_mode": "asserted"
     },
     {
-      "id": "basepay-dispatch-binding-negative",
-      "authority_source": "scope field — cross-mechanism boundary",
-      "failure_mode": "DISPATCH_BINDING_VIOLATION",
-      "description": "Transfer where the approved envelope committed scope=basepay:eip3009_gasless_usdc but the executed call used scope=basepay:permit_batch_pay_usdc (different transfer mechanism). The action_ref in the receipt reflects the approved envelope; the verifier recomputes from executed fields and gets a different hash. Verifier MUST reject: approved action_ref != recomputed from executed envelope.",
-      "notes": {
-        "invariant": "The envelope fields committed at approval time (action_type, agent_id, scope, timestamp) MUST match the fields present in the executed transaction. Any field substitution after approval constitutes a dispatch binding violation.",
-        "field": "scope — mechanism substitution between approval and dispatch"
-      },
-      "approved_envelope": {
-        "action_ref": "9e4a428fae35b6657592e05e5efde790b6acd121ef0b5d0aebb8f49d2a93f7ff",
-        "preimage": {
-          "action_type": "basepay:transfer.gasless",
-          "agent_id": "basepay-agentkit",
-          "scope": "basepay:eip3009_gasless_usdc",
-          "timestamp": "2026-06-26T16:00:00.000Z"
-        },
-        "preimage_canonical_bytes_hex": "7b22616374696f6e5f74797065223a22626173657061793a7472616e736665722e6761736c657373222c226167656e745f6964223a22626173657061792d6167656e746b6974222c2273636f7065223a22626173657061793a656970333030395f6761736c6573735f75736463222c2274696d657374616d70223a22323032362d30362d32365431363a30303a30302e3030305a227d"
-      },
-      "executed_envelope": {
-        "preimage": {
-          "action_type": "basepay:transfer.gasless",
-          "agent_id": "basepay-agentkit",
-          "scope": "basepay:permit_batch_pay_usdc",
-          "timestamp": "2026-06-26T16:00:00.000Z"
-        },
-        "preimage_canonical_bytes_hex": "7b22616374696f6e5f74797065223a22626173657061793a7472616e736665722e6761736c657373222c226167656e745f6964223a22626173657061792d6167656e746b6974222c2273636f7065223a22626173657061793a7065726d69745f62617463685f7061795f75736463222c2274696d657374616d70223a22323032362d30362d32365431363a30303a30302e3030305a227d",
-        "recomputed_action_ref": "57a60c990b8462e1c5d0285a04752e40ebccb2a6e722c7210e4c2c3ae9bfc5f9"
-      },
-      "invariant": "compute_action_ref(approved_envelope) == compute_action_ref(executed_envelope)",
-      "expected_error_code": "DISPATCH_BINDING_VIOLATION",
-      "verification_mode": "asserted"
-    },
-    {
       "id": "basepay-eip3009-expired",
-      "authority_source": "validBefore timestamp check",
+      "authority_source": "EIP-712 signature over (token, from, to, value, validAfter, validBefore, nonce)",
       "failure_mode": "AUTHORIZATION_EXPIRED",
-      "description": "EIP-3009 transfer where block.timestamp >= validBefore at submission time. The authorization window has closed. Verifier MUST reject without RPC — pure timestamp check against current time. Threat model: time-bounded window, not replay.",
-      "notes": {
-        "check": "Pure timestamp comparison — no RPC required. block.timestamp >= claim.valid_before → reject.",
-        "threat_model": "Time-bounded authorization window. Distinct from nonce-spent (replay)."
-      },
-      "claim": {
-        "transfer_mechanism": "eip3009",
-        "from": "0xaaaa000000000000000000000000000000000001",
-        "to": "0xbbbb000000000000000000000000000000000002",
-        "value": "1000000",
-        "nonce": "0xdeadbeef00000000000000000000000000000000000000000000000000000001",
-        "valid_before": 1750953600
-      },
-      "submission_context": {
-        "block_timestamp": 1750953601,
-        "note": "block.timestamp (1750953601) >= validBefore (1750953600) — window expired by 1 second"
-      },
-      "action_ref": "17e3f2b74eba17d1693eebda0aaaf89581bea6b7375732472d3cb85e8d76cfcc",
+      "description": "EIP-3009 transfer where block.timestamp at submission is >= validBefore. The authorization window has passed — USDC.transferWithAuthorization will revert. Verifier MUST detect this condition before broadcasting.",
       "action_ref_preimage": {
         "action_type": "basepay:transfer.gasless",
         "agent_id": "basepay-agentkit",
         "scope": "basepay:eip3009_gasless_usdc",
-        "timestamp": "2026-06-26T17:00:00.000Z"
+        "timestamp": "2026-06-26T12:00:00.000Z"
       },
-      "action_ref_preimage_canonical_bytes_hex": "7b22616374696f6e5f74797065223a22626173657061793a7472616e736665722e6761736c657373222c226167656e745f6964223a22626173657061792d6167656e746b6974222c2273636f7065223a22626173657061793a656970333030395f6761736c6573735f75736463222c2274696d657374616d70223a22323032362d30362d32365431373a30303a30302e3030305a227d",
-      "invariant": "block.timestamp < claim.valid_before",
+      "action_ref_preimage_canonical_bytes_hex": "7b22616374696f6e5f74797065223a22626173657061793a7472616e736665722e6761736c657373222c226167656e745f6964223a22626173657061792d6167656e746b6974222c2273636f7065223a22626173657061793a656970333030395f6761736c6573735f75736463222c2274696d657374616d70223a22323032362d30362d32365431323a30303a30302e3030305a227d",
+      "action_ref": "18178662c90ef5d844affcbaf2c39b0ef319783313028f0d1eb93998635edacc",
+      "claim": {
+        "from": "0xaaa0000000000000000000000000000000000001",
+        "to": "0xbbb0000000000000000000000000000000000002",
+        "value": "50000000",
+        "nonce": "0xdeadbeef00000000000000000000000000000000000000000000000000000001",
+        "valid_before": 1750896000
+      },
+      "submission_context": {
+        "block_timestamp": 1750896001,
+        "note": "block_timestamp (1750896001) >= valid_before (1750896000) → AUTHORIZATION_EXPIRED"
+      },
+      "invariants": [
+        {
+          "id": "valid_before_not_expired",
+          "description": "Verifier MUST check block.timestamp < claim.valid_before before broadcasting. This vector demonstrates the failure case where the condition is violated.",
+          "verify": "block.timestamp < claim.valid_before",
+          "expected": "FAIL — block.timestamp (1750896001) >= valid_before (1750896000)"
+        }
+      ],
       "expected_error_code": "AUTHORIZATION_EXPIRED",
       "verification_mode": "asserted"
     },
     {
       "id": "basepay-eip3009-nonce-spent",
-      "authority_source": "authorizationState(from, nonce) == false",
+      "authority_source": "EIP-712 signature over (token, from, to, value, validAfter, validBefore, nonce)",
       "failure_mode": "NONCE_SPENT",
-      "description": "EIP-3009 transfer where authorizationState(from, nonce) == true — the nonce was already used in a prior transfer. Verifier MUST reject after on-chain DB lookup. Threat model: replay attack, not a time window issue.",
-      "notes": {
-        "check": "Requires RPC call: authorizationState(from, nonce) on the USDC contract. Returns bool — true means nonce consumed.",
-        "threat_model": "Replay attack. Distinct from expired (time window). Same nonce, second submission."
-      },
-      "claim": {
-        "transfer_mechanism": "eip3009",
-        "from": "0xcccc000000000000000000000000000000000003",
-        "to": "0xdddd000000000000000000000000000000000004",
-        "value": "2000000",
-        "nonce": "0xdeadbeef00000000000000000000000000000000000000000000000000000002",
-        "valid_before": 1750957200
-      },
-      "on_chain_state": {
-        "authorizationState": true,
-        "note": "authorizationState(0xcccc...0003, 0xdeadbeef...0002) == true — nonce already consumed by a prior transferWithAuthorization"
-      },
-      "action_ref": "42c8c81c91c0773b30800bd062c9d3e8ae3fb8f94d64c7f5678c122097bf867f",
+      "description": "EIP-3009 transfer where authorizationState(from, nonce) is already true on-chain — the nonce was used in a prior transfer. USDC.transferWithAuthorization will revert. Verifier MUST check on-chain state before broadcasting.",
       "action_ref_preimage": {
         "action_type": "basepay:transfer.gasless",
         "agent_id": "basepay-agentkit",
         "scope": "basepay:eip3009_gasless_usdc",
-        "timestamp": "2026-06-26T18:00:00.000Z"
+        "timestamp": "2026-06-26T13:00:00.000Z"
       },
-      "action_ref_preimage_canonical_bytes_hex": "7b22616374696f6e5f74797065223a22626173657061793a7472616e736665722e6761736c657373222c226167656e745f6964223a22626173657061792d6167656e746b6974222c2273636f7065223a22626173657061793a656970333030395f6761736c6573735f75736463222c2274696d657374616d70223a22323032362d30362d32365431383a30303a30302e3030305a227d",
-      "invariant": "authorizationState(claim.from, claim.nonce) == false",
+      "action_ref_preimage_canonical_bytes_hex": "7b22616374696f6e5f74797065223a22626173657061793a7472616e736665722e6761736c657373222c226167656e745f6964223a22626173657061792d6167656e746b6974222c2273636f7065223a22626173657061793a656970333030395f6761736c6573735f75736463222c2274696d657374616d70223a22323032362d30362d32365431333a30303a30302e3030305a227d",
+      "action_ref": "b317d7444ea3088d702edb10bdb9e06ac1342913a3a5f34d384fb8f260a3906f",
+      "claim": {
+        "from": "0xaaa0000000000000000000000000000000000001",
+        "to": "0xccc0000000000000000000000000000000000003",
+        "value": "25000000",
+        "nonce": "0xdeadbeef00000000000000000000000000000000000000000000000000000002",
+        "valid_before": 1750982400
+      },
+      "on_chain_state": {
+        "contract": "USDC 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+        "function": "authorizationState(address authorizer, bytes32 nonce) → bool",
+        "authorizationState": true,
+        "note": "authorizationState(from, nonce) == true → nonce already consumed; replay will revert"
+      },
+      "invariants": [
+        {
+          "id": "nonce_not_spent",
+          "description": "Verifier MUST call authorizationState(from, nonce) on the USDC contract before broadcasting. This vector demonstrates the failure case where the nonce is already marked used.",
+          "verify": "authorizationState(claim.from, claim.nonce) == false",
+          "expected": "FAIL — authorizationState returns true (nonce already spent)",
+          "requires": "rpc"
+        }
+      ],
       "expected_error_code": "NONCE_SPENT",
+      "verification_mode": "asserted"
+    },
+    {
+      "id": "basepay-dispatch-binding-negative",
+      "authority_source": "scope field in action_ref preimage",
+      "failure_mode": "DISPATCH_BINDING_VIOLATION",
+      "description": "An agent receives approval for a gasless EIP-3009 transfer (scope: basepay:eip3009_gasless_usdc) but the router dispatches a permit-batch execution (scope: basepay:permit_batch_pay_usdc). The approved and executed action_refs are computed from different scope values — the mismatch is detectable at the dispatch boundary before any wallet interaction.",
+      "approved_envelope": {
+        "preimage": {
+          "action_type": "basepay:transfer.gasless",
+          "agent_id": "basepay-agentkit",
+          "scope": "basepay:eip3009_gasless_usdc",
+          "timestamp": "2026-06-26T14:00:00.000Z"
+        },
+        "preimage_canonical_bytes_hex": "7b22616374696f6e5f74797065223a22626173657061793a7472616e736665722e6761736c657373222c226167656e745f6964223a22626173657061792d6167656e746b6974222c2273636f7065223a22626173657061793a656970333030395f6761736c6573735f75736463222c2274696d657374616d70223a22323032362d30362d32365431343a30303a30302e3030305a227d",
+        "action_ref": "a559d90f82540dbc3af1af44ffa821d6316d3c0f68458f7a5c42398b59f8cf06"
+      },
+      "executed_envelope": {
+        "preimage": {
+          "action_type": "basepay:transfer.batch",
+          "agent_id": "basepay-agentkit",
+          "scope": "basepay:permit_batch_pay_usdc",
+          "timestamp": "2026-06-26T14:00:00.000Z"
+        },
+        "preimage_canonical_bytes_hex": "7b22616374696f6e5f74797065223a22626173657061793a7472616e736665722e6261746368222c226167656e745f6964223a22626173657061792d6167656e746b6974222c2273636f7065223a22626173657061793a7065726d69745f62617463685f7061795f75736463222c2274696d657374616d70223a22323032362d30362d32365431343a30303a30302e3030305a227d",
+        "recomputed_action_ref": "7c3138846772d6c9a37a6fce874482e6f443ce4f671ae4a14c0e31961fe01378"
+      },
+      "invariants": [
+        {
+          "id": "dispatch_scope_match",
+          "description": "The action_ref computed from the executed envelope's preimage MUST equal the action_ref in the approved envelope. A mismatch means the dispatched action is not the approved action.",
+          "verify": "compute_action_ref(executed.preimage) == approved.action_ref",
+          "expected": "FAIL — approved=a559d90f82540dbc… != executed=7c3138846772d6c9…"
+        }
+      ],
+      "expected_error_code": "DISPATCH_BINDING_VIOLATION",
+      "verification_mode": "asserted"
+    },
+    {
+      "id": "basepay-mechanism-scope-mismatch",
+      "authority_source": "scope field in action_ref preimage",
+      "failure_mode": "MECHANISM_SCOPE_MISMATCH",
+      "description": "A pre-action claim approved for the EIP-3009 gasless execution path (scope: basepay:eip3009_gasless_usdc) is presented to the permit-batch execution path (scope: basepay:permit_batch_pay_usdc). The scope field encodes mechanism identity — different scopes produce different action_ref hashes even when agent_id, value, and recipient are identical. The verifier checks claim.action_ref == expected_ref_for_this_execution_path before any wallet signing. This is a claim-validation-time check, not a post-dispatch check.",
+      "claim": {
+        "action_ref": "bc2821200526e4c26fd289506282941118a0a08230268e1987c3a03cbb529c2b",
+        "preimage": {
+          "action_type": "basepay:transfer.gasless",
+          "agent_id": "basepay-agentkit",
+          "scope": "basepay:eip3009_gasless_usdc",
+          "timestamp": "2026-06-26T00:00:00.000Z"
+        },
+        "preimage_canonical_bytes_hex": "7b22616374696f6e5f74797065223a22626173657061793a7472616e736665722e6761736c657373222c226167656e745f6964223a22626173657061792d6167656e746b6974222c2273636f7065223a22626173657061793a656970333030395f6761736c6573735f75736463222c2274696d657374616d70223a22323032362d30362d32365430303a30303a30302e3030305a227d",
+        "scope": "basepay:eip3009_gasless_usdc"
+      },
+      "execution_path": {
+        "expected_scope": "basepay:permit_batch_pay_usdc",
+        "expected_preimage": {
+          "action_type": "basepay:transfer.batch",
+          "agent_id": "basepay-agentkit",
+          "scope": "basepay:permit_batch_pay_usdc",
+          "timestamp": "2026-06-26T00:00:00.000Z"
+        },
+        "expected_preimage_canonical_bytes_hex": "7b22616374696f6e5f74797065223a22626173657061793a7472616e736665722e6261746368222c226167656e745f6964223a22626173657061792d6167656e746b6974222c2273636f7065223a22626173657061793a7065726d69745f62617463685f7061795f75736463222c2274696d657374616d70223a22323032362d30362d32365430303a30303a30302e3030305a227d",
+        "expected_action_ref": "2715a8165324471a96ef711f34fab94de43f2a864c50ff82efc26dd12d971c05"
+      },
+      "invariants": [
+        {
+          "id": "execution_path_scope_match",
+          "description": "Before entering a mechanism-specific execution path, the verifier MUST confirm claim.action_ref == compute_action_ref(preimage_with_this_path_scope). A claim approved for a different mechanism fails before any wallet interaction.",
+          "verify": "claim.action_ref == compute_action_ref({...preimage, scope: execution_path.expected_scope})",
+          "expected": "FAIL — claim.action_ref (bc2821200526e4c2…) != expected (2715a8165324471a…)",
+          "note": "Only the scope field differs between claim and execution_path preimages. Same agent_id, same timestamp, same hash algorithm. Cross-mechanism substitution is detectable without any mechanism-specific logic."
+        }
+      ],
+      "expected_error_code": "MECHANISM_SCOPE_MISMATCH",
       "verification_mode": "asserted"
     }
   ]
