@@ -387,14 +387,15 @@
       "failure_mode": "RECIPIENT_ALLOCATION_MISMATCH",
       "description": "Batch permit where per-recipient amounts are redistributed after policy approval. Same 3-recipient set, same $150 aggregate — so recipient_set_hash and aggregate_usdc are unchanged. Verifier MUST reject: sha256(jcs(normalize(calldata.allocation))) != claim.recipient_allocation_hash.",
       "notes": {
-        "demonstrates": "recipient_set_hash cannot detect intra-set redistribution; recipient_allocation_hash is required",
-        "normalization": "each pair normalized to {to: address.toLowerCase(), amount_atomic: amount.toString()}, sorted by to then amount_atomic, then sha256(jcs(array))"
+        "demonstrates": "recipient_set_hash and aggregate_usdc cannot detect intra-set redistribution; recipient_allocation_hash is required",
+        "normalization": "each pair normalized to {amount_atomic: amount.toString(), to: address.toLowerCase()}, sorted by to then amount_atomic, then sha256(RFC-8785-JCS(array)). RFC 8785 sorts object keys — amount_atomic < to alphabetically.",
+        "jcs_contract": "RFC 8785 + SHA-256 — same contract as all other vectors in this fixture"
       },
       "claim": {
         "recipient_count": 3,
         "recipient_set_hash": "dfbdb2c10ac83d4b68a04588c709e774462a5e289077a58cb8bc18b3cc9b65a2",
         "aggregate_usdc": "150000000",
-        "recipient_allocation_hash": "43caa3a8ddb4351d336498dd1884c2ce8d77d0089cab5e478c021ca8dec648df",
+        "recipient_allocation_hash": "3cd57be1b381c391a201ebc98ef7434eabade8c9e0e52b66df25284195dad87d",
         "approved_allocation": [
           {
             "to": "0xaaa0000000000000000000000000000000000001",
@@ -410,8 +411,8 @@
           }
         ]
       },
-      "claim_allocation_jcs": "[{\"to\":\"0xaaa0000000000000000000000000000000000001\",\"amount_atomic\":\"100000000\"},{\"to\":\"0xbbb0000000000000000000000000000000000002\",\"amount_atomic\":\"30000000\"},{\"to\":\"0xccc0000000000000000000000000000000000003\",\"amount_atomic\":\"20000000\"}]",
-      "claim_allocation_jcs_hex": "5b7b22746f223a22307861616130303030303030303030303030303030303030303030303030303030303030303030303031222c22616d6f756e745f61746f6d6963223a22313030303030303030227d2c7b22746f223a22307862626230303030303030303030303030303030303030303030303030303030303030303030303032222c22616d6f756e745f61746f6d6963223a223330303030303030227d2c7b22746f223a22307863636330303030303030303030303030303030303030303030303030303030303030303030303033222c22616d6f756e745f61746f6d6963223a223230303030303030227d5d",
+      "claim_allocation_jcs": "[{\"amount_atomic\":\"100000000\",\"to\":\"0xaaa0000000000000000000000000000000000001\"},{\"amount_atomic\":\"30000000\",\"to\":\"0xbbb0000000000000000000000000000000000002\"},{\"amount_atomic\":\"20000000\",\"to\":\"0xccc0000000000000000000000000000000000003\"}]",
+      "claim_allocation_jcs_hex": "5b7b22616d6f756e745f61746f6d6963223a22313030303030303030222c22746f223a22307861616130303030303030303030303030303030303030303030303030303030303030303030303031227d2c7b22616d6f756e745f61746f6d6963223a223330303030303030222c22746f223a22307862626230303030303030303030303030303030303030303030303030303030303030303030303032227d2c7b22616d6f756e745f61746f6d6963223a223230303030303030222c22746f223a22307863636330303030303030303030303030303030303030303030303030303030303030303030303033227d5d",
       "calldata": {
         "recipient_count": 3,
         "aggregate_usdc": "150000000",
@@ -429,11 +430,45 @@
             "amount_atomic": "30000000"
           }
         ],
-        "computed_allocation_hash": "fb0dd46c60b4aa4eca8b78c8c8ca2debb3d56dbeb79c59192cfcc66bb7be251a",
+        "computed_allocation_hash": "922b1542dce041c1e52d1fe06bf494c08d308a126f0fedb68b5be297b86c24e6",
         "computed_set_hash": "dfbdb2c10ac83d4b68a04588c709e774462a5e289077a58cb8bc18b3cc9b65a2"
       },
-      "calldata_allocation_jcs": "[{\"to\":\"0xaaa0000000000000000000000000000000000001\",\"amount_atomic\":\"50000000\"},{\"to\":\"0xbbb0000000000000000000000000000000000002\",\"amount_atomic\":\"70000000\"},{\"to\":\"0xccc0000000000000000000000000000000000003\",\"amount_atomic\":\"30000000\"}]",
-      "calldata_allocation_jcs_hex": "5b7b22746f223a22307861616130303030303030303030303030303030303030303030303030303030303030303030303031222c22616d6f756e745f61746f6d6963223a223530303030303030227d2c7b22746f223a22307862626230303030303030303030303030303030303030303030303030303030303030303030303032222c22616d6f756e745f61746f6d6963223a223730303030303030227d2c7b22746f223a22307863636330303030303030303030303030303030303030303030303030303030303030303030303033222c22616d6f756e745f61746f6d6963223a223330303030303030227d5d",
+      "calldata_allocation_jcs": "[{\"amount_atomic\":\"50000000\",\"to\":\"0xaaa0000000000000000000000000000000000001\"},{\"amount_atomic\":\"70000000\",\"to\":\"0xbbb0000000000000000000000000000000000002\"},{\"amount_atomic\":\"30000000\",\"to\":\"0xccc0000000000000000000000000000000000003\"}]",
+      "calldata_allocation_jcs_hex": "5b7b22616d6f756e745f61746f6d6963223a223530303030303030222c22746f223a22307861616130303030303030303030303030303030303030303030303030303030303030303030303031227d2c7b22616d6f756e745f61746f6d6963223a223730303030303030222c22746f223a22307862626230303030303030303030303030303030303030303030303030303030303030303030303032227d2c7b22616d6f756e745f61746f6d6963223a223330303030303030222c22746f223a22307863636330303030303030303030303030303030303030303030303030303030303030303030303033227d5d",
+      "decision_ref_example": {
+        "description": "Invariant 5: decision_ref is recomputable from persisted issued_at_ms + expires_at_ms + recipient_allocation_hash. Verifier recomputes sha256(jcs(preimage)) and checks it equals the stored decision_ref.",
+        "preimage": {
+          "action": "basepay_batch_pay_usdc",
+          "aggregate_usdc": "150000000",
+          "expires_at_ms": 1750953660000,
+          "issued_at_ms": 1750953600000,
+          "policy_version": "cycles-v1",
+          "recipient_allocation_hash": "3cd57be1b381c391a201ebc98ef7434eabade8c9e0e52b66df25284195dad87d",
+          "recipient_count": 3,
+          "transfer_mechanism": "permit"
+        },
+        "preimage_jcs": "{\"action\":\"basepay_batch_pay_usdc\",\"aggregate_usdc\":\"150000000\",\"expires_at_ms\":1750953660000,\"issued_at_ms\":1750953600000,\"policy_version\":\"cycles-v1\",\"recipient_allocation_hash\":\"3cd57be1b381c391a201ebc98ef7434eabade8c9e0e52b66df25284195dad87d\",\"recipient_count\":3,\"transfer_mechanism\":\"permit\"}",
+        "decision_ref": "93e4349808515750b20132dad1e01ad560411e0fdfade14a5e94e7495877b531",
+        "note": "issued_at_ms and expires_at_ms are generated once and stored — not re-read from clock. Expiry check: Date.now() > expires_at_ms against the canonical stored timestamp."
+      },
+      "invariants": [
+        {
+          "id": "recipient_set_hash_unchanged",
+          "verify": "claim.recipient_set_hash == calldata.computed_set_hash"
+        },
+        {
+          "id": "aggregate_usdc_unchanged",
+          "verify": "claim.aggregate_usdc == calldata.aggregate_usdc"
+        },
+        {
+          "id": "allocation_hash_changed",
+          "verify": "claim.recipient_allocation_hash != calldata.computed_allocation_hash"
+        },
+        {
+          "id": "decision_ref_recomputable",
+          "verify": "sha256(jcs({action, aggregate_usdc, expires_at_ms, issued_at_ms, policy_version, recipient_allocation_hash, recipient_count, transfer_mechanism})) == decision_ref_example.decision_ref"
+        }
+      ],
       "expected_error_code": "RECIPIENT_ALLOCATION_MISMATCH",
       "verification_mode": "asserted"
     }
