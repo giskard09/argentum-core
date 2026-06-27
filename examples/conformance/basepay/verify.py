@@ -190,58 +190,80 @@ for v in data.get("negative_vectors", []):
             passed += 1
 
     elif vid == "basepay-permit-batch-redistribution":
-        # verify claim allocation hash matches its own normalized pairs
-        import hashlib as _hl, json as _json
-        def _jcs_arr(arr): return _json.dumps(arr, separators=(',', ':'), ensure_ascii=False)
-        def _sha256(s): return _hl.sha256(s.encode()).hexdigest()
-        def _normalize(pairs): return sorted([{"to": p["to"].lower(), "amount_atomic": str(p["amount_atomic"])} for p in pairs], key=lambda x: (x["to"], x["amount_atomic"]))
+          claim = v["claim"]
+          calldata = v["calldata"]
 
-        claim = v["claim"]
-        calldata = v["calldata"]
+          # --- invariant 1: recipient_set_hash identical on both sides ---
+          if claim["recipient_set_hash"] != calldata["computed_set_hash"]:
+              print(f"FAIL [{vid}] expected recipient_set_hash to be identical for both allocations")
+              failed += 1
+              continue
 
-        # verify claim_allocation_jcs_hex is byte-identical to normalizing approved_allocation
-        approved_norm = _normalize(claim["approved_allocation"])
-        approved_jcs = _jcs_arr(approved_norm)
-        if approved_jcs.encode().hex() != v["claim_allocation_jcs_hex"]:
-            print(f"FAIL [{vid}] claim approved_allocation jcs hex mismatch")
-            failed += 1
-            continue
+          # --- invariant 2: aggregate_usdc identical ---
+          if claim["aggregate_usdc"] != calldata["aggregate_usdc"]:
+              print(f"FAIL [{vid}] expected aggregate_usdc to be identical for both allocations")
+              failed += 1
+              continue
 
-        # verify computed_allocation_hash from claim
-        computed_claim_hash = _sha256(approved_jcs)
-        if computed_claim_hash != claim["recipient_allocation_hash"]:
-            print(f"FAIL [{vid}] claim recipient_allocation_hash doesn't match normalized approved_allocation")
-            failed += 1
-            continue
+          # --- claim allocation: verify stored jcs hex is byte-identical to normalizing approved_allocation ---
+          # uses top-level jcs() (RFC 8785, sort_keys=True) — same contract as the rest of the fixture
+          approved_norm = sorted(
+              [{"amount_atomic": str(p["amount_atomic"]), "to": p["to"].lower()} for p in claim["approved_allocation"]],
+              key=lambda x: (x["to"], x["amount_atomic"])
+          )
+          approved_jcs_bytes = jcs(approved_norm).encode()
+          if approved_jcs_bytes.hex() != v["claim_allocation_jcs_hex"]:
+              print(f"FAIL [{vid}] claim approved_allocation jcs hex mismatch")
+              print(f"  expected: {v['claim_allocation_jcs_hex'][:32]}...")
+              print(f"  got:      {approved_jcs_bytes.hex()[:32]}...")
+              failed += 1
+              continue
+          computed_claim_hash = hashlib.sha256(approved_jcs_bytes).hexdigest()
+          if computed_claim_hash != claim["recipient_allocation_hash"]:
+              print(f"FAIL [{vid}] claim recipient_allocation_hash doesn't match normalized approved_allocation")
+              failed += 1
+              continue
 
-        # verify calldata_allocation_jcs_hex is byte-identical to normalizing executed_allocation
-        executed_norm = _normalize(calldata["executed_allocation"])
-        executed_jcs = _jcs_arr(executed_norm)
-        if executed_jcs.encode().hex() != v["calldata_allocation_jcs_hex"]:
-            print(f"FAIL [{vid}] calldata executed_allocation jcs hex mismatch")
-            failed += 1
-            continue
+          # --- calldata allocation: verify stored jcs hex + hash ---
+          executed_norm = sorted(
+              [{"amount_atomic": str(p["amount_atomic"]), "to": p["to"].lower()} for p in calldata["executed_allocation"]],
+              key=lambda x: (x["to"], x["amount_atomic"])
+          )
+          executed_jcs_bytes = jcs(executed_norm).encode()
+          if executed_jcs_bytes.hex() != v["calldata_allocation_jcs_hex"]:
+              print(f"FAIL [{vid}] calldata executed_allocation jcs hex mismatch")
+              failed += 1
+              continue
+          computed_calldata_hash = hashlib.sha256(executed_jcs_bytes).hexdigest()
+          if computed_calldata_hash != calldata["computed_allocation_hash"]:
+              print(f"FAIL [{vid}] calldata computed_allocation_hash doesn't match normalized executed_allocation")
+              failed += 1
+              continue
 
-        # verify computed_allocation_hash from calldata
-        computed_calldata_hash = _sha256(executed_jcs)
-        if computed_calldata_hash != calldata["computed_allocation_hash"]:
-            print(f"FAIL [{vid}] calldata computed_allocation_hash doesn't match normalized executed_allocation")
-            failed += 1
-            continue
+          # --- invariant 3: allocation hashes must differ ---
+          if computed_claim_hash == computed_calldata_hash:
+              print(f"FAIL [{vid}] expected RECIPIENT_ALLOCATION_MISMATCH but allocation hashes match")
+              failed += 1
+              continue
 
-        # demonstrate recipient_set_hash is identical (proving it cannot detect this)
-        if claim["recipient_set_hash"] != calldata["computed_set_hash"]:
-            print(f"FAIL [{vid}] expected recipient_set_hash to be identical for both allocations")
-            failed += 1
-            continue
+          # --- invariant 4 (asserted, not executable here): rejection before permit signing ---
 
-        # confirm allocation hashes differ (RECIPIENT_ALLOCATION_MISMATCH)
-        if computed_claim_hash == computed_calldata_hash:
-            print(f"FAIL [{vid}] expected RECIPIENT_ALLOCATION_MISMATCH but allocation hashes match")
-            failed += 1
-        else:
-            print(f"PASS [{vid}] RECIPIENT_ALLOCATION_MISMATCH confirmed (claim={computed_claim_hash[:16]}… != calldata={computed_calldata_hash[:16]}…, set_hash identical={claim['recipient_set_hash'][:16]}…)")
-            passed += 1
+          # --- invariant 5: decision_ref recomputable from persisted timestamps + allocation hash ---
+          dr_ex = v.get("decision_ref_example", {})
+          if dr_ex:
+              computed_dr = compute_action_ref(dr_ex["preimage"])
+              if computed_dr != dr_ex["decision_ref"]:
+                  print(f"FAIL [{vid}] decision_ref_example doesn't match its preimage")
+                  failed += 1
+                  continue
 
+          print(f"PASS [{vid}] RECIPIENT_ALLOCATION_MISMATCH confirmed")
+          print(f"  claim_alloc={computed_claim_hash[:16]}\u2026 != calldata_alloc={computed_calldata_hash[:16]}\u2026")
+          print(f"  set_hash identical: {claim['recipient_set_hash'][:16]}\u2026 (proving set_hash insufficient)")
+          if dr_ex:
+              print(f"  decision_ref recomputable: {computed_dr[:16]}\u2026")
+          passed += 1
+
+  
 print(f"\n{passed}/{passed+failed} vectors passed, {pending} pending")
 sys.exit(0 if failed == 0 else 1)
