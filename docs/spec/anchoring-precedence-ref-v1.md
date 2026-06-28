@@ -71,6 +71,8 @@ An independent signer — outside the control of the actor and the executor — 
 
 **Fails when:** the admitting signer is the actor, the executor, or an entity they control. Independence is the property; the identity of the signer is the evidence.
 
+**Co-signer blocks MUST include the published pubkey alongside `issuer` / `kid` / `jws_signature`.** Without the pubkey in the fixture, a referee can only verify the primary admission leg without out-of-band lookup. Both JWS legs must be recomputable from the fixture alone.
+
 ### 3. anchoring_existence
 
 `anchor_block_time` is non-null and the commitment is confirmed by the declared mechanism's external record (block explorer, OTS file, timestamp authority). The anchor must be independently retrievable without querying the actor.
