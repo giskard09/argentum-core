@@ -1,0 +1,186 @@
+{
+  "spec_version": "verifier-key-source-ref-v1",
+  "description": "Negative conformance fixtures for signer_record key-source binding. All six vectors represent admission claims that a lenient verifier might silently accept but that fail at least one signer_record invariant.",
+  "canonical_envelope_ref": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+  "canonical_envelope_note": "SHA-256(JCS(anchoring-precedence-ref-v1 production envelope, trail_id b4377bcd))",
+  "vectors": [
+    {
+      "id": "missing-cosigner-key",
+      "description": "Two-signer admission row. Primary signer_record is complete (embedded key, correct signature_input_hash). Co-signer record has a valid JWS signature but neither public_key_hash nor key_resolution_evidence_hash is present — the co-signer leg is not recomputable from the fixture alone.",
+      "expected": "FAIL",
+      "failure_mode": "missing_cosigner_key",
+      "failure_detail": "signer_records[1].public_key_hash absent and key_resolution_evidence_hash absent. Co-signer leg requires out-of-band key fetch — not independently recomputable.",
+      "signer_records": [
+        {
+          "signer_id": "giskard-admission-v1",
+          "key_id": "giskard-adm-2026-06",
+          "key_source": "embedded",
+          "public_key_hash": "21be9bab247ffb7a84ce62bde8eddb23f14766035763ed8eef78540a53ef1ae4",
+          "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+          "verification_result": "pass",
+          "key_resolution_time": "2026-06-28T10:00:00.000Z",
+          "key_resolution_evidence_hash": "291df308f935d4e16d2b52a03c543976a0753275f501ae0346cecba2ef084be5"
+        },
+        {
+          "signer_id": "external-auditor-v1",
+          "key_id": "ext-aud-key-001",
+          "key_source": "published_jwks",
+          "public_key_hash": null,
+          "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+          "verification_result": "pass",
+          "key_resolution_time": "2026-06-28T10:01:00.000Z",
+          "key_resolution_evidence_hash": null
+        }
+      ]
+    },
+    {
+      "id": "stale-external-key",
+      "description": "Co-signer key resolved from external JWKS. key_resolution_time is 2026-06-29T08:00:00Z, which is after the fixture certification time (2026-06-28T10:00:00Z). The key record post-dates the certified artifact — the key that was used during original admission cannot be confirmed.",
+      "expected": "FAIL",
+      "failure_mode": "stale_external_key",
+      "failure_detail": "signer_records[1].key_resolution_time='2026-06-29T08:00:00.000Z' is after fixture certification time '2026-06-28T10:00:00.000Z'. Key cannot be proven to have been the key in use during original admission.",
+      "fixture_certification_time": "2026-06-28T10:00:00.000Z",
+      "signer_records": [
+        {
+          "signer_id": "giskard-admission-v1",
+          "key_id": "giskard-adm-2026-06",
+          "key_source": "embedded",
+          "public_key_hash": "21be9bab247ffb7a84ce62bde8eddb23f14766035763ed8eef78540a53ef1ae4",
+          "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+          "verification_result": "pass",
+          "key_resolution_time": "2026-06-28T10:00:00.000Z",
+          "key_resolution_evidence_hash": "291df308f935d4e16d2b52a03c543976a0753275f501ae0346cecba2ef084be5"
+        },
+        {
+          "signer_id": "external-auditor-v1",
+          "key_id": "ext-aud-key-001",
+          "key_source": "published_jwks",
+          "public_key_hash": "450d60268f12a08d2911aed1683be228ff5b1bf7416eecd09b41ec6653cc0e19",
+          "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+          "verification_result": "pass",
+          "key_resolution_time": "2026-06-29T08:00:00.000Z",
+          "key_resolution_evidence_hash": "d3bdadc9d6cee5f4fd984e16e7897e3ab1e49c95779a371adb41b6f7453d6bb8"
+        }
+      ]
+    },
+    {
+      "id": "signer-identity-unbound",
+      "description": "Co-signer public key is present and cryptographic verification passes, but signer_id 'anonymous-key-holder' is not linked to any declared verifier role. The key proves ownership of a key pair, not independent admission authority.",
+      "expected": "FAIL",
+      "failure_mode": "signer_identity_unbound",
+      "failure_detail": "signer_records[1].signer_id='anonymous-key-holder' is not bound to a declared verifier role. Cryptographic verification passing does not establish admission independence.",
+      "signer_records": [
+        {
+          "signer_id": "giskard-admission-v1",
+          "key_id": "giskard-adm-2026-06",
+          "key_source": "embedded",
+          "public_key_hash": "21be9bab247ffb7a84ce62bde8eddb23f14766035763ed8eef78540a53ef1ae4",
+          "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+          "verification_result": "pass",
+          "key_resolution_time": "2026-06-28T10:00:00.000Z",
+          "key_resolution_evidence_hash": "291df308f935d4e16d2b52a03c543976a0753275f501ae0346cecba2ef084be5"
+        },
+        {
+          "signer_id": "anonymous-key-holder",
+          "key_id": "anon-key-9f3a",
+          "key_source": "embedded",
+          "public_key_hash": "450d60268f12a08d2911aed1683be228ff5b1bf7416eecd09b41ec6653cc0e19",
+          "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+          "verification_result": "pass",
+          "key_resolution_time": "2026-06-28T10:00:00.000Z",
+          "key_resolution_evidence_hash": "271ff0b58f8dd5e4a2a86e3b848921e91e891742e02aa93d2d488c8e8eea6510",
+          "verification_note": "Cryptographic verification passes. signer_id not bound to any declared role."
+        }
+      ]
+    },
+    {
+      "id": "key-source-ambiguous",
+      "description": "Board reports admission pass. Co-signer record has key_source absent — the verifier cannot determine if the key came from the fixture, a live fetch, a registry, or a cache. The claim is not recomputable because the resolution path is unknown.",
+      "expected": "FAIL",
+      "failure_mode": "key_source_ambiguous",
+      "failure_detail": "signer_records[1].key_source is absent. Without key_source, a verifier cannot determine the resolution path and cannot confirm independent recomputability.",
+      "signer_records": [
+        {
+          "signer_id": "giskard-admission-v1",
+          "key_id": "giskard-adm-2026-06",
+          "key_source": "embedded",
+          "public_key_hash": "21be9bab247ffb7a84ce62bde8eddb23f14766035763ed8eef78540a53ef1ae4",
+          "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+          "verification_result": "pass",
+          "key_resolution_time": "2026-06-28T10:00:00.000Z",
+          "key_resolution_evidence_hash": "291df308f935d4e16d2b52a03c543976a0753275f501ae0346cecba2ef084be5"
+        },
+        {
+          "signer_id": "external-auditor-v1",
+          "key_id": "ext-aud-key-001",
+          "key_source": null,
+          "public_key_hash": "450d60268f12a08d2911aed1683be228ff5b1bf7416eecd09b41ec6653cc0e19",
+          "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+          "verification_result": "pass",
+          "key_resolution_time": "2026-06-28T10:00:00.000Z",
+          "key_resolution_evidence_hash": "271ff0b58f8dd5e4a2a86e3b848921e91e891742e02aa93d2d488c8e8eea6510"
+        }
+      ]
+    },
+    {
+      "id": "signature-input-drift",
+      "description": "Co-signer signature_input_hash is f8dbea22… — SHA-256 of the pretty-printed JSON envelope, not SHA-256(JCS(envelope)) = 906a51a3…. The signer signed different bytes than the canonical envelope. The admission does not bind to the certified artifact.",
+      "expected": "FAIL",
+      "failure_mode": "signature_input_drift",
+      "failure_detail": "signer_records[1].signature_input_hash='f8dbea22…' != canonical_envelope_hash='906a51a3…'. Signer signed pretty-printed JSON bytes, not JCS. Admission is not bound to the canonical certified envelope.",
+      "signer_records": [
+        {
+          "signer_id": "giskard-admission-v1",
+          "key_id": "giskard-adm-2026-06",
+          "key_source": "embedded",
+          "public_key_hash": "21be9bab247ffb7a84ce62bde8eddb23f14766035763ed8eef78540a53ef1ae4",
+          "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+          "verification_result": "pass",
+          "key_resolution_time": "2026-06-28T10:00:00.000Z",
+          "key_resolution_evidence_hash": "291df308f935d4e16d2b52a03c543976a0753275f501ae0346cecba2ef084be5"
+        },
+        {
+          "signer_id": "external-auditor-v1",
+          "key_id": "ext-aud-key-001",
+          "key_source": "embedded",
+          "public_key_hash": "450d60268f12a08d2911aed1683be228ff5b1bf7416eecd09b41ec6653cc0e19",
+          "signature_input_hash": "f8dbea22449bb9f81f5e92b99604d2749f3f65c44c7c6a5105108fe099be1102",
+          "verification_result": "pass",
+          "key_resolution_time": "2026-06-28T10:00:00.000Z",
+          "key_resolution_evidence_hash": "271ff0b58f8dd5e4a2a86e3b848921e91e891742e02aa93d2d488c8e8eea6510",
+          "verification_note": "Signed pretty-printed JSON bytes, not JCS canonical form."
+        }
+      ]
+    },
+    {
+      "id": "multisig-overclaim",
+      "description": "Admission row claims two independent signers. Primary leg is fully recomputable (embedded key, correct signature_input_hash). Co-signer verification_result is 'unverifiable' — key could not be resolved from the fixture. Reporting two-signer recomputation is an overclaim: only one leg is independently recomputable.",
+      "expected": "FAIL",
+      "failure_mode": "multisig_overclaim",
+      "failure_detail": "signer_records[1].verification_result='unverifiable'. Only 1 of 2 signer legs is independently recomputable from the fixture. Claiming two-signer admission recomputation is an overclaim.",
+      "signer_records": [
+        {
+          "signer_id": "giskard-admission-v1",
+          "key_id": "giskard-adm-2026-06",
+          "key_source": "embedded",
+          "public_key_hash": "21be9bab247ffb7a84ce62bde8eddb23f14766035763ed8eef78540a53ef1ae4",
+          "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+          "verification_result": "pass",
+          "key_resolution_time": "2026-06-28T10:00:00.000Z",
+          "key_resolution_evidence_hash": "291df308f935d4e16d2b52a03c543976a0753275f501ae0346cecba2ef084be5"
+        },
+        {
+          "signer_id": "external-auditor-v1",
+          "key_id": "ext-aud-key-001",
+          "key_source": "published_jwks",
+          "public_key_hash": null,
+          "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+          "verification_result": "unverifiable",
+          "key_resolution_time": "2026-06-28T10:01:00.000Z",
+          "key_resolution_evidence_hash": null,
+          "verification_note": "JWKS endpoint returned 404 at resolution time. Key not retrievable from fixture or external source."
+        }
+      ]
+    }
+  ]
+}
