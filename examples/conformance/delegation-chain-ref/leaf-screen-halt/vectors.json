@@ -1,0 +1,77 @@
+{
+  "spec_version": "delegation-chain-ref-v1",
+  "description": "Leaf-screen-halt: a payment-authority delegation chain cannot anchor a PII_BLOCKED screen action. The leaf_action_ref correctly recomputes to the screen's action_ref (leaf-anchoring passes), but the screen's preimage scope is not the authorized leaf hop scope, so the chain is rejected on scope_mismatch_at_leaf. Authorization over a payment does not cover a leaf whose identity is a different action.",
+  "narrowing_rule": "hops[i].scope must equal hops[i-1].scope OR start with hops[i-1].scope + ':'. The wildcard '*' at the end of a scope matches any sub-namespace.",
+  "vectors": [
+    {
+      "id": "leaf-screen-halt-001",
+      "description": "Chain authorizes a payment (mycelium:* -> mycelium:payment -> mycelium:payment:route), but leaf_action_ref anchors a PII_BLOCKED presidio screen (presidio:x402.screen:PII_BLOCKED:EMAIL_ADDRESS,US_SSN). Leaf-anchoring recompute matches the screen action_ref, but the leaf scope is not the authorized leaf hop scope. A payment authorization cannot anchor a screen-halt action.",
+      "expected": "FAIL",
+      "failure_mode": "scope_mismatch_at_leaf",
+      "failure_detail": "leaf_preimage.scope='presidio:x402.screen:PII_BLOCKED:EMAIL_ADDRESS,US_SSN' != hops[-1].scope='mycelium:payment:route'; the PII_BLOCKED screen is a different action than the authorized payment-route leaf.",
+      "chain_artifact": {
+        "chain_id": "chain-leaf-screen-halt-001",
+        "hops": [
+          {
+            "delegatee": "pay-orchestrator",
+            "delegator": "giskard-self",
+            "delegation_ref": "277a250738c0ff39704288c754dc25c3e477494abfb5a48c1918419d8b9ec029",
+            "scope": "mycelium:*"
+          },
+          {
+            "delegatee": "pay-router",
+            "delegator": "pay-orchestrator",
+            "delegation_ref": "6c3332c035909c036bd298541ca2f319c102d5ca50cede0bb7f38f3da7a9e84d",
+            "scope": "mycelium:payment"
+          },
+          {
+            "delegatee": "presidio-screen-agent",
+            "delegator": "pay-router",
+            "delegation_ref": "5f715da34d491de67b42bf61546f43567c82d792654ca416a4cc0e63dfa02811",
+            "scope": "mycelium:payment:route"
+          }
+        ],
+        "leaf_action_ref": "6db0b40bd26984559ebb460b3bad628dd0e4d1230abb1b644752d60717c358b4",
+        "root_delegator": "giskard-self",
+        "scope": "mycelium:*",
+        "version": "delegation-chain-ref-v1"
+      },
+      "delegation_artifacts": [
+        {
+          "capability": "delegate",
+          "delegatee": "pay-orchestrator",
+          "delegator": "giskard-self",
+          "expires_at": "2026-12-31T00:00:00.000Z",
+          "policy_version": "2026-06-01",
+          "scope": "mycelium:*",
+          "version": "delegation-ref-v1"
+        },
+        {
+          "capability": "delegate",
+          "delegatee": "pay-router",
+          "delegator": "pay-orchestrator",
+          "expires_at": "2026-12-31T00:00:00.000Z",
+          "policy_version": "2026-06-01",
+          "scope": "mycelium:payment",
+          "version": "delegation-ref-v1"
+        },
+        {
+          "capability": "delegate",
+          "delegatee": "presidio-screen-agent",
+          "delegator": "pay-router",
+          "expires_at": "2026-12-31T00:00:00.000Z",
+          "policy_version": "2026-06-01",
+          "scope": "mycelium:payment:route",
+          "version": "delegation-ref-v1"
+        }
+      ],
+      "leaf_preimage": {
+        "agent_id": "presidio-screen-agent",
+        "action_type": "pii_screen",
+        "scope": "presidio:x402.screen:PII_BLOCKED:EMAIL_ADDRESS,US_SSN",
+        "timestamp": "2026-06-28T19:30:00.000Z"
+      },
+      "delegation_chain_ref": "ea9cc0163e6635d453eda062ec58ee020c8bdaad06b543001bbb18e11a8dbd8d"
+    }
+  ]
+}
