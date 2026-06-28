@@ -1,0 +1,292 @@
+{
+  "spec_version": "delegation-chain-ref-v1",
+  "description": "Conformance vectors for monotonic scope narrowing invariant. Each hop scope MUST be equal to or a strict subset of its parent hop scope. Scope narrowing is verified by checking that each hop[i].scope is a prefix match (sub-namespace) of hop[i-1].scope, where ':' is the namespace separator.",
+  "narrowing_rule": "hops[i].scope must equal hops[i-1].scope OR start with hops[i-1].scope + ':'. The wildcard '*' at the end of a scope matches any sub-namespace.",
+  "vectors": [
+    {
+      "id": "narrowing-positive-001",
+      "description": "3-hop chain with valid monotonic scope narrowing: mycelium:* -> mycelium:payment -> mycelium:payment:route. chain continuity valid, leaf_action_ref matches hops[-1].scope.",
+      "expected": "PASS",
+      "chain_artifact": {
+        "chain_id": "chain-narrowing-positive-001",
+        "hops": [
+          {
+            "delegatee": "pioneer-agent-001",
+            "delegator": "giskard-self",
+            "delegation_ref": "1a84eeb2c9f96ecf24896c86363c8b734c85c2978d40c4b06f0c69bda16a0816",
+            "scope": "mycelium:*"
+          },
+          {
+            "delegatee": "lightning",
+            "delegator": "pioneer-agent-001",
+            "delegation_ref": "8a1cfa277bf2b7fa6c9f66e3b0315ea42d5ea5134268a8bbfe256dcde184fa5b",
+            "scope": "mycelium:payment"
+          },
+          {
+            "delegatee": "soma-agent",
+            "delegator": "lightning",
+            "delegation_ref": "2668d12058433ae4594e881b3f67c83fe33867c35eacf444e5a3446522dc36aa",
+            "scope": "mycelium:payment:route"
+          }
+        ],
+        "leaf_action_ref": "3434c8811a9aa3ba4ca3694bf690b1550bd0bd5de73db17bb1cfb7cdbcd75182",
+        "root_delegator": "giskard-self",
+        "scope": "mycelium:*",
+        "version": "delegation-chain-ref-v1"
+      },
+      "delegation_artifacts": [
+        {
+          "capability": "delegate",
+          "delegatee": "pioneer-agent-001",
+          "delegator": "giskard-self",
+          "expires_at": "2026-12-31T00:00:00.000Z",
+          "policy_version": "2026-06-01",
+          "scope": "mycelium:*",
+          "version": "delegation-ref-v1"
+        },
+        {
+          "capability": "delegate",
+          "delegatee": "lightning",
+          "delegator": "pioneer-agent-001",
+          "expires_at": "2026-12-31T00:00:00.000Z",
+          "parent_delegation_ref": "1a84eeb2c9f96ecf24896c86363c8b734c85c2978d40c4b06f0c69bda16a0816",
+          "policy_version": "2026-06-01",
+          "scope": "mycelium:payment",
+          "version": "delegation-ref-v1"
+        },
+        {
+          "capability": "payment.route",
+          "delegatee": "soma-agent",
+          "delegator": "lightning",
+          "expires_at": "2026-12-31T00:00:00.000Z",
+          "parent_delegation_ref": "8a1cfa277bf2b7fa6c9f66e3b0315ea42d5ea5134268a8bbfe256dcde184fa5b",
+          "policy_version": "2026-06-01",
+          "scope": "mycelium:payment:route",
+          "version": "delegation-ref-v1"
+        }
+      ],
+      "leaf_preimage": {
+        "agent_id": "soma-agent",
+        "action_type": "payment.route",
+        "scope": "mycelium:payment:route",
+        "timestamp": "2026-06-28T10:00:00.000Z"
+      },
+      "delegation_chain_ref": "27ccaf56bc0c92ded70e1bb710835caa79f42e210691ca3670aa96956c5381d7"
+    },
+    {
+      "id": "narrowing-neg1-scope-widening",
+      "description": "Hop 1 widens scope from mycelium:payment to mycelium:*, which is broader. Non-conformant.",
+      "expected": "FAIL",
+      "failure_mode": "scope_widening",
+      "failure_detail": "hops[1].scope='mycelium:*' is broader than hops[0].scope='mycelium:payment'",
+      "chain_artifact": {
+        "chain_id": "chain-narrowing-neg1-scope-widening",
+        "hops": [
+          {
+            "delegatee": "pioneer-agent-001",
+            "delegator": "giskard-self",
+            "delegation_ref": "e7a936ee9b30fceae7239df32ecb593b60b109f05463f3048740c8bc45f9824a",
+            "scope": "mycelium:payment"
+          },
+          {
+            "delegatee": "lightning",
+            "delegator": "pioneer-agent-001",
+            "delegation_ref": "3d8b2e1b80fa46f4e85ebe645352fa5f41af2eea05c5979aead69ef1047ae08d",
+            "scope": "mycelium:*"
+          },
+          {
+            "delegatee": "soma-agent",
+            "delegator": "lightning",
+            "delegation_ref": "9fbab4c1040f3e7480345eaa21903d6b0c0ca73c3f5ff58b973ec0edfe0b82d3",
+            "scope": "mycelium:payment:route"
+          }
+        ],
+        "leaf_action_ref": "4ac73d3e376b8ddd0ad31cb1445a7f40f547e5ddd20c12649461ed22a1eee81e",
+        "root_delegator": "giskard-self",
+        "scope": "mycelium:payment",
+        "version": "delegation-chain-ref-v1"
+      },
+      "delegation_artifacts": [
+        {
+          "capability": "delegate",
+          "delegatee": "pioneer-agent-001",
+          "delegator": "giskard-self",
+          "expires_at": "2026-12-31T00:00:00.000Z",
+          "policy_version": "2026-06-01",
+          "scope": "mycelium:payment",
+          "version": "delegation-ref-v1"
+        },
+        {
+          "capability": "delegate",
+          "delegatee": "lightning",
+          "delegator": "pioneer-agent-001",
+          "expires_at": "2026-12-31T00:00:00.000Z",
+          "parent_delegation_ref": "e7a936ee9b30fceae7239df32ecb593b60b109f05463f3048740c8bc45f9824a",
+          "policy_version": "2026-06-01",
+          "scope": "mycelium:*",
+          "version": "delegation-ref-v1"
+        },
+        {
+          "capability": "payment.route",
+          "delegatee": "soma-agent",
+          "delegator": "lightning",
+          "expires_at": "2026-12-31T00:00:00.000Z",
+          "parent_delegation_ref": "3d8b2e1b80fa46f4e85ebe645352fa5f41af2eea05c5979aead69ef1047ae08d",
+          "policy_version": "2026-06-01",
+          "scope": "mycelium:payment:route",
+          "version": "delegation-ref-v1"
+        }
+      ],
+      "leaf_preimage": {
+        "agent_id": "soma-agent",
+        "action_type": "payment.route",
+        "scope": "mycelium:payment:route",
+        "timestamp": "2026-06-28T10:01:00.000Z"
+      },
+      "delegation_chain_ref": "c002b2395a3ad3e8d4b050d455305428c746463b64bfad1672b204f19cb544ec"
+    },
+    {
+      "id": "narrowing-neg2-scope-mismatch-leaf",
+      "description": "Chain scopes narrow correctly (mycelium:* -> mycelium:payment -> mycelium:payment:route), but leaf_action_ref is derived from scope='mycelium:payment', not matching hops[-1].scope='mycelium:payment:route'.",
+      "expected": "FAIL",
+      "failure_mode": "scope_mismatch_at_leaf",
+      "failure_detail": "leaf_action_ref preimage scope='mycelium:payment' != hops[-1].scope='mycelium:payment:route'",
+      "chain_artifact": {
+        "chain_id": "chain-narrowing-neg2-scope-mismatch-leaf",
+        "hops": [
+          {
+            "delegatee": "pioneer-agent-001",
+            "delegator": "giskard-self",
+            "delegation_ref": "1a84eeb2c9f96ecf24896c86363c8b734c85c2978d40c4b06f0c69bda16a0816",
+            "scope": "mycelium:*"
+          },
+          {
+            "delegatee": "lightning",
+            "delegator": "pioneer-agent-001",
+            "delegation_ref": "8a1cfa277bf2b7fa6c9f66e3b0315ea42d5ea5134268a8bbfe256dcde184fa5b",
+            "scope": "mycelium:payment"
+          },
+          {
+            "delegatee": "soma-agent",
+            "delegator": "lightning",
+            "delegation_ref": "2668d12058433ae4594e881b3f67c83fe33867c35eacf444e5a3446522dc36aa",
+            "scope": "mycelium:payment:route"
+          }
+        ],
+        "leaf_action_ref": "3b20137acab2a0d5f46f737402d1e625fd5ca172547a0c68397139797bd3fdf5",
+        "root_delegator": "giskard-self",
+        "scope": "mycelium:*",
+        "version": "delegation-chain-ref-v1"
+      },
+      "delegation_artifacts": [
+        {
+          "capability": "delegate",
+          "delegatee": "pioneer-agent-001",
+          "delegator": "giskard-self",
+          "expires_at": "2026-12-31T00:00:00.000Z",
+          "policy_version": "2026-06-01",
+          "scope": "mycelium:*",
+          "version": "delegation-ref-v1"
+        },
+        {
+          "capability": "delegate",
+          "delegatee": "lightning",
+          "delegator": "pioneer-agent-001",
+          "expires_at": "2026-12-31T00:00:00.000Z",
+          "parent_delegation_ref": "1a84eeb2c9f96ecf24896c86363c8b734c85c2978d40c4b06f0c69bda16a0816",
+          "policy_version": "2026-06-01",
+          "scope": "mycelium:payment",
+          "version": "delegation-ref-v1"
+        },
+        {
+          "capability": "payment.route",
+          "delegatee": "soma-agent",
+          "delegator": "lightning",
+          "expires_at": "2026-12-31T00:00:00.000Z",
+          "parent_delegation_ref": "8a1cfa277bf2b7fa6c9f66e3b0315ea42d5ea5134268a8bbfe256dcde184fa5b",
+          "policy_version": "2026-06-01",
+          "scope": "mycelium:payment:route",
+          "version": "delegation-ref-v1"
+        }
+      ],
+      "leaf_preimage": {
+        "agent_id": "soma-agent",
+        "action_type": "payment.route",
+        "scope": "mycelium:payment",
+        "timestamp": "2026-06-28T10:02:00.000Z"
+      },
+      "delegation_chain_ref": "765eb9a630f85b0545dad82d53d95620659ef927cd3c226508c596566ce4b249"
+    },
+    {
+      "id": "narrowing-neg3-chain-break",
+      "description": "hops[0].delegatee='pioneer-agent-001' but hops[1].delegator='rogue-agent'. Chain continuity broken at hop 1.",
+      "expected": "FAIL",
+      "failure_mode": "chain_break",
+      "failure_detail": "hops[0].delegatee='pioneer-agent-001' != hops[1].delegator='rogue-agent'",
+      "chain_artifact": {
+        "chain_id": "chain-narrowing-neg3-chain-break",
+        "hops": [
+          {
+            "delegatee": "pioneer-agent-001",
+            "delegator": "giskard-self",
+            "delegation_ref": "1a84eeb2c9f96ecf24896c86363c8b734c85c2978d40c4b06f0c69bda16a0816",
+            "scope": "mycelium:*"
+          },
+          {
+            "delegatee": "lightning",
+            "delegator": "rogue-agent",
+            "delegation_ref": "3b675936f50655291bc38193406378728d46f96e12058a942db64b2eadfe43fb",
+            "scope": "mycelium:payment"
+          },
+          {
+            "delegatee": "soma-agent",
+            "delegator": "lightning",
+            "delegation_ref": "626bd85aed7e5b029c825428356fee7d6fb9d3c066ee635afd8b73844ce9f6bd",
+            "scope": "mycelium:payment:route"
+          }
+        ],
+        "leaf_action_ref": "1a4cdeadfd7718956ebf07336be3c15d2a64cd6ef50c5eff9c94622bddb1194a",
+        "root_delegator": "giskard-self",
+        "scope": "mycelium:*",
+        "version": "delegation-chain-ref-v1"
+      },
+      "delegation_artifacts": [
+        {
+          "capability": "delegate",
+          "delegatee": "pioneer-agent-001",
+          "delegator": "giskard-self",
+          "expires_at": "2026-12-31T00:00:00.000Z",
+          "policy_version": "2026-06-01",
+          "scope": "mycelium:*",
+          "version": "delegation-ref-v1"
+        },
+        {
+          "capability": "delegate",
+          "delegatee": "lightning",
+          "delegator": "rogue-agent",
+          "expires_at": "2026-12-31T00:00:00.000Z",
+          "policy_version": "2026-06-01",
+          "scope": "mycelium:payment",
+          "version": "delegation-ref-v1"
+        },
+        {
+          "capability": "payment.route",
+          "delegatee": "soma-agent",
+          "delegator": "lightning",
+          "expires_at": "2026-12-31T00:00:00.000Z",
+          "parent_delegation_ref": "3b675936f50655291bc38193406378728d46f96e12058a942db64b2eadfe43fb",
+          "policy_version": "2026-06-01",
+          "scope": "mycelium:payment:route",
+          "version": "delegation-ref-v1"
+        }
+      ],
+      "leaf_preimage": {
+        "agent_id": "soma-agent",
+        "action_type": "payment.route",
+        "scope": "mycelium:payment:route",
+        "timestamp": "2026-06-28T10:03:00.000Z"
+      },
+      "delegation_chain_ref": "94620858a7d2fd7b930d3de1d22dc9f6b7157e50512a8f3e92688b90eefa8a4b"
+    }
+  ]
+}
