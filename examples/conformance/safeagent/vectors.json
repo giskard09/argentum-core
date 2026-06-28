@@ -1,0 +1,42 @@
+{
+  "schema": "action-ref-v1",
+  "author": "azender1",
+  "implementation": "safeagent-exec-guard",
+  "source": "https://github.com/azender1/SafeAgent",
+  "description": "SafeAgent action_ref conformance vectors. action_ref = SHA-256(JCS({agent_id, action_type, scope, timestamp})) per docs/spec/action-ref.md. JCS = RFC 8785 canonical JSON. Implementation in safeagent_exec_guard/mycelium_trail.py:compute_action_ref().",
+  "vectors": [
+    {
+      "description": "erc20_transfer by safeagent-prod",
+      "input": {
+        "agent_id": "safeagent-prod",
+        "action_type": "erc20_transfer",
+        "scope": "req-001",
+        "timestamp": "2026-06-28T10:00:00.000Z"
+      },
+      "canonical_jcs": "{\"action_type\":\"erc20_transfer\",\"agent_id\":\"safeagent-prod\",\"scope\":\"req-001\",\"timestamp\":\"2026-06-28T10:00:00.000Z\"}",
+      "action_ref": "bd9d4d341695bba61c5c04f7fc3c16869dfe1fc33e09f21728ae6b19e522e99b"
+    },
+    {
+      "description": "trade.execute by safeagent-prod",
+      "input": {
+        "agent_id": "safeagent-prod",
+        "action_type": "trade.execute",
+        "scope": "req-002",
+        "timestamp": "2026-06-28T10:01:00.000Z"
+      },
+      "canonical_jcs": "{\"action_type\":\"trade.execute\",\"agent_id\":\"safeagent-prod\",\"scope\":\"req-002\",\"timestamp\":\"2026-06-28T10:01:00.000Z\"}",
+      "action_ref": "aa87ff98e6d3ae164df36b90753171ae4b2cea76392a74d879dc42c383a460f4"
+    },
+    {
+      "description": "payment.settle by EVM agent",
+      "input": {
+        "agent_id": "0x2Dc36fb02357aDa6E210Cb4b0EA783EA5153EAa8",
+        "action_type": "payment.settle",
+        "scope": "req-003",
+        "timestamp": "2026-06-28T10:02:00.000Z"
+      },
+      "canonical_jcs": "{\"action_type\":\"payment.settle\",\"agent_id\":\"0x2Dc36fb02357aDa6E210Cb4b0EA783EA5153EAa8\",\"scope\":\"req-003\",\"timestamp\":\"2026-06-28T10:02:00.000Z\"}",
+      "action_ref": "2d9f6892450e55938fd8647d5f7020d40dcec7087204f0e9e936610995883cf8"
+    }
+  ]
+}
