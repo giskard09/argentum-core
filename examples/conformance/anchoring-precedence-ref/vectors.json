@@ -1,0 +1,159 @@
+{
+  "spec_version": "anchoring-precedence-ref-v1",
+  "description": "Conformance vectors for anchoring-precedence-ref-v1. Five invariants are separately recomputable: canonical_envelope, admission_invariant, anchoring_existence, anchoring_precedence, chain_invariant. A verifier that only checks existence without precedence will silently pass the two critical negative vectors (existence_only_anchor, late_commitment).",
+  "precedence_rule": "anchor_block_time * 1000 < outcome_ts_ms (strict). Equality is not conformant.",
+  "vectors": [
+    {
+      "id": "precedence-positive-001",
+      "description": "Production trail b4377bcd. on-chain Arbitrum anchor at block_time 1782677381 (Unix s), outcome at 1782677980000 ms. Margin 599s. All five invariants pass.",
+      "expected": "PASS",
+      "envelope": {
+        "anchor_block_time": 1782677381,
+        "mechanism": "on-chain",
+        "outcome_ts_ms": 1782677980000,
+        "trail_id": "b4377bcd-7342-4f7d-bdb3-daf41201bd47",
+        "version": "anchoring-precedence-ref-v1"
+      },
+      "anchoring_precedence_ref": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+      "checks": {
+        "canonical_envelope": true,
+        "admission_invariant": true,
+        "anchoring_existence": true,
+        "anchoring_precedence": true,
+        "chain_invariant": true
+      },
+      "admission_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+      "mechanism_detail": {
+        "tier": "on-chain",
+        "clock": "Arbitrum",
+        "anchor_ms": 1782677381000,
+        "precedence": true,
+        "margin_s": 599
+      }
+    },
+    {
+      "id": "existence-only-anchor",
+      "description": "CRITICAL: anchor externally confirmed (anchoring_existence passes), but anchor_block_time * 1000 = 1782678100000 > outcome_ts_ms = 1782677980000. A verifier that only checks existence will silently accept this. anchoring_precedence fails.",
+      "expected": "FAIL",
+      "failure_mode": "anchoring_precedence",
+      "failure_detail": "anchor_block_time * 1000 = 1782678100000 >= outcome_ts_ms = 1782677980000 (anchor is 120s AFTER outcome)",
+      "envelope": {
+        "anchor_block_time": 1782678100,
+        "mechanism": "on-chain",
+        "outcome_ts_ms": 1782677980000,
+        "trail_id": "neg-001-existence-only",
+        "version": "anchoring-precedence-ref-v1"
+      },
+      "anchoring_precedence_ref": "7c48cf6d0f61f54d02a84dc7aa5703a35f849ee9feacae42a1c0bc7c736bf677",
+      "checks": {
+        "canonical_envelope": true,
+        "admission_invariant": true,
+        "anchoring_existence": true,
+        "anchoring_precedence": false,
+        "chain_invariant": true
+      },
+      "mechanism_detail": {
+        "anchor_ms": 1782678100000,
+        "precedence": false,
+        "margin_s": -120
+      }
+    },
+    {
+      "id": "late-commitment",
+      "description": "CRITICAL: anchor externally confirmed 1h after outcome. anchoring_existence passes, anchoring_precedence fails. A lazy verifier checking only existence will silently pass this.",
+      "expected": "FAIL",
+      "failure_mode": "anchoring_precedence",
+      "failure_detail": "anchor_block_time * 1000 = 1782681600000 >= outcome_ts_ms = 1782677980000 (anchor is 3620s AFTER outcome)",
+      "envelope": {
+        "anchor_block_time": 1782681600,
+        "mechanism": "on-chain",
+        "outcome_ts_ms": 1782677980000,
+        "trail_id": "neg-002-late-commitment",
+        "version": "anchoring-precedence-ref-v1"
+      },
+      "anchoring_precedence_ref": "4c74216655b24e7219b4380b63b4fc5f2c5c412ef47dc23f352c9d06af38c902",
+      "checks": {
+        "canonical_envelope": true,
+        "admission_invariant": true,
+        "anchoring_existence": true,
+        "anchoring_precedence": false,
+        "chain_invariant": true
+      },
+      "mechanism_detail": {
+        "anchor_ms": 1782681600000,
+        "precedence": false,
+        "margin_s": -3620
+      }
+    },
+    {
+      "id": "ordering-unanchored",
+      "description": "Internal ordering chain is valid (chain_invariant passes), but anchor_block_time is null — no external commitment exists. anchoring_existence fails. The internal order cannot substitute for an external anchor.",
+      "expected": "FAIL",
+      "failure_mode": "anchoring_existence",
+      "failure_detail": "anchor_block_time is null — no external commitment. Internal ordering is not a valid mechanism for anchoring_existence.",
+      "envelope": {
+        "anchor_block_time": null,
+        "mechanism": "internal-ordering",
+        "outcome_ts_ms": 1782677980000,
+        "trail_id": "neg-003-ordering-unanchored",
+        "version": "anchoring-precedence-ref-v1"
+      },
+      "anchoring_precedence_ref": "542426923ec6e60b07ed0a0e78b7a2dbf5418e6f1d1e31fcfa02e5637cecf66e",
+      "checks": {
+        "canonical_envelope": true,
+        "admission_invariant": true,
+        "anchoring_existence": false,
+        "anchoring_precedence": false,
+        "chain_invariant": true
+      }
+    },
+    {
+      "id": "admission-not-independent",
+      "description": "anchor_block_time precedes outcome (anchoring_precedence passes), but the admitting signer resolves to the actor/executor controller. admission_hash is SHA-256 of the actor_id string, not of the canonical envelope. admission_invariant fails.",
+      "expected": "FAIL",
+      "failure_mode": "admission_invariant",
+      "failure_detail": "admission_hash b1254ee2… = SHA-256('actor-controller-01') — signer resolved to actor controller, not to an independent party. canonical_envelope_hash = f391107e…",
+      "envelope": {
+        "anchor_block_time": 1782677200,
+        "mechanism": "on-chain",
+        "outcome_ts_ms": 1782677980000,
+        "trail_id": "neg-004-admission-not-independent",
+        "version": "anchoring-precedence-ref-v1"
+      },
+      "anchoring_precedence_ref": "f391107ec90ce0c75fdf829e22bb677397a576790d37b644b189e8fdf616c096",
+      "checks": {
+        "canonical_envelope": true,
+        "admission_invariant": false,
+        "anchoring_existence": true,
+        "anchoring_precedence": true,
+        "chain_invariant": true
+      },
+      "admission_hash": "b1254ee214708564d0e02be5d44af051c9778d67da5080ac79184afaa909311b",
+      "admission_hash_note": "SHA-256('actor-controller-01') — signer signed the actor identity string, not the envelope"
+    },
+    {
+      "id": "verdict-binding-failed",
+      "description": "anchor precedes outcome, signer is independent, but admission signed a tampered envelope (extra field injected). admission_hash does not match canonical_envelope_hash. verdict_binding_failed.",
+      "expected": "FAIL",
+      "failure_mode": "verdict_binding_failed",
+      "failure_detail": "canonical_envelope_hash=59cf14da… but admission signed 95f75353… (envelope with injected extra_field). Bytes diverge — binding fails.",
+      "envelope": {
+        "anchor_block_time": 1782677200,
+        "mechanism": "on-chain",
+        "outcome_ts_ms": 1782677980000,
+        "trail_id": "neg-005-verdict-binding-failed",
+        "version": "anchoring-precedence-ref-v1"
+      },
+      "anchoring_precedence_ref": "59cf14da14017617e5b1a3212b9d354b14778363041fc169d14c616bef7be0cb",
+      "checks": {
+        "canonical_envelope": true,
+        "admission_invariant": false,
+        "anchoring_existence": true,
+        "anchoring_precedence": true,
+        "chain_invariant": true
+      },
+      "admission_hash": "95f75353cb06f58e393dbea5d98e052e6dc28f6ad25d46a9e24ca58795b039e0",
+      "admission_hash_note": "SHA-256(JCS(envelope + {extra_field: 'injected'})) — signer signed a mutated envelope"
+    }
+  ]
+}
