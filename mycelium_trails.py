@@ -99,6 +99,20 @@ _DDL_EXTERNAL_NONCES = """
     )
 """
 
+_DDL_BILLING = """
+    CREATE TABLE IF NOT EXISTS billing_events (
+        id           INTEGER PRIMARY KEY AUTOINCREMENT,
+        api_key      TEXT NOT NULL,
+        agent_id     TEXT NOT NULL,
+        trail_id     TEXT NOT NULL,
+        amount_usd   REAL NOT NULL DEFAULT 0.003,
+        billed_at    INTEGER NOT NULL,
+        month_key    TEXT NOT NULL
+    )
+"""
+
+TRAIL_UNIT_PRICE_USD: float = 0.003
+
 _DDL_MIGRATIONS = [
     "ALTER TABLE trails ADD COLUMN scope TEXT",
     "ALTER TABLE trails ADD COLUMN delegation_ref TEXT",
@@ -123,6 +137,7 @@ def init_db(db_path: str) -> None:
         conn.execute(_DDL_PAYG)
         conn.execute(_DDL_USDC_INTENTS)
         conn.execute(_DDL_EXTERNAL_NONCES)
+        conn.execute(_DDL_BILLING)
         for stmt in _DDL_MIGRATIONS:
             try:
                 conn.execute(stmt)
@@ -694,5 +709,36 @@ def set_conformance_source(db_path: str, api_key: str, source: str) -> Optional[
             (api_key,),
         ).fetchone()
         return dict(row) if row else None
+    finally:
+        conn.close()
+
+# ── BILLING ───────────────────────────────────────────────────────────────────
+
+def record_billing_event(db_path: str, api_key: str, agent_id: str, trail_id: str) -> None:
+    """Registra un evento de billing por trail. $0.003 USD por trail. Idempotente por trail_id."""
+    import datetime as _dt
+    now = int(time.time())
+    month_key = _dt.datetime.utcfromtimestamp(now).strftime("%Y-%m")
+    conn = _connect(db_path)
+    try:
+        conn.execute(
+            "INSERT OR IGNORE INTO billing_events (api_key, agent_id, trail_id, amount_usd, billed_at, month_key) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (api_key, agent_id, trail_id, TRAIL_UNIT_PRICE_USD, now, month_key),
+        )
+    finally:
+        conn.close()
+
+
+def get_billing_summary(db_path: str, month_key: str) -> list[dict]:
+    """Retorna resumen de billing por api_key para el mes dado (formato 'YYYY-MM')."""
+    conn = _connect(db_path)
+    try:
+        rows = conn.execute(
+            "SELECT api_key, agent_id, COUNT(*) AS trail_count, SUM(amount_usd) AS total_usd "
+            "FROM billing_events WHERE month_key = ? GROUP BY api_key ORDER BY total_usd DESC",
+            (month_key,),
+        ).fetchall()
+        return [dict(r) for r in rows]
     finally:
         conn.close()

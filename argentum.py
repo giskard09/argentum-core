@@ -2784,6 +2784,7 @@ async def nexus_trail(request: Request):
     preimage = body.get("preimage") or {}
     _origin_raw = body.get("origin", "nexus")
     origin_val = _origin_raw if _origin_raw in ("nexus", "pioneer") else "nexus"
+    billing_api_key = (body.get("api_key") or "").strip() or None
 
     agent_id = preimage.get("agent_id", "")
     action_type = preimage.get("action_type", "")
@@ -2843,6 +2844,14 @@ async def nexus_trail(request: Request):
         _conn = mycelium_trails._connect(TRAILS_DB)
         _conn.execute("UPDATE trails SET action_ref = ? WHERE trail_id = ?", (action_ref, trail_id))
         _conn.close()
+
+        # Billing: $0.003 USD por trail para cuentas con api_key y conformance_source activo
+        if billing_api_key:
+            _bill_acct = mycelium_trails.get_payg_account(TRAILS_DB, billing_api_key)
+            if _bill_acct and _bill_acct.get("conformance_source"):
+                mycelium_trails.record_billing_event(
+                    TRAILS_DB, billing_api_key, _bill_acct["agent_id"], trail_id
+                )
 
         # Anchor on-chain en background — no bloquea la respuesta al cliente
         # Karma solo si el anchor es exitoso (tx_hash != null): karma = actividad verificable on-chain
