@@ -71,6 +71,26 @@ A multi-signer admission claim requires every signer leg to be independently rec
 
 ---
 
+## Conformance Column Split
+
+A conformance board MUST report two distinct columns for multi-signer admission. Collapsing them into a single cell discards the distinction that makes the claim verifiable.
+
+**`admission_independent`** — `admission_invariant` passes with at least one signer whose leg is fully recomputable from the fixture alone. A co-signer block may be present but is not required for this column to pass. A row passes `admission_independent` if any single `signer_record` has `verification_result: pass`, `key_source` declared, `signature_input_hash` equal to the canonical envelope hash, and either `public_key_hash` or `key_resolution_evidence_hash` present.
+
+**`admission_multisig_recomputable`** — `admission_invariant` passes with every declared signer recomputable from the fixture alone. Requires that each co-signer block includes either an embedded `public_key_hash` or a `pinned_registry` entry. `published_jwks` without a pinned `key_resolution_evidence_hash` does not satisfy this column. `cached_prior` without a pinned hash does not satisfy this column.
+
+A row may pass both columns simultaneously if the fixture is sufficiently complete — all signer blocks embedded or pinned, all `signature_input_hash` fields bound to the canonical envelope, all `verification_result` fields `pass`. The board MUST show both columns explicitly and MUST NOT collapse the distinction into a single green cell.
+
+| Scenario | `admission_independent` | `admission_multisig_recomputable` |
+|----------|------------------------|----------------------------------|
+| One signer, embedded key, correct sig input | ✓ | ✓ (single signer = all signers recomputable) |
+| Two signers, both embedded, both correct | ✓ | ✓ |
+| Two signers, primary embedded, co-signer JWKS (no pinned hash) | ✓ | ✗ |
+| Two signers, primary embedded, co-signer key absent | ✓ | ✗ |
+| Two signers, both JWKS without pinned hash | ✗ | ✗ |
+
+---
+
 ## Cross-references
 
 - `anchoring-precedence-ref-v1`: [`docs/spec/anchoring-precedence-ref-v1.md`](./anchoring-precedence-ref-v1.md)
