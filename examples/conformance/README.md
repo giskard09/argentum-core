@@ -244,3 +244,11 @@ mismatch, with no preimage retries, no coercion, and no normalization.
 Standalone runner: `python3 recompute-drift-v1/verify.py` (stdlib only,
 deterministic, exit 0 on full pass). See [`recompute-drift-v1/README.md`](./recompute-drift-v1/README.md)
 for the drift-family table and the explicit not-covered list.
+
+## Conformance methodology
+
+All sets in this directory use embedded_fixture evidence mode: every key,
+canonical byte sequence, and hash needed to reproduce the result is present
+in the fixture. No external key resolution, network fetch, or out-of-band
+trust input is required. A verifier with only the fixture file and a correct
+SHA-256 / Ed25519 implementation reaches the same result as the original run.
