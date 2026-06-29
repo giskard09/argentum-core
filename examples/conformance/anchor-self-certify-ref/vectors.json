@@ -1,0 +1,133 @@
+{
+  "spec_version": "anchor-self-certify-ref-v1",
+  "description": "Reference shape for self-certify + on-chain anchor conformance. Four joins required before anchoring_invariant can flip: signer identity, action_ref recomputation, trail record binding, registry transition. One positive vector; three negatives covering the most common ways an anchor can look valid while failing the governance claim.",
+  "vectors": [
+    {
+      "id": "anchor-self-certify-all-joins-pass",
+      "description": "Positive baseline: all four joins satisfied. Signer identity resolves to declared agent_id. action_ref recomputes from canonical response (governance block excluded). Trail record binds to same action_ref and exposes accepted anchor. block_time * 1000 < outcome_ts_ms. Registry row flips to anchored.",
+      "expected": "PASS",
+      "joins": {
+        "signer_identity": {
+          "governance_signing_key": "3d54caa2a1f4b8e7c2d9f0a3b6e1c4f7d2a5b8e3c6f1d4a7b0e3c6f9d2a5b8e1",
+          "declared_agent_id": "moyan-governance-v1",
+          "key_resolves_to_agent": true,
+          "resolution_source": "sixu-ai.net.cn/.well-known/auth.md"
+        },
+        "action_ref": {
+          "canonical_response_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+          "governance_block_normalization": "excluded_once",
+          "action_ref_recomputed": "a4f7b2e5c8d1f4a7b0e3c6f9d2a5b8e1c4f7d0a3b6e9c2f5d8a1b4e7c0f3d6b9",
+          "action_ref_matches_submitted": true
+        },
+        "trail_record": {
+          "trail_id": "e1b4a7c0-f3d6-b9e2-c5a8-f1d4b7e0c3a6",
+          "action_ref_in_trail": "a4f7b2e5c8d1f4a7b0e3c6f9d2a5b8e1c4f7d0a3b6e9c2f5d8a1b4e7c0f3d6b9",
+          "anchor_point": {
+            "method": "on-chain",
+            "chain": "arbitrum-one",
+            "tx_hash": "b1e4a7c0f3d6b9e2c5a8f1d4b7e0c3a6f9d2b5e8a1c4f7d0b3e6c9f2a5d8b1e4",
+            "block_time": 1782680000
+          },
+          "trail_binds_to_action_ref": true
+        },
+        "registry_transition": {
+          "outcome_ts_ms": 1782680599000,
+          "precedence_check": "block_time * 1000 < outcome_ts_ms",
+          "precedence_check_value": "1782680000000 < 1782680599000",
+          "precedence_margin_ms": 599000,
+          "existence_verified": true,
+          "precedence_verified": true,
+          "allowed_to_flip": true
+        }
+      },
+      "board_result": {
+        "displayed_claim_level": "anchor_precedence_verified",
+        "blocked_reason": null,
+        "registry_row": "anchored"
+      }
+    },
+    {
+      "id": "wrong-signing-key-for-declared-identity",
+      "description": "Signer identity join fails: the governance signing key used for self-certify does not resolve to the declared agent_id. The key is well-formed and the signature is valid — but the key belongs to a different identity. Self-certify creates a candidate record only; the board cannot advance to anchoring_invariant.",
+      "expected": "FAIL",
+      "failure_mode": "self_certify_signature_invalid",
+      "failure_detail": "governance_signing_key resolves to 'other-agent-v1', not 'moyan-governance-v1'. A valid signature from the wrong key is not admission. Identity join fails; remaining joins not evaluated.",
+      "joins": {
+        "signer_identity": {
+          "governance_signing_key": "9f2c5a8b1d4e7f0c3a6b9e2c5f8d1b4e7a0c3f6d9b2e5a8c1f4d7b0e3a6f9c2d5",
+          "declared_agent_id": "moyan-governance-v1",
+          "key_resolves_to_agent": false,
+          "key_resolves_to": "other-agent-v1",
+          "resolution_source": "sixu-ai.net.cn/.well-known/auth.md"
+        }
+      },
+      "board_result": {
+        "displayed_claim_level": null,
+        "blocked_reason": "self_certify_signature_invalid: signing key does not resolve to declared agent_id",
+        "registry_row": "rejected"
+      }
+    },
+    {
+      "id": "action-ref-derived-from-wrong-canonical",
+      "description": "Action_ref join fails: the submitted action_ref was derived from a different canonical response — governance block excluded from a different envelope version. Identity join passes; action_ref recomputation produces a different hash than submitted. Trail cannot be bound.",
+      "expected": "FAIL",
+      "failure_mode": "action_ref_mismatch",
+      "failure_detail": "Submitted action_ref a4f7b2e5... does not recompute from the canonical response with governance block excluded exactly once. Referee derives b7e0c3a6... instead. action_ref join fails; trail_record and registry_transition joins not evaluated.",
+      "joins": {
+        "signer_identity": {
+          "key_resolves_to_agent": true
+        },
+        "action_ref": {
+          "canonical_response_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+          "governance_block_normalization": "excluded_once",
+          "action_ref_recomputed": "b7e0c3a6f9d2b5e8a1c4f7d0b3e6c9f2a5d8b1e4a7c0f3d6b9e2c5a8f1d4b7e0",
+          "action_ref_submitted": "a4f7b2e5c8d1f4a7b0e3c6f9d2a5b8e1c4f7d0a3b6e9c2f5d8a1b4e7c0f3d6b9",
+          "action_ref_matches_submitted": false
+        }
+      },
+      "board_result": {
+        "displayed_claim_level": null,
+        "blocked_reason": "action_ref_mismatch: recomputed hash does not match submitted action_ref",
+        "registry_row": "rejected"
+      }
+    },
+    {
+      "id": "valid-trail-block-time-too-late",
+      "description": "Trail record and signer identity joins pass; precedence fails. tx_hash is real and recomputable. block_time is confirmed. But block_time * 1000 > outcome_ts_ms — the anchor arrived after the outcome. Anchor proves existence; precedence is not established. Registry row stays at anchor_existence_only, not anchor_precedence_verified.",
+      "expected": "FAIL",
+      "failure_mode": "anchor_precedence_failed",
+      "failure_detail": "block_time * 1000 > outcome_ts_ms by 220000ms. The commitment was recorded on-chain after the governed outcome. Existence is independently verifiable from the tx_hash; precedence is not. These are separate invariants — the board must not conflate them.",
+      "joins": {
+        "signer_identity": {
+          "key_resolves_to_agent": true
+        },
+        "action_ref": {
+          "action_ref_matches_submitted": true
+        },
+        "trail_record": {
+          "trail_binds_to_action_ref": true,
+          "anchor_point": {
+            "method": "on-chain",
+            "chain": "arbitrum-one",
+            "tx_hash": "c3a6f9d2b5e8a1c4f7d0b3e6c9f2a5d8b1e4a7c0f3d6b9e2c5a8f1d4b7e0c3a6",
+            "block_time": 1782678200
+          }
+        },
+        "registry_transition": {
+          "outcome_ts_ms": 1782677980000,
+          "precedence_check": "block_time * 1000 < outcome_ts_ms",
+          "precedence_check_value": "1782678200000 < 1782677980000",
+          "precedence_margin_ms": -220000,
+          "existence_verified": true,
+          "precedence_verified": false,
+          "allowed_to_flip": false
+        }
+      },
+      "board_result": {
+        "displayed_claim_level": "anchor_existence_only",
+        "blocked_reason": "anchor_precedence_failed: block_time * 1000 > outcome_ts_ms by 220000ms",
+        "registry_row": "anchor_existence_only"
+      }
+    }
+  ]
+}
