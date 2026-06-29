@@ -43,14 +43,31 @@ attempt's bytes is a binding failure even if the proof itself is valid.
   "version": "execution-join-ref-v1"
 }
 
-// decision_id
+// decision_id (decision evidence object)
 {
   "action_ref": "<sha256-hex>",
+  "canonicalization_profile_id": "<string>",
   "outcome": "permit | deny | defer",
   "policy_id": "<string>",
   "ts_ms": <integer>,
   "version": "execution-join-ref-v1"
 }
+```
+
+`canonicalization_profile_id` is a required field in the decision evidence
+object. The verifier reads it before comparing any digests. If the field is
+absent or names a profile the verifier does not support, the verifier must
+return a failure code specific to that condition — not DIGEST_MISMATCH. This
+ensures that a verifier that only implements JCS cannot silently pass evidence
+encoded with a different canonicalization scheme.
+
+Currently defined profiles:
+
+| profile_id | canonical form |
+|---|---|
+| `jcs-rfc8785-v1` | JSON Canonicalization Scheme (RFC 8785) |
+
+```json
 
 // attempt_id
 {
@@ -86,6 +103,22 @@ Optional. rpelevin's framing: join contract first, anchors after. A
 conformant implementation must pass all five positive invariants without any
 on-chain anchor. Anchoring may be layered on top via
 `anchoring-precedence-ref-v1` once the join record exists.
+
+## Failure code taxonomy
+
+All verifier results map to exactly one of these codes:
+
+| code | condition |
+|---|---|
+| `AUTHORIZED_EFFECTIVE_CALL` | all invariants pass; effective call is bound to a valid decision |
+| `MALFORMED_EVIDENCE` | decision evidence object is missing a required field or is not valid JCS |
+| `UNSUPPORTED_CANONICAL_PROFILE` | `canonicalization_profile_id` is present but the verifier does not implement that profile |
+| `DIGEST_MISMATCH` | profile is supported, all fields are present, but recomputed digest does not match the claimed ref |
+| `EXPIRED_POLICY_BINDING` | decision evidence is structurally valid but `policy_id` was not in force at `ts_ms` |
+
+`VERIFIER_OFFLINE` remains a distinct code when the verifier cannot access the
+preimage material needed to recompute any ref. It does not collapse into
+`MALFORMED_EVIDENCE`.
 
 ## Invariants
 

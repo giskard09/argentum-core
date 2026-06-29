@@ -2,6 +2,8 @@
   "spec_version": "execution-join-ref-v1",
   "description": "Conformance vectors for execution-join-ref-v1. Five invariants are separately recomputable: canonical_envelope, chain_integrity, no_duplicate_attempt, result_uniqueness, proof_binding. A sixth invariant checks effective_call_binding: the dispatched call must bind to the same action_ref the guardrail decided on. Anchoring is optional and not required for any vector here. A verifier that only checks chain_integrity will silently pass DUPLICATE_ATTEMPT, RESULT_ID_CONFLICT, and EFFECTIVE_CALL_REBINDING_FAILED.",
   "chain_rule": "decision_id preimage must include action_ref. result_id preimage must include attempt_id. proof_ref preimage (if present) must include this attempt_id, not a rewrite's.",
+  "canonicalization_note": "decision evidence preimage must include canonicalization_profile_id. Verifier reads this field before comparing any digest. Absent or unsupported profile must return a failure code distinct from DIGEST_MISMATCH.",
+  "failure_codes": ["AUTHORIZED_EFFECTIVE_CALL", "MALFORMED_EVIDENCE", "UNSUPPORTED_CANONICAL_PROFILE", "DIGEST_MISMATCH", "EXPIRED_POLICY_BINDING"],
   "vectors": [
     {
       "id": "execution-join-positive-001",
@@ -82,6 +84,173 @@
         "proof_binding": true
       },
       "note": "This record is identical to execution-join-positive-001 as seen by the verifier. The failure is detected only because the registry already holds a record with this attempt_id."
+    },
+    {
+      "id": "AUTHORIZED_EFFECTIVE_CALL",
+      "description": "Positive case with canonicalization_profile_id present. decision evidence declares jcs-rfc8785-v1. Verifier reads the profile field first, confirms it is supported, then recomputes the digest. All invariants pass. Failure code: AUTHORIZED_EFFECTIVE_CALL.",
+      "expected": "PASS",
+      "failure_code": "AUTHORIZED_EFFECTIVE_CALL",
+      "envelope": {
+        "version": "execution-join-ref-v1",
+        "action_ref": "53138a338b70ac7cb54165e4175f5432384b44092f2968329212a1661f973b02",
+        "decision_id": "f7130bc102fe84edd3435eed4b42cf51c134b9c6d5840fda760a117ed7ec34f3",
+        "attempt_id": "9c796e94c7cbfbc898791bdafffb9f83d676820435dfdecc40899fb341f3c2bf",
+        "result_id": "121a8185d514f8458f0eee59647f9f4f7b84442c7de185680ae4e73d619e99f0",
+        "proof_ref": null
+      },
+      "preimages": {
+        "decision_id": {
+          "action_ref": "53138a338b70ac7cb54165e4175f5432384b44092f2968329212a1661f973b02",
+          "canonicalization_profile_id": "jcs-rfc8785-v1",
+          "outcome": "permit",
+          "policy_id": "stripe-payment-guardrail-v2",
+          "ts_ms": 1782900000050,
+          "version": "execution-join-ref-v1"
+        }
+      },
+      "checks": {
+        "canonical_envelope": true,
+        "chain_integrity": true,
+        "no_duplicate_attempt": true,
+        "result_uniqueness": true,
+        "proof_binding": true,
+        "effective_call_binding": true
+      }
+    },
+    {
+      "id": "MALFORMED_EVIDENCE",
+      "description": "decision evidence object is missing action_ref. Verifier must return MALFORMED_EVIDENCE before attempting digest comparison. A verifier that skips field validation and proceeds to digest comparison will produce an incorrect result.",
+      "expected": "FAIL",
+      "failure_code": "MALFORMED_EVIDENCE",
+      "failure_detail": "decision_id preimage 69401bd3… does not contain action_ref. Required field absent. Verifier must not proceed to digest comparison.",
+      "envelope": {
+        "version": "execution-join-ref-v1",
+        "action_ref": "53138a338b70ac7cb54165e4175f5432384b44092f2968329212a1661f973b02",
+        "decision_id": "69401bd3e78ed1ba06657bb6334d5611476e45bf7862f2ad2f150b777d10b9e2",
+        "attempt_id": "9c796e94c7cbfbc898791bdafffb9f83d676820435dfdecc40899fb341f3c2bf",
+        "result_id": "121a8185d514f8458f0eee59647f9f4f7b84442c7de185680ae4e73d619e99f0",
+        "proof_ref": null
+      },
+      "preimages": {
+        "decision_id": {
+          "canonicalization_profile_id": "jcs-rfc8785-v1",
+          "outcome": "permit",
+          "policy_id": "stripe-payment-guardrail-v2",
+          "ts_ms": 1782900000050,
+          "version": "execution-join-ref-v1"
+        }
+      },
+      "checks": {
+        "canonical_envelope": false,
+        "chain_integrity": false,
+        "no_duplicate_attempt": true,
+        "result_uniqueness": true,
+        "proof_binding": true,
+        "effective_call_binding": false
+      }
+    },
+    {
+      "id": "UNSUPPORTED_CANONICAL_PROFILE",
+      "description": "decision evidence declares canonicalization_profile_id cbor-deterministic-v1, which the verifier does not implement. Verifier must return UNSUPPORTED_CANONICAL_PROFILE, not DIGEST_MISMATCH. A verifier that falls through to its default JCS comparison will produce the wrong failure code.",
+      "expected": "FAIL",
+      "failure_code": "UNSUPPORTED_CANONICAL_PROFILE",
+      "failure_detail": "canonicalization_profile_id cbor-deterministic-v1 is not in the verifier's supported set. Verifier must halt before digest comparison and return UNSUPPORTED_CANONICAL_PROFILE.",
+      "envelope": {
+        "version": "execution-join-ref-v1",
+        "action_ref": "53138a338b70ac7cb54165e4175f5432384b44092f2968329212a1661f973b02",
+        "decision_id": "f978ed243ff4bba7c72d82f5d1f591df6a3f1da88a10afa9886289ef3d80d23c",
+        "attempt_id": "9c796e94c7cbfbc898791bdafffb9f83d676820435dfdecc40899fb341f3c2bf",
+        "result_id": "121a8185d514f8458f0eee59647f9f4f7b84442c7de185680ae4e73d619e99f0",
+        "proof_ref": null
+      },
+      "preimages": {
+        "decision_id": {
+          "action_ref": "53138a338b70ac7cb54165e4175f5432384b44092f2968329212a1661f973b02",
+          "canonicalization_profile_id": "cbor-deterministic-v1",
+          "outcome": "permit",
+          "policy_id": "stripe-payment-guardrail-v2",
+          "ts_ms": 1782900000050,
+          "version": "execution-join-ref-v1"
+        }
+      },
+      "checks": {
+        "canonical_envelope": null,
+        "chain_integrity": null,
+        "no_duplicate_attempt": true,
+        "result_uniqueness": true,
+        "proof_binding": true,
+        "effective_call_binding": null
+      },
+      "note": "null checks indicate the verifier halted before those checks could be performed. UNSUPPORTED_CANONICAL_PROFILE is reported before any digest comparison is attempted."
+    },
+    {
+      "id": "DIGEST_MISMATCH",
+      "description": "canonicalization_profile_id is jcs-rfc8785-v1 (supported), all required fields are present, but action_ref in the decision evidence preimage is wrong bytes (fff…). Recomputed decision_id does not match the claimed value. Failure code: DIGEST_MISMATCH.",
+      "expected": "FAIL",
+      "failure_code": "DIGEST_MISMATCH",
+      "failure_detail": "decision_id 1c9de3c2… recomputes correctly from its declared preimage (which contains action_ref fff…). But fff… ≠ envelope action_ref 53138a33…. The decision evidence was computed over a different action. chain_integrity fails after digest verification.",
+      "envelope": {
+        "version": "execution-join-ref-v1",
+        "action_ref": "53138a338b70ac7cb54165e4175f5432384b44092f2968329212a1661f973b02",
+        "decision_id": "1c9de3c23a027ec8013ba709c2dfb5a4034bcabaf6374e7f28b40aa80e414beb",
+        "attempt_id": "9c796e94c7cbfbc898791bdafffb9f83d676820435dfdecc40899fb341f3c2bf",
+        "result_id": "121a8185d514f8458f0eee59647f9f4f7b84442c7de185680ae4e73d619e99f0",
+        "proof_ref": null
+      },
+      "preimages": {
+        "decision_id": {
+          "action_ref": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "canonicalization_profile_id": "jcs-rfc8785-v1",
+          "outcome": "permit",
+          "policy_id": "stripe-payment-guardrail-v2",
+          "ts_ms": 1782900000050,
+          "version": "execution-join-ref-v1"
+        }
+      },
+      "checks": {
+        "canonical_envelope": true,
+        "chain_integrity": false,
+        "no_duplicate_attempt": true,
+        "result_uniqueness": true,
+        "proof_binding": true,
+        "effective_call_binding": false
+      },
+      "note": "canonical_envelope passes because decision_id correctly hashes its own preimage. chain_integrity fails because the preimage's action_ref does not match the envelope's action_ref. DIGEST_MISMATCH is reported after the profile check succeeds."
+    },
+    {
+      "id": "EXPIRED_POLICY_BINDING",
+      "description": "decision evidence is structurally valid and canonicalization_profile_id is supported, but policy_id stripe-payment-guardrail-v1 expired at 1782800000000 ms, which is before the decision ts_ms 1782900000050. The guardrail was no longer in force when the decision was issued. Failure code: EXPIRED_POLICY_BINDING.",
+      "expected": "FAIL",
+      "failure_code": "EXPIRED_POLICY_BINDING",
+      "failure_detail": "policy_id stripe-payment-guardrail-v1 policy_expires_ms=1782800000000 < ts_ms=1782900000050. Policy was retired 100s before the decision timestamp. Decision was issued under an expired policy binding.",
+      "envelope": {
+        "version": "execution-join-ref-v1",
+        "action_ref": "53138a338b70ac7cb54165e4175f5432384b44092f2968329212a1661f973b02",
+        "decision_id": "7b5e4e5af9832b5d71586179f64070437a76a5dc5c0bef585bbad118177b02e3",
+        "attempt_id": "9c796e94c7cbfbc898791bdafffb9f83d676820435dfdecc40899fb341f3c2bf",
+        "result_id": "121a8185d514f8458f0eee59647f9f4f7b84442c7de185680ae4e73d619e99f0",
+        "proof_ref": null
+      },
+      "preimages": {
+        "decision_id": {
+          "action_ref": "53138a338b70ac7cb54165e4175f5432384b44092f2968329212a1661f973b02",
+          "canonicalization_profile_id": "jcs-rfc8785-v1",
+          "outcome": "permit",
+          "policy_expires_ms": 1782800000000,
+          "policy_id": "stripe-payment-guardrail-v1",
+          "ts_ms": 1782900000050,
+          "version": "execution-join-ref-v1"
+        }
+      },
+      "checks": {
+        "canonical_envelope": true,
+        "chain_integrity": true,
+        "no_duplicate_attempt": true,
+        "result_uniqueness": true,
+        "proof_binding": true,
+        "effective_call_binding": false
+      },
+      "note": "canonical_envelope and chain_integrity both pass — the evidence is internally consistent and the digest is correct. The failure is temporal: the policy that authorized the action was not in force at decision time."
     },
     {
       "id": "NONCONFORMANT_DECISION",
