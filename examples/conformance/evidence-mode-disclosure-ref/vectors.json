@@ -1,12 +1,12 @@
 {
-  "spec_version": "evidence-mode-disclosure-ref-v1",
-  "description": "Producer/referee separation for evidence_mode. A producer hint is disclosure, not control flow. The referee derives evidence_mode from what it actually verified; the board displays the strongest claim that survives recomputation. producer_hint_contradicts_referee is a first-class cross_check finding.",
+  "spec_version": "evidence-mode-disclosure-ref-v2",
+  "description": "Producer/referee separation for evidence_mode. Three-part decomposition: mode_label_match, contract_satisfied, board_result. Labels classify; only contract_satisfied can raise a claim. producer_hint_contract_failed is the key negative: hint label matches, contract fails. On-chain anchor vectors added: block_time < outcome_ts is required for precedence_verified.",
   "canonical_envelope_ref": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
   "canonical_envelope_note": "SHA-256(JCS(anchoring-precedence-ref-v1 production envelope, trail_id b4377bcd))",
   "vectors": [
     {
       "id": "mode-hint-matches-referee",
-      "description": "Baseline: producer declares embedded_fixture; referee finds key material in header and recomputes successfully. Hint matches referee-derived mode. Board displays full claim.",
+      "description": "Baseline: producer declares embedded_fixture; referee finds key material in header and recomputes successfully. Label matches, contract satisfied. Board displays full claim.",
       "expected": "PASS",
       "producer_record": {
         "artifact_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
@@ -25,7 +25,11 @@
         "signature_input_recomputation_result": "pass",
         "claim_level_ceiling": "admission_multisig_recomputable"
       },
-      "cross_check": "producer_hint_matches_referee",
+      "cross_check": {
+        "mode_label_match": true,
+        "contract_satisfied": true,
+        "result": "producer_hint_matches_referee"
+      },
       "board_result": {
         "displayed_claim_level": "admission_multisig_recomputable",
         "blocked_reason": null,
@@ -34,10 +38,10 @@
     },
     {
       "id": "hint-embedded-fixture-key-absent",
-      "description": "Producer declares embedded_fixture. Referee cannot locate public_key_hash or key material in header — recomputation path is broken. Hint recorded as disclosure only; referee derives unverifiable mode. producer_hint_contradicts_referee is the cross_check finding. Claim falls to unverifiable.",
+      "description": "Key negative from rpelevin: producer hint label matches referee mode name, but contract fails. Producer declares embedded_fixture; referee also derives embedded_fixture as the named mode — but public_key_hash is absent, key_hash_recomputed_from_fixture fails. mode_label_match: true, contract_satisfied: false. This is producer_hint_contract_failed, not producer_hint_contradicts_referee. The distinction: _contradicts_referee means the producer named the wrong evidence source; _contract_failed means the producer named a plausible source but did not supply the evidence required to earn it.",
       "expected": "FAIL",
-      "failure_mode": "hint_plausible_contract_unmet",
-      "failure_detail": "Producer declared embedded_fixture but public_key_hash is absent and key material is not present in jws.header.jwk. The contract for embedded_fixture requires the key to be present and recomputable from the fixture alone. Referee cannot establish the recomputation path without out-of-band key fetch.",
+      "failure_mode": "hint_label_matches_contract_fails",
+      "failure_detail": "Producer declared embedded_fixture; referee derives embedded_fixture as mode name. But public_key_hash is absent — key_hash_recomputed_from_fixture fails. Labels agree; contract does not hold. Claim falls to admission_multisig_unverifiable regardless of label match.",
       "producer_record": {
         "artifact_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
         "signer_identity_ref": "external-signer-v1",
@@ -55,19 +59,23 @@
         "signature_input_recomputation_result": "not_attempted",
         "claim_level_ceiling": "admission_multisig_unverifiable"
       },
-      "cross_check": "producer_hint_contradicts_referee",
+      "cross_check": {
+        "mode_label_match": true,
+        "contract_satisfied": false,
+        "result": "producer_hint_contract_failed"
+      },
       "board_result": {
         "displayed_claim_level": "admission_multisig_unverifiable",
         "blocked_reason": "key_material_absent: public_key_hash not present; embedded_fixture contract requires recomputable key in header",
-        "evidence_contract": "embedded_fixture failed: key recomputation path broken"
+        "evidence_contract": "embedded_fixture failed: key recomputation path broken despite label match"
       }
     },
     {
       "id": "hint-pinned-registry-no-resolution-evidence",
-      "description": "Producer declares pinned_registry. Referee finds no key_record_hash, registry_entry_hash, or resolution_time available. The contract for pinned_registry requires all three fields to be present and independently verifiable. Hint recorded as disclosure; referee derives registry_unverifiable. Row falls to admission_independent.",
+      "description": "Producer declares pinned_registry; referee finds no key_record_hash, registry_entry_hash, or resolution_time. Label mismatch: producer names pinned_registry, referee derives embedded_fixture (embedded key still present and recomputable). mode_label_match: false, contract_satisfied: true on the embedded path. This is producer_hint_contradicts_referee — producer named the wrong evidence source. Row falls to admission_independent because the claim level ceiling of the referee-derived mode is lower.",
       "expected": "FAIL",
-      "failure_mode": "hint_plausible_contract_unmet",
-      "failure_detail": "Producer declared pinned_registry but key_record_hash, registry_entry_hash, and resolution_time are all absent from the fixture. The pinned_registry contract requires the referee to independently verify the key against a recorded registry snapshot. Without resolution evidence, the referee cannot establish that the key was the one in use at admission time.",
+      "failure_mode": "hint_label_contradicts_referee",
+      "failure_detail": "Producer declared pinned_registry but key_record_hash, registry_entry_hash, and resolution_time are all absent. Referee cannot verify a registry path. Embedded key is present and recomputable, so referee derives embedded_fixture (not unverifiable). Labels diverge; contract holds on the referee path but at a lower claim ceiling.",
       "producer_record": {
         "artifact_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
         "signer_identity_ref": "external-signer-v1",
@@ -77,19 +85,129 @@
         "canonical_payload_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c"
       },
       "referee_record": {
-        "evidence_mode": "pinned_registry_unverifiable",
+        "evidence_mode": "embedded_fixture",
         "evidence_mode_source": "hint_accepted_as_disclosure_only",
-        "evidence_fields_inspected": ["key_record_hash", "registry_entry_hash", "resolution_time"],
-        "key_material_source": "not_found",
-        "key_hash_recomputation_result": "fail_missing_material",
-        "signature_input_recomputation_result": "not_attempted",
+        "evidence_fields_inspected": ["key_record_hash", "registry_entry_hash", "resolution_time", "jws.header.jwk"],
+        "key_material_source": "embedded",
+        "key_hash_recomputation_result": "pass",
+        "signature_input_recomputation_result": "pass",
         "claim_level_ceiling": "admission_independent"
       },
-      "cross_check": "producer_hint_contradicts_referee",
+      "cross_check": {
+        "mode_label_match": false,
+        "contract_satisfied": true,
+        "result": "producer_hint_contradicts_referee"
+      },
       "board_result": {
         "displayed_claim_level": "admission_independent",
-        "blocked_reason": "pinned_registry contract unmet: key_record_hash, registry_entry_hash, resolution_time all absent",
-        "evidence_contract": "pinned_registry failed: no resolution evidence available to referee"
+        "blocked_reason": "pinned_registry contract unmet: no resolution evidence available to referee; falls to embedded_fixture ceiling",
+        "evidence_contract": "embedded_fixture (referee-derived): key recomputable but claim capped at admission_independent"
+      }
+    },
+    {
+      "id": "anchor-precedence-verified",
+      "description": "On-chain anchor baseline: block_time < outcome_ts. Precedence holds — the commitment predates the outcome. anchor.method: on-chain, Arbitrum. block_time * 1000 < outcome_ts_ms (strict). This is the invariant TKCollective's trail b4377bcd demonstrated in production (margin 599s).",
+      "expected": "PASS",
+      "producer_record": {
+        "artifact_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+        "anchor": {
+          "method": "on-chain",
+          "chain": "arbitrum-one",
+          "tx_hash": "07e3bc82a1f4c2d9e5b8a3f1d6c4e7b2a9f0c3d8e1b4a7f2c5d8e3b6a1f4c2d9",
+          "block_time": 1782677381,
+          "block_time_iso": "2026-06-28T20:09:41Z"
+        },
+        "outcome_ts_ms": 1782677980000
+      },
+      "referee_record": {
+        "anchor_method_verified": "on-chain",
+        "block_time_recomputed": 1782677381,
+        "outcome_ts_ms": 1782677980000,
+        "precedence_check": "block_time * 1000 < outcome_ts_ms",
+        "precedence_check_value": "1782677381000 < 1782677980000",
+        "precedence_margin_ms": 599000,
+        "precedence_result": "verified"
+      },
+      "cross_check": {
+        "mode_label_match": true,
+        "contract_satisfied": true,
+        "result": "producer_hint_matches_referee"
+      },
+      "board_result": {
+        "displayed_claim_level": "anchoring_precedence_verified",
+        "blocked_reason": null,
+        "evidence_contract": "on-chain anchor: block_time * 1000 < outcome_ts_ms, margin 599000ms, Arbitrum-one"
+      }
+    },
+    {
+      "id": "anchor-precedence-failed-late-commitment",
+      "description": "On-chain anchor present but block_time > outcome_ts. Commitment arrived after the outcome — precedence does not hold. Anchor proves existence, not precedence. Board must not display anchoring_precedence_verified even though the tx_hash is real.",
+      "expected": "FAIL",
+      "failure_mode": "precedence_not_established",
+      "failure_detail": "block_time * 1000 > outcome_ts_ms: the on-chain anchor confirmed after the outcome was recorded. Existence is proven; precedence is not. These are separate invariants and must be asserted separately on the board.",
+      "producer_record": {
+        "artifact_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+        "anchor": {
+          "method": "on-chain",
+          "chain": "arbitrum-one",
+          "tx_hash": "3c8a1f5d2b9e4c7a0f3d6b1e4a7c2f5d8b1e4a7c0f3d6b9e2c5a8f1d4b7e0c3a",
+          "block_time": 1782678200,
+          "block_time_iso": "2026-06-28T20:13:20Z"
+        },
+        "outcome_ts_ms": 1782677980000
+      },
+      "referee_record": {
+        "anchor_method_verified": "on-chain",
+        "block_time_recomputed": 1782678200,
+        "outcome_ts_ms": 1782677980000,
+        "precedence_check": "block_time * 1000 < outcome_ts_ms",
+        "precedence_check_value": "1782678200000 < 1782677980000",
+        "precedence_margin_ms": -220000,
+        "precedence_result": "failed"
+      },
+      "cross_check": {
+        "mode_label_match": true,
+        "contract_satisfied": false,
+        "result": "producer_hint_contract_failed"
+      },
+      "board_result": {
+        "displayed_claim_level": "anchoring_existence_only",
+        "blocked_reason": "block_time * 1000 > outcome_ts_ms by 220000ms: anchor confirms existence, not precedence",
+        "evidence_contract": "on-chain anchor: existence proven (tx_hash recomputable), precedence not established"
+      }
+    },
+    {
+      "id": "anchor-block-time-absent",
+      "description": "On-chain anchor declared but block_time absent from the fixture. Referee cannot establish either existence or precedence without a confirmed block_time. Anchor falls to unverifiable.",
+      "expected": "FAIL",
+      "failure_mode": "anchor_unverifiable",
+      "failure_detail": "anchor.tx_hash is present but anchor.block_time is null. Referee cannot confirm when the anchor was included in the chain. Without block_time, neither existence nor precedence can be independently asserted from the fixture.",
+      "producer_record": {
+        "artifact_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+        "anchor": {
+          "method": "on-chain",
+          "chain": "arbitrum-one",
+          "tx_hash": "7b2e5c8a1f4d0b3e6c9a2f5d8b1e4c7a0f3d6b9e2c5a8f1d4b7e0c3a6f9d2b5e",
+          "block_time": null
+        },
+        "outcome_ts_ms": 1782677980000
+      },
+      "referee_record": {
+        "anchor_method_verified": "on-chain",
+        "block_time_recomputed": null,
+        "outcome_ts_ms": 1782677980000,
+        "precedence_check": "not_attempted",
+        "precedence_result": "unverifiable"
+      },
+      "cross_check": {
+        "mode_label_match": true,
+        "contract_satisfied": false,
+        "result": "producer_hint_contract_failed"
+      },
+      "board_result": {
+        "displayed_claim_level": "anchoring_unverifiable",
+        "blocked_reason": "block_time absent: on-chain anchor cannot be confirmed from fixture alone",
+        "evidence_contract": "on-chain anchor failed: block_time required for both existence and precedence assertions"
       }
     }
   ]
