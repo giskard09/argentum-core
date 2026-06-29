@@ -1,0 +1,195 @@
+{
+  "spec_version": "execution-join-ref-v1",
+  "description": "Conformance vectors for execution-join-ref-v1. Five invariants are separately recomputable: canonical_envelope, chain_integrity, no_duplicate_attempt, result_uniqueness, proof_binding. Anchoring is optional and not required for any vector here. A verifier that only checks chain_integrity will silently pass DUPLICATE_ATTEMPT and RESULT_ID_CONFLICT.",
+  "chain_rule": "decision_id preimage must include action_ref. result_id preimage must include attempt_id. proof_ref preimage (if present) must include this attempt_id, not a rewrite's.",
+  "vectors": [
+    {
+      "id": "execution-join-positive-001",
+      "description": "Stripe payment execution. action_ref computed before tool call. Guardrail issued permit. Single attempt completed. proof_ref bound to the same attempt_id. All five invariants pass.",
+      "expected": "PASS",
+      "envelope": {
+        "version": "execution-join-ref-v1",
+        "action_ref": "53138a338b70ac7cb54165e4175f5432384b44092f2968329212a1661f973b02",
+        "decision_id": "e84fbc5834ef2f9c0363268c81fdf159d74b906e52ee49c8103d965503f69822",
+        "attempt_id": "9c796e94c7cbfbc898791bdafffb9f83d676820435dfdecc40899fb341f3c2bf",
+        "result_id": "121a8185d514f8458f0eee59647f9f4f7b84442c7de185680ae4e73d619e99f0",
+        "proof_ref": "88caaaf94cedba2019244200f8909b05b23ff0017f6789e0c92ef3072c842aa5"
+      },
+      "preimages": {
+        "action_ref": {
+          "actor_id": "agent-stripe-payment-processor-v1",
+          "input_hash": "a3f1c2e9d4b7a8f0c1e2d3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4",
+          "scope": "stripe.charge.create",
+          "ts_ms": 1782900000000,
+          "version": "execution-join-ref-v1"
+        },
+        "decision_id": {
+          "action_ref": "53138a338b70ac7cb54165e4175f5432384b44092f2968329212a1661f973b02",
+          "outcome": "permit",
+          "policy_id": "stripe-payment-guardrail-v2",
+          "ts_ms": 1782900000050,
+          "version": "execution-join-ref-v1"
+        },
+        "attempt_id": {
+          "action_ref": "53138a338b70ac7cb54165e4175f5432384b44092f2968329212a1661f973b02",
+          "attempt_seq": 1,
+          "executor_id": "runtime-node-07",
+          "ts_ms": 1782900000100,
+          "version": "execution-join-ref-v1"
+        },
+        "result_id": {
+          "attempt_id": "9c796e94c7cbfbc898791bdafffb9f83d676820435dfdecc40899fb341f3c2bf",
+          "outcome": "completed",
+          "output_hash": "f1e2d3c4b5a6978869504132231445566778899aabbccddeeff00112233445566",
+          "ts_ms": 1782900001200,
+          "version": "execution-join-ref-v1"
+        },
+        "proof_ref": {
+          "attempt_id": "9c796e94c7cbfbc898791bdafffb9f83d676820435dfdecc40899fb341f3c2bf",
+          "evidence_type": "stripe_webhook_confirmation",
+          "external_ref": "evt_1QxRbK2eZvKYlo2C1XfXdXMk",
+          "ts_ms": 1782900002000,
+          "version": "execution-join-ref-v1"
+        }
+      },
+      "checks": {
+        "canonical_envelope": true,
+        "chain_integrity": true,
+        "no_duplicate_attempt": true,
+        "result_uniqueness": true,
+        "proof_binding": true
+      }
+    },
+    {
+      "id": "DUPLICATE_ATTEMPT",
+      "description": "CRITICAL: agent retried the tool call after a transient network error but submitted the result with the same attempt_id as the original execution. A verifier that only checks chain_integrity will silently accept this retry as a new execution. no_duplicate_attempt fails.",
+      "expected": "FAIL",
+      "failure_mode": "no_duplicate_attempt",
+      "failure_detail": "attempt_id 9c796e94… already recorded for action_ref 53138a33…. Retry must compute a new attempt_id with attempt_seq=2 over a fresh preimage. Reusing attempt_id makes the original execution and the retry indistinguishable.",
+      "envelope": {
+        "version": "execution-join-ref-v1",
+        "action_ref": "53138a338b70ac7cb54165e4175f5432384b44092f2968329212a1661f973b02",
+        "decision_id": "e84fbc5834ef2f9c0363268c81fdf159d74b906e52ee49c8103d965503f69822",
+        "attempt_id": "9c796e94c7cbfbc898791bdafffb9f83d676820435dfdecc40899fb341f3c2bf",
+        "result_id": "121a8185d514f8458f0eee59647f9f4f7b84442c7de185680ae4e73d619e99f0",
+        "proof_ref": null
+      },
+      "checks": {
+        "canonical_envelope": true,
+        "chain_integrity": true,
+        "no_duplicate_attempt": false,
+        "result_uniqueness": true,
+        "proof_binding": true
+      },
+      "note": "This record is identical to execution-join-positive-001 as seen by the verifier. The failure is detected only because the registry already holds a record with this attempt_id."
+    },
+    {
+      "id": "NONCONFORMANT_DECISION",
+      "description": "CRITICAL: the result record claims a decision_id whose JCS preimage binds to a different action_ref (all-zeros placeholder). The guardrail never evaluated this specific proposed action. chain_integrity fails at the decision_id link.",
+      "expected": "FAIL",
+      "failure_mode": "chain_integrity",
+      "failure_detail": "decision_id 8361ac05… preimage contains action_ref 000000000000000000000000000000000000000000000000000000000000dead, but envelope action_ref is 53138a33…. Decision did not evaluate this action.",
+      "envelope": {
+        "version": "execution-join-ref-v1",
+        "action_ref": "53138a338b70ac7cb54165e4175f5432384b44092f2968329212a1661f973b02",
+        "decision_id": "8361ac05f89848deacb8913a1b6e2496916bf6a1f2bcde57f71d432912629ac1",
+        "attempt_id": "9c796e94c7cbfbc898791bdafffb9f83d676820435dfdecc40899fb341f3c2bf",
+        "result_id": "121a8185d514f8458f0eee59647f9f4f7b84442c7de185680ae4e73d619e99f0",
+        "proof_ref": null
+      },
+      "preimages": {
+        "decision_id": {
+          "action_ref": "000000000000000000000000000000000000000000000000000000000000dead",
+          "outcome": "permit",
+          "policy_id": "stripe-payment-guardrail-v2",
+          "ts_ms": 1782900000050,
+          "version": "execution-join-ref-v1"
+        }
+      },
+      "checks": {
+        "canonical_envelope": true,
+        "chain_integrity": false,
+        "no_duplicate_attempt": true,
+        "result_uniqueness": true,
+        "proof_binding": true
+      }
+    },
+    {
+      "id": "PROOF_BINDING_FAILED",
+      "description": "CRITICAL: proof_ref is present but its JCS preimage binds to the attempt_id of a rewrite (aaaa…), not to the attempt_id of this execution (9c79…). The proof is real and recomputable but it was attached to the wrong attempt. proof_binding fails.",
+      "expected": "FAIL",
+      "failure_mode": "proof_binding",
+      "failure_detail": "proof_ref 9d693727… preimage contains attempt_id aaaa…aaaa, but envelope attempt_id is 9c796e94…. Proof does not bind to this execution attempt.",
+      "envelope": {
+        "version": "execution-join-ref-v1",
+        "action_ref": "53138a338b70ac7cb54165e4175f5432384b44092f2968329212a1661f973b02",
+        "decision_id": "e84fbc5834ef2f9c0363268c81fdf159d74b906e52ee49c8103d965503f69822",
+        "attempt_id": "9c796e94c7cbfbc898791bdafffb9f83d676820435dfdecc40899fb341f3c2bf",
+        "result_id": "121a8185d514f8458f0eee59647f9f4f7b84442c7de185680ae4e73d619e99f0",
+        "proof_ref": "9d693727bbf3b82369f31b82b60b71e8a52d1a4497b5b03352b3830f6c705b44"
+      },
+      "preimages": {
+        "proof_ref": {
+          "attempt_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "evidence_type": "stripe_webhook_confirmation",
+          "external_ref": "evt_1QxRbK2eZvKYlo2C1XfXdXMk",
+          "ts_ms": 1782900002000,
+          "version": "execution-join-ref-v1"
+        }
+      },
+      "checks": {
+        "canonical_envelope": true,
+        "chain_integrity": true,
+        "no_duplicate_attempt": true,
+        "result_uniqueness": true,
+        "proof_binding": false
+      }
+    },
+    {
+      "id": "RESULT_ID_CONFLICT",
+      "description": "CRITICAL: two records both declare result_id 121a8185… but with conflicting outcome fields (completed vs failed). A registry that accepts the second record corrupts the terminal state of the attempt. result_uniqueness fails on the second record.",
+      "expected": "FAIL",
+      "failure_mode": "result_uniqueness",
+      "failure_detail": "result_id 121a8185… already recorded with outcome=completed. Incoming record claims outcome=failed. A terminal state cannot be overwritten. Both records cannot coexist in a conformant registry.",
+      "envelope": {
+        "version": "execution-join-ref-v1",
+        "action_ref": "53138a338b70ac7cb54165e4175f5432384b44092f2968329212a1661f973b02",
+        "decision_id": "e84fbc5834ef2f9c0363268c81fdf159d74b906e52ee49c8103d965503f69822",
+        "attempt_id": "9c796e94c7cbfbc898791bdafffb9f83d676820435dfdecc40899fb341f3c2bf",
+        "result_id": "121a8185d514f8458f0eee59647f9f4f7b84442c7de185680ae4e73d619e99f0",
+        "outcome_claim": "failed"
+      },
+      "checks": {
+        "canonical_envelope": true,
+        "chain_integrity": true,
+        "no_duplicate_attempt": true,
+        "result_uniqueness": false,
+        "proof_binding": true
+      },
+      "note": "The conflict is detected at registry ingestion: result_id 121a8185… already exists with outcome=completed. The incoming record carries the same result_id string with outcome=failed. Canonical result_id computation makes it impossible for two different preimages to produce the same hash — the attack vector is submitting the same result_id bytes with a mutated outer outcome field."
+    },
+    {
+      "id": "VERIFIER_OFFLINE",
+      "description": "Verifier cannot recompute action_ref because the actor's runtime input buffer is no longer available. The verifier must return VERIFIER_OFFLINE rather than pass or fail on partial evidence. canonical_envelope cannot be checked.",
+      "expected": "FAIL",
+      "failure_mode": "VERIFIER_OFFLINE",
+      "failure_detail": "input_hash in the action_ref preimage resolves to a buffer that is no longer accessible in this runtime. Recomputation is blocked. Verifier must not infer pass from absence of evidence.",
+      "envelope": {
+        "version": "execution-join-ref-v1",
+        "action_ref": "53138a338b70ac7cb54165e4175f5432384b44092f2968329212a1661f973b02",
+        "decision_id": "e84fbc5834ef2f9c0363268c81fdf159d74b906e52ee49c8103d965503f69822",
+        "attempt_id": "9c796e94c7cbfbc898791bdafffb9f83d676820435dfdecc40899fb341f3c2bf",
+        "result_id": "121a8185d514f8458f0eee59647f9f4f7b84442c7de185680ae4e73d619e99f0",
+        "proof_ref": null
+      },
+      "checks": {
+        "canonical_envelope": null,
+        "chain_integrity": null,
+        "no_duplicate_attempt": null,
+        "result_uniqueness": null,
+        "proof_binding": null
+      },
+      "note": "null checks indicate the verifier could not complete the check, not that it passed. A conformant verifier must surface VERIFIER_OFFLINE as a distinct result, not as PASS or FAIL."
+    }
+  ]
+}
