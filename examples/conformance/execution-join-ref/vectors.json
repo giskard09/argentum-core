@@ -1,6 +1,6 @@
 {
   "spec_version": "execution-join-ref-v1",
-  "description": "Conformance vectors for execution-join-ref-v1. Five invariants are separately recomputable: canonical_envelope, chain_integrity, no_duplicate_attempt, result_uniqueness, proof_binding. Anchoring is optional and not required for any vector here. A verifier that only checks chain_integrity will silently pass DUPLICATE_ATTEMPT and RESULT_ID_CONFLICT.",
+  "description": "Conformance vectors for execution-join-ref-v1. Five invariants are separately recomputable: canonical_envelope, chain_integrity, no_duplicate_attempt, result_uniqueness, proof_binding. A sixth invariant checks effective_call_binding: the dispatched call must bind to the same action_ref the guardrail decided on. Anchoring is optional and not required for any vector here. A verifier that only checks chain_integrity will silently pass DUPLICATE_ATTEMPT, RESULT_ID_CONFLICT, and EFFECTIVE_CALL_REBINDING_FAILED.",
   "chain_rule": "decision_id preimage must include action_ref. result_id preimage must include attempt_id. proof_ref preimage (if present) must include this attempt_id, not a rewrite's.",
   "vectors": [
     {
@@ -190,6 +190,47 @@
         "proof_binding": null
       },
       "note": "null checks indicate the verifier could not complete the check, not that it passed. A conformant verifier must surface VERIFIER_OFFLINE as a distinct result, not as PASS or FAIL."
+    },
+    {
+      "id": "EFFECTIVE_CALL_REBINDING_FAILED",
+      "description": "CRITICAL: guardrail reviewed the original args and issued a permit decision (decision_id covers action_ref 53138a33…). The guardrail then rewrote the args before dispatch. The runtime dispatched the rewritten call but did not update the binding — no decision_id exists that covers the effective action_ref (a91d5335…). A verifier that only checks chain_integrity will pass this: the chain action_ref→decision_id→attempt_id→result_id is internally consistent. The failure is that the effective dispatched call is not covered by any guardrail decision. effective_call_binding fails.",
+      "expected": "FAIL",
+      "failure_mode": "effective_call_binding",
+      "failure_detail": "decision_id e84fbc58… covers action_ref 53138a33… (original args, input_hash a3f1c2e9…). Effective call dispatched with input_hash deadbeef… → effective_action_ref a91d5335…. No decision_id covers a91d5335…. Runtime executed an action the guardrail never evaluated.",
+      "envelope": {
+        "version": "execution-join-ref-v1",
+        "action_ref": "53138a338b70ac7cb54165e4175f5432384b44092f2968329212a1661f973b02",
+        "decision_id": "e84fbc5834ef2f9c0363268c81fdf159d74b906e52ee49c8103d965503f69822",
+        "attempt_id": "9c796e94c7cbfbc898791bdafffb9f83d676820435dfdecc40899fb341f3c2bf",
+        "result_id": "121a8185d514f8458f0eee59647f9f4f7b84442c7de185680ae4e73d619e99f0",
+        "proof_ref": null,
+        "effective_action_ref": "a91d53353e39e653142049e6430ee230923f6cd63435f4ef2f207aa3e67aba09"
+      },
+      "preimages": {
+        "action_ref": {
+          "actor_id": "agent-stripe-payment-processor-v1",
+          "input_hash": "a3f1c2e9d4b7a8f0c1e2d3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4",
+          "scope": "stripe.charge.create",
+          "ts_ms": 1782900000000,
+          "version": "execution-join-ref-v1"
+        },
+        "effective_action_ref": {
+          "actor_id": "agent-stripe-payment-processor-v1",
+          "input_hash": "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+          "scope": "stripe.charge.create",
+          "ts_ms": 1782900000000,
+          "version": "execution-join-ref-v1"
+        }
+      },
+      "checks": {
+        "canonical_envelope": true,
+        "chain_integrity": true,
+        "no_duplicate_attempt": true,
+        "result_uniqueness": true,
+        "proof_binding": true,
+        "effective_call_binding": false
+      },
+      "note": "chain_integrity passes because action_ref→decision_id→attempt_id→result_id is internally consistent. The failure requires a verifier that separately checks effective_action_ref against the decision_id that authorized the action. This is the arg-rewrite attack surface: a guardrail that rewrites args must issue a new decision_id over the rewritten preimage before dispatch."
     }
   ]
 }

@@ -102,6 +102,11 @@ failure_mode:
    different `outcome` values.
 5. **proof_binding** — if proof_ref is present, its preimage's attempt_id
    matches this record's attempt_id (not a rewrite's).
+6. **effective_call_binding** — if the guardrail rewrote the args before
+   dispatch, the runtime must present an `effective_action_ref` computed from
+   the rewritten preimage, and a decision_id that covers that effective ref.
+   A record where `effective_action_ref` is present but no decision covers it
+   fails this check.
 
 ## Critical negative cases
 
@@ -123,6 +128,18 @@ silently corrupts the terminal state. Invariant 4 fails.
 **VERIFIER_OFFLINE** — recomputing action_ref requires the actor's runtime
 input buffer, which is no longer available. The verifier must return
 `VERIFIER_OFFLINE` rather than pass or fail the record on partial evidence.
+
+**EFFECTIVE_CALL_REBINDING_FAILED** — the guardrail reviewed the original args
+and issued a permit decision (decision_id covers action_ref). The guardrail
+then rewrote the args. The runtime dispatched the rewritten call without
+issuing a new decision_id that covers the effective preimage. The join record
+carries `effective_action_ref` pointing to the rewritten args, but no
+decision_id in the registry covers it. Invariant 6 fails. A verifier that
+only checks chain_integrity will silently accept this: the internal chain
+action_ref→decision_id→attempt_id→result_id is consistent; the failure is
+that the guardrail never evaluated the call that was actually dispatched.
+A conformant guardrail that rewrites args must compute a new decision_id over
+the rewritten preimage before the runtime crosses the boundary.
 
 ## Relationship to existing primitives
 
