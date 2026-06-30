@@ -51,10 +51,12 @@ PASS: 2 vectors, FAIL: 0 vectors
 AgentTrust anchors composed envelopes on-chain via the Mycelium/NEXUS trail
 mechanism on Arbitrum, the same anchor track used by AgentOracle.
 
-- Trail ID: `2b7bbb15-a982-4e89-aab2-42f056abed8e`
-- TX hash: `3d7ba704ea1dacfa7d276499cba0efacea6ca93d6962cbf145b7e91b1384a574`
-- Anchor block: `478878982`
-- Recompute: `curl -s https://argentum.rgiskard.xyz/mycelium/trails/2b7bbb15-a982-4e89-aab2-42f056abed8e/verify_chain`
+- Trail ID: `c63af6c1-6c17-46d0-b31d-e69aed2e4c65`
+- TX hash: `52248423831d58fd9331d07120ffe76a4107e4be5fb6ef306c77e4cffe9cb2d0`
+- Anchor block: `479023026`
+- Action ref: `6cb9d13b1c79276ce6220de38976de34f239c3baa961cca73d5163b339d62121`
+- Recompute chain: `SHA-256(JCS(anchor_proof.preimage)) == action_ref == on-chain calldata`
+- Verify: `curl -s https://argentum.rgiskard.xyz/trails/c63af6c1-6c17-46d0-b31d-e69aed2e4c65`
 
 ## Live reference implementation
 

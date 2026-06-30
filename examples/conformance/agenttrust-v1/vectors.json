@@ -22,20 +22,32 @@
   ],
   "anchor": {
     "mechanism": "on-chain (Arbitrum, via NEXUS/Mycelium)",
-    "trail_id": "2b7bbb15-a982-4e89-aab2-42f056abed8e",
-    "tx_hash": "3d7ba704ea1dacfa7d276499cba0efacea6ca93d6962cbf145b7e91b1384a574",
-    "anchor_block": 478878982,
-    "verify_chain_url": "https://argentum.rgiskard.xyz/mycelium/trails/2b7bbb15-a982-4e89-aab2-42f056abed8e/verify_chain"
+    "trail_id": "c63af6c1-6c17-46d0-b31d-e69aed2e4c65",
+    "tx_hash": "52248423831d58fd9331d07120ffe76a4107e4be5fb6ef306c77e4cffe9cb2d0",
+    "anchor_block": 479023026,
+    "action_ref": "6cb9d13b1c79276ce6220de38976de34f239c3baa961cca73d5163b339d62121",
+    "anchor_proof": {
+      "preimage": {
+        "action_type": "skill_scan",
+        "agent_id": "did:agenttrust:conformance-v1",
+        "scope": "agenttrust:v1.compose:skill_scan",
+        "timestamp": "2026-06-30T10:00:00.000Z"
+      },
+      "recompute": "SHA-256(JCS(anchor_proof.preimage)) == action_ref == on-chain calldata"
+    },
+    "verify_chain_url": "https://argentum.rgiskard.xyz/mycelium/trails/c63af6c1-6c17-46d0-b31d-e69aed2e4c65/verify_chain"
   },
   "accept_vectors": [
     {
       "id": "at-001",
-      "description": "Skill scan SAFE (v_gate_skill.verdict=act). composed_decision is halt because AO sibling is absent in this AT-only vector — this is expected AND_PRESENT behavior, not a failure.",
+      "description": "Skill scan SAFE (v_gate_skill.verdict=act). composed_decision is halt because AO sibling is absent in this AT-only vector \u2014 this is expected AND_PRESENT behavior, not a failure.",
       "payload_file": "payload-001.json",
       "jws_file": "jws-001.json",
       "expected_v_gate_skill_verdict": "act",
       "expected_composed_decision": "halt",
-      "signer_kids": ["agenttrust-ed25519-v1"]
+      "signer_kids": [
+        "agenttrust-ed25519-v1"
+      ]
     },
     {
       "id": "at-002",
@@ -44,7 +56,9 @@
       "jws_file": "jws-002.json",
       "expected_v_gate_skill_verdict": "halt",
       "expected_composed_decision": "halt",
-      "signer_kids": ["agenttrust-ed25519-v1"]
+      "signer_kids": [
+        "agenttrust-ed25519-v1"
+      ]
     }
   ]
 }
