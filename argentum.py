@@ -341,12 +341,59 @@ async def _usdc_poller():
             pass  # poller nunca muere por error puntual
 
 
+async def _anchor_confirmation_poller():
+    """Confirma trails cuya TX fue enviada pero no verificada on-chain.
+
+    Lee trails con anchor_status='submitted', llama eth_getTransactionReceipt.
+    Si status==0x1 → anchor_status='anchored' + anchor_block. No depende de eventos
+    del contrato — funciona con GiskardPayments v2 y cualquier versión futura.
+    """
+    while True:
+        await asyncio.sleep(30)
+        try:
+            pending = mycelium_trails.get_submitted_trails(TRAILS_DB, limit=20)
+            if not pending:
+                continue
+            async with httpx.AsyncClient(timeout=10) as client:
+                for trail in pending:
+                    tx = trail["tx_hash"]
+                    if not tx.startswith("0x"):
+                        tx = "0x" + tx
+                    payload = {
+                        "jsonrpc": "2.0", "id": 1,
+                        "method": "eth_getTransactionReceipt",
+                        "params": [tx],
+                    }
+                    try:
+                        resp = await client.post(ARB_RPC, json=payload, timeout=8)
+                        receipt = resp.json().get("result")
+                        if receipt and receipt.get("status") == "0x1":
+                            block_number = int(receipt.get("blockNumber", "0x0"), 16)
+                            mycelium_trails.confirm_trail_anchor(
+                                TRAILS_DB, trail["trail_id"], block_number
+                            )
+                            if _WEBHOOK_OK:
+                                hook = mycelium_trails.get_notify_webhook(
+                                    TRAILS_DB, trail["agent_id"]
+                                )
+                                if hook:
+                                    _webhook.notify_anchor(
+                                        hook, trail["trail_id"], tx,
+                                        datetime.now(timezone.utc).isoformat(),
+                                    )
+                    except Exception:
+                        pass
+        except Exception:
+            pass  # poller nunca muere por error puntual
+
+
 @app.on_event("startup")
 async def startup():
     init_db()
     capture_config_snapshot()
     mycelium_trails.init_db(TRAILS_DB)
     asyncio.create_task(_usdc_poller())
+    asyncio.create_task(_anchor_confirmation_poller())
 
 # ── MODELS ──────────────────────────────────────────────────────────────────
 

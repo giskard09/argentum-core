@@ -125,6 +125,8 @@ _DDL_MIGRATIONS = [
     "ALTER TABLE trails ADD COLUMN notes TEXT",
     "ALTER TABLE payg_accounts ADD COLUMN conformance_source TEXT",
     "ALTER TABLE payg_accounts ADD COLUMN notify_webhook TEXT",
+    "ALTER TABLE trails ADD COLUMN anchor_status TEXT",
+    "ALTER TABLE trails ADD COLUMN anchor_block INTEGER",
 ]
 
 
@@ -271,13 +273,40 @@ def _row_to_dict(row: sqlite3.Row) -> dict:
 
 
 def set_trail_tx_hash(db_path: str, trail_id: str, tx_hash: str) -> None:
-    """Actualiza tx_hash de un trail después del anchor on-chain."""
+    """Marca tx_hash y anchor_status='submitted' tras enviar la TX. No implica confirmación."""
     conn = _connect(db_path)
     try:
         conn.execute(
-            "UPDATE trails SET tx_hash = ? WHERE trail_id = ?",
+            "UPDATE trails SET tx_hash = ?, anchor_status = 'submitted' WHERE trail_id = ?",
             (tx_hash, trail_id),
         )
+    finally:
+        conn.close()
+
+
+def confirm_trail_anchor(db_path: str, trail_id: str, block_number: int) -> None:
+    """Marca anchor_status='anchored' y anchor_block tras confirmar receipt status==1 on-chain."""
+    conn = _connect(db_path)
+    try:
+        conn.execute(
+            "UPDATE trails SET anchor_status = 'anchored', anchor_block = ? WHERE trail_id = ?",
+            (block_number, trail_id),
+        )
+    finally:
+        conn.close()
+
+
+def get_submitted_trails(db_path: str, limit: int = 50) -> list[dict]:
+    """Retorna trails con tx_hash != null y anchor_status='submitted' para el poller."""
+    conn = _connect(db_path)
+    try:
+        rows = conn.execute(
+            "SELECT trail_id, agent_id, tx_hash FROM trails "
+            "WHERE tx_hash IS NOT NULL AND anchor_status = 'submitted' "
+            "ORDER BY timestamp DESC LIMIT ?",
+            (limit,),
+        ).fetchall()
+        return [{"trail_id": r["trail_id"], "agent_id": r["agent_id"], "tx_hash": r["tx_hash"]} for r in rows]
     finally:
         conn.close()
 
