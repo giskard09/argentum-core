@@ -2,7 +2,8 @@
   "spec_version": "execution-join-ref-v1",
   "description": "Conformance vectors for execution-join-ref-v1. Five invariants are separately recomputable: canonical_envelope, chain_integrity, no_duplicate_attempt, result_uniqueness, proof_binding. A sixth invariant checks effective_call_binding: the dispatched call must bind to the same action_ref the guardrail decided on. Anchoring is optional and not required for any vector here. A verifier that only checks chain_integrity will silently pass DUPLICATE_ATTEMPT, RESULT_ID_CONFLICT, and EFFECTIVE_CALL_REBINDING_FAILED.",
   "chain_rule": "decision_id preimage must include action_ref. result_id preimage must include attempt_id. proof_ref preimage (if present) must include this attempt_id, not a rewrite's.",
-  "canonicalization_note": "decision evidence preimage must include canonicalization_profile_id. Verifier reads this field before comparing any digest. Absent or unsupported profile must return a failure code distinct from DIGEST_MISMATCH.",
+  "canonicalization_note": "decision evidence preimage must include canonicalization_profile_id. The value is SHA-256(JCS(profile_doc)) — content-addressed. Verifier resolves the id against profiles/ before comparing any digest. Absent or unsupported profile must return a failure code distinct from DIGEST_MISMATCH.",
+  "profile_registry": "profiles/ — each file is <profile_id>.json where profile_id = SHA-256(JCS(doc)). Human aliases in profiles/profile_registry.py.",
   "failure_codes": ["AUTHORIZED_EFFECTIVE_CALL", "MALFORMED_EVIDENCE", "UNSUPPORTED_CANONICAL_PROFILE", "DIGEST_MISMATCH", "EXPIRED_POLICY_BINDING"],
   "vectors": [
     {
@@ -87,13 +88,13 @@
     },
     {
       "id": "AUTHORIZED_EFFECTIVE_CALL",
-      "description": "Positive case with canonicalization_profile_id present. decision evidence declares jcs-rfc8785-v1. Verifier reads the profile field first, confirms it is supported, then recomputes the digest. All invariants pass. Failure code: AUTHORIZED_EFFECTIVE_CALL.",
+      "description": "Positive case with canonicalization_profile_id present. canonicalization_profile_id is the SHA-256 of the jcs-rfc8785-v1 profile doc (content-addressed). Verifier resolves the id against the profile registry, confirms it is supported, then recomputes the digest. All invariants pass. Failure code: AUTHORIZED_EFFECTIVE_CALL.",
       "expected": "PASS",
       "failure_code": "AUTHORIZED_EFFECTIVE_CALL",
       "envelope": {
         "version": "execution-join-ref-v1",
         "action_ref": "53138a338b70ac7cb54165e4175f5432384b44092f2968329212a1661f973b02",
-        "decision_id": "f7130bc102fe84edd3435eed4b42cf51c134b9c6d5840fda760a117ed7ec34f3",
+        "decision_id": "151e2d0d708df60fceb8f39d6b013d955446639548bba07cf344e74710cca198",
         "attempt_id": "9c796e94c7cbfbc898791bdafffb9f83d676820435dfdecc40899fb341f3c2bf",
         "result_id": "121a8185d514f8458f0eee59647f9f4f7b84442c7de185680ae4e73d619e99f0",
         "proof_ref": null
@@ -101,12 +102,17 @@
       "preimages": {
         "decision_id": {
           "action_ref": "53138a338b70ac7cb54165e4175f5432384b44092f2968329212a1661f973b02",
-          "canonicalization_profile_id": "jcs-rfc8785-v1",
+          "canonicalization_profile_id": "82b5df2a487988d5ba773cf40ffa92a614769de6fbea6f4b2745794125e1c9fa",
           "outcome": "permit",
           "policy_id": "stripe-payment-guardrail-v2",
           "ts_ms": 1782900000050,
           "version": "execution-join-ref-v1"
         }
+      },
+      "profile_resolution": {
+        "profile_id": "82b5df2a487988d5ba773cf40ffa92a614769de6fbea6f4b2745794125e1c9fa",
+        "alias": "jcs-rfc8785-v1",
+        "doc": "profiles/82b5df2a487988d5ba773cf40ffa92a614769de6fbea6f4b2745794125e1c9fa.json"
       },
       "checks": {
         "canonical_envelope": true,
@@ -122,18 +128,18 @@
       "description": "decision evidence object is missing action_ref. Verifier must return MALFORMED_EVIDENCE before attempting digest comparison. A verifier that skips field validation and proceeds to digest comparison will produce an incorrect result.",
       "expected": "FAIL",
       "failure_code": "MALFORMED_EVIDENCE",
-      "failure_detail": "decision_id preimage 69401bd3… does not contain action_ref. Required field absent. Verifier must not proceed to digest comparison.",
+      "failure_detail": "decision_id preimage 0f3dd3d1… does not contain action_ref. Required field absent per field_set in profile 8d81c9f0…. Verifier must not proceed to digest comparison.",
       "envelope": {
         "version": "execution-join-ref-v1",
         "action_ref": "53138a338b70ac7cb54165e4175f5432384b44092f2968329212a1661f973b02",
-        "decision_id": "69401bd3e78ed1ba06657bb6334d5611476e45bf7862f2ad2f150b777d10b9e2",
+        "decision_id": "dc97ddbaa961f8dbcd86b1308d620fec38860b7010253d2fd095cb62889e6ce8",
         "attempt_id": "9c796e94c7cbfbc898791bdafffb9f83d676820435dfdecc40899fb341f3c2bf",
         "result_id": "121a8185d514f8458f0eee59647f9f4f7b84442c7de185680ae4e73d619e99f0",
         "proof_ref": null
       },
       "preimages": {
         "decision_id": {
-          "canonicalization_profile_id": "jcs-rfc8785-v1",
+          "canonicalization_profile_id": "82b5df2a487988d5ba773cf40ffa92a614769de6fbea6f4b2745794125e1c9fa",
           "outcome": "permit",
           "policy_id": "stripe-payment-guardrail-v2",
           "ts_ms": 1782900000050,
@@ -151,14 +157,14 @@
     },
     {
       "id": "UNSUPPORTED_CANONICAL_PROFILE",
-      "description": "decision evidence declares canonicalization_profile_id cbor-deterministic-v1, which the verifier does not implement. Verifier must return UNSUPPORTED_CANONICAL_PROFILE, not DIGEST_MISMATCH. A verifier that falls through to its default JCS comparison will produce the wrong failure code.",
+      "description": "decision evidence declares a canonicalization_profile_id that does not exist in the profile registry (0000…0001 is not a valid profile SHA-256). Verifier must return UNSUPPORTED_CANONICAL_PROFILE, not DIGEST_MISMATCH. A verifier that falls through to its default JCS comparison will produce the wrong failure code.",
       "expected": "FAIL",
       "failure_code": "UNSUPPORTED_CANONICAL_PROFILE",
-      "failure_detail": "canonicalization_profile_id cbor-deterministic-v1 is not in the verifier's supported set. Verifier must halt before digest comparison and return UNSUPPORTED_CANONICAL_PROFILE.",
+      "failure_detail": "canonicalization_profile_id 0000000000000000000000000000000000000000000000000000000000000001 not found in profile registry. Verifier must halt before digest comparison and return UNSUPPORTED_CANONICAL_PROFILE.",
       "envelope": {
         "version": "execution-join-ref-v1",
         "action_ref": "53138a338b70ac7cb54165e4175f5432384b44092f2968329212a1661f973b02",
-        "decision_id": "f978ed243ff4bba7c72d82f5d1f591df6a3f1da88a10afa9886289ef3d80d23c",
+        "decision_id": "dd55b39f8f062d4e09ccdf28d9097fcea31f64b8b505f88564fead75a7295efe",
         "attempt_id": "9c796e94c7cbfbc898791bdafffb9f83d676820435dfdecc40899fb341f3c2bf",
         "result_id": "121a8185d514f8458f0eee59647f9f4f7b84442c7de185680ae4e73d619e99f0",
         "proof_ref": null
@@ -166,7 +172,7 @@
       "preimages": {
         "decision_id": {
           "action_ref": "53138a338b70ac7cb54165e4175f5432384b44092f2968329212a1661f973b02",
-          "canonicalization_profile_id": "cbor-deterministic-v1",
+          "canonicalization_profile_id": "0000000000000000000000000000000000000000000000000000000000000001",
           "outcome": "permit",
           "policy_id": "stripe-payment-guardrail-v2",
           "ts_ms": 1782900000050,
@@ -185,14 +191,14 @@
     },
     {
       "id": "DIGEST_MISMATCH",
-      "description": "canonicalization_profile_id is jcs-rfc8785-v1 (supported), all required fields are present, but action_ref in the decision evidence preimage is wrong bytes (fff…). Recomputed decision_id does not match the claimed value. Failure code: DIGEST_MISMATCH.",
+      "description": "canonicalization_profile_id resolves to jcs-rfc8785-v1 (supported), all required fields are present, but action_ref in the decision evidence preimage is wrong bytes (fff…). Recomputed decision_id does not match the claimed value. Failure code: DIGEST_MISMATCH.",
       "expected": "FAIL",
       "failure_code": "DIGEST_MISMATCH",
-      "failure_detail": "decision_id 1c9de3c2… recomputes correctly from its declared preimage (which contains action_ref fff…). But fff… ≠ envelope action_ref 53138a33…. The decision evidence was computed over a different action. chain_integrity fails after digest verification.",
+      "failure_detail": "decision_id 1b3e83c8… recomputes correctly from its declared preimage (which contains action_ref fff…). But fff… ≠ envelope action_ref 53138a33…. The decision evidence was computed over a different action. chain_integrity fails after digest verification.",
       "envelope": {
         "version": "execution-join-ref-v1",
         "action_ref": "53138a338b70ac7cb54165e4175f5432384b44092f2968329212a1661f973b02",
-        "decision_id": "1c9de3c23a027ec8013ba709c2dfb5a4034bcabaf6374e7f28b40aa80e414beb",
+        "decision_id": "f39a3afa0c8b1b6e1ff993a8af5d70c576647c18419cd2aba744785016d4d005",
         "attempt_id": "9c796e94c7cbfbc898791bdafffb9f83d676820435dfdecc40899fb341f3c2bf",
         "result_id": "121a8185d514f8458f0eee59647f9f4f7b84442c7de185680ae4e73d619e99f0",
         "proof_ref": null
@@ -200,7 +206,7 @@
       "preimages": {
         "decision_id": {
           "action_ref": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
-          "canonicalization_profile_id": "jcs-rfc8785-v1",
+          "canonicalization_profile_id": "82b5df2a487988d5ba773cf40ffa92a614769de6fbea6f4b2745794125e1c9fa",
           "outcome": "permit",
           "policy_id": "stripe-payment-guardrail-v2",
           "ts_ms": 1782900000050,
@@ -219,14 +225,14 @@
     },
     {
       "id": "EXPIRED_POLICY_BINDING",
-      "description": "decision evidence is structurally valid and canonicalization_profile_id is supported, but policy_id stripe-payment-guardrail-v1 expired at 1782800000000 ms, which is before the decision ts_ms 1782900000050. The guardrail was no longer in force when the decision was issued. Failure code: EXPIRED_POLICY_BINDING.",
+      "description": "decision evidence is structurally valid and canonicalization_profile_id resolves to a supported profile, but policy_id stripe-payment-guardrail-v1 expired at 1782800000000 ms, which is before the decision ts_ms 1782900000050. The guardrail was no longer in force when the decision was issued. Failure code: EXPIRED_POLICY_BINDING.",
       "expected": "FAIL",
       "failure_code": "EXPIRED_POLICY_BINDING",
       "failure_detail": "policy_id stripe-payment-guardrail-v1 policy_expires_ms=1782800000000 < ts_ms=1782900000050. Policy was retired 100s before the decision timestamp. Decision was issued under an expired policy binding.",
       "envelope": {
         "version": "execution-join-ref-v1",
         "action_ref": "53138a338b70ac7cb54165e4175f5432384b44092f2968329212a1661f973b02",
-        "decision_id": "7b5e4e5af9832b5d71586179f64070437a76a5dc5c0bef585bbad118177b02e3",
+        "decision_id": "2199060fdf192f5105d2cd26798e04ceabc3879553993c00fd662646cc345035",
         "attempt_id": "9c796e94c7cbfbc898791bdafffb9f83d676820435dfdecc40899fb341f3c2bf",
         "result_id": "121a8185d514f8458f0eee59647f9f4f7b84442c7de185680ae4e73d619e99f0",
         "proof_ref": null
@@ -234,7 +240,7 @@
       "preimages": {
         "decision_id": {
           "action_ref": "53138a338b70ac7cb54165e4175f5432384b44092f2968329212a1661f973b02",
-          "canonicalization_profile_id": "jcs-rfc8785-v1",
+          "canonicalization_profile_id": "82b5df2a487988d5ba773cf40ffa92a614769de6fbea6f4b2745794125e1c9fa",
           "outcome": "permit",
           "policy_expires_ms": 1782800000000,
           "policy_id": "stripe-payment-guardrail-v1",

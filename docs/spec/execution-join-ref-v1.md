@@ -61,11 +61,18 @@ return a failure code specific to that condition — not DIGEST_MISMATCH. This
 ensures that a verifier that only implements JCS cannot silently pass evidence
 encoded with a different canonicalization scheme.
 
+The value of `canonicalization_profile_id` is `SHA-256(JCS(profile_doc))` —
+content-addressed. Same id implies same doc, verifiable by construction.
+Human-readable aliases resolve to their canonical hash via
+`profiles/profile_registry.py`. Each profile doc lives at
+`profiles/<profile_id>.json`.
+
 Currently defined profiles:
 
-| profile_id | canonical form |
-|---|---|
-| `jcs-rfc8785-v1` | JSON Canonicalization Scheme (RFC 8785) |
+| alias | profile_id (SHA-256 of doc) | canonical form |
+|---|---|---|
+| `jcs-rfc8785-v1` | `82b5df2a487988d5ba773cf40ffa92a614769de6fbea6f4b2745794125e1c9fa` | JSON Canonicalization Scheme (RFC 8785) — decision evidence preimage |
+| `jcs-rfc8785-action-ref-v1` | `8c7f71754e3daae1a0390d5e0287d51097d011e40df36bf15cad5c0f47efa05a` | JSON Canonicalization Scheme (RFC 8785) — action_ref preimage; `timestamp` is `string`, NOT integer |
 
 ```json
 

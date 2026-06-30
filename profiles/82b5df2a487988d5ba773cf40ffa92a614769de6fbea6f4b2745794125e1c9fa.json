@@ -1,0 +1,29 @@
+{
+  "description": "JCS (RFC 8785) profile for decision evidence (decision_id) preimage — execution-join-ref-v1",
+  "encoding": "UTF-8",
+  "field_set": ["action_ref", "canonicalization_profile_id", "outcome", "policy_id", "ts_ms", "version"],
+  "key_order": "lexicographic",
+  "name": "jcs-rfc8785-v1",
+  "per_field_units": {
+    "action_ref": {
+      "type": "string",
+      "format": "sha256-hex",
+      "note": "SHA-256(JCS(action_ref preimage)) — 64 lowercase hex chars"
+    },
+    "canonicalization_profile_id": {
+      "type": "string",
+      "format": "sha256-hex",
+      "note": "SHA-256(JCS(this profile doc)) — content-addressed"
+    },
+    "outcome": {"type": "string", "enum": ["permit", "deny", "defer"]},
+    "policy_id": {"type": "string"},
+    "ts_ms": {
+      "type": "integer",
+      "unit": "milliseconds since Unix epoch",
+      "note": "integer — NOT string. Decision timestamp."
+    },
+    "version": {"type": "string", "const": "execution-join-ref-v1"}
+  },
+  "serialization": "RFC8785-JCS",
+  "spec_ref": "docs/spec/execution-join-ref-v1.md"
+}
