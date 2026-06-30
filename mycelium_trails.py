@@ -269,6 +269,8 @@ def _row_to_dict(row: sqlite3.Row) -> dict:
         "action_ref": row["action_ref"] if "action_ref" in keys else None,
         "tx_hash": row["tx_hash"] if "tx_hash" in keys else None,
         "origin": row["origin"] if "origin" in keys else None,
+        "anchor_status": row["anchor_status"] if "anchor_status" in keys else None,
+        "anchor_block": row["anchor_block"] if "anchor_block" in keys else None,
     }
 
 
