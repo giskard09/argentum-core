@@ -2769,8 +2769,12 @@ async def nexus_trail(request: Request):
     no coincide, el trail se rechaza.
 
     Body: receipt NEXUS (packet_version 1.0):
-      {action_ref, service, preimage: {agent_id, action_type, scope, ts},
+      {action_ref, service, preimage: {agent_id, action_type, scope, timestamp},
        payment_hash, output_hash, hash_algo, preimage_format, timestamp, ...}
+
+    action_ref preimage: SHA-256(JCS({"action_type": str, "agent_id": str, "scope": str,
+      "timestamp": str})) — RFC 8785 lexicographic order. timestamp is always a string
+      (e.g. "1782900000000" or "2026-06-29T17:00:00.000Z"). Integer timestamp will fail.
     """
     try:
         body = await request.json()
@@ -2815,7 +2819,21 @@ async def nexus_trail(request: Request):
         colon_ref = hashlib.sha256(colon_payload.encode("utf-8")).hexdigest()
         if action_ref != colon_ref:
             return JSONResponse(
-                {"error": "action_ref mismatch — receipt tampered or preimage incorrect"},
+                {
+                    "error": "action_ref mismatch",
+                    "detail": (
+                        "Recomputed action_ref does not match the provided value. "
+                        "Preimage must be: {\"action_type\": str, \"agent_id\": str, "
+                        "\"scope\": str, \"timestamp\": str} — JCS order (lexicographic). "
+                        f"Expected (JCS): {expected!r}. "
+                        f"Received: {action_ref!r}. "
+                        "Common causes: timestamp as integer instead of string, "
+                        "extra or missing fields in preimage, wrong field names (use 'timestamp' not 'ts')."
+                    ),
+                    "preimage_fields": ["action_type", "agent_id", "scope", "timestamp"],
+                    "timestamp_format": "string — ISO 8601 or Unix ms as string, e.g. \"1782900000000\"",
+                    "canonical_form": "SHA-256(JCS({action_type, agent_id, scope, timestamp})) — RFC 8785",
+                },
                 status_code=422,
             )
 
