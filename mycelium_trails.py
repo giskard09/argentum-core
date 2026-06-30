@@ -343,7 +343,8 @@ def get_trail_by_id(db_path: str, trail_id: str) -> Optional[dict]:
             """
             SELECT trail_id, agent_id, service, operation, timestamp,
                    karma_at_time, success, signature_ref, scope, delegation_ref,
-                   parent_trail_id, root_trail_id, negotiation_ref, action_ref, tx_hash, origin
+                   parent_trail_id, root_trail_id, negotiation_ref, action_ref,
+                   tx_hash, origin, anchor_status, anchor_block
             FROM trails WHERE trail_id=?
             """,
             (trail_id,),
