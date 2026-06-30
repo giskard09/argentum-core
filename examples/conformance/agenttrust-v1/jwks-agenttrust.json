@@ -1,0 +1,12 @@
+{
+  "keys": [
+    {
+      "crv": "Ed25519",
+      "x": "mOc6qdTHAQkszT8_RQvpzmKTcntBCH1f-dyDwuKpExI",
+      "kty": "OKP",
+      "kid": "agenttrust-ed25519-v1",
+      "use": "sig",
+      "alg": "EdDSA"
+    }
+  ]
+}

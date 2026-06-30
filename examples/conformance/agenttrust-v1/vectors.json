@@ -1,0 +1,64 @@
+{
+  "suite": "verification.v0.3+composed",
+  "version": "agenttrust-v1-conformance-2026-06-30",
+  "spec": "../../README.md (Mycelium Trails section) + IETF draft-krausz-verification-state-01",
+  "issuer": "agenttrust",
+  "composition_rule": "AND_PRESENT",
+  "composition_rule_note": "Vectors here are AT-only (no v_gate sibling present). composed_decision collapses to halt whenever any present-or-required sibling is absent or halts, per AND_PRESENT semantics. v_gate_skill.verdict is the AT-specific signal to inspect independently of composed_decision.",
+  "envelope_kind": "verification.v0.3+composed",
+  "jws_typ": "application/vnd.verification.v0.3+composed+jws",
+  "signature_algorithm": "EdDSA (Ed25519)",
+  "canonicalization": "RFC 8785 (JCS)",
+  "issuers": [
+    {
+      "role": "v_gate_skill",
+      "issuer": "agenttrust",
+      "jwks_file": "jwks-agenttrust.json",
+      "jwks_url": "https://agenttrust.uk/.well-known/jwks.json",
+      "kid": "agenttrust-ed25519-v1",
+      "mapping_id": "agenttrust-v0.3-2026-06-07",
+      "mapping_hash": "sha256-307db9faa364cfe149fb5120d0451175175de40d7433c44915bfec57acc16ec4"
+    }
+  ],
+  "anchor": {
+    "mechanism": "on-chain (Arbitrum, via NEXUS/Mycelium)",
+    "trail_id": "c63af6c1-6c17-46d0-b31d-e69aed2e4c65",
+    "tx_hash": "52248423831d58fd9331d07120ffe76a4107e4be5fb6ef306c77e4cffe9cb2d0",
+    "anchor_block": 479023026,
+    "action_ref": "6cb9d13b1c79276ce6220de38976de34f239c3baa961cca73d5163b339d62121",
+    "anchor_proof": {
+      "preimage": {
+        "action_type": "skill_scan",
+        "agent_id": "did:agenttrust:conformance-v1",
+        "scope": "agenttrust:v1.compose:skill_scan",
+        "timestamp": "2026-06-30T10:00:00.000Z"
+      },
+      "recompute": "SHA-256(JCS(anchor_proof.preimage)) == action_ref == on-chain calldata"
+    },
+    "verify_chain_url": "https://argentum.rgiskard.xyz/mycelium/trails/c63af6c1-6c17-46d0-b31d-e69aed2e4c65/verify_chain"
+  },
+  "accept_vectors": [
+    {
+      "id": "at-001",
+      "description": "Skill scan SAFE (v_gate_skill.verdict=act). composed_decision is halt because AO sibling is absent in this AT-only vector \u2014 this is expected AND_PRESENT behavior, not a failure.",
+      "payload_file": "payload-001.json",
+      "jws_file": "jws-001.json",
+      "expected_v_gate_skill_verdict": "act",
+      "expected_composed_decision": "halt",
+      "signer_kids": [
+        "agenttrust-ed25519-v1"
+      ]
+    },
+    {
+      "id": "at-002",
+      "description": "Skill scan CRITICAL findings (curl|bash backdoor pattern). v_gate_skill.verdict=halt, composed_decision=halt.",
+      "payload_file": "payload-002.json",
+      "jws_file": "jws-002.json",
+      "expected_v_gate_skill_verdict": "halt",
+      "expected_composed_decision": "halt",
+      "signer_kids": [
+        "agenttrust-ed25519-v1"
+      ]
+    }
+  ]
+}
