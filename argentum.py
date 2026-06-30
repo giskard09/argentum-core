@@ -2287,7 +2287,25 @@ def get_trail(trail_id: str):
         mrow = mycelium_trails.get_trail_by_id(TRAILS_DB, trail_id)
         if mrow is None:
             raise HTTPException(404, "trail not found")
-        return {"source": "mycelium", **mrow}
+        # Build anchor_proof from stored preimage if available
+        preimage_raw = mrow.pop("preimage_json", None)
+        anchor_proof = None
+        if preimage_raw:
+            try:
+                import json as _json_ap, hashlib as _hs_ap
+                preimage = _json_ap.loads(preimage_raw)
+                canonical = _json_ap.dumps(preimage, sort_keys=True, separators=(",", ":"),
+                                           ensure_ascii=False).encode("utf-8")
+                computed_ref = _hs_ap.sha256(canonical).hexdigest()
+                anchor_proof = {
+                    "preimage": preimage,
+                    "hash_algo": "sha256",
+                    "preimage_format": "jcs-rfc8785",
+                    "action_ref_verified": computed_ref == mrow.get("action_ref"),
+                }
+            except Exception:
+                pass
+        return {"source": "mycelium", **mrow, "anchor_proof": anchor_proof}
     d = dict(row)
     d["steps"] = _json.loads(d["steps"])
     if d.get("output_schema"):
@@ -2909,6 +2927,14 @@ async def nexus_trail(request: Request):
         _conn = mycelium_trails._connect(TRAILS_DB)
         _conn.execute("UPDATE trails SET action_ref = ? WHERE trail_id = ?", (action_ref, trail_id))
         _conn.close()
+        # Preimage exacto para recomputation independiente del action_ref.
+        # timestamp como string — mismo formato que el hash usa.
+        mycelium_trails.set_trail_preimage(TRAILS_DB, trail_id, {
+            "action_type": action_type,
+            "agent_id":    agent_id,
+            "scope":       scope or "",
+            "timestamp":   str(ts),
+        })
 
         # Billing: $0.003 USD por trail para cuentas con api_key y conformance_source activo
         if billing_api_key:

@@ -127,6 +127,7 @@ _DDL_MIGRATIONS = [
     "ALTER TABLE payg_accounts ADD COLUMN notify_webhook TEXT",
     "ALTER TABLE trails ADD COLUMN anchor_status TEXT",
     "ALTER TABLE trails ADD COLUMN anchor_block INTEGER",
+    "ALTER TABLE trails ADD COLUMN preimage_json TEXT",
 ]
 
 
@@ -271,6 +272,7 @@ def _row_to_dict(row: sqlite3.Row) -> dict:
         "origin": row["origin"] if "origin" in keys else None,
         "anchor_status": row["anchor_status"] if "anchor_status" in keys else None,
         "anchor_block": row["anchor_block"] if "anchor_block" in keys else None,
+        "preimage_json": row["preimage_json"] if "preimage_json" in keys else None,
     }
 
 
@@ -293,6 +295,19 @@ def confirm_trail_anchor(db_path: str, trail_id: str, block_number: int) -> None
         conn.execute(
             "UPDATE trails SET anchor_status = 'anchored', anchor_block = ? WHERE trail_id = ?",
             (block_number, trail_id),
+        )
+    finally:
+        conn.close()
+
+
+def set_trail_preimage(db_path: str, trail_id: str, preimage: dict) -> None:
+    """Guarda el preimage JCS raw del trail para permitir recomputation independiente del action_ref."""
+    import json as _json
+    conn = _connect(db_path)
+    try:
+        conn.execute(
+            "UPDATE trails SET preimage_json = ? WHERE trail_id = ?",
+            (_json.dumps(preimage, sort_keys=True, separators=(",", ":")), trail_id),
         )
     finally:
         conn.close()
@@ -346,7 +361,7 @@ def get_trail_by_id(db_path: str, trail_id: str) -> Optional[dict]:
             SELECT trail_id, agent_id, service, operation, timestamp,
                    karma_at_time, success, signature_ref, scope, delegation_ref,
                    parent_trail_id, root_trail_id, negotiation_ref, action_ref,
-                   tx_hash, origin, anchor_status, anchor_block
+                   tx_hash, origin, anchor_status, anchor_block, preimage_json
             FROM trails WHERE trail_id=?
             """,
             (trail_id,),
