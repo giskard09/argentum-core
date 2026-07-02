@@ -104,8 +104,30 @@ function main() {
     pass++;
   }
 
-  console.log(`\nPASS: ${pass} vectors, FAIL: ${fail} vectors`);
-  process.exit(fail > 0 ? 1 : 0);
+  // Reject vectors — MUST fail canonical check
+  const rejectVectors = vectors.reject_vectors || [];
+  let rejectPass = 0, rejectFail = 0;
+
+  for (const vector of rejectVectors) {
+    const payloadFile = join(__dirname, vector.payload_file);
+    const jwsFile = join(__dirname, vector.jws_file);
+    const payload = JSON.parse(readFileSync(payloadFile, 'utf8'));
+    const jws = JSON.parse(readFileSync(jwsFile, 'utf8'));
+
+    const canonical = jcs(payload);
+    const expectedPayloadB64 = Buffer.from(canonical, 'utf8').toString('base64url');
+
+    if (expectedPayloadB64 !== jws.payload) {
+      console.log(`PASS (reject) ${vector.id}: canonical mismatch detected correctly`);
+      rejectPass++;
+    } else {
+      console.error(`FAIL (reject) ${vector.id}: tampered payload was NOT detected`);
+      rejectFail++;
+    }
+  }
+
+  console.log(`\nPASS: ${pass} accept + ${rejectPass} reject, FAIL: ${fail + rejectFail}`);
+  process.exit((fail + rejectFail) > 0 ? 1 : 0);
 }
 
 main();

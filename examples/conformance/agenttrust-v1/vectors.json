@@ -60,5 +60,17 @@
         "agenttrust-ed25519-v1"
       ]
     }
+  ],
+  "reject_vectors": [
+    {
+      "id": "at-r01",
+      "description": "Tampered payload \u2014 verdict changed from halt to act after signing. Canonical recompute MUST fail: payload bytes differ from what AT signed.",
+      "payload_file": "payload-003.json",
+      "jws_file": "jws-003.json",
+      "expected_failure": "canonical_mismatch",
+      "signer_kids": [
+        "agenttrust-ed25519-v1"
+      ]
+    }
   ]
 }
