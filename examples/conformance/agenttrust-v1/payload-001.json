@@ -1,0 +1,27 @@
+{
+  "composed_decision": "halt",
+  "composed_decision_rule": "AND_PRESENT",
+  "envelope_kind": "verification.v0.3+composed",
+  "receipt_version": "0.3.0-composed",
+  "signature_meta": {
+    "agentoracle_jwks_url": "https://agentoracle.co/.well-known/jwks.json",
+    "agenttrust_jwks_url": "https://agenttrust.uk/.well-known/jwks.json"
+  },
+  "subject": {
+    "claim_hash": "sha256-conformance-vector-at001",
+    "skill_hash": "sha256-e9cb9a71f0c9ccdb64e7590c2cbde29feb0483c9a1d2b166e5aff36e1dc05b30"
+  },
+  "v_gate_skill": {
+    "endpoint_results": [],
+    "issuer": "agenttrust",
+    "mapping_id": "agenttrust-v0.3-2026-06-07",
+    "mcp_results": [],
+    "skill_results": [
+      {
+        "status": "clean"
+      }
+    ],
+    "v_gate_mapping_hash": "sha256-307db9faa364cfe149fb5120d0451175175de40d7433c44915bfec57acc16ec4",
+    "verdict": "act"
+  }
+}
