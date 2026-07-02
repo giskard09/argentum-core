@@ -120,6 +120,8 @@ Or retrieve by trail_id:
 GET https://argentum-api.rgiskard.xyz/trails/{trail_id}
 ```
 
+Note: the trail detail endpoint is `/trails/{trail_id}`, not `/mycelium/trails/{trail_id}` — the `/mycelium/trails/...` prefix is reserved for graph sub-resources (`/mycelium/trails/{trail_id}/graph`, `/verify_chain`).
+
 Or recompute locally from the four preimage fields using the snippet above — no API call needed.
 
 ---
@@ -141,8 +143,10 @@ PAYG activates automatically when the Free tier is exhausted. Usage is invoiced 
 |----------|--------|---------|
 | `/nexus/trail` | POST | Register a trail |
 | `/trails/verify` | GET | Verify by action_ref |
-| `/trails/{trail_id}` | GET | Trail detail + tx_hash |
+| `/trails/{trail_id}` | GET | Trail detail + tx_hash (not `/mycelium/trails/{trail_id}`) |
 | `/trails/agents/{agent_id}` | GET | Trail history |
+| `/mycelium/trails/{trail_id}/graph` | GET | Trail graph (parent/root chain) |
+| `/mycelium/trails/{trail_id}/verify_chain` | GET | Verify full trail chain |
 | `/karma/{agent_id}` | GET | Karma score + Ed25519 badge |
 | `/status` | GET | API health |
 
