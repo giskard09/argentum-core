@@ -1,0 +1,93 @@
+{
+  "spec_version": "governance-block-join-ref-v1",
+  "description": "Binds a signed governance_block to a terminal_envelope via a recomputable digest. Single authority path: verifier recomputes governance_block_digest, confirms terminal_envelope names it, confirms lossless_projection (same digest + same call pair => same terminal_bucket).",
+  "vectors": [
+    {
+      "id": "joined-and-consistent",
+      "description": "Baseline: governance_block recomputes to the digest the terminal_envelope names. Single authority path holds.",
+      "expected": "JOINED_AND_CONSISTENT",
+      "governance_block": {
+        "authority_chain": ["pdp-root-2026", "gateway-node-04"],
+        "canonicalization_profile_id": "jcs-rfc8785-v1",
+        "data_version_hash": "f3a1c9e2b7d5468a9c1e0f2b3a4d5c6e7f8091a2b3c4d5e6f7081920a3b4c5d6",
+        "fixture_id": "gb-fixture-2026-07",
+        "schema_version": "1.0",
+        "ts_ms": 1751472000000,
+        "version": "governance-block-join-ref-v1"
+      },
+      "governance_block_digest": "a6743f8c84cb91d2cb035c25d0190c41e153b36869e122316f2773053c3c17b5",
+      "terminal_envelope": {
+        "effective_call_digest": "aa11bb22cc33dd44ee55ff66aa77bb88cc99dd00ee11ff22aa33bb44cc55dd66",
+        "evaluated_fixture_id": "gb-fixture-2026-07",
+        "governance_block_digest": "a6743f8c84cb91d2cb035c25d0190c41e153b36869e122316f2773053c3c17b5",
+        "operation_id": "op-9f2c1a",
+        "policy_decision": "deny",
+        "proposed_call_digest": "aa11bb22cc33dd44ee55ff66aa77bb88cc99dd00ee11ff22aa33bb44cc55dd66",
+        "terminal_bucket": "denied_mode_incompatible",
+        "ts_ms": 1751472001200,
+        "version": "governance-block-join-ref-v1"
+      }
+    }
+  ],
+  "negative_vectors": [
+    {
+      "id": "governance-block-digest-mismatch",
+      "description": "governance_block content was altered (data_version_hash tampered) after the digest was computed. Recomputed digest no longer equals what terminal_envelope names.",
+      "expected": "GOVERNANCE_BLOCK_DIGEST_MISMATCH",
+      "governance_block": {
+        "authority_chain": ["pdp-root-2026", "gateway-node-04"],
+        "canonicalization_profile_id": "jcs-rfc8785-v1",
+        "data_version_hash": "0000000000000000000000000000000000000000000000000000000000000",
+        "fixture_id": "gb-fixture-2026-07",
+        "schema_version": "1.0",
+        "ts_ms": 1751472000000,
+        "version": "governance-block-join-ref-v1"
+      },
+      "claimed_governance_block_digest": "a6743f8c84cb91d2cb035c25d0190c41e153b36869e122316f2773053c3c17b5"
+    },
+    {
+      "id": "split-authority-divergent-bucket",
+      "description": "Two terminal_envelope records share the same governance_block_digest and the same (proposed_call_digest, effective_call_digest) pair but disagree on terminal_bucket. lossless_projection fails — cannot both be conformant.",
+      "expected": "SPLIT_AUTHORITY",
+      "terminal_envelope_a": {
+        "effective_call_digest": "aa11bb22cc33dd44ee55ff66aa77bb88cc99dd00ee11ff22aa33bb44cc55dd66",
+        "evaluated_fixture_id": "gb-fixture-2026-07",
+        "governance_block_digest": "a6743f8c84cb91d2cb035c25d0190c41e153b36869e122316f2773053c3c17b5",
+        "operation_id": "op-9f2c1a",
+        "policy_decision": "deny",
+        "proposed_call_digest": "aa11bb22cc33dd44ee55ff66aa77bb88cc99dd00ee11ff22aa33bb44cc55dd66",
+        "terminal_bucket": "denied_mode_incompatible",
+        "ts_ms": 1751472001200,
+        "version": "governance-block-join-ref-v1"
+      },
+      "terminal_envelope_b": {
+        "effective_call_digest": "aa11bb22cc33dd44ee55ff66aa77bb88cc99dd00ee11ff22aa33bb44cc55dd66",
+        "evaluated_fixture_id": "gb-fixture-2026-07",
+        "governance_block_digest": "a6743f8c84cb91d2cb035c25d0190c41e153b36869e122316f2773053c3c17b5",
+        "operation_id": "op-9f2c1a",
+        "policy_decision": "deny",
+        "proposed_call_digest": "aa11bb22cc33dd44ee55ff66aa77bb88cc99dd00ee11ff22aa33bb44cc55dd66",
+        "terminal_bucket": "allow",
+        "ts_ms": 1751472001500,
+        "version": "governance-block-join-ref-v1"
+      }
+    },
+    {
+      "id": "orphan-terminal-envelope",
+      "description": "terminal_envelope names a governance_block_digest for which no governance_block object is available to the verifier.",
+      "expected": "ORPHAN_TERMINAL_ENVELOPE",
+      "governance_block": null,
+      "terminal_envelope": {
+        "effective_call_digest": "aa11bb22cc33dd44ee55ff66aa77bb88cc99dd00ee11ff22aa33bb44cc55dd66",
+        "evaluated_fixture_id": "gb-fixture-2026-07",
+        "governance_block_digest": "0000000000000000000000000000000000000000000000000000000000000000",
+        "operation_id": "op-9f2c1a",
+        "policy_decision": "deny",
+        "proposed_call_digest": "aa11bb22cc33dd44ee55ff66aa77bb88cc99dd00ee11ff22aa33bb44cc55dd66",
+        "terminal_bucket": "denied_mode_incompatible",
+        "ts_ms": 1751472001200,
+        "version": "governance-block-join-ref-v1"
+      }
+    }
+  ]
+}
