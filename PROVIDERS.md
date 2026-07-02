@@ -20,3 +20,10 @@ Declaration snippet (what "Declared" looks like — same badge AgentOracle uses)
     [![Mycelium Provider](https://img.shields.io/badge/Mycelium-Provider-4a90e2)](https://github.com/giskard09/argentum-core/blob/main/docs/mycelium-provider-protocol.md)
 
 The claim is the merged conformance set plus production trails, not this table.
+
+## Conformance tooling
+
+[giskard09/action-ref-conformance](https://github.com/giskard09/action-ref-conformance) — a
+GitHub Action that verifies an implementation (or vendored fixtures) against the frozen
+`action-ref-v1-jcs-sha256` profile in minutes. The claim is the green run with the pinned
+action (`@v1`), not a badge. A row above is added only after manual verification of that run.
