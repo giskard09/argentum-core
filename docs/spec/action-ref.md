@@ -31,7 +31,7 @@ def compute_action_ref(
     return hashlib.sha256(canonical).hexdigest()
 ```
 
-**Safe band:** the `json.dumps` approach above produces RFC 8785-compatible bytes for the specific input shapes this spec exercises: ASCII-only field values, RFC 3339 timestamp strings in the conformant `YYYY-MM-DDTHH:MM:SS.mmmZ` form (see [Timestamp format](#timestamp-format)), no surrogate-pair Unicode, no `-0.0`. For inputs outside this band — non-ASCII agent identifiers, surrogate-pair scope strings — use `rfc8785` (Python) or an equivalent RFC 8785-compliant library to guarantee byte-level portability across implementations.
+**Domain:** the `json.dumps` approach above produces RFC 8785-compatible bytes for the specific input shapes this spec exercises: ASCII-only field values, RFC 3339 timestamp strings in the conformant `YYYY-MM-DDTHH:MM:SS.mmmZ` form (see [Timestamp format](#timestamp-format)), no surrogate-pair Unicode, no `-0.0`. This is the profile's full domain, not a convenience subset — there is no "use a compliant library instead" fallback. A preimage outside this domain (non-ASCII agent identifiers, surrogate-pair scope strings, malformed timestamp grammar, duplicate preimage keys) is not canonicalized by best effort or delegated to a different implementation's number/string handling; the verifier MUST return `OUT_OF_PROFILE_DOMAIN` and stop before any digest comparison — the same pattern already used for `UNSUPPORTED_CANONICAL_PROFILE`. One pinned behavior per profile, never a disjunction between "this path or, failing that, some other path."
 
 Reference implementation: [`plugins/agt_evidence_anchor/action_ref.py`](../../plugins/agt_evidence_anchor/action_ref.py)
 

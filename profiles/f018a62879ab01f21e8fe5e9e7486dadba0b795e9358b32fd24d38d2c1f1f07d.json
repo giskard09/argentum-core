@@ -1,0 +1,59 @@
+{
+  "description": "JCS (RFC 8785) profile for decision evidence (decision_id) preimage — execution-join-ref-v1",
+  "duplicate_keys": "REJECT",
+  "encoding": "UTF-8",
+  "field_set": [
+    "action_ref",
+    "canonicalization_profile_id",
+    "outcome",
+    "policy_id",
+    "ts_ms",
+    "version"
+  ],
+  "key_order": "lexicographic",
+  "name": "jcs-rfc8785-v1",
+  "numeric_domain": {
+    "applies_to": [
+      "ts_ms"
+    ],
+    "note": "RFC 8785 Sec 3.2.2.3 requires ECMA-262 Number-to-String canonicalization; only integers exactly representable as an IEEE-754 double (|n| <= 2^53-1) are in this profile's domain. ts_ms is a non-negative Unix millisecond timestamp, so the lower bound is 0. Fractional values, exponential notation, and integers outside this range are out of domain -- the verifier MUST return OUT_OF_PROFILE_DOMAIN, never attempt best-effort canonicalization or fall back to a different library's number handling.",
+    "range": "[0, 9007199254740991]",
+    "type": "safe_integer"
+  },
+  "per_field_units": {
+    "action_ref": {
+      "format": "sha256-hex",
+      "note": "SHA-256(JCS(action_ref preimage)) — 64 lowercase hex chars",
+      "type": "string"
+    },
+    "canonicalization_profile_id": {
+      "format": "sha256-hex",
+      "note": "SHA-256(JCS(this profile doc)) — content-addressed",
+      "type": "string"
+    },
+    "outcome": {
+      "enum": [
+        "permit",
+        "deny",
+        "defer"
+      ],
+      "type": "string"
+    },
+    "policy_id": {
+      "type": "string"
+    },
+    "ts_ms": {
+      "note": "integer — NOT string. Decision timestamp.",
+      "type": "integer",
+      "unit": "milliseconds since Unix epoch"
+    },
+    "version": {
+      "const": "execution-join-ref-v1",
+      "type": "string"
+    }
+  },
+  "serialization": "RFC8785-JCS",
+  "spec_ref": "docs/spec/execution-join-ref-v1.md",
+  "superseded_reason": "Original profile doc left duplicate_keys and numeric_domain unpinned. Additive tightening only -- no previously-valid canonicalization changes; only previously-ambiguous inputs (duplicate preimage keys, numbers outside the RFC 8785 safe-integer domain) now REJECT explicitly instead of falling to implementation-defined behavior. Old doc remains resolvable for evidence that already names it.",
+  "supersedes": "82b5df2a487988d5ba773cf40ffa92a614769de6fbea6f4b2745794125e1c9fa"
+}

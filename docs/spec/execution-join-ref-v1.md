@@ -71,8 +71,23 @@ Currently defined profiles:
 
 | alias | profile_id (SHA-256 of doc) | canonical form |
 |---|---|---|
-| `jcs-rfc8785-v1` | `82b5df2a487988d5ba773cf40ffa92a614769de6fbea6f4b2745794125e1c9fa` | JSON Canonicalization Scheme (RFC 8785) — decision evidence preimage |
-| `jcs-rfc8785-action-ref-v1` | `8c7f71754e3daae1a0390d5e0287d51097d011e40df36bf15cad5c0f47efa05a` | JSON Canonicalization Scheme (RFC 8785) — action_ref preimage; `timestamp` is `string`, NOT integer |
+| `jcs-rfc8785-v1` | `f018a62879ab01f21e8fe5e9e7486dadba0b795e9358b32fd24d38d2c1f1f07d` | JSON Canonicalization Scheme (RFC 8785) — decision evidence preimage. `duplicate_keys: REJECT`; `numeric_domain`: safe integers `[0, 2^53-1]` for `ts_ms`, out of range → `OUT_OF_PROFILE_DOMAIN` |
+| `jcs-rfc8785-action-ref-v1` | `bcf8ae8c1105b8b59f892935d076540f54813b0d87c30cab741e4c29847a0cf5` | JSON Canonicalization Scheme (RFC 8785) — action_ref preimage; `timestamp` is `string`, NOT integer. `duplicate_keys: REJECT`; `numeric_domain: not_applicable` (no numeric fields) |
+
+Also used by [`governance-block-join-ref-v1`](governance-block-join-ref-v1.md)
+(`canonicalization_profile_id: jcs-rfc8785-v1`) — same profile doc, same
+domain pinning.
+
+Superseded profile_ids (schema gap closed 2026-07-03: `duplicate_keys` and
+`numeric_domain` were previously unpinned — a single behavior per profile now,
+not an implementation-defined fallback). The old docs remain on disk and
+remain resolvable by hash for evidence minted before this change; the aliases
+above resolve to the current docs.
+
+| superseded profile_id | superseded by |
+|---|---|
+| `82b5df2a487988d5ba773cf40ffa92a614769de6fbea6f4b2745794125e1c9fa` | `f018a62879ab01f21e8fe5e9e7486dadba0b795e9358b32fd24d38d2c1f1f07d` |
+| `8c7f71754e3daae1a0390d5e0287d51097d011e40df36bf15cad5c0f47efa05a` | `bcf8ae8c1105b8b59f892935d076540f54813b0d87c30cab741e4c29847a0cf5` |
 
 ```json
 
@@ -120,7 +135,8 @@ All verifier results map to exactly one of these codes:
 | `AUTHORIZED_EFFECTIVE_CALL` | all invariants pass; effective call is bound to a valid decision |
 | `MALFORMED_EVIDENCE` | decision evidence object is missing a required field or is not valid JCS |
 | `UNSUPPORTED_CANONICAL_PROFILE` | `canonicalization_profile_id` is present but the verifier does not implement that profile |
-| `DIGEST_MISMATCH` | profile is supported, all fields are present, but recomputed digest does not match the claimed ref |
+| `OUT_OF_PROFILE_DOMAIN` | profile is supported, but the preimage violates a domain constraint the profile pins explicitly (duplicate keys when `duplicate_keys: REJECT`; a number outside the declared `numeric_domain`) — checked before any digest comparison, never coerced or passed to a fallback library |
+| `DIGEST_MISMATCH` | profile is supported, preimage is within domain, all fields are present, but recomputed digest does not match the claimed ref |
 | `EXPIRED_POLICY_BINDING` | decision evidence is structurally valid but `policy_id` was not in force at `ts_ms` |
 
 `VERIFIER_OFFLINE` remains a distinct code when the verifier cannot access the

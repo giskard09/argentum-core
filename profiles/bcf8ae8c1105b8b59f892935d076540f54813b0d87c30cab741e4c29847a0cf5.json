@@ -1,0 +1,33 @@
+{
+  "description": "JCS (RFC 8785) profile for action_ref preimage — execution-join-ref-v1",
+  "duplicate_keys": "REJECT",
+  "encoding": "UTF-8",
+  "field_set": [
+    "action_type",
+    "agent_id",
+    "scope",
+    "timestamp"
+  ],
+  "key_order": "lexicographic",
+  "name": "jcs-rfc8785-action-ref-v1",
+  "numeric_domain": "not_applicable",
+  "per_field_units": {
+    "action_type": {
+      "type": "string"
+    },
+    "agent_id": {
+      "type": "string"
+    },
+    "scope": {
+      "type": "string"
+    },
+    "timestamp": {
+      "note": "MUST be string — integer timestamp produces a different hash. Accepted formats: Unix ms as string (e.g. \"1782900000000\") or ISO 8601 (e.g. \"2026-06-29T17:00:00.000Z\"). Format must be consistent between signer and verifier.",
+      "type": "string"
+    }
+  },
+  "serialization": "RFC8785-JCS",
+  "spec_ref": "docs/spec/execution-join-ref-v1.md",
+  "superseded_reason": "Original profile doc left duplicate_keys unpinned. All fields in this profile are strings, so numeric_domain is not_applicable. Additive tightening only. Old doc remains resolvable for evidence that already names it.",
+  "supersedes": "8c7f71754e3daae1a0390d5e0287d51097d011e40df36bf15cad5c0f47efa05a"
+}

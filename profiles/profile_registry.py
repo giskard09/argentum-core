@@ -6,6 +6,13 @@ from profiles/<profile_id>.json. A verifier reads canonicalization_profile_id
 from the decision evidence, resolves it here before comparing any digests.
 If the profile is absent or unrecognized, the verifier must return
 UNSUPPORTED_CANONICAL_PROFILE — not DIGEST_MISMATCH.
+
+Profile docs are immutable once minted: same profile_id implies same doc,
+byte-for-byte, verified by construction. Closing a gap in a profile's schema
+(pinning a field that was previously unpinned) is never an in-place edit --
+it mints a new doc with a new profile_id and the alias is repointed to it.
+The old doc stays on disk and stays resolvable, so evidence that already
+named the old profile_id remains verifiable exactly as it always was.
 """
 
 import hashlib
@@ -16,8 +23,18 @@ _PROFILES_DIR = pathlib.Path(__file__).parent
 
 # Human-readable aliases → canonical profile_id (SHA-256 of doc)
 ALIASES: dict[str, str] = {
-    "jcs-rfc8785-v1":            "82b5df2a487988d5ba773cf40ffa92a614769de6fbea6f4b2745794125e1c9fa",
-    "jcs-rfc8785-action-ref-v1": "8c7f71754e3daae1a0390d5e0287d51097d011e40df36bf15cad5c0f47efa05a",
+    "jcs-rfc8785-v1":            "f018a62879ab01f21e8fe5e9e7486dadba0b795e9358b32fd24d38d2c1f1f07d",
+    "jcs-rfc8785-action-ref-v1": "bcf8ae8c1105b8b59f892935d076540f54813b0d87c30cab741e4c29847a0cf5",
+}
+
+# Superseded profile_ids -- no longer the alias target, but the doc stays on
+# disk and stays resolvable by hash. Evidence minted before 2026-07-03 that
+# names these hashes directly remains verifiable against the original,
+# unpinned-schema doc. Superseded because duplicate_keys/numeric_domain were
+# unpinned (see each new doc's "supersedes"/"superseded_reason" fields).
+SUPERSEDED: dict[str, str] = {
+    "82b5df2a487988d5ba773cf40ffa92a614769de6fbea6f4b2745794125e1c9fa": "f018a62879ab01f21e8fe5e9e7486dadba0b795e9358b32fd24d38d2c1f1f07d",
+    "8c7f71754e3daae1a0390d5e0287d51097d011e40df36bf15cad5c0f47efa05a": "bcf8ae8c1105b8b59f892935d076540f54813b0d87c30cab741e4c29847a0cf5",
 }
 
 _cache: dict[str, dict] = {}

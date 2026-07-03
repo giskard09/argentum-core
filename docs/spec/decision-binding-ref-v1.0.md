@@ -33,7 +33,7 @@ def compute_decision_binding_ref(
     return "sha256:" + hashlib.sha256(canonical).hexdigest()
 ```
 
-**Safe band:** the `json.dumps` approach above is RFC 8785-compatible for the input shapes this spec exercises: ASCII-only string fields, integer `decision_at_ms`, no `-0.0`, no surrogate-pair Unicode. For inputs outside this band, use an RFC 8785-compliant library.
+**Domain:** the `json.dumps` approach above is RFC 8785-compatible for the input shapes this spec exercises: ASCII-only string fields, integer `decision_at_ms` within the RFC 8785 safe-integer range (`[0, 2^53-1]`), no `-0.0`, no surrogate-pair Unicode, no duplicate preimage keys. This is the profile's full domain, not a convenience subset — there is no "use a compliant library instead" fallback. A preimage outside this domain is not canonicalized by best effort; the verifier MUST return `OUT_OF_PROFILE_DOMAIN` and stop before any digest comparison — the same pattern already used for `UNSUPPORTED_CANONICAL_PROFILE`. One pinned behavior per profile, never a disjunction between "this path or, failing that, some other path."
 
 ## Fields
 
