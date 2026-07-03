@@ -1,0 +1,85 @@
+{
+  "spec_version": "transition-sufficiency-ref-v1",
+  "description": "Required(τ) ⊆ Supported(τ) recomputed by the verifier from item-level sets, not accepted as an assertion. Two well-formed hashes of the two sets are not sufficient on their own.",
+  "vectors": [
+    {
+      "id": "sufficient-full-coverage",
+      "description": "Every required item is present in supported. Recomputed missing_support_items is empty.",
+      "expected": "SUFFICIENT",
+      "decision_record_id": "decision-7c1f2a",
+      "verifier_profile_id": "jcs-rfc8785-v1",
+      "inclusion_operator": "set_subset",
+      "required_support_items": [
+        "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f9",
+        "b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f9a1"
+      ],
+      "supported_support_items": [
+        "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f9",
+        "b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f9a1",
+        "c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f9a1b2"
+      ]
+    },
+    {
+      "id": "insufficient-missing-item",
+      "description": "One required item has no counterpart in supported. Recomputed missing_support_items is non-empty.",
+      "expected": "INSUFFICIENT",
+      "decision_record_id": "decision-9d3e4b",
+      "verifier_profile_id": "jcs-rfc8785-v1",
+      "inclusion_operator": "set_subset",
+      "required_support_items": [
+        "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f9",
+        "d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f9a1b2c3"
+      ],
+      "supported_support_items": [
+        "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f9"
+      ],
+      "expected_missing": [
+        "d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f9a1b2c3"
+      ]
+    }
+  ],
+  "negative_vectors": [
+    {
+      "id": "asserted-hashes-not-inclusion",
+      "description": "required_support_hash and supported_support_hash are both well-formed digests of their respective sets, but no item-level sets are given to the verifier. Digest agreement about set identity says nothing about subset relation — the verifier must reject this as unverifiable, not infer SUFFICIENT from two matching-looking hashes.",
+      "expected": "INCLUSION_NOT_RECOMPUTED",
+      "decision_record_id": "decision-ae21f0",
+      "verifier_profile_id": "jcs-rfc8785-v1",
+      "required_support_hash": "e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f9a1b2c3d4",
+      "supported_support_hash": "e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f9a1b2c3d4",
+      "claimed_inclusion_result": "SUFFICIENT"
+    },
+    {
+      "id": "claimed-sufficient-but-recomputation-disagrees",
+      "description": "Record claims SUFFICIENT, but recomputing missing_support_items from the item-level sets shows a required item is absent. Verifier trusts recomputation, not the claim.",
+      "expected": "INSUFFICIENT",
+      "decision_record_id": "decision-f01a2b",
+      "verifier_profile_id": "jcs-rfc8785-v1",
+      "inclusion_operator": "set_subset",
+      "claimed_inclusion_result": "SUFFICIENT",
+      "required_support_items": [
+        "f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f9a1b2c3d4e5"
+      ],
+      "supported_support_items": []
+    },
+    {
+      "id": "unsupported-inclusion-operator",
+      "description": "inclusion_operator names a comparison the verifier does not implement.",
+      "expected": "UNSUPPORTED_INCLUSION_OPERATOR",
+      "decision_record_id": "decision-1122aa",
+      "verifier_profile_id": "jcs-rfc8785-v1",
+      "inclusion_operator": "fuzzy_match_v9",
+      "required_support_items": ["a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f9"],
+      "supported_support_items": ["a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f9"]
+    },
+    {
+      "id": "unresolvable-decision-record",
+      "description": "decision_record_id does not resolve to any decision record the verifier can retrieve item-level sets from.",
+      "expected": "UNRESOLVABLE_DECISION_RECORD",
+      "decision_record_id": "decision-does-not-exist",
+      "verifier_profile_id": "jcs-rfc8785-v1",
+      "inclusion_operator": "set_subset",
+      "resolvable": false
+    }
+  ]
+}
