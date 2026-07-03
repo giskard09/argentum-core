@@ -7,7 +7,8 @@
   "construction": {
     "content_hash": "sha256(JCS(record))",
     "head_hash": "sha256(content_hash + \"|\" + prev_head_hash)",
-    "test_prior_head": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    "test_prior_head": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "test_prior_head_alt": "6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b"
   },
   "vectors": [
     {
@@ -44,11 +45,53 @@
       "head_hash": "e68a162f7b1b9a380a82600f8df312fb0ba21579e664df525edf92a27f5d37d0",
       "note": "A divergent entry at the SAME sequence position (same prior_head, different content). Produces a DIFFERENT head_hash from axis3-chain-entry-a -- both heads independently computable, so a fork is a detectable conflict, not a silent overwrite.",
       "invariant": "axis3-chain-entry-a.head_hash != axis3-chain-entry-b-divergent.head_hash"
+    },
+    {
+      "id": "axis4a-determinism",
+      "fails_on": null,
+      "property": "same content_hash + same prior_head -> same head_hash",
+      "content_hash": "4e78304e2a58c014f51bcd0d8bce2a9c252bf58cc589e6059dc487ea22a33d8d",
+      "prior_head": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "head_hash": "03d92bae7842b00f8da7fae256abbb8db40c18f532547b2e10a56267e408ce77",
+      "note": "Recomputed via a fresh call path (not reusing axis3-chain-entry-a's cached digest) -- lands on the same head_hash."
+    },
+    {
+      "id": "axis4b-branch-fork",
+      "fails_on": "chain-fork (branch)",
+      "property": "same sequence position + different prior_head -> detectable branch fork between two competing lineages",
+      "sequence_position": 41,
+      "heads": {
+        "x": "03d92bae7842b00f8da7fae256abbb8db40c18f532547b2e10a56267e408ce77",
+        "y": "1e1664b322c96c98e261b4776a2f9ba42be245e2f56b1c339479b94a53152a6b"
+      },
+      "prior_heads": {
+        "x": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "y": "6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b"
+      },
+      "conflict": true,
+      "note": "Two DIFFERENT payloads (accepted vs. verdict-not-recomputable), each independently anchored, arriving at the SAME sequence position from two DIFFERENT prior heads -- two competing lineages, not a same-lineage overwrite."
+    },
+    {
+      "id": "axis4c-anti-replay",
+      "fails_on": "chain-fork (replay)",
+      "property": "same payload, different chain context -> different head_hash",
+      "content_hash": "4e78304e2a58c014f51bcd0d8bce2a9c252bf58cc589e6059dc487ea22a33d8d",
+      "head_hash_context_1": "03d92bae7842b00f8da7fae256abbb8db40c18f532547b2e10a56267e408ce77",
+      "head_hash_context_2": "408110ebd0273d1b1ad18d3ee59dded43239c68b96e2f4df4b9a07ed05a22bef",
+      "invariant": "head_hash_context_1 != head_hash_context_2",
+      "note": "The IDENTICAL record (same content_hash) hashed under two different chain contexts (prior_head vs. prior_head_alt) must not collapse to the same head -- otherwise a valid entry from one point in history could be replayed at a different position and pass as the original commitment."
+    },
+    {
+      "id": "axis4d-structured-conflict-report",
+      "fails_on": null,
+      "property": "the verifier exposes both competing heads plus the shared sequence position as structured data, never collapses to a bare boolean",
+      "demonstrated_by": "axis4b-branch-fork's shape: {sequence_position, heads: {x, y}, prior_heads: {x, y}, conflict}",
+      "note": "A reviewer needs to distinguish corruption, replay, and legitimate branch divergence from the report -- a collapsed boolean cannot carry that distinction."
     }
   ],
   "independent_verification": {
-    "cross_checked_against": "babyblueviper1/preaction-governance-conformance @ examples/composed-decision-chain-recompute/ (same construction, independently implemented)",
-    "result": "byte-identical head_hash values on both chain-entry vectors",
-    "method": "This repo's verify.py was written independently from the construction description (content_hash + head_hash formula), not copied from any third party's code, then cross-checked against babyblueviper1's independently-published head_hash values. Both computations used the same source fixture (presidio-x402-decision-ref-v1.fixture.json, originally contributed to this repo by presidio-v), which is verified byte-identical between both repos."
+    "cross_checked_against": "babyblueviper1/preaction-governance-conformance @ examples/composed-decision-chain-recompute/ (same construction, independently implemented, including pshkv's Axis 4 fork-matrix proposed on autogen#7353 2026-07-03)",
+    "result": "byte-identical head_hash values across all vectors, including axis4b (position 41, heads 03d92bae.../1e1664b3..., prior_heads e3b0c442.../6b86b273...)",
+    "method": "This repo's verify.py was written independently from the construction description (content_hash + head_hash formula, and pshkv's four-property fork-matrix description), not copied from any third party's code, then cross-checked against babyblueviper1's independently-published head_hash values. Both computations used the same source fixture (presidio-x402-decision-ref-v1.fixture.json, originally contributed to this repo by presidio-v), which is verified byte-identical between both repos."
   }
 }

@@ -248,11 +248,13 @@ for the drift-family table and the explicit not-covered list.
 ## composed-decision-chain-recompute - [`composed-decision-chain-recompute/`](./composed-decision-chain-recompute/)
 
 Composed profile: admission (signer independence) + recompute (`verdict = f(controls)`) +
-chain-fork (`head_hash = sha256(content_hash|prev_head_hash)`), requested by rpelevin on
+chain-fork (`head_hash = sha256(content_hash|prev_head_hash)`) + fork-matrix (pshkv's four
+separately-checkable properties: determinism, branch fork, anti-replay, structured
+conflict report), requested by rpelevin and pshkv on
 [autogen#7353](https://github.com/microsoft/autogen/issues/7353). A self-signed ALLOW, a
-verdict that doesn't recompute, and a same-sequence fork each fail for a distinct,
-individually-diagnosable reason — not one pass/fail bit. Built on the
-[`presidio/`](./presidio/) decision fixture. Cross-checked byte-identical against an
+verdict that doesn't recompute, a same-sequence fork, and each fork-matrix property fail
+or hold for a distinct, individually-diagnosable reason — not one pass/fail bit. Built on
+the [`presidio/`](./presidio/) decision fixture. Cross-checked byte-identical against an
 independent build of the same profile
 ([babyblueviper1/preaction-governance-conformance](https://github.com/babyblueviper1/preaction-governance-conformance)).
 
