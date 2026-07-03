@@ -1,0 +1,54 @@
+{
+  "fixture_id": "composed-decision-chain-recompute",
+  "version": "v1",
+  "spec": "docs/spec/action-ref.md",
+  "purpose": "Composed conformance profile: admission (signer independence) + recompute (verdict = f(controls)) + chain-fork (head_hash = sha256(content_hash|prev_head_hash)). Requested by rpelevin on autogen#7353 (2026-07-03).",
+  "source_decisions": "examples/conformance/presidio/presidio-x402-decision-ref-v1.fixture.json",
+  "construction": {
+    "content_hash": "sha256(JCS(record))",
+    "head_hash": "sha256(content_hash + \"|\" + prev_head_hash)",
+    "test_prior_head": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "vectors": [
+    {
+      "id": "axis1-admission-self-signed",
+      "decision_vector": "presidio-x402-decision-signer-equals-runtime",
+      "fails_on": "admission",
+      "admission_check": false,
+      "recompute_check": true,
+      "note": "Signer is the actor's own payment wallet -- self-approval, not an independent verdict. Fails closed on WHO signed it; the hash and recorded verdict are otherwise valid."
+    },
+    {
+      "id": "axis2-recompute-verdict-mismatch",
+      "decision_vector": "presidio-x402-decision-verdict-not-recomputable",
+      "fails_on": "recompute",
+      "admission_check": true,
+      "recompute_check": false,
+      "note": "controls.policy=VIOLATION implies f(controls)=DENY, but the recorded verdict is ALLOW. Signer is a legitimate independent policy-issuer -- fails on WHETHER the verdict follows from its own cited inputs, not on WHO signed it."
+    },
+    {
+      "id": "axis3-chain-entry-a",
+      "decision_vector": "presidio-x402-decision-001",
+      "entry": 41,
+      "prior_head": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "content_hash": "4e78304e2a58c014f51bcd0d8bce2a9c252bf58cc589e6059dc487ea22a33d8d",
+      "head_hash": "03d92bae7842b00f8da7fae256abbb8db40c18f532547b2e10a56267e408ce77",
+      "note": "The accepted decision committed as a receipt chain entry. Recomputing head_hash from the identical content + prior head reproduces the identical digest, deterministically."
+    },
+    {
+      "id": "axis3-chain-entry-b-divergent",
+      "decision_vector": "presidio-x402-decision-verdict-not-recomputable",
+      "entry": 41,
+      "prior_head": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "content_hash": "2b8df5eacd29f7abeb2154b4a2b785ec59caadef2bc6677eaac36093afb13129",
+      "head_hash": "e68a162f7b1b9a380a82600f8df312fb0ba21579e664df525edf92a27f5d37d0",
+      "note": "A divergent entry at the SAME sequence position (same prior_head, different content). Produces a DIFFERENT head_hash from axis3-chain-entry-a -- both heads independently computable, so a fork is a detectable conflict, not a silent overwrite.",
+      "invariant": "axis3-chain-entry-a.head_hash != axis3-chain-entry-b-divergent.head_hash"
+    }
+  ],
+  "independent_verification": {
+    "cross_checked_against": "babyblueviper1/preaction-governance-conformance @ examples/composed-decision-chain-recompute/ (same construction, independently implemented)",
+    "result": "byte-identical head_hash values on both chain-entry vectors",
+    "method": "This repo's verify.py was written independently from the construction description (content_hash + head_hash formula), not copied from any third party's code, then cross-checked against babyblueviper1's independently-published head_hash values. Both computations used the same source fixture (presidio-x402-decision-ref-v1.fixture.json, originally contributed to this repo by presidio-v), which is verified byte-identical between both repos."
+  }
+}
