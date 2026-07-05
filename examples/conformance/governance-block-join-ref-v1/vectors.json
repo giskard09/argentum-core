@@ -73,6 +73,33 @@
       }
     },
     {
+      "id": "divergent-call-envelope-legitimate-divergence",
+      "description": "Same governance_block_digest but a different (proposed_call_digest, effective_call_digest) pair. terminal_bucket legitimately diverges from the joined-and-consistent vector — this is NOT split authority. A verifier must not flag divergence, or inherit the old bucket, solely because governance_block_digest matches; lossless_projection is keyed on (governance_block_digest, proposed_call_digest, effective_call_digest) together, not on governance_block_digest alone.",
+      "expected": "JOINED_AND_CONSISTENT",
+      "terminal_envelope_a": {
+        "effective_call_digest": "aa11bb22cc33dd44ee55ff66aa77bb88cc99dd00ee11ff22aa33bb44cc55dd66",
+        "evaluated_fixture_id": "gb-fixture-2026-07",
+        "governance_block_digest": "a6743f8c84cb91d2cb035c25d0190c41e153b36869e122316f2773053c3c17b5",
+        "operation_id": "op-9f2c1a",
+        "policy_decision": "deny",
+        "proposed_call_digest": "aa11bb22cc33dd44ee55ff66aa77bb88cc99dd00ee11ff22aa33bb44cc55dd66",
+        "terminal_bucket": "denied_mode_incompatible",
+        "ts_ms": 1751472001200,
+        "version": "governance-block-join-ref-v1"
+      },
+      "terminal_envelope_b": {
+        "effective_call_digest": "ffeeddccbbaa99887766554433221100ffeeddccbbaa998877665544332211",
+        "evaluated_fixture_id": "gb-fixture-2026-07",
+        "governance_block_digest": "a6743f8c84cb91d2cb035c25d0190c41e153b36869e122316f2773053c3c17b5",
+        "operation_id": "op-9f2c1a",
+        "policy_decision": "allow",
+        "proposed_call_digest": "ffeeddccbbaa99887766554433221100ffeeddccbbaa998877665544332211",
+        "terminal_bucket": "allow",
+        "ts_ms": 1751472003300,
+        "version": "governance-block-join-ref-v1"
+      }
+    },
+    {
       "id": "orphan-terminal-envelope",
       "description": "terminal_envelope names a governance_block_digest for which no governance_block object is available to the verifier.",
       "expected": "ORPHAN_TERMINAL_ENVELOPE",

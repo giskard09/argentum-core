@@ -62,6 +62,19 @@ for v in data.get("negative_vectors", []):
             failed += 1
         continue
 
+    if vid == "divergent-call-envelope-legitimate-divergence":
+        a, b = v["terminal_envelope_a"], v["terminal_envelope_b"]
+        same_gb = a["governance_block_digest"] == b["governance_block_digest"]
+        different_call_pair = (a["proposed_call_digest"], a["effective_call_digest"]) != (b["proposed_call_digest"], b["effective_call_digest"])
+        divergent_bucket = a["terminal_bucket"] != b["terminal_bucket"]
+        if same_gb and different_call_pair and divergent_bucket:
+            print(f"PASS [{vid}] JOINED_AND_CONSISTENT confirmed (bucket_a={a['terminal_bucket']} != bucket_b={b['terminal_bucket']} — legitimate, call pair differs, not split authority)")
+            passed += 1
+        else:
+            print(f"FAIL [{vid}] expected legitimate divergence conditions not met")
+            failed += 1
+        continue
+
     if vid == "orphan-terminal-envelope":
         if v["governance_block"] is None:
             print(f"PASS [{vid}] ORPHAN_TERMINAL_ENVELOPE confirmed (no governance_block available for governance_block_digest={v['terminal_envelope']['governance_block_digest'][:16]}…)")
