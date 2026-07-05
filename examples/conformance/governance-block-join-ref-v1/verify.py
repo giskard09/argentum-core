@@ -84,5 +84,18 @@ for v in data.get("negative_vectors", []):
             failed += 1
         continue
 
+    if vid == "dispatch-binding-mismatch":
+        gb, te = v["governance_block"], v["terminal_envelope"]
+        computed_gb_digest = ref(gb)
+        gb_recomputes = computed_gb_digest == v["governance_block_digest"] == te["governance_block_digest"]
+        dispatch_mismatch = te["effective_call_digest"] != v["dispatched_effective_call_digest"]
+        if gb_recomputes and dispatch_mismatch:
+            print(f"PASS [{vid}] DISPATCH_BINDING_MISMATCH confirmed (envelope names {te['effective_call_digest'][:16]}… but runtime dispatched {v['dispatched_effective_call_digest'][:16]}… — governance_block itself recomputes fine)")
+            passed += 1
+        else:
+            print(f"FAIL [{vid}] expected dispatch-binding-mismatch conditions not met")
+            failed += 1
+        continue
+
 print(f"\n{passed}/{passed+failed} vectors passed")
 sys.exit(0 if failed == 0 else 1)

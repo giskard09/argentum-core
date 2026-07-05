@@ -74,6 +74,16 @@ the profile named in `governance_block.canonicalization_profile_id`.
    lossless_projection. It never accepts a terminal_envelope whose
    governance_block_digest does not resolve to a governance_block the
    verifier can independently recompute.
+4. **dispatch_binding** — a well-formed terminal_envelope with a
+   recomputable governance_block is not sufficient. The verifier also
+   confirms the `effective_call_digest` the envelope names equals the digest
+   of the call the runtime actually dispatched or resumed
+   (`dispatched_effective_call_digest`), taken from a source the runtime
+   producing the envelope does not control (execution log, tool-call
+   receipt, resumed-session record). A terminal_envelope that recomputes and
+   names a real governance_block but binds to a call the runtime did not
+   actually execute is a fabricated artifact, not a conformant record — it
+   must fail closed rather than merely exist.
 
 ## Failure code taxonomy
 
@@ -83,6 +93,7 @@ the profile named in `governance_block.canonicalization_profile_id`.
 | `GOVERNANCE_BLOCK_DIGEST_MISMATCH` | recomputed digest of governance_block does not equal `governance_block_digest` named in terminal_envelope |
 | `SPLIT_AUTHORITY` | two terminal_envelope records share `governance_block_digest` + `(proposed_call_digest, effective_call_digest)` but disagree on `terminal_bucket` |
 | `ORPHAN_TERMINAL_ENVELOPE` | terminal_envelope names a `governance_block_digest` for which no governance_block object is available to the verifier |
+| `DISPATCH_BINDING_MISMATCH` | governance_block recomputes and terminal_envelope is well-formed, but `effective_call_digest` named in the envelope does not equal `dispatched_effective_call_digest` observed independently at the runtime dispatch/resume boundary |
 | `UNSUPPORTED_CANONICAL_PROFILE` | `canonicalization_profile_id` is present but not implemented by the verifier |
 
 ## Relationship to existing primitives

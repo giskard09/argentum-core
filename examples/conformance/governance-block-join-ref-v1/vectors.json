@@ -115,6 +115,33 @@
         "ts_ms": 1751472001200,
         "version": "governance-block-join-ref-v1"
       }
+    },
+    {
+      "id": "dispatch-binding-mismatch",
+      "description": "governance_block recomputes cleanly and terminal_envelope is well-formed and internally consistent, but the call actually dispatched/resumed by the runtime (dispatched_effective_call_digest, taken from an execution log the envelope-producing runtime does not control) differs from the effective_call_digest the envelope names. The envelope describes a call that was never the one executed — a fabricated binding, must fail closed.",
+      "expected": "DISPATCH_BINDING_MISMATCH",
+      "governance_block": {
+        "authority_chain": ["pdp-root-2026", "gateway-node-04"],
+        "canonicalization_profile_id": "jcs-rfc8785-v1",
+        "data_version_hash": "f3a1c9e2b7d5468a9c1e0f2b3a4d5c6e7f8091a2b3c4d5e6f7081920a3b4c5d6",
+        "fixture_id": "gb-fixture-2026-07",
+        "schema_version": "1.0",
+        "ts_ms": 1751472000000,
+        "version": "governance-block-join-ref-v1"
+      },
+      "governance_block_digest": "a6743f8c84cb91d2cb035c25d0190c41e153b36869e122316f2773053c3c17b5",
+      "terminal_envelope": {
+        "effective_call_digest": "aa11bb22cc33dd44ee55ff66aa77bb88cc99dd00ee11ff22aa33bb44cc55dd66",
+        "evaluated_fixture_id": "gb-fixture-2026-07",
+        "governance_block_digest": "a6743f8c84cb91d2cb035c25d0190c41e153b36869e122316f2773053c3c17b5",
+        "operation_id": "op-9f2c1a",
+        "policy_decision": "allow",
+        "proposed_call_digest": "aa11bb22cc33dd44ee55ff66aa77bb88cc99dd00ee11ff22aa33bb44cc55dd66",
+        "terminal_bucket": "allowed_resumed",
+        "ts_ms": 1751472004400,
+        "version": "governance-block-join-ref-v1"
+      },
+      "dispatched_effective_call_digest": "9911887766554433221100ffeeddccbbaa998877665544332211ffeeddccbb"
     }
   ]
 }
