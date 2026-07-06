@@ -1,0 +1,135 @@
+{
+  "spec_version": "verify-failure-mode-ref-v1",
+  "description": "Generalizes the fail-open/fail-closed distinction from azender1/SafeAgent#12 (attestation_unreachable vs attestation_stale) into a mechanism-neutral spec: any pre-action gate that consumes external verification evidence (signed attestation, scan finding, revocation check) must classify a failed verify step into exactly one of three DISTINCT reason codes before applying policy. Collapsing any two of them into a single generic 'denied' bucket loses information an operator needs to respond correctly.",
+  "purpose": "An external implementer who reproduces the classify_verify_attempt output byte-identical from the stated inputs has a conformant implementation. verify_mode is explicit config (fail_closed default | fail_open opt-in) and composes with any existing policy gate (e.g. a grade/score threshold) without replacing it — the verify-failure classification runs before the gate evaluates its own policy.",
+  "failure_modes": {
+    "verify_unreachable": "The evidence source could not be reached (network error, timeout, DNS failure) before any content was received. No claim about the evidence's validity can be made — this is an availability fact, not a safety fact.",
+    "verify_stale": "The evidence source responded and returned a signed, structurally valid record, but the record's freshness bound (issued_at + freshness_ttl_seconds, or explicit expires_at) has passed. The evidence exists and may have been valid once, but cannot be trusted as current.",
+    "verify_invalid": "The evidence source responded with a record that is fresh (within its freshness bound) but fails structural or cryptographic verification (signature does not verify against the declared key, or the canonical digest does not match the signed payload). The evidence is actively contradicted, not merely absent or expired."
+  },
+  "classify_reference": "def classify_verify_attempt(fetch_ok, sig_valid, digest_match, issued_at_ms, expires_at_ms, ttl_seconds, now_ms):\n    if not fetch_ok:\n        return 'verify_unreachable'\n    if expires_at_ms is not None and now_ms > expires_at_ms:\n        return 'verify_stale'\n    if ttl_seconds is not None and (now_ms - issued_at_ms) > ttl_seconds * 1000:\n        return 'verify_stale'\n    if not (sig_valid and digest_match):\n        return 'verify_invalid'\n    return 'verify_ok'",
+  "vectors": [
+    {
+      "id": "reachable-fresh-valid-allow",
+      "description": "Baseline: evidence source reachable, signature valid, digest matches, within freshness bound. Gate proceeds to its own policy evaluation.",
+      "input": {
+        "fetch_ok": true,
+        "sig_valid": true,
+        "digest_match": true,
+        "issued_at_ms": 1782600000000,
+        "expires_at_ms": 1782700000000,
+        "ttl_seconds": 3600,
+        "now_ms": 1782601000000
+      },
+      "expected_reason": "verify_ok",
+      "expected_policy_action": "PROCEED_TO_GATE_POLICY"
+    },
+    {
+      "id": "unreachable-fail-closed-deny",
+      "description": "Evidence source fetch fails (timeout). verify_mode=fail_closed (default) — DENY, distinct reason from a safety finding.",
+      "input": {
+        "fetch_ok": false,
+        "sig_valid": null,
+        "digest_match": null,
+        "issued_at_ms": null,
+        "expires_at_ms": null,
+        "ttl_seconds": 3600,
+        "now_ms": 1782601000000,
+        "verify_mode": "fail_closed"
+      },
+      "expected_reason": "verify_unreachable",
+      "expected_policy_action": "DENY"
+    },
+    {
+      "id": "unreachable-fail-open-skip",
+      "description": "Same fetch failure as above, but operator explicitly opted into verify_mode=fail_open. SKIP, not DENY — the reason code is still verify_unreachable, only the policy action changes.",
+      "input": {
+        "fetch_ok": false,
+        "sig_valid": null,
+        "digest_match": null,
+        "issued_at_ms": null,
+        "expires_at_ms": null,
+        "ttl_seconds": 3600,
+        "now_ms": 1782601000000,
+        "verify_mode": "fail_open"
+      },
+      "expected_reason": "verify_unreachable",
+      "expected_policy_action": "SKIP"
+    },
+    {
+      "id": "stale-by-ttl-deny",
+      "description": "Evidence fetched successfully, signature valid, digest matches — but issued_at is older than freshness_ttl_seconds relative to now. DENY verify_stale, not verify_invalid — the evidence was never contradicted, it just aged out.",
+      "input": {
+        "fetch_ok": true,
+        "sig_valid": true,
+        "digest_match": true,
+        "issued_at_ms": 1782500000000,
+        "expires_at_ms": null,
+        "ttl_seconds": 3600,
+        "now_ms": 1782601000000
+      },
+      "expected_reason": "verify_stale",
+      "expected_policy_action": "DENY"
+    },
+    {
+      "id": "stale-by-expires-at-deny",
+      "description": "Evidence carries an explicit expires_at that has passed, independent of ttl_seconds. DENY verify_stale.",
+      "input": {
+        "fetch_ok": true,
+        "sig_valid": true,
+        "digest_match": true,
+        "issued_at_ms": 1782600000000,
+        "expires_at_ms": 1782600500000,
+        "ttl_seconds": null,
+        "now_ms": 1782601000000
+      },
+      "expected_reason": "verify_stale",
+      "expected_policy_action": "DENY"
+    },
+    {
+      "id": "invalid-signature-deny",
+      "description": "Evidence fresh (within bound) but signature does not verify against the declared key. DENY verify_invalid — distinct from verify_stale and verify_unreachable, this is active contradiction of the evidence, not absence or aging.",
+      "input": {
+        "fetch_ok": true,
+        "sig_valid": false,
+        "digest_match": true,
+        "issued_at_ms": 1782600000000,
+        "expires_at_ms": null,
+        "ttl_seconds": 3600,
+        "now_ms": 1782601000000
+      },
+      "expected_reason": "verify_invalid",
+      "expected_policy_action": "DENY"
+    },
+    {
+      "id": "no-freshness-configured-backward-compat-allow",
+      "description": "No ttl_seconds and no expires_at configured — freshness check does not apply, matching azender1's backward-compatibility requirement for operators who haven't opted into a freshness bound yet. Old evidence still passes if signature and digest hold.",
+      "input": {
+        "fetch_ok": true,
+        "sig_valid": true,
+        "digest_match": true,
+        "issued_at_ms": 1782000000000,
+        "expires_at_ms": null,
+        "ttl_seconds": null,
+        "now_ms": 1782601000000
+      },
+      "expected_reason": "verify_ok",
+      "expected_policy_action": "PROCEED_TO_GATE_POLICY"
+    }
+  ],
+  "negative_vectors": [
+    {
+      "id": "collapsed-unreachable-and-invalid",
+      "description": "A lenient implementation that maps both verify_unreachable and verify_invalid to a single generic 'DENIED' reason without a distinguishing field. An auditor reading the record cannot tell 'the source was down' from 'the evidence was actively wrong' — the two require different operator response (retry infra vs. investigate compromise). This vector documents the failure to distinguish, it is not itself a valid conformant output.",
+      "lenient_output": {
+        "unreachable_case": {"reason": "denied"},
+        "invalid_signature_case": {"reason": "denied"}
+      },
+      "conformant_output": {
+        "unreachable_case": {"reason": "verify_unreachable"},
+        "invalid_signature_case": {"reason": "verify_invalid"}
+      },
+      "expected": "REASON_CODES_MUST_REMAIN_DISTINGUISHABLE"
+    }
+  ]
+}
