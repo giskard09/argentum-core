@@ -2198,8 +2198,16 @@ function applyFilter() {{
 document.getElementById('filter-input').addEventListener('keydown', e => {{
   if (e.key === 'Enter') applyFilter();
 }});
-// Auto-refresh every 30s
-setTimeout(() => window.location.reload(), 30000);
+// Auto-refresh every 30s, paused while tab is hidden (avoids reload storms on forgotten tabs)
+let refreshTimer = null;
+function scheduleRefresh() {{
+  if (refreshTimer) clearTimeout(refreshTimer);
+  if (!document.hidden) {{
+    refreshTimer = setTimeout(() => window.location.reload(), 30000);
+  }}
+}}
+document.addEventListener('visibilitychange', scheduleRefresh);
+scheduleRefresh();
 </script>
 </body>
 </html>"""
