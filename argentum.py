@@ -2447,6 +2447,34 @@ from mcp.server.fastmcp import FastMCP
 
 mcp = FastMCP("ARGENTUM", host="0.0.0.0", port=8019)
 
+from starlette.routing import Route as _StarletteRoute
+from starlette.responses import JSONResponse as _StarletteJSON
+from starlette.requests import Request as _StarletteRequest
+
+
+async def _mcp_status_handler(request: _StarletteRequest):
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        n_actions = conn.execute("SELECT COUNT(*) FROM actions").fetchone()[0]
+        conn.close()
+        healthy = True
+    except Exception:
+        n_actions = None
+        healthy = False
+    return _StarletteJSON({
+        "service": "argentum-core",
+        "version": "0.4.0",
+        "port": 8019,
+        "uptime_seconds": int(time.time() - _started_at),
+        "healthy": healthy,
+        "dependencies": ["sqlite", "giskard-marks", "arbitrum-rpc"],
+        "total_actions": n_actions,
+        "weight_threshold": WEIGHT_THRESHOLD,
+    }, headers={"Access-Control-Allow-Origin": "*"})
+
+
+mcp._custom_starlette_routes.append(_StarletteRoute("/status", _mcp_status_handler))
+
 
 @mcp.tool()
 def submit_action(entity_id: str, entity_name: str, entity_type: str, action_type: str, description: str, proof: str = "") -> str:
