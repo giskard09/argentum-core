@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added — AnchorRegistry on Ink mainnet (2026-07-07)
+
+- `AnchorRegistry` deployed on Ink mainnet (chain_id 57073) at the same canonical CREATE2 address `0x49fEcA52bC634a9Ab773226D16619deC547794aa` as Arbitrum One and Base. Deploy tx `0xcbd2d137e14287a13168eb14a75d4cad44456d94a78946ef72170d3f3723a895`, source verified on the Ink explorer.
+- `counterparty_ref_anchor.chain_id: 57073` is now a conformant target. Additive — existing integrators unaffected.
+
 ### Added — Accountability primitives & multi-chain anchor (2026-06)
 
 - `counterparty_ref` (`docs/spec/counterparty-ref.md`) — content-addressed pointer to a counterparty snapshot at action time. JCS-canonical preimage with timestamp.
