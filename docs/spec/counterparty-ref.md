@@ -136,6 +136,7 @@ at one canonical address across every chain via CREATE2 (salt
 |-------|----------|---------|
 | Arbitrum One | 42161 | `0x49fEcA52bC634a9Ab773226D16619deC547794aa` |
 | Base | 8453 | `0x49fEcA52bC634a9Ab773226D16619deC547794aa` |
+| Ink | 57073 | `0x49fEcA52bC634a9Ab773226D16619deC547794aa` |
 
 The single canonical address is itself the verifier binding: a conformant
 `counterparty_ref_anchor.contract` MUST equal this address. An anchor recorded on any
