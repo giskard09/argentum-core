@@ -1,4 +1,4 @@
-[![CI](https://github.com/giskard09/argentum-core/actions/workflows/ci.yml/badge.svg)](https://github.com/giskard09/argentum-core/actions) [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE) [![argentum-core conformance](https://verify.crestsystems.ai/badge/argentum-core.svg)](https://crestsystems.ai/conformance)
+[![CI](https://github.com/giskard09/argentum-core/actions/workflows/ci.yml/badge.svg)](https://github.com/giskard09/argentum-core/actions) [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE) · [Independent conformance receipt](https://verify.crestsystems.ai/argentum-core-substrate-v0.json) (Crest Verification Service, 5/5 PASS)
 
 # Mycelium Trails — Accountability Protocol for Autonomous Agents
 
