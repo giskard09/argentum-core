@@ -2392,32 +2392,30 @@ def rate_trail_execution(trail_id: str, req: TrailRating):
 @app.get("/billing/summary")
 def billing_summary(client: str, month: str):
     """
-    Uso mensual de un agente. Interno, sin autenticación.
+    Uso mensual facturado de un agente. Interno, sin autenticación.
     month: YYYY-MM
+
+    Cuenta desde billing_events (atribución por cuenta PAYG), no desde
+    trails.agent_id: el agent_id del payload puede diferir del de la cuenta
+    (p.ej. SafeAgent factura como safeagent-prod pero manda trails con
+    agent_id=conformance-check).
     """
-    import re as _re, calendar as _cal
+    import re as _re
     if not _re.fullmatch(r"\d{4}-\d{2}", month):
         raise HTTPException(400, "month must be YYYY-MM")
-    try:
-        year, mon = int(month[:4]), int(month[5:7])
-        month_start = int(datetime(year, mon, 1).timestamp())
-    except ValueError:
-        raise HTTPException(400, "month must be YYYY-MM")
-    last_day = _cal.monthrange(year, mon)[1]
-    month_end = int(datetime(year, mon, last_day, 23, 59, 59).timestamp())
     conn = sqlite3.connect(TRAILS_DB)
     conn.row_factory = sqlite3.Row
     row = conn.execute(
-        "SELECT COUNT(*) AS n FROM trails WHERE agent_id=? AND timestamp>=? AND timestamp<=?",
-        (client, month_start, month_end),
+        "SELECT COUNT(*) AS n, COALESCE(SUM(amount_usd), 0) AS usd "
+        "FROM billing_events WHERE agent_id=? AND month_key=?",
+        (client, month),
     ).fetchone()
     conn.close()
-    trail_count = row["n"] if row else 0
     return {
         "client":     client,
         "month":      month,
-        "trails":     trail_count,
-        "amount_usd": round(trail_count * 0.003, 6),
+        "trails":     row["n"] if row else 0,
+        "amount_usd": round(row["usd"], 6) if row else 0.0,
     }
 
 
