@@ -1,0 +1,86 @@
+{
+  "spec_version": "disclosure-scoped-ref-v0",
+  "spec": "docs/spec/disclosure-scoped-ref.md",
+  "description": "Field-level selective disclosure: per-field salted commitments, a canonical commitment vector, and a root digest (disclosure_ref). A discloser opens a subset of fields; a verifier confirms opened values against the vector and the vector against the published root, without ever seeing closed fields' values.",
+  "record": {
+    "agent_id": "did:mycelium:agent-4b19f0",
+    "counterparty_id": "did:mycelium:counterparty-9e21ab",
+    "amount": 48250,
+    "currency": "USD",
+    "jurisdiction": "US-NY",
+    "settlement_ts": "2026-07-08T15:20:00.000Z"
+  },
+  "salts": {
+    "agent_id": "a1f3c9d8e2b74016f5a8c3d0e9b1f7a2",
+    "counterparty_id": "b2e4d0a9f3c85127e6b9d4e1f0a2c8b3",
+    "amount": "c3f5e1b0a4d96238f7c0e5f2a1b3d9c4",
+    "currency": "d4a6f2c1b5ea7349f8d1f6a3b2c4e0d5",
+    "jurisdiction": "e5b7a3d2c6fb8450f9e2a7b4c3d5f1e6",
+    "settlement_ts": "f6c8b4e3d7ac9561f0a3b8c5d4e6f2a7"
+  },
+  "commitment_vector": [
+    {"field": "agent_id", "digest": "9015104ce7fb116e28b05906ee93308aaadeadb2099a867febda43e3c52f397b"},
+    {"field": "amount", "digest": "72fe208e0eda6c3e6c11866db9cc06d975d8b3588d849a7ee795960b49e4df4e"},
+    {"field": "counterparty_id", "digest": "a469d60554e84fef2c799c573ab77809fc463ee4bd7a2ee2b89557fd570addcc"},
+    {"field": "currency", "digest": "0147f3fd6fcdc993c2f0d3f5afb91996907e3c7791951ca2e6d7f1eb97afdba5"},
+    {"field": "jurisdiction", "digest": "9203ce73b2d5e39add67d23deaa017ae9c4f4a0b79b548d60723d394d26299dd"},
+    {"field": "settlement_ts", "digest": "0701912bd8864ce66784a0fb31e10e2c035aeaa8889c1f4b851ffd9ebb469ca5"}
+  ],
+  "disclosure_ref": "38372760acdcc75e95f22902cab163f61b2031121ebe8f5ea1662b2bf41800ce",
+  "vectors": [
+    {
+      "id": "pos-subset-disclosure",
+      "description": "Open agent_id, currency, jurisdiction; amount, counterparty_id, settlement_ts stay closed. Opened fields recompute to their committed digests; the full commitment_vector recomputes to the published disclosure_ref -- unchanged by which fields were chosen for disclosure.",
+      "expected": "PASS",
+      "opened": {
+        "agent_id": {"value": "did:mycelium:agent-4b19f0", "salt": "a1f3c9d8e2b74016f5a8c3d0e9b1f7a2"},
+        "currency": {"value": "USD", "salt": "d4a6f2c1b5ea7349f8d1f6a3b2c4e0d5"},
+        "jurisdiction": {"value": "US-NY", "salt": "e5b7a3d2c6fb8450f9e2a7b4c3d5f1e6"}
+      },
+      "checks": {
+        "opened_fields_match_vector": true,
+        "root_matches_disclosure_ref": true
+      }
+    },
+    {
+      "id": "neg-hidden-field-altered",
+      "description": "A closed field (amount) is tampered: its committed digest is replaced with the digest of a different (attacker-chosen) amount value, using the same salt. The commitment_vector's own recomputed root no longer matches the published disclosure_ref -- the tamper is caught structurally, without the field ever needing to be opened.",
+      "expected": "FAIL",
+      "failure_mode": "root_mismatch",
+      "tampered_field": "amount",
+      "tampered_digest": "5a57965b857f1cbf0cbc0467ce80072a286e35fda510acad3b632d0ac7899bd4",
+      "tampered_root": "7ff34f758386be8513e27005d29551c27e7c211d4f03ac37fdedaae3ee46474e",
+      "checks": {
+        "root_matches_disclosure_ref": false
+      },
+      "note": "tampered_digest = field_digest('amount', 999999, salts.amount) -- attacker substitutes a different value's digest under the amount value the true salt would produce. amount's original digest was field_digest('amount', 48250, salts.amount)."
+    },
+    {
+      "id": "neg-salt-reuse-and-digest-substitution",
+      "description": "Two related, structurally distinct attacks against the same closed field (amount): (a) salt reuse -- amount and counterparty_id are committed under the identical salt, collapsing both fields' effective dictionary-attack resistance to one; (b) digest substitution -- amount's stored commitment-vector entry is replaced verbatim with jurisdiction's digest (a digest that is valid, just for a different field). Both are detectable, by different mechanisms: (a) is a structural uniqueness check over the salts, independent of any hash recomputation; (b) breaks the root immediately (same class as neg-hidden-field-altered) and additionally fails on later disclosure because amount's field-name binding does not match what was actually committed.",
+      "expected": "FAIL",
+      "sub_vectors": {
+        "salt_reuse": {
+          "reused_salt": "c3f5e1b0a4d96238f7c0e5f2a1b3d9c4",
+          "reused_by_fields": ["amount", "counterparty_id"],
+          "recomputed_root_with_reused_salt": "94a81627b5a89a4092fb42575631ed7819a000c45a7689c5146d1e1f8c6accb2",
+          "checks": {
+            "salts_unique": false
+          },
+          "note": "Structural conformance failure per docs/spec/disclosure-scoped-ref.md Verification step 3 -- caught by a uniqueness scan over the salt set, not by any root or field-digest recomputation. Root still hashes 'correctly' under the reused salt; the defect is the reduced dictionary-attack cost, not a broken chain."
+        },
+        "digest_substitution": {
+          "substituted_field": "amount",
+          "substituted_with_digest_of_field": "jurisdiction",
+          "substituted_digest": "9203ce73b2d5e39add67d23deaa017ae9c4f4a0b79b548d60723d394d26299dd",
+          "substituted_root": "621fa2d18800a234583825cacfe787262e56f644af1c89c9047d9aedb1fd6ca2",
+          "checks": {
+            "root_matches_disclosure_ref": false,
+            "later_open_of_amount_recomputes_match": false
+          },
+          "note": "Root breaks immediately (same as neg-hidden-field-altered). Independently, if amount is later opened with its TRUE value (48250) and TRUE salt, field_digest('amount', 48250, salts.amount) does not equal the substituted stored digest -- the field-name binding inside jurisdiction's original commitment (field:'jurisdiction') means it can never validate as amount's commitment, confirming the substitution is caught on disclosure too, not only via the root."
+        }
+      }
+    }
+  ]
+}
