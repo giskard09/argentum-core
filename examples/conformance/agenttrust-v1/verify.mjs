@@ -9,17 +9,9 @@ import { readFileSync } from 'fs';
 import { createPublicKey, verify as cryptoVerify } from 'crypto';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import jcs from 'canonicalize';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-
-function jcs(value) {
-  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
-    return JSON.stringify(value);
-  }
-  const keys = Object.keys(value).sort();
-  const parts = keys.map(k => `${JSON.stringify(k)}:${jcs(value[k])}`);
-  return `{${parts.join(',')}}`;
-}
 
 function b64urlDecode(str) {
   return Buffer.from(str, 'base64url');

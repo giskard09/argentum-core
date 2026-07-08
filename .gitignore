@@ -2,3 +2,4 @@ __pycache__/
 *.pyc
 argentum.db
 .env
+examples/conformance/**/node_modules/

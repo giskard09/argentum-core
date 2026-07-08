@@ -12,21 +12,36 @@ implementation of `verification.v0.3+composed` envelopes
 | `payload-001.json`, `payload-002.json` | Canonical JCS payloads |
 | `jws-001.json`, `jws-002.json` | JWS general serialization (AT signature) |
 | `jwks-agenttrust.json` | AgentTrust's published Ed25519 public key |
-| `verify.mjs` | Node.js stdlib verifier |
+| `verify.mjs` | Node.js verifier (strict RFC 8785 via `canonicalize`) |
 
 ## Run
 
 ```bash
 cd examples/conformance/agenttrust-v1
+npm install
 node verify.mjs
 ```
 
-Expected output:
-```
-PASS at-001: Skill scan SAFE (v_gate_skill.verdict=act)...
-PASS at-002: Skill scan CRITICAL findings (curl|bash backdoor...
-PASS: 2 vectors, FAIL: 0 vectors
-```
+## Known failing vector (as of 2026-07-08)
+
+`verify.mjs` previously hand-rolled its own JCS (sort keys + `JSON.stringify`),
+which is self-consistent with the fixtures but not strict RFC 8785 — it
+doesn't implement the spec's number formatting or full escaping rules. Fixed
+by swapping in the `canonicalize` npm package (reported by TKCollective,
+[#32](https://github.com/giskard09/argentum-core/issues/32)).
+
+With a strict canonicalizer, `at-002` (`jws-002.json`) now correctly
+**fails** with `canonical_mismatch`: its embedded payload's `skill_results`
+key order isn't alphabetical, so it isn't RFC 8785 canonical. This can only
+be fixed by AgentTrust regenerating and re-signing `jws-002.json` (and
+`jws-003.json`, same issue) — the `agenttrust-ed25519-v1` signing key isn't
+ours. Tracked in #32.
+
+`at-r01` (reject vector) still passes, but for the same reason as `at-002`
+rather than for the tampering its description claims (embedded
+`composed_decision`/`v_gate_skill.verdict` are identical to the sidecar —
+no verdict was actually changed after signing). Also needs an AgentTrust-side
+re-sign to demonstrate real semantic tampering.
 
 ## What each vector demonstrates
 

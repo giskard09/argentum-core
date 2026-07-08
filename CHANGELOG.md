@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Fixed — strict RFC 8785 canonicalization in agenttrust-v1 conformance suite (2026-07-08)
+
+- `examples/conformance/agenttrust-v1/verify.mjs` replaced its hand-rolled `jcs()` helper (sort keys + `JSON.stringify`, self-consistent with the fixtures but not spec-compliant) with the `canonicalize` npm package (strict RFC 8785). Reported by TKCollective, [#32](https://github.com/giskard09/argentum-core/issues/32).
+- With strict canonicalization, `jws-002.json` (vector `at-002`) now correctly fails `canonical_mismatch` — its embedded payload's `skill_results` key order isn't RFC 8785 canonical. Fixing it requires AgentTrust to regenerate and re-sign `jws-002.json`/`jws-003.json`; we don't hold the `agenttrust-ed25519-v1` signing key. Tracked in #32, pending their PR.
+- `at-r01` also needs an AgentTrust re-sign to demonstrate actual semantic tampering (its embedded verdict doesn't currently differ from the sidecar).
+
 ### Added — AnchorRegistry on Ink mainnet (2026-07-07)
 
 - `AnchorRegistry` deployed on Ink mainnet (chain_id 57073) at the same canonical CREATE2 address `0x49fEcA52bC634a9Ab773226D16619deC547794aa` as Arbitrum One and Base. Deploy tx `0xcbd2d137e14287a13168eb14a75d4cad44456d94a78946ef72170d3f3723a895`, source verified on the Ink explorer.

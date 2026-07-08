@@ -1,0 +1,14 @@
+{
+  "name": "agenttrust-v1-conformance",
+  "version": "1.0.0",
+  "description": "Offline-verifiable conformance suite for AgentTrust's implementation of verification.v0.3+composed envelopes (draft-krausz-verification-state-01).",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node verify.mjs"
+  },
+  "license": "Apache-2.0",
+  "dependencies": {
+    "canonicalize": "^3.0.0"
+  }
+}
