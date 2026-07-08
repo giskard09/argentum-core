@@ -1,0 +1,127 @@
+{
+  "spec_version": "audit-record-contract-compat-v1",
+  "target_spec": "MCP SEP-3004 — Tamper-Evident Audit Record Contract (modelcontextprotocol/modelcontextprotocol#3004)",
+  "target_spec_commit": "377f8d260ded5b6854871b2ce3c73621ffcaef1d",
+  "description": "Compat vectors reproducing SEP-3004's own published known-answer digest, joining it to action_ref (docs/spec/action-ref.md) for cross-producer identity, and applying anchoring-precedence-ref-v1's existence/precedence split to SEP-3004's own reserved-and-deferred external-anchoring boundary (§2.8).",
+  "vectors": [
+    {
+      "id": "known-answer-two-extension",
+      "description": "SEP-3004 Conformance section, C-REC-3 fixed known-answer test. Single segment-head record (previous_hash: null) carrying both caller-governance and runtime-security extensions.",
+      "record": {
+        "event_id": "99999999-9999-9999-9999-999999999999",
+        "event_type": "tool_call",
+        "occurred_at": "2026-06-06T12:00:00.000Z",
+        "outcome": "deferred",
+        "previous_hash": null,
+        "principal_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        "tool_name": "export",
+        "extensions": {
+          "caller-governance": {
+            "flagged": false,
+            "invoked_by_principal_id": null,
+            "purpose_declared": "reconcile June invoices",
+            "session_id": "55555555-5555-5555-5555-555555555555"
+          },
+          "runtime-security": {
+            "drift_status": "confirmed",
+            "evidence_hash": "sha256:b2c547e2c8f17eafc72ef5c2d4d7b6b4d0f7437ab52bae573a9af14ff5e2d9be",
+            "policy_id": "example.org/runtime-drift@3",
+            "quarantine_decision": "quarantine",
+            "severity": "high"
+          }
+        }
+      },
+      "event_hash": "f733fed9cc757165f810b778e4baba1f51a45504988e937707aaab4361b2f064",
+      "note": "Published by SEP-3004 as its two-extension known-answer digest. Reproduced here byte-for-byte with a runner independent of the SEP's reference implementation (GIF, notboatanchor/gif) and of Interlock's runtime-security implementation."
+    },
+    {
+      "id": "action-ref-join-positive",
+      "description": "Same tool_call event as the single-extension form (caller-governance only), with both event_hash (SEP-3004 chain-scoped identity) and action_ref (docs/spec/action-ref.md cross-producer identity) computed from its own fields.",
+      "record": {
+        "event_id": "99999999-9999-9999-9999-999999999999",
+        "event_type": "tool_call",
+        "occurred_at": "2026-06-06T12:00:00.000Z",
+        "outcome": "deferred",
+        "previous_hash": null,
+        "principal_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        "tool_name": "export",
+        "extensions": {
+          "caller-governance": {
+            "flagged": false,
+            "invoked_by_principal_id": null,
+            "purpose_declared": "reconcile June invoices",
+            "session_id": "55555555-5555-5555-5555-555555555555"
+          }
+        }
+      },
+      "event_hash": "d494769c1ae442ea88dd190068747abf63c0568a3b856f85791b1a50a99d48b4",
+      "action_ref_preimage": {
+        "agent_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        "action_type": "export",
+        "scope": "caller-governance:reconcile June invoices",
+        "timestamp": "2026-06-06T12:00:00.000Z"
+      },
+      "action_ref": "40e189aa4d199d3389aea50354b78d7ca13ad3efdcd1e3e07907bcbab545cd01",
+      "note": "event_hash matches SEP-3004's own stated single-extension digest (d494769c...), confirming this fixture against the SEP text independently of the two-extension vector. action_ref is the identity SEP-3004's protected core does not define: event_id (§2.1) is an opaque id unique 'within the chain', not independently recomputable by a party without chain access."
+    },
+    {
+      "id": "action-ref-join-negative-preimage-drift",
+      "description": "Identical event, occurred_at drifted by 1ms. Same principal, tool, outcome.",
+      "record": {
+        "event_id": "99999999-9999-9999-9999-999999999999",
+        "event_type": "tool_call",
+        "occurred_at": "2026-06-06T12:00:00.001Z",
+        "outcome": "deferred",
+        "previous_hash": null,
+        "principal_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        "tool_name": "export",
+        "extensions": {
+          "caller-governance": {
+            "flagged": false,
+            "invoked_by_principal_id": null,
+            "purpose_declared": "reconcile June invoices",
+            "session_id": "55555555-5555-5555-5555-555555555555"
+          }
+        }
+      },
+      "action_ref_preimage": {
+        "agent_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        "action_type": "export",
+        "scope": "caller-governance:reconcile June invoices",
+        "timestamp": "2026-06-06T12:00:00.001Z"
+      },
+      "invariant": "event_hash(drifted) != event_hash(action-ref-join-positive) AND action_ref(drifted) != action_ref(action-ref-join-positive)",
+      "note": "Both identifiers move together under the same 1ms drift -- action_ref carries the same field sensitivity as SEP-3004's own chain, expressed as a value computable by a second producer with no access to the chain."
+    },
+    {
+      "id": "boundary-anchoring-existence-only",
+      "description": "External anchor for the known-answer chain head exists but is timestamped AFTER the event's own occurred_at -- SEP-3004 §2.8 reserves and defers exactly this boundary ('External Anchoring... addresses a distinct, weaker-priority threat... orthogonal to the within-system chain construction').",
+      "expected": "FAIL",
+      "failure_mode": "anchoring_precedence",
+      "envelope": {
+        "chain_head": "f733fed9cc757165f810b778e4baba1f51a45504988e937707aaab4361b2f064",
+        "anchor_block_time": 1749211500,
+        "outcome_ts_ms": 1749211200000
+      },
+      "checks": {
+        "anchoring_existence": true,
+        "anchoring_precedence": false
+      },
+      "note": "A verifier that only checks SEP-3004's own chain integrity (§2.4-2.6) cannot see this gap -- the chain hashes correctly either way. Same existence-vs-precedence split as ../anchoring-precedence-ref/, applied to a SEP-3004 chain head instead of a Mycelium trail."
+    },
+    {
+      "id": "boundary-anchoring-precedence",
+      "description": "External anchor for the same chain head, strictly BEFORE occurred_at.",
+      "expected": "PASS",
+      "envelope": {
+        "chain_head": "f733fed9cc757165f810b778e4baba1f51a45504988e937707aaab4361b2f064",
+        "anchor_block_time": 1749211100,
+        "outcome_ts_ms": 1749211200000
+      },
+      "checks": {
+        "anchoring_existence": true,
+        "anchoring_precedence": true
+      }
+    }
+  ]
+}
