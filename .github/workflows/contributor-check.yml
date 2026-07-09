@@ -1,0 +1,52 @@
+name: Contributor Check
+
+on:
+  pull_request_target:
+    types: [opened]
+  issues:
+    types: [opened]
+
+permissions:
+  contents: read
+
+jobs:
+  # Exempt trusted maintainers (resolved from native RBAC), so there is no
+  # hardcoded human allowlist to drift. Fail safe: if permission cannot be
+  # resolved, run the check rather than skip it.
+  gate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      run_check: ${{ steps.decide.outputs.run_check }}
+    steps:
+      - id: decide
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        with:
+          script: |
+            try {
+              const { data: perm } = await github.rest.repos.getCollaboratorPermissionLevel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                username: context.actor,
+              });
+              const isMaintainer = perm.role_name === 'admin' || perm.role_name === 'maintain';
+              core.setOutput('run_check', isMaintainer ? 'false' : 'true');
+            } catch (e) {
+              core.info(`Could not resolve permission for ${context.actor}: ${e.message}. Running check.`);
+              core.setOutput('run_check', 'true');
+            }
+
+  check:
+    needs: gate
+    if: needs.gate.outputs.run_check == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+    steps:
+      - name: Run contributor reputation check
+        uses: giskard09/contributor-check-action@v1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
