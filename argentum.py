@@ -17,7 +17,7 @@ from datetime import datetime, timezone
 from typing import Optional
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, HTMLResponse
+from fastapi.responses import JSONResponse, HTMLResponse, Response
 from pydantic import BaseModel
 from pathlib import Path
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -539,6 +539,99 @@ def root():
         "weight_threshold": WEIGHT_THRESHOLD,
         "sybil_resistance": "marks + karma-weighted attestations"
     }
+
+def _jcs_response(obj: dict) -> Response:
+    """Serialize obj as JCS/RFC 8785 canonical JSON (sorted keys, no whitespace)
+    so raw bytes served == canonicalized bytes, hash-stable from day one."""
+    body = json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+    return Response(content=body, media_type="application/json")
+
+@app.get("/.well-known/agent.json")
+def well_known_agent_card():
+    """A2A agent card — mirrors agentcards/giskard-self.json, mapped to A2A shape."""
+    card = {
+        "name": "Giskard Self",
+        "description": "Rama's autonomous CEO agent - karma, identity, and Mycelium Trails accountability layer for AI agents.",
+        "url": "https://argentum.rgiskard.xyz",
+        "version": "mycelium.agent-card.v1",
+        "provider": {
+            "organization": "Rama",
+            "url": "https://argentum.rgiskard.xyz"
+        },
+        "capabilities": {
+            "streaming": False,
+            "pushNotifications": False
+        },
+        "defaultInputModes": ["text/plain", "application/json"],
+        "defaultOutputModes": ["application/json"],
+        "skills": [
+            {
+                "id": "mycelium-trails",
+                "name": "Mycelium Trails",
+                "description": "Anchors verifiable action_ref traces on-chain (Arbitrum/Base) for agent-to-agent accountability.",
+                "tags": ["accountability", "erc-8004", "attestation"]
+            },
+            {
+                "id": "karma-economy",
+                "name": "Karma Economy",
+                "description": "Reputation scoring for agents, verified by community attestation, karma-weighted anti-sybil.",
+                "tags": ["reputation", "karma"]
+            }
+        ],
+        "canonical_identity": {
+            "registry": "0x8004A818BFB912233c491871b3d84c89A494BD9e",
+            "network": "ethereum-sepolia",
+            "agent_id_canonical": 3249
+        },
+        "signing": {
+            "pub_key_b64": "iUbeMGgVBmcYlv0KLOfYrm8zO7KPPsuRY2VTq7cfrTI=",
+            "rotation_registry": "https://marks.rgiskard.xyz/pubkey/giskard-self"
+        },
+        "services": [
+            "https://search.rgiskard.xyz",
+            "https://memory.rgiskard.xyz",
+            "https://oasis.rgiskard.xyz",
+            "https://origin.rgiskard.xyz",
+            "https://marks.rgiskard.xyz",
+            "https://argentum.rgiskard.xyz"
+        ]
+    }
+    return _jcs_response(card)
+
+@app.get("/.well-known/mcp.json")
+def well_known_mcp_manifest():
+    """MCP discovery manifest — lists Mycelium's public MCP servers."""
+    manifest = {
+        "version": "1.0",
+        "servers": [
+            {
+                "name": "io.github.giskard09/search",
+                "url": "https://search.rgiskard.xyz",
+                "transport": "sse",
+                "status_url": "https://search.rgiskard.xyz/status"
+            },
+            {
+                "name": "io.github.giskard09/memory",
+                "url": "https://memory.rgiskard.xyz",
+                "transport": "sse",
+                "status_url": "https://memory.rgiskard.xyz/status"
+            },
+            {
+                "name": "io.github.giskard09/oasis",
+                "url": "https://oasis.rgiskard.xyz",
+                "transport": "sse",
+                "status_url": "https://oasis.rgiskard.xyz/status"
+            },
+            {
+                "name": "io.github.giskard09/origin",
+                "url": "https://origin.rgiskard.xyz",
+                "transport": "sse",
+                "status_url": "https://origin.rgiskard.xyz/status"
+            }
+        ],
+        "registry": "https://registry.modelcontextprotocol.io"
+    }
+    return _jcs_response(manifest)
 
 @app.get("/docs/integration", response_class=HTMLResponse)
 def integration_guide():
