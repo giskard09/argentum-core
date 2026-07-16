@@ -40,7 +40,7 @@
   "accept_vectors": [
     {
       "id": "at-001",
-      "description": "Skill scan SAFE (v_gate_skill.verdict=act). composed_decision is halt because AO sibling is absent in this AT-only vector \u2014 this is expected AND_PRESENT behavior, not a failure.",
+      "description": "Skill scan SAFE (v_gate_skill.verdict=act). composed_decision is halt because AO sibling is absent in this AT-only vector — this is expected AND_PRESENT behavior, not a failure.",
       "payload_file": "payload-001.json",
       "jws_file": "jws-001.json",
       "expected_v_gate_skill_verdict": "act",
@@ -64,7 +64,7 @@
   "reject_vectors": [
     {
       "id": "at-r01",
-      "description": "Tampered payload \u2014 verdict changed from halt to act after signing. Canonical recompute MUST fail: payload bytes differ from what AT signed.",
+      "description": "Tampered sidecar — verdict and composed_decision flipped from halt to act after signing. Signature is valid over the original halt payload, but JCS(sidecar) yields different canonical bytes than the embedded JWS payload — canonical_mismatch fires before signature verification.",
       "payload_file": "payload-003.json",
       "jws_file": "jws-003.json",
       "expected_failure": "canonical_mismatch",

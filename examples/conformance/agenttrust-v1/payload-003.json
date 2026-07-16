@@ -8,7 +8,7 @@
     "agenttrust_jwks_url": "https://agenttrust.uk/.well-known/jwks.json"
   },
   "subject": {
-    "claim_hash": "sha256-conformance-vector-at002",
+    "claim_hash": "sha256-conformance-vector-at003",
     "skill_hash": "sha256-c0f20f9666853b4c8fc867414914e85c4e2cfa06446f8db3ed2c8e4068de366c"
   },
   "v_gate_skill": {
@@ -17,11 +17,7 @@
     "mapping_id": "agenttrust-v0.3-2026-06-07",
     "mcp_results": [],
     "skill_results": [
-      {
-        "status": "findings",
-        "count": 1,
-        "level": "CRITICAL"
-      }
+      { "status": "findings", "count": 1, "level": "CRITICAL" }
     ],
     "v_gate_mapping_hash": "sha256-307db9faa364cfe149fb5120d0451175175de40d7433c44915bfec57acc16ec4",
     "verdict": "act"
