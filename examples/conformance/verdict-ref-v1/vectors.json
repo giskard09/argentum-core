@@ -1,0 +1,86 @@
+{
+  "suite": "verdict-ref-v1",
+  "version": "1.0",
+  "spec": "../../../docs/spec/action-ref.md (action-ref-v1) + this README",
+  "description": "Conformance vectors for verdict_ref, an optional envelope-adjacent field binding action_ref to an independent pre- or post-action judgment. verdict_ref does not enter the action_ref preimage (four fields only, per action-ref.md §3.1) — same envelope-adjacent pattern as authority_verified_at_ms / revocation_check_at_ms. Conformance gates on issuer independence (issuer_id != agent_id), not on the verdict outcome itself.",
+  "vectors": [
+    {
+      "id": "vr-001-self-attested-baseline",
+      "description": "No verdict_ref present. This is action_ref's default and only mode today: authorization_ref / freshness fields (action-ref.md §4.2) prove the delegation chain was valid at admission, but nothing in the base envelope carries a third party's judgment on this specific instance. Self-attested by construction — not a defect, the documented baseline this fixture set extends.",
+      "preimage": {
+        "agent_id": "pioneer-agent-001",
+        "action_type": "code.execute",
+        "scope": "mycelium:review_gate",
+        "timestamp": "2026-07-22T00:00:00.000Z"
+      },
+      "expected_action_ref": "87d69fd1c9ae136e09e7c4e7a7c1a781aec9ef1791b67ad3025ac0b67baa4a94"
+    },
+    {
+      "id": "vr-002-independent-verdict-approve",
+      "description": "verdict_ref present, issuer_id distinct from the executing agent_id, verdict=approve. Conformant: independence holds, so the citation in scope (or an envelope-adjacent verdict_ref field) is a genuine third-party judgment, not the agent grading itself.",
+      "conformant": true,
+      "preimage": {
+        "agent_id": "pioneer-agent-001",
+        "action_type": "code.execute",
+        "scope": "mycelium:review_gate",
+        "timestamp": "2026-07-22T00:00:00.000Z"
+      },
+      "expected_action_ref": "87d69fd1c9ae136e09e7c4e7a7c1a781aec9ef1791b67ad3025ac0b67baa4a94",
+      "verdict": {
+        "action_ref": "87d69fd1c9ae136e09e7c4e7a7c1a781aec9ef1791b67ad3025ac0b67baa4a94",
+        "confidence": 0.91,
+        "issuer_id": "babyblueviper1:review",
+        "ts_ms": 1753142400000,
+        "verdict": "approve"
+      },
+      "expected_verdict_ref": "2c516d75d6d37c135f452709dd23457ab1b59e45b762dab238defec0e3a1c923"
+    },
+    {
+      "id": "vr-003-self-attested-masquerade",
+      "description": "verdict_ref present but issuer_id equals the executing agent_id — the agent judging its own action and citing the judgment as if it were third-party. Non-conformant: a verifier MUST reject this as an independent verdict, even though the hash recomputes correctly. Hash validity and independence are separate checks; this vector fails the second one.",
+      "conformant": false,
+      "failure_mode": "VERDICT_ISSUER_NOT_INDEPENDENT",
+      "preimage": {
+        "agent_id": "pioneer-agent-001",
+        "action_type": "code.execute",
+        "scope": "mycelium:review_gate",
+        "timestamp": "2026-07-22T00:00:00.000Z"
+      },
+      "expected_action_ref": "87d69fd1c9ae136e09e7c4e7a7c1a781aec9ef1791b67ad3025ac0b67baa4a94",
+      "verdict": {
+        "action_ref": "87d69fd1c9ae136e09e7c4e7a7c1a781aec9ef1791b67ad3025ac0b67baa4a94",
+        "confidence": 0.99,
+        "issuer_id": "pioneer-agent-001",
+        "ts_ms": 1753142400000,
+        "verdict": "approve"
+      },
+      "expected_verdict_ref": "db3a6c1fd1719da030f15f08b14a3be561c30720e65a82447bd55e9fd7580216"
+    },
+    {
+      "id": "vr-004-independent-verdict-reject",
+      "description": "verdict_ref present, issuer_id distinct, verdict=reject. Conformant: independence is what gates conformance, not the verdict outcome — a reject from an independent issuer is exactly as valid a citation as an approve. A scheme that only accepts independent verdict_ref on 'approve' would let the agent selectively suppress unfavorable third-party judgments.",
+      "conformant": true,
+      "preimage": {
+        "agent_id": "pioneer-agent-001",
+        "action_type": "payment.send",
+        "scope": "nobulex:bilateral",
+        "timestamp": "2026-07-22T00:05:00.000Z"
+      },
+      "expected_action_ref": "26384c69cfc647bc4aa9066571434037c2018b2e9dd60bb58231a6c2b38b84b4",
+      "verdict": {
+        "action_ref": "26384c69cfc647bc4aa9066571434037c2018b2e9dd60bb58231a6c2b38b84b4",
+        "confidence": 0.6,
+        "issuer_id": "babyblueviper1:review",
+        "ts_ms": 1753142700000,
+        "verdict": "reject"
+      },
+      "expected_verdict_ref": "10d6110fe291ad3152562871810e1e75f9f102a6515b98f88aefc90811fcf221"
+    }
+  ],
+  "notes": [
+    "verdict_ref = SHA-256(JCS(verdict_object)), where verdict_object = {action_ref, confidence, issuer_id, ts_ms, verdict}. Envelope-adjacent per action-ref.md §3.1: it never enters the four-field action_ref preimage (agent_id, action_type, scope, timestamp).",
+    "independence invariant: verdict.issuer_id != preimage.agent_id. This is a semantic check on top of hash recomputation — vr-003 recomputes correctly and still fails conformance, same pattern as composition-ref-v1's non-conformant-but-hash-valid vectors.",
+    "verdict_ref binds forward to the action_ref it judges (verdict.action_ref), so a verifier confirms both directions: recompute action_ref from the preimage, recompute verdict_ref from the verdict object, and confirm verdict.action_ref matches the action_ref in scope.",
+    "This complements, not replaces, agentoracle-v1 (examples/conformance/agentoracle-v1/): that fixture set shows a pre-action gate receipt embedding action_ref as a forward pointer (verdict receipt -> subject action). verdict-ref-v1 is the reverse binding (action envelope -> citing the verdict that judged it) — both directions are now conformance-covered."
+  ]
+}
