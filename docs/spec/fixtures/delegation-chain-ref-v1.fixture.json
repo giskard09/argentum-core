@@ -124,6 +124,33 @@
         "scope_consistency": "All hops carry scope=mycelium:payment. Scope narrowing per hop is implementer policy, not enforced by this spec.",
         "leaf_envelope_dual_ref": "The leaf trail record carries both delegation_ref (direct authorization from lightning) and delegation_chain_ref (full chain from giskard-self). Intermediate records carry only their own delegation_ref."
       }
+    },
+    {
+      "id": "chain-002-hops-reordered-negative",
+      "description": "NEGATIVE CASE. Same three hop objects as chain-001-three-hop-payment-route, byte-identical (same delegatee/delegator/delegation_ref/scope in each), but hop_index 0 and hop_index 1 swapped in the hops array. Demonstrates that hops order is semantic: JCS sort_keys canonicalizes object keys, never array element order, so the reordered chain_artifact serializes to different bytes and produces a different delegation_chain_ref. A conformant implementation MUST NOT treat this as equivalent to chain-001, and MUST NOT sort hops before hashing.",
+      "chain_artifact": {
+        "chain_id":       "chain_b1f4a2d7c9e3",
+        "hops": [
+          {"delegatee": "lightning",          "delegation_ref": "7243ad56d9b7d90200b0ad488150b00c6edea21a126cda0067573028f3ef73e9", "delegator": "pioneer-agent-001", "scope": "mycelium:payment"},
+          {"delegatee": "pioneer-agent-001", "delegation_ref": "fc49ff73ebd629bd3440455115a4ce09e69219f2374f6b0c7a2713a52a579b7e", "delegator": "giskard-self",      "scope": "mycelium:payment"},
+          {"delegatee": "soma-agent",         "delegation_ref": "e471778fe440b4373251a32ef1e04388d0be7e51bcb341deb2cec27f1f146669", "delegator": "lightning",         "scope": "mycelium:payment"}
+        ],
+        "leaf_action_ref": "ba524423fdc3d2c1366627f39e74c31934115480c82e1b59f0758daadbe4263c",
+        "root_delegator":  "giskard-self",
+        "scope":           "mycelium:payment",
+        "version":         "delegation-chain-ref-v1"
+      },
+      "chain_artifact_jcs_payload": "{\"chain_id\":\"chain_b1f4a2d7c9e3\",\"hops\":[{\"delegatee\":\"lightning\",\"delegation_ref\":\"7243ad56d9b7d90200b0ad488150b00c6edea21a126cda0067573028f3ef73e9\",\"delegator\":\"pioneer-agent-001\",\"scope\":\"mycelium:payment\"},{\"delegatee\":\"pioneer-agent-001\",\"delegation_ref\":\"fc49ff73ebd629bd3440455115a4ce09e69219f2374f6b0c7a2713a52a579b7e\",\"delegator\":\"giskard-self\",\"scope\":\"mycelium:payment\"},{\"delegatee\":\"soma-agent\",\"delegation_ref\":\"e471778fe440b4373251a32ef1e04388d0be7e51bcb341deb2cec27f1f146669\",\"delegator\":\"lightning\",\"scope\":\"mycelium:payment\"}],\"leaf_action_ref\":\"ba524423fdc3d2c1366627f39e74c31934115480c82e1b59f0758daadbe4263c\",\"root_delegator\":\"giskard-self\",\"scope\":\"mycelium:payment\",\"version\":\"delegation-chain-ref-v1\"}",
+      "chain_artifact_canonical_bytes_hex": "7b22636861696e5f6964223a22636861696e5f623166346132643763396533222c22686f7073223a5b7b2264656c656761746565223a226c696768746e696e67222c2264656c65676174696f6e5f726566223a2237323433616435366439623764393032303062306164343838313530623030633665646561323161313236636461303036373537333032386633656637336539222c2264656c656761746f72223a2270696f6e6565722d6167656e742d303031222c2273636f7065223a226d7963656c69756d3a7061796d656e74227d2c7b2264656c656761746565223a2270696f6e6565722d6167656e742d303031222c2264656c65676174696f6e5f726566223a2266633439666637336562643632396264333434303435353131356134636530396536393231396632333734663662306337613237313361353261353739623765222c2264656c656761746f72223a226769736b6172642d73656c66222c2273636f7065223a226d7963656c69756d3a7061796d656e74227d2c7b2264656c656761746565223a22736f6d612d6167656e74222c2264656c65676174696f6e5f726566223a2265343731373738666534343062343337333235316133326566316530343338386430626537653531626362333431646562326365633237663166313436363639222c2264656c656761746f72223a226c696768746e696e67222c2273636f7065223a226d7963656c69756d3a7061796d656e74227d5d2c226c6561665f616374696f6e5f726566223a2262613532343432336664633364326331333636363237663339653734633331393334313135343830633832653162353966303735386461616462653432363363222c22726f6f745f64656c656761746f72223a226769736b6172642d73656c66222c2273636f7065223a226d7963656c69756d3a7061796d656e74222c2276657273696f6e223a2264656c65676174696f6e2d636861696e2d7265662d7631227d",
+      "delegation_chain_ref": "a32b5aba3cd7946b13dddb357bd5eacbea9133269391eaf0f18cacc705651e7b",
+      "asserted_relationship": {
+        "vs": "chain-001-three-hop-payment-route",
+        "hop_object_set": "identical (same 3 hop objects: same delegatee/delegator/delegation_ref/scope values each)",
+        "hop_array_order": "hop_index 0 and hop_index 1 swapped",
+        "delegation_chain_ref_of_chain_001": "453529e323616b344fef58c203ea9bb0caae79954661d3d344fa1b4707457197",
+        "delegation_chain_ref_of_this_vector": "a32b5aba3cd7946b13dddb357bd5eacbea9133269391eaf0f18cacc705651e7b",
+        "assertion": "MUST differ. A verifier or implementation that produces the same digest for both, or that sorts hops before hashing, is non-conformant."
+      }
     }
   ]
 }

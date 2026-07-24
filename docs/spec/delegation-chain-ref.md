@@ -56,7 +56,7 @@ delegation_chain_ref = hashlib.sha256(jcs(chain_artifact).encode()).hexdigest()
 | Field | Type | Description |
 |-------|------|-------------|
 | `chain_id` | string | Client-generated unique identifier for this chain instance. |
-| `hops` | array | Ordered list of delegation hops, root→leaf. See hop fields below. |
+| `hops` | array | Ordered list of delegation hops, root→leaf. **Order is semantic, not incidental**: `hops` encodes the chain of custody itself, not a sortable collection of equivalent entries. JCS canonicalizes object *keys* within each hop, never array *element* order — two chain artifacts with the same hop objects in different array order are different documents and MUST produce different `delegation_chain_ref` digests. A verifier or implementer MUST NOT sort `hops` before hashing under any circumstance. See hop fields below. |
 | `leaf_action_ref` | SHA-256 hex | `action_ref` of the final action executed by `hops[-1].delegatee`. Derived per [`action-ref.md`](./action-ref.md). |
 | `root_delegator` | string | The origin of the chain. Must equal `hops[0].delegator`. |
 | `scope` | string | Top-level scope for the chain. Must match `hops[0].scope`. |
@@ -112,6 +112,26 @@ For all `i` from 0 to `len(hops)-2`: `hops[i].delegatee == hops[i+1].delegator`.
 **6. minimum chain length is two hops**
 
 A single delegation is expressed as `delegation_ref` per [`delegation-ref.md`](./delegation-ref.md). `delegation_chain_ref` is for chains of two or more hops.
+
+---
+
+## Critical negative case
+
+**HOPS_REORDERED** — two chain artifacts carry the identical set of hop
+objects (same `delegatee`/`delegator`/`delegation_ref`/`scope` values) but in
+different array order. JCS sorts object keys, not array elements, so the two
+`hops` arrays serialize to different byte sequences and produce different
+`delegation_chain_ref` digests — **by design**. This is not a determinism bug:
+`hops` order *is* the claimed chain of custody (root→leaf), so a reordering
+that still passes invariant 1 (chain continuity checked pairwise) would
+silently assert a different delegation path than the one that actually
+occurred, even though the set of hop objects is identical. A verifier MUST
+treat two artifacts differing only in `hops` order as two distinct, unrelated
+`delegation_chain_ref` values — never as equivalent representations of the
+same chain. See `chain-002-hops-reordered-negative` in the conformance
+fixture for a byte-level demonstration (same three hop objects as
+`chain-001-three-hop-payment-route`, hop 0 and hop 1 swapped, digest
+differs).
 
 ---
 
