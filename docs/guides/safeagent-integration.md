@@ -125,7 +125,7 @@ Or recompute locally from the four preimage fields using the snippet above.
 | Free | 500 trails/month | $0 |
 | PAYG | Unlimited | $0.003 / trail |
 
-Your PAYG account activates when the Free tier is exhausted. Usage is invoiced monthly to **Zender Gaming Technologies** (EIN 42-2933899) per the Revenue Share Agreement.
+Your PAYG account activates when the Free tier is exhausted. Usage is invoiced monthly per the Revenue Share Agreement on file.
 
 ---
 
