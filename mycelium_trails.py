@@ -371,6 +371,63 @@ def get_trail_by_id(db_path: str, trail_id: str) -> Optional[dict]:
         conn.close()
 
 
+def list_trails_by_agent(db_path: str, agent_id: str, limit: int = 50) -> list:
+    limit = max(1, min(int(limit), MAX_LIMIT_PER_QUERY))
+    conn = _connect(db_path)
+    try:
+        rows = conn.execute(
+            """
+            SELECT trail_id, agent_id, service, operation, timestamp,
+                   karma_at_time, success, signature_ref
+            FROM trails
+            WHERE agent_id=?
+            ORDER BY timestamp DESC
+            LIMIT ?
+            """,
+            (agent_id, limit),
+        ).fetchall()
+        return [_row_to_dict(r) for r in rows]
+    finally:
+        conn.close()
+
+
+def get_trail_by_action_ref(db_path: str, agent_id: str, action_ref: str) -> Optional[dict]:
+    conn = _connect(db_path)
+    try:
+        row = conn.execute(
+            """
+            SELECT trail_id, agent_id, service, operation, timestamp,
+                   karma_at_time, success, signature_ref, scope, delegation_ref,
+                   parent_trail_id, root_trail_id, negotiation_ref, action_ref,
+                   tx_hash, origin, anchor_status, anchor_block, preimage_json
+            FROM trails WHERE agent_id=? AND action_ref=?
+            """,
+            (agent_id, action_ref),
+        ).fetchone()
+        return _row_to_dict(row) if row else None
+    finally:
+        conn.close()
+
+
+def get_trail_by_payment_hash(db_path: str, payment_hash: str) -> Optional[dict]:
+    """Busca por delegation_ref — donde se guarda el payment_hash externo (NEXUS cross-rail)."""
+    conn = _connect(db_path)
+    try:
+        row = conn.execute(
+            """
+            SELECT trail_id, agent_id, service, operation, timestamp,
+                   karma_at_time, success, signature_ref, scope, delegation_ref,
+                   parent_trail_id, root_trail_id, negotiation_ref, action_ref,
+                   tx_hash, origin, anchor_status, anchor_block, preimage_json
+            FROM trails WHERE delegation_ref=?
+            """,
+            (payment_hash,),
+        ).fetchone()
+        return _row_to_dict(row) if row else None
+    finally:
+        conn.close()
+
+
 def get_trail_graph(db_path: str, trail_id: str) -> Optional[dict]:
     """Devuelve el DAG completo a partir de trail_id como raíz o nodo.
 

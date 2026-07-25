@@ -17,7 +17,7 @@ from datetime import datetime, timezone
 from typing import Optional
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, HTMLResponse, Response
+from fastapi.responses import JSONResponse, HTMLResponse, Response, FileResponse
 from pydantic import BaseModel
 from pathlib import Path
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -528,17 +528,63 @@ def upsert_wisdom(conn, entity_id, entity_name, entity_type, karma_delta=0.0, ac
 
 # ── ROUTES ──────────────────────────────────────────────────────────────────
 
+_ROOT_JSON = {
+    "name":             "ARGENTUM",
+    "version":          "0.4.0",
+    "contract":         ARBITRUM_CONTRACT,
+    "philosophy":       "The faith is not measurable. The action is.",
+    "genesis_attestors": list(GENESIS_ATTESTORS),
+    "weight_threshold": WEIGHT_THRESHOLD,
+    "sybil_resistance": "marks + karma-weighted attestations"
+}
+
+_ROOT_HTML = """<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mycelium Trails — Accountability layer for AI agents</title>
+<meta name="description" content="Content-addressed action records for AI agents, verified on-chain. The faith is not measurable. The action is.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Mycelium Trails — Accountability layer for AI agents">
+<meta property="og:description" content="Content-addressed action records for AI agents, verified on-chain. The faith is not measurable. The action is.">
+<meta property="og:image" content="https://argentum.rgiskard.xyz/static/og-image.png">
+<meta property="og:url" content="https://argentum.rgiskard.xyz/">
+<meta property="og:site_name" content="Mycelium Trails">
+<meta name="twitter:card" content="summary_large_image">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Inter',system-ui,sans-serif;background:#0a0e1a;color:#e2e8f0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:40px}
+  .card{max-width:640px}
+  h1{font-size:2rem;font-weight:700;color:#93c5fd;margin-bottom:12px}
+  p{color:#94a3b8;font-size:1rem;line-height:1.6;margin-bottom:8px}
+  .meta{margin-top:24px;color:#475569;font-size:.8rem}
+  a{color:#5eead4;text-decoration:none}
+  a:hover{text-decoration:underline}
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>Mycelium Trails</h1>
+  <p>Content-addressed action records for AI agents, verified on-chain.</p>
+  <p>The faith is not measurable. The action is.</p>
+  <div class="meta">
+    ARGENTUM v0.4.0 · <a href="/dashboard/trails">Live dashboard</a> · <a href="/docs/integration">Integration guide</a> · <a href="/status">Status</a>
+  </div>
+</div>
+</body>
+</html>"""
+
 @app.get("/")
-def root():
-    return {
-        "name":             "ARGENTUM",
-        "version":          "0.4.0",
-        "contract":         ARBITRUM_CONTRACT,
-        "philosophy":       "The faith is not measurable. The action is.",
-        "genesis_attestors": list(GENESIS_ATTESTORS),
-        "weight_threshold": WEIGHT_THRESHOLD,
-        "sybil_resistance": "marks + karma-weighted attestations"
-    }
+def root(request: Request):
+    accept = request.headers.get("accept", "")
+    if "application/json" in accept and "text/html" not in accept:
+        return _ROOT_JSON
+    return HTMLResponse(content=_ROOT_HTML)
+
+@app.get("/static/og-image.png")
+def og_image():
+    return FileResponse(str(Path(__file__).parent / "static" / "og-image.png"), media_type="image/png")
 
 def _jcs_response(obj: dict) -> Response:
     """Serialize obj as JCS/RFC 8785 canonical JSON (sorted keys, no whitespace)
@@ -1893,7 +1939,7 @@ async def register_trail(request: Request, req: TrailRegister):
             "price_sats": req.price_sats, "signed": signed}
 
 @app.get("/trails/verify")
-async def proxy_trails_verify(
+def proxy_trails_verify(
     agent_id: Optional[str] = None,
     action_ref: Optional[str] = None,
     payment_hash: Optional[str] = None,
@@ -1902,29 +1948,27 @@ async def proxy_trails_verify(
 
     - Por action_ref: requiere agent_id + action_ref (SHA-256 canónico).
     - Por payment_hash: receipt_id cross-rail (linking key en fixtures APS/stripe-issuing).
-    Delega a Giskard Oasis REST. Sin auth.
+    Lee directo de trails.db (anteriormente proxy a Oasis en :8003, nunca desplegado en VPS).
+    Sin auth.
     """
-    params = {}
     if payment_hash:
-        params["payment_hash"] = payment_hash
+        trail = mycelium_trails.get_trail_by_payment_hash(TRAILS_DB, payment_hash)
     elif agent_id and action_ref:
-        params["agent_id"] = agent_id
-        params["action_ref"] = action_ref
+        trail = mycelium_trails.get_trail_by_action_ref(TRAILS_DB, agent_id, action_ref)
     else:
         return JSONResponse(
             {"detail": "provide action_ref+agent_id or payment_hash"}, status_code=422
         )
-    async with httpx.AsyncClient(timeout=10) as c:
-        r = await c.get("http://localhost:8003/trails/verify", params=params)
-        return JSONResponse(content=r.json(), status_code=r.status_code)
+    if trail is None:
+        return JSONResponse({"verified": False}, status_code=404)
+    return JSONResponse({"verified": True, "trail": trail}, status_code=200)
 
 
 @app.get("/trails/demo")
-async def proxy_trails_demo(limit: int = 10):
-    """Proxy a Giskard Oasis /trails/demo — flujo demo Lightning + cross-chain bridge."""
-    async with httpx.AsyncClient(timeout=10) as c:
-        r = await c.get(f"http://localhost:8003/trails/demo", params={"limit": limit})
-        return r.json()
+def proxy_trails_demo(limit: int = 10):
+    """Trails Mycelium reales mas recientes (anteriormente proxy a Oasis en :8003, nunca desplegado en VPS)."""
+    rows = mycelium_trails.list_trails_by_service(TRAILS_DB, limit=min(limit, 50))
+    return {"trails": rows, "count": len(rows)}
 
 
 _FINSERV_DEMO = {
@@ -2243,6 +2287,14 @@ def trails_dashboard(client: Optional[str] = None, limit: int = 50, show_interna
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Mycelium Trails — Live Dashboard</title>
+<meta name="description" content="Live dashboard of Mycelium Trails — content-addressed action records for AI agents, verified on-chain.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Mycelium Trails — Live Dashboard">
+<meta property="og:description" content="Live dashboard of Mycelium Trails — content-addressed action records for AI agents, verified on-chain.">
+<meta property="og:image" content="https://argentum.rgiskard.xyz/static/og-image.png">
+<meta property="og:url" content="https://argentum.rgiskard.xyz/dashboard/trails">
+<meta property="og:site_name" content="Mycelium Trails">
+<meta name="twitter:card" content="summary_large_image">
 <style>
   *{{box-sizing:border-box;margin:0;padding:0}}
   body{{font-family:'Inter',system-ui,sans-serif;background:#0a0e1a;color:#e2e8f0;font-size:.875rem}}
@@ -2356,14 +2408,10 @@ def mycelium_stats(agent_id: str):
 
 
 @app.get("/trails/agents/{agent_id}")
-async def proxy_trails_by_agent(agent_id: str, limit: int = 50):
-    """Proxy a Giskard Oasis /trails/{agent_id} — historial de trails por agente."""
-    async with httpx.AsyncClient(timeout=10) as c:
-        r = await c.get(
-            f"http://localhost:8003/trails/{agent_id}",
-            params={"limit": min(limit, 50)},
-        )
-        return JSONResponse(content=r.json(), status_code=r.status_code)
+def proxy_trails_by_agent(agent_id: str, limit: int = 50):
+    """Historial de trails por agente — lee directo de trails.db (anteriormente proxy a Oasis en :8003, nunca desplegado en VPS)."""
+    rows = mycelium_trails.list_trails_by_agent(TRAILS_DB, agent_id, limit=min(limit, 50))
+    return {"agent_id": agent_id, "trails": rows, "count": len(rows)}
 
 
 @app.get("/mycelium/trails/{trail_id}/graph")
