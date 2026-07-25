@@ -201,6 +201,54 @@ window of credential exposure.
 for the full spec and derivation. Does not enter the `action_ref` preimage: changing or
 removing `negotiation_ref` does not change `action_ref`.
 
+**`revocation_authority_ref`** (string, optional) — SHA-256 hex pointer identifying the
+revocation authority consulted at check time. `revocation_check_at_ms` proves a
+non-revocation check happened; it does not prove *against what*. A conformant receipt can
+carry a fresh `revocation_check_at_ms` while pointing at a revocation registry that is
+stale, unreachable, or compromised — same timestamp, same appearance of compliance, no
+real guarantee. `revocation_authority_ref` closes that gap by binding the check to a
+specific, independently identifiable authority.
+
+Derived as `SHA-256(JCS(authority_descriptor))` where `authority_descriptor` contains at
+minimum:
+
+- `authority_type` — one of `"permissionless-registry"` (verifiable by any third party,
+  e.g. an on-chain registry), `"private-endpoint"` (operator-controlled, verifiable only
+  by trusting the operator), or `"third-party-oracle"` (external service, verifiable by
+  querying that service independently).
+- `authority_id` — canonical identifier of the authority. For a permissionless registry,
+  the registry contract address. For a private endpoint, a stable hash of the endpoint
+  (never the raw URL — see `feedback_outofband_nunca_inline` pattern: out-of-band values
+  are never pasted inline in a public artifact).
+- `version` — identifies the shape of `authority_descriptor` itself, so a future revision
+  does not silently change what the pointer means.
+
+Does not enter the `action_ref` preimage — same invariant as `negotiation_ref` and
+`revocation_ref`: changing or adding `revocation_authority_ref` does not change
+`action_ref`.
+
+```python
+import hashlib, json
+
+def jcs(obj):
+    return json.dumps(obj, separators=(',', ':'), sort_keys=True, ensure_ascii=False)
+
+authority_descriptor = {
+    "authority_type": "permissionless-registry",
+    "authority_id":   "0x49fEcA52bC634a9Ab773226D16619deC547794aa",
+    "version":        "revocation-authority-ref-v1",
+}
+revocation_authority_ref = hashlib.sha256(jcs(authority_descriptor).encode()).hexdigest()
+# 6715df92abbc5adef5dce788e6b64d4fd280f16c6a077d4cf959be5f127a675b
+```
+
+Paired with `revocation_check_at_ms`, the two fields together answer "checked when,
+against what" instead of just "checked when." A receipt with `revocation_check_at_ms`
+but no `revocation_authority_ref` is auditable for timing but not for authority — a
+verifier that requires both SHOULD treat a receipt missing `revocation_authority_ref` as
+unauditable for authority provenance, not as invalid (same non-invalidating posture as
+the other optional rotation fields).
+
 ### Updated canonical receipt envelope — v1.0 with optional rotation fields
 
 ```json
@@ -217,7 +265,8 @@ removing `negotiation_ref` does not change `action_ref`.
   },
   "policy_version": "2026-05-01",
   "authority_verified_at_ms": 1747568400000,
-  "revocation_check_at_ms": 1747568431000
+  "revocation_check_at_ms": 1747568431000,
+  "revocation_authority_ref": "6715df92abbc5adef5dce788e6b64d4fd280f16c6a077d4cf959be5f127a675b"
 }
 ```
 

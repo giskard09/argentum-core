@@ -1,0 +1,49 @@
+{
+  "fixture_id": "revocation-authority-ref-v1",
+  "version": "v1",
+  "spec": "docs/spec/action-ref.md",
+  "spec_stable_ref": "https://github.com/giskard09/argentum-core/blob/main/docs/spec/action-ref.md#updated-canonical-receipt-envelope--v10-with-optional-rotation-fields",
+  "hash_algo": "sha256",
+  "artifact_format": "jcs-rfc8785-v1",
+  "generated_at": "2026-07-25",
+  "purpose": "Formal conformance substrate for revocation_authority_ref. An external implementer who reproduces revocation_authority_ref byte-identical from the stated authority_descriptor has a conformant implementation. Pairs with revocation_check_at_ms (docs/spec/action-ref.md) to answer 'checked when, against what' instead of just 'checked when'. Does not enter the action_ref preimage.",
+  "reproduce_in_python": "import hashlib, json\ndef jcs(obj): return json.dumps(obj, separators=(',',':'), sort_keys=True, ensure_ascii=False)\nrevocation_authority_ref = hashlib.sha256(jcs(authority_descriptor).encode()).hexdigest()",
+  "vectors": [
+    {
+      "id": "raa-001-permissionless-registry",
+      "description": "Strong case — the revocation check consults a permissionless on-chain registry (AnchorRegistry, same canonical CREATE2 address across Arbitrum One / Base / Ink). authority_id is verifiable by any third party without trusting the operator.",
+      "strength": "strong — independently verifiable by any third party",
+      "authority_descriptor": {
+        "authority_type": "permissionless-registry",
+        "authority_id":   "0x49fEcA52bC634a9Ab773226D16619deC547794aa",
+        "version":        "revocation-authority-ref-v1"
+      },
+      "artifact_jcs_payload": "{\"authority_id\":\"0x49fEcA52bC634a9Ab773226D16619deC547794aa\",\"authority_type\":\"permissionless-registry\",\"version\":\"revocation-authority-ref-v1\"}",
+      "artifact_canonical_bytes_hex": "7b22617574686f726974795f6964223a22307834396645634135326243363334613941623737333232364431363631396465433534373739346161222c22617574686f726974795f74797065223a227065726d697373696f6e6c6573732d7265676973747279222c2276657273696f6e223a227265766f636174696f6e2d617574686f726974792d7265662d7631227d",
+      "revocation_authority_ref": "6715df92abbc5adef5dce788e6b64d4fd280f16c6a077d4cf959be5f127a675b"
+    },
+    {
+      "id": "raa-002-private-endpoint",
+      "description": "Weak-but-honest case — the revocation check consults an operator-controlled private endpoint. authority_id is a stable hash of the endpoint (never the raw URL, so the pointer does not leak an addressable internal target). A verifier can confirm a check pointed at *some* consistent private authority across receipts, but cannot independently confirm that authority's own integrity without trusting the operator.",
+      "strength": "weak — verifiable only by trusting the operator, but explicit about it instead of silent",
+      "authority_descriptor": {
+        "authority_type": "private-endpoint",
+        "authority_id":   "a3f1c9e2b7d4f0518c6a2e9b4d7f1a3c5e8b0d2f4a6c8e0b2d4f6a8c0e2b4d6f",
+        "version":        "revocation-authority-ref-v1"
+      },
+      "artifact_jcs_payload": "{\"authority_id\":\"a3f1c9e2b7d4f0518c6a2e9b4d7f1a3c5e8b0d2f4a6c8e0b2d4f6a8c0e2b4d6f\",\"authority_type\":\"private-endpoint\",\"version\":\"revocation-authority-ref-v1\"}",
+      "artifact_canonical_bytes_hex": "7b22617574686f726974795f6964223a2261336631633965326237643466303531386336613265396234643766316133633565386230643266346136633865306232643466366138633065326234643666222c22617574686f726974795f74797065223a22707269766174652d656e64706f696e74222c2276657273696f6e223a227265766f636174696f6e2d617574686f726974792d7265662d7631227d",
+      "revocation_authority_ref": "77bd4596dc69fa493e479385f35de0387139b2f0090cb43a33514c5679d87d3f"
+    }
+  ],
+  "invariants": {
+    "not_in_action_ref_preimage": "revocation_authority_ref never enters the action_ref preimage — same invariant as negotiation_ref and revocation_ref. Adding, removing, or changing it does not change action_ref.",
+    "authority_id_never_raw_url": "For private-endpoint, authority_id MUST be a hash of the endpoint, never the raw URL — an out-of-band value pasted inline defeats the purpose of a content-addressed pointer.",
+    "pairs_with_revocation_check_at_ms": "revocation_authority_ref alone proves what would be consulted; revocation_check_at_ms alone proves a check happened at some time. Together they are the only combination that proves 'checked when, against what'."
+  },
+  "gap_closed": {
+    "before": "A conformant receipt could carry a fresh revocation_check_at_ms while pointing at a stale, unreachable, or compromised revocation source — same timestamp, same appearance of compliance, zero real guarantee.",
+    "after": "revocation_authority_ref makes the consulted authority explicit and content-addressed, so a verifier can at minimum confirm consistency of the authority referenced across receipts, and for permissionless-registry, independently verify the authority itself.",
+    "origin": "Gap identified by claudeopus_mos (Moltbook, 2026-07-25) on revocation-ref-v1 — verified as real against docs/spec/action-ref.md and docs/spec/revocation-ref.md, which had no field binding the check to a specific authority."
+  }
+}

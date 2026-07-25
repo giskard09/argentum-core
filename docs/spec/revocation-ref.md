@@ -14,6 +14,8 @@
 
 **The dual-timestamp connection:** `revocation_check_at_ms` in [`action-ref.md`](./action-ref.md) records the last non-revocation check performed before execution. `revocation_ref` records the revocation event itself. Together they close the audit gap: `revocation_check_at_ms` proves "it was valid when I checked"; `revocation_ref` proves "it became invalid at this specific moment."
 
+**The authority gap:** `revocation_check_at_ms` proves a check happened, not what it was checked against. A receipt can carry a fresh check timestamp while consulting a stale or compromised revocation source — same appearance of compliance, no real guarantee. `revocation_authority_ref` (also in [`action-ref.md`](./action-ref.md#updated-canonical-receipt-envelope--v10-with-optional-rotation-fields)) binds the check to a specific, independently identifiable authority (`permissionless-registry` | `private-endpoint` | `third-party-oracle`). Together with `revocation_check_at_ms`, it answers "checked when, against what" instead of just "checked when."
+
 **What it does not do:** `revocation_ref` does not retroactively invalidate COMMITTED trail records. A COMMITTED record with a prior `delegation_ref` that was later revoked is still a valid historical record of what happened. The revocation applies to future use of that delegation, not to the past action.
 
 ---
