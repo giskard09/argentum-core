@@ -1335,6 +1335,31 @@ def set_account_webhook(body: WebhookRequest):
     }
 
 
+class RotateRequest(BaseModel):
+    api_key: str
+
+
+@app.post("/payg/account/rotate")
+def rotate_account_api_key(body: RotateRequest, request: Request):
+    """Admin — rota la api_key de una cuenta PAYG, invalida la vieja.
+
+    Requiere header X-Admin-Token. Uso: integrador filtra su api_key (repo público,
+    log expuesto) y necesita una nueva sin perder créditos, tier ni configuración.
+    Preserva agent_id, tier, credit_trails, conformance_source, notify_webhook.
+    """
+    token = request.headers.get("X-Admin-Token", "")
+    if not ADMIN_TOKEN or not hmac.compare_digest(token, ADMIN_TOKEN):
+        raise HTTPException(401, "invalid or missing X-Admin-Token")
+    account = mycelium_trails.rotate_payg_account(TRAILS_DB, body.api_key)
+    if account is None:
+        raise HTTPException(404, "api_key not found")
+    return {
+        "old_api_key": body.api_key,
+        "new_api_key": account["api_key"],
+        "agent_id":    account["agent_id"],
+    }
+
+
 _SELF_CERTIFY_REPO = "giskard09/argentum-core"
 _CONFORMANCE_BASE  = "examples/conformance"
 

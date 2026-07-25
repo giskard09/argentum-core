@@ -622,6 +622,33 @@ def set_payg_webhook(db_path: str, api_key: str, url: Optional[str]) -> Optional
         conn.close()
 
 
+def rotate_payg_account(db_path: str, old_api_key: str) -> Optional[dict]:
+    """Rota la api_key de una cuenta PAYG — genera una nueva, invalida la vieja.
+
+    Preserva agent_id, tier, credit_trails, conformance_source, notify_webhook.
+    Retorna la cuenta actualizada (con new_api_key aplicada), o None si old_api_key
+    no existe.
+    """
+    new_api_key = uuid.uuid4().hex
+    ts = int(time.time())
+    conn = _connect(db_path)
+    try:
+        cur = conn.execute(
+            "UPDATE payg_accounts SET api_key = ?, updated_at = ? WHERE api_key=?",
+            (new_api_key, ts, old_api_key),
+        )
+        if cur.rowcount == 0:
+            return None
+        row = conn.execute(
+            "SELECT api_key, agent_id, tier, credit_trails, conformance_source, notify_webhook "
+            "FROM payg_accounts WHERE api_key=?",
+            (new_api_key,),
+        ).fetchone()
+        return dict(row) if row else None
+    finally:
+        conn.close()
+
+
 def get_notify_webhook(db_path: str, agent_id: str) -> Optional[str]:
     """Retorna el notify_webhook de la cuenta de un agent_id, o None si no hay.
 

@@ -91,3 +91,32 @@ def test_payg_free_account_cannot_consume(db):
     api_key = mycelium_trails.create_payg_account(db, "agent-free")
     # tier='free', no topup → consume_payg_credit debe retornar False
     assert mycelium_trails.consume_payg_credit(db, api_key) is False
+
+
+# ── Rotate api_key ─────────────────────────────────────────────────────────────
+
+def test_payg_rotate_preserves_state(db):
+    old_key = mycelium_trails.create_payg_account(db, "agent-rotate")
+    mycelium_trails.topup_payg(db, old_key, 42)
+    mycelium_trails.set_payg_webhook(db, old_key, "https://example.com/hook")
+    mycelium_trails.set_conformance_source(db, old_key, "safeagent")
+
+    result = mycelium_trails.rotate_payg_account(db, old_key)
+    assert result is not None
+    new_key = result["api_key"]
+    assert new_key != old_key
+    assert result["agent_id"] == "agent-rotate"
+    assert result["tier"] == "payg"
+    assert result["credit_trails"] == 42
+    assert result["conformance_source"] == "safeagent"
+    assert result["notify_webhook"] == "https://example.com/hook"
+
+
+def test_payg_rotate_invalidates_old_key(db):
+    old_key = mycelium_trails.create_payg_account(db, "agent-rotate")
+    mycelium_trails.rotate_payg_account(db, old_key)
+    assert mycelium_trails.get_payg_account(db, old_key) is None
+
+
+def test_payg_rotate_unknown_key_returns_none(db):
+    assert mycelium_trails.rotate_payg_account(db, "does-not-exist") is None
