@@ -84,6 +84,37 @@ A `PENDING/null` record is not a verification failure — it is an honest declar
 the signer's knowledge ended before a handle could be recovered. The contract: the receipt
 never lies about what the signer actually knew at signing time.
 
+## `confirmation_predicate` per backend
+
+For each backend, three things must be defined explicitly: the field that
+correlates `outcome_handle` to the original action (`correlation field`),
+the exact refetch state that counts as confirmed vs not-yet
+(`confirmation_predicate`), and how long a verifier should wait before a
+still-`PENDING` record is treated as suspicious (`freshness window`).
+Previously this was left implicit — asked directly by xsa520
+([`a2aproject/A2A#1672`](https://github.com/a2aproject/A2A/issues/1672),
+comment `5086390308`): is this defined in the guarantee model, or does
+today's integration assign it producer-side? Verified: it was the
+latter, only the general pattern (independent refetch + non-null/null)
+was named. This section closes that gap, drawn from the on-chain path
+this repo runs and from the confirmation-gap patterns already catalogued
+across the `*-action-ref-anchor` worked examples series.
+
+| Backend | correlation field | `confirmation_predicate` | freshness window |
+|---|---|---|---|
+| On-chain (`AnchorRegistry`/`GiskardPayments`, this repo) | `tx_hash` | tx receipt exists and `status == 1` (included). This repo's own `anchor_action_ref` (`arb_pay.py`) writes `tx_hash` at broadcast time and does not currently poll for the receipt — today `PENDING/non-null` never transitions to an explicit `COMMITTED` write; the predicate above is the target, not yet enforced in code. Open item, not a spec gap. | no fixed block-confirmation count enforced yet; chain finality (~12 blocks Arbitrum/Base) is the reference target |
+| Payment processor REST API (PayPal `capture`, pattern from [`paypal-action-ref-anchor`](https://github.com/giskard09/paypal-action-ref-anchor)) | processor's capture id (`purchase_units[].payments.captures[0].id`) | idempotent `GET` on that id returns a terminal `status` value (e.g. `COMPLETED`) — not the response to the original write | bounded by the processor's own settlement SLA (typically seconds, not on-chain finality) |
+| MPC/custody signer (Turnkey `eth_send_transaction`, pattern from [`turnkey-action-ref-anchor`](https://github.com/giskard09/turnkey-action-ref-anchor)) | `eth.txHash` from the poll response | same predicate as the on-chain row above once the tx lands — the signer only adds an intermediate `ACTIVITY_STATUS_*` state before broadcast, which is not itself the confirmation | signer-side polling interval + underlying chain finality |
+| MPC signer with confirmation gate (Fireblocks `x402_get_and_pay`, pattern from [`fireblocks-action-ref-anchor`](https://github.com/giskard09/fireblocks-action-ref-anchor)) | facilitator's `transaction` field from the `PAYMENT-RESPONSE` header | same on-chain predicate as above; the `confirmed` flag in this backend is a **pre-execution** approval gate, not the post-execution `confirmation_predicate` — the two are orthogonal and must not be conflated | same as on-chain row |
+
+The distinction the table makes explicit: `confirmation_predicate` is
+always a property of the **outcome refetch**, never of any pre-execution
+approval step (elicitation, policy consensus, `confirmed: true`) that a
+given backend may or may not have. A backend can have a strong
+pre-execution gate and a weak or missing `confirmation_predicate`, or
+vice versa — the `*-action-ref-anchor` worked examples series exists
+precisely because those two axes vary independently across backends.
+
 ## Canonical key derivation
 
 All three systems converge on the same linking key:
