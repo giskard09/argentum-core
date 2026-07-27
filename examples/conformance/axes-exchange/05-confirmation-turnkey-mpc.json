@@ -1,0 +1,21 @@
+{
+  "id": "05-confirmation-turnkey-mpc",
+  "kind": "positive",
+  "class": "confirmation_predicate",
+  "backend": "MPC/custody signer (Turnkey eth_send_transaction)",
+  "description": "Correlation field, confirmation_predicate, and freshness window for an MPC-signer backend, per docs/spec/guarantee-model.md \"confirmation_predicate per backend\" table (commit 66fd62f), pattern drawn from giskard09/turnkey-action-ref-anchor.",
+  "correlation_field": "eth.txHash from the poll response",
+  "confirmation_predicate": "same predicate as the on-chain backend (03) once the tx lands — the signer only adds an intermediate ACTIVITY_STATUS_* state before broadcast, which is not itself the confirmation",
+  "freshness_window": "signer-side polling interval + underlying chain finality",
+  "worked_example": {
+    "repo": "giskard09/turnkey-action-ref-anchor",
+    "anchor_ref_bytes32": "0x40c194fe9d4ad496fd01ccb888b6c900fa4131940e38513158e9cbf0cbefaf64",
+    "tx": "0x4c3ae9915a5a405509c0140ad225a7840417e52b011e60bc546001bf11e3fa85",
+    "chain": "Base mainnet (chainId 8453)",
+    "block": 48766397,
+    "provenance_disclaimer": "SYNTHETIC — action_ref derived for a modeled eth_send_transaction call based on tkhq/turnkey-agent-skills' public source (skills/signing-transactions/SKILL.md + references/evm-examples.md). Not produced by a live Turnkey organization. No adoption or endorsement by Turnkey is implied. Only the on-chain anchor of the action_ref is real."
+  },
+  "expect": {
+    "predicate_holds_for_worked_example": "reduces to vector 03 (on-chain) once the tx lands — no separate live ACTIVITY_STATUS_* poll was captured for this synthetic example"
+  }
+}

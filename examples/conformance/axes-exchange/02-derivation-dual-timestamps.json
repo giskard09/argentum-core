@@ -1,0 +1,26 @@
+{
+  "id": "02-derivation-dual-timestamps",
+  "kind": "positive",
+  "class": "action_ref-derivation",
+  "description": "Same 4-field preimage derivation, different action_type/agent_id/scope/timestamp — checks the derivation is not baseline-specific. The full envelope (authority_verified_at_ms, revocation_check_at_ms, policy_version) is a separate, optional canonical form (envelope_canonical_sha256 in the source fixture) not exercised by this vector.",
+  "input": {
+    "action_type": "payment.send",
+    "agent_id": "pioneer-agent-001",
+    "scope": "nobulex:bilateral",
+    "timestamp": "2026-05-23T10:00:00.000Z"
+  },
+  "canonicalization": "jcs-rfc8785-v1",
+  "expected_canonical_bytes": "{\"action_type\":\"payment.send\",\"agent_id\":\"pioneer-agent-001\",\"scope\":\"nobulex:bilateral\",\"timestamp\":\"2026-05-23T10:00:00.000Z\"}",
+  "expect": {
+    "hash_algo": "sha256",
+    "digest": "f09eb8c50dfa27a33cdb36efa08194bcba2d7ac32eb1dd6539fb0c3bc811a8e0"
+  },
+  "provenance": {
+    "source_fixture": "examples/conformance/action-ref-v1-baseline.fixture.json#0002-dual-timestamps",
+    "verification_mode": "asserted",
+    "independently_reproduced_by": [
+      {"party": "magentixai (Sansone)", "where": "axes#3 comment 5095783301", "when": "2026-07-27T19:23:35Z"}
+    ],
+    "recomputed_this_session": true
+  }
+}

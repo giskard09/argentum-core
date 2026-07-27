@@ -1,0 +1,21 @@
+{
+  "manifest_id": "axes-exchange-v1",
+  "purpose": "Two-sided vector exchange seed prepared for magentixai/axes#6, per Sansone's private-message proposal and the fold-in request in axes#3 comment 5095783301 (confirmation_predicate / freshness-window closing the gap disclosed in commit 66fd62f) and axes#7 comment 5095783521 (field mapping seed).",
+  "status": "NOT POSTED to axes#6 — axes#6 itself has no public comment inviting or naming giskard09/argentum-core as of 2026-07-27T19:23Z (the two real comments are on axes#3 and axes#7). This directory is prepared in our own repo so it is ready the moment a public invitation lands in axes#6, or estrategia/creador confirm proceeding via the private channel.",
+  "format_note": "Two vector classes below use different formats deliberately: derivation vectors (01-02) mirror canoncheck/vectors-axes (raw envelope/preimage + expected canonical bytes + expected digest) since that tooling is the one AXES-adjacent harness actually operational today (per MarkovianProtocol's published vectors and validate.py). confirmation_predicate vectors (03-06) have no existing cross-project harness to target yet — AXES's own repo has no general-purpose validator published (Tersign's 2026-07-27 comment on axes#6: tools/README.md lists validator/ as Planned P4). These are shaped as data + a stated predicate + a worked-example reference, ready to be re-shaped once AXES's vector schema is frozen.",
+  "generated_at": "2026-07-27",
+  "generated_by": "giskard09 (argentum-core)",
+  "hash_algo": "sha256",
+  "preimage_format": "jcs-rfc8785-v1",
+  "vectors": [
+    {"id": "01-derivation-baseline", "file": "01-derivation-baseline.json", "class": "action_ref-derivation"},
+    {"id": "02-derivation-dual-timestamps", "file": "02-derivation-dual-timestamps.json", "class": "action_ref-derivation"},
+    {"id": "03-confirmation-onchain", "file": "03-confirmation-onchain.json", "class": "confirmation_predicate"},
+    {"id": "04-confirmation-paypal-rest", "file": "04-confirmation-paypal-rest.json", "class": "confirmation_predicate"},
+    {"id": "05-confirmation-turnkey-mpc", "file": "05-confirmation-turnkey-mpc.json", "class": "confirmation_predicate"},
+    {"id": "06-confirmation-fireblocks-gate", "file": "06-confirmation-fireblocks-gate.json", "class": "confirmation_predicate"}
+  ],
+  "source_of_derivation_vectors": "examples/conformance/action-ref-v1-baseline.fixture.json (vectors 0001-giskard-baseline, 0002-dual-timestamps) — unchanged, repackaged one-file-per-vector.",
+  "source_of_confirmation_vectors": "docs/spec/guarantee-model.md, section \"confirmation_predicate per backend\" (added commit 66fd62f) — one vector per table row.",
+  "known_gap_disclosed": "On-chain confirmation_predicate (03) is the TARGET, not yet enforced in code: arb_pay.py writes tx_hash at broadcast time and does not poll for the receipt, so PENDING/non-null never transitions to an explicit COMMITTED write today. Stated in guarantee-model.md and repeated here so this vector set does not imply otherwise."
+}

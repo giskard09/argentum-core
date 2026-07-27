@@ -1,0 +1,26 @@
+{
+  "id": "01-derivation-baseline",
+  "kind": "positive",
+  "class": "action_ref-derivation",
+  "description": "Minimal baseline — 4 preimage fields only, scope with namespace-prefix. Any conformant implementation must reproduce action_ref byte-identical from the stated preimage.",
+  "input": {
+    "action_type": "trail.anchor",
+    "agent_id": "giskard-self",
+    "scope": "mycelium:baseline",
+    "timestamp": "2026-05-23T00:00:00.000Z"
+  },
+  "canonicalization": "jcs-rfc8785-v1",
+  "expected_canonical_bytes": "{\"action_type\":\"trail.anchor\",\"agent_id\":\"giskard-self\",\"scope\":\"mycelium:baseline\",\"timestamp\":\"2026-05-23T00:00:00.000Z\"}",
+  "expect": {
+    "hash_algo": "sha256",
+    "digest": "f4ebda732e3c063bdd8547c734e4956f009bbed7f557cb949f7c8033e8c42d1d"
+  },
+  "provenance": {
+    "source_fixture": "examples/conformance/action-ref-v1-baseline.fixture.json#0001-giskard-baseline",
+    "verification_mode": "asserted",
+    "independently_reproduced_by": [
+      {"party": "magentixai (Sansone)", "where": "axes#3 comment 5095783301", "when": "2026-07-27T19:23:35Z"}
+    ],
+    "recomputed_this_session": true
+  }
+}

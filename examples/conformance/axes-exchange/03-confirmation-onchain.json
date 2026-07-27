@@ -1,0 +1,22 @@
+{
+  "id": "03-confirmation-onchain",
+  "kind": "positive",
+  "class": "confirmation_predicate",
+  "backend": "On-chain (AnchorRegistry / GiskardPayments, this repo)",
+  "description": "Correlation field, confirmation_predicate, and freshness window for the on-chain backend, per docs/spec/guarantee-model.md \"confirmation_predicate per backend\" table (commit 66fd62f).",
+  "correlation_field": "tx_hash",
+  "confirmation_predicate": "tx receipt exists and status == 1 (included)",
+  "freshness_window": "no fixed block-confirmation count enforced yet; chain finality (~12 blocks Arbitrum/Base) is the reference target",
+  "worked_example": {
+    "tx": "0xb0254145b3c20d0014b6891a8dc710be20cec3ce5fe2b5d133cf70bc9369180d",
+    "registry": "0x49fEcA52bC634a9Ab773226D16619deC547794aa",
+    "chain": "Base mainnet (chainId 8453)",
+    "block": 48510788,
+    "status": "confirmed (real anchor(), not synthetic)"
+  },
+  "known_gap": "This repo's own anchor_action_ref (arb_pay.py) writes tx_hash at broadcast time and does not currently poll for the receipt — PENDING/non-null never transitions to an explicit COMMITTED write in code yet. The predicate above is the target, not yet enforced. Stated openly in guarantee-model.md; repeated here so this vector does not overclaim.",
+  "expect": {
+    "predicate_holds_for_worked_example": true,
+    "enforced_in_code_today": false
+  }
+}

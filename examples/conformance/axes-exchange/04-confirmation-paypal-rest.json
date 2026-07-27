@@ -1,0 +1,21 @@
+{
+  "id": "04-confirmation-paypal-rest",
+  "kind": "positive",
+  "class": "confirmation_predicate",
+  "backend": "Payment processor REST API (PayPal capture)",
+  "description": "Correlation field, confirmation_predicate, and freshness window for a processor-REST backend, per docs/spec/guarantee-model.md \"confirmation_predicate per backend\" table (commit 66fd62f), pattern drawn from giskard09/paypal-action-ref-anchor.",
+  "correlation_field": "purchase_units[].payments.captures[0].id",
+  "confirmation_predicate": "idempotent GET on that id returns a terminal status value (e.g. COMPLETED) — not the response to the original write",
+  "freshness_window": "bounded by the processor's own settlement SLA (typically seconds, not on-chain finality)",
+  "worked_example": {
+    "repo": "giskard09/paypal-action-ref-anchor",
+    "anchor_ref_bytes32": "0x1bc3adf336dcd58f645f1b5bb0902946abc6a1b37d5aaaa7ecdbec616dd21d5d",
+    "tx": "0x5237ac20d5e2c11113695ada5571ddd651092be955bcff7d1834bb8d823512f8",
+    "chain": "Base mainnet (chainId 8453)",
+    "block": 48765403,
+    "provenance_disclaimer": "SYNTHETIC — action_ref derived for a modeled pay_order call based on @paypal/agent-toolkit's public source (typescript/src/shared/{tools,parameters,functions}.ts). Not produced by a live PayPal sandbox call. No adoption or endorsement by PayPal is implied. Only the on-chain anchor of the action_ref is real; the capture id / GET confirmation described above is not exercised against a live PayPal endpoint."
+  },
+  "expect": {
+    "predicate_holds_for_worked_example": "not applicable — no live capture id exists to test against; this vector documents the predicate shape only"
+  }
+}

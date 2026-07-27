@@ -1,0 +1,22 @@
+{
+  "id": "06-confirmation-fireblocks-gate",
+  "kind": "positive",
+  "class": "confirmation_predicate",
+  "backend": "MPC signer with confirmation gate (Fireblocks x402_get_and_pay)",
+  "description": "Correlation field, confirmation_predicate, and freshness window for an MPC-signer-with-gate backend, per docs/spec/guarantee-model.md \"confirmation_predicate per backend\" table (commit 66fd62f), pattern drawn from giskard09/fireblocks-action-ref-anchor. This is the vector that most needs stating explicitly: it is a NEGATIVE-adjacent case for a naive verifier — the backend's own 'confirmed' flag must NOT be read as the confirmation_predicate.",
+  "correlation_field": "facilitator's transaction field from the PAYMENT-RESPONSE header",
+  "confirmation_predicate": "same on-chain predicate as vector 03 (tx receipt exists and status == 1) — the confirmed flag in this backend is a PRE-EXECUTION approval gate, not the post-execution confirmation_predicate",
+  "freshness_window": "same as on-chain (vector 03)",
+  "anti_pattern_flagged": "a verifier that treats Fireblocks' pre-execution 'confirmed: true' as proof of settlement is conflating two orthogonal axes (pre-execution approval strength vs post-execution confirmation_predicate strength) — this is the exact conflation guarantee-model.md warns against.",
+  "worked_example": {
+    "repo": "giskard09/fireblocks-action-ref-anchor",
+    "anchor_ref_bytes32": "0x3c816dd2ae802d9c427e52658204dcaa47841cceb6065426597d03bb8eb88ad9",
+    "tx": "0xaf834024b7504040103c088e2ccc45acbba10ca7b36c4411d7ffa79ca2534017",
+    "chain": "Base mainnet (chainId 8453)",
+    "block": 48766784,
+    "provenance_disclaimer": "SYNTHETIC — action_ref derived for a modeled x402_get_and_pay call based on fireblocks/x402-agent's public source (src/mcp-server.ts + src/HttpX402Service.ts). No real Fireblocks MPC signing or broadcast transaction beyond the anchor itself. No adoption or endorsement by Fireblocks is implied."
+  },
+  "expect": {
+    "predicate_holds_for_worked_example": "reduces to vector 03 (on-chain) — the pre-execution confirmed flag is explicitly out of scope for this predicate"
+  }
+}
