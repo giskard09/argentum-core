@@ -11,6 +11,7 @@ Authorization (`decision_binding_ref`) confirms that a policy approved this acti
 - A tool package whose digest changed since the last posture check is a different tool — prior safety decisions do not transfer.
 - A posture check outside its validity window fails closed — a stale "safe" verdict is not a safe verdict.
 - An MCP server URI that resolves to a different endpoint is a different target.
+- This also closes a rug-pull scenario: a server is approved under one declared capability set, then silently swaps in a different one after approval. Because `tool_id` is content-addressed and `posture_version` is part of the preimage, a swapped or redefined capability produces a new `tool_trust_ref` — it cannot inherit the prior "safe" verdict. Binding this into `action_ref` (see Relationship to other specs) means a downstream verifier can confirm which exact declaration was live at the moment a given action ran, not just that a declaration existed at some point.
 
 ## Relationship to other records
 
