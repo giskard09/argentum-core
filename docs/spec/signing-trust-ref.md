@@ -85,3 +85,5 @@ Both can coexist as sibling fields in a trail record or audit log entry:
 - `action-ref.md` — canonical field derivation
 - `verifier-independence.md` — trust-model context and motivation
 - `guarantee-model.md` — composability with pre-execution enforcement layers
+- `custody-ref.md` — trust-domain relationship between capturer and executor; its
+  `independent_third_party` check cross-references this document's `signer_id`
