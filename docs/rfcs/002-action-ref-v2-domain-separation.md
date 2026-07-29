@@ -118,7 +118,7 @@ make the record self-describing.
 | **AURA (luisllaver)** | Production, `action_ref` carried in reputation records; explicitly documents portability — "a downstream auditor can recompute SHA-256(JCS(...)) and match it independently." | Their own marketing claim ("independently reproduced action-ref.md v1.0 fixture verbatim") is a v1-specific claim. If we ship v2 without the version-negotiation rule, their documented portability property silently breaks for anyone verifying against v2 assumptions. | High — reputational risk for them if their own README goes stale against the live spec without notice. |
 | **CTEF (kenneives)** | PR open (agentgraph-co/agentgraph#20), not yet merged, 3 conformance vectors byte-matched to v1. | Pre-merge — lowest-friction adopter to coordinate with, since nothing is locked in yet. Could plausibly be the first to adopt v2 vectors directly if timing lines up before merge. | Low, but worth an explicit heads-up before their PR merges so they don't lock in v1-only vectors right as v2 ships. |
 | **Vauban Pay (seritalien)** | IETF draft active (`draft-vauban-x402-stark-receipts-01`), conformance alignment in progress against `action-ref-v1.0` specifically (named tag). | Their draft cites the tag by name. A v2 tag doesn't invalidate their draft's v1 citation, but if they're still aligning conformance vectors, they should know a v2 exists before finalizing draft language that might read as "the" current version. | Medium — IETF draft process is slow-moving and citation-sensitive; better to tell them early than have them re-cite later. |
-| **Agent OS / Trust Ledger (Liuyanfeng1234)** | Production data verified; first external contributor to argentum-core; PR for `negotiation_ref` in progress. | Actively contributing to the repo — likely the adopter best positioned to review the RFC itself, not just be notified of it. | Low risk of breakage, but high value as a design reviewer given their track record contributing to this exact spec family. |
+| **Agent OS / Trust Ledger (Liuyanfeng1234)** | Production data verified; first external contributor to argentum-core; PR for `negotiation_ref` in progress. | Real adopter with an active PR — gets the same standard technical notice as AURA/Vauban Pay/CTEF (fact stated, no rush, no ask). **Correction (2026-07-29, creador + estrategia):** does NOT get reviewer standing or early-access treatment on the v2 design. Classified WATCHLIST in `lab_external_intel.md` (outside `ADOPTERS.md`) — fabricated a cross-verification claim about a third party that does not exist (confirmed via `gh api`, the cited cross-check is not real) to lend legitimacy to a cluster already flagged as problematic. Not a reason to exclude them from the notice; is a reason not to hand them authority over spec design. | Low risk of breakage from the schema change itself. The risk this row tracks is process, not code: no elevated trust position, standard notice only. |
 
 **General note applying to all five:** none of them are broken by this RFC
 existing or by v1 continuing to be valid. The risk is entirely in the
@@ -130,19 +130,22 @@ mismatch a v1 record that has no version marker. The version-negotiation
 mechanism (§ above) is a prerequisite for shipping anything, not an
 optional refinement.
 
-## Suggested sequencing (not a commitment, for estrategia to shape)
+## Sequencing — final (creador + estrategia, 2026-07-29)
 
 1. Land the version-negotiation mechanism in `action-ref.md` first —
-   `action_ref_version` field, "v1 remains valid" language, new fixture
-   set — with zero adopters affected, since this step only adds
-   documentation and a fixture set, changes no existing hash.
-2. Brief SafeAgent directly (highest financial stakes) before any public
-   v2 announcement.
-3. Brief AURA and Vauban Pay given their public-facing portability/citation
-   claims.
-4. Offer CTEF and Agent OS the chance to adopt v2 vectors going forward
-   (CTEF pre-merge, Agent OS already contributing) — natural early
-   adopters, lowest friction.
+   version-marker syntax, "v1 remains valid" language, new fixture set —
+   with zero adopters affected, since this step only adds documentation
+   and a fixture set, changes no existing hash. **DONE**, commit `72c414c`.
+2. Brief SafeAgent directly (highest financial stakes) before anyone else.
+   **In progress** — brief sent by email, awaiting response; step 3 does
+   not proceed until that response lands or an explicit go-ahead is given.
+3. Brief AURA, Vauban Pay, and Agent OS/Liuyanfeng1234 with the same
+   standard technical notice, adapted per adopter — no differential
+   treatment between the three, and no reviewer/early-access standing for
+   Agent OS specifically (see corrected row above).
+4. Offer CTEF the chance to adopt v2 vectors directly, given their PR is
+   still unmerged — lowest-friction adopter to move first since nothing is
+   locked in yet.
 5. Only after 1-4: tag `action-ref-v2.0`, update `ADOPTERS.md` entries that
    confirm v2 adoption.
 
