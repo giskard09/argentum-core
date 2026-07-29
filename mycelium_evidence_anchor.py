@@ -18,6 +18,7 @@ SPI: EvidenceAnchor ABC (agt-evidence package)
 from __future__ import annotations
 
 import hashlib
+import json
 import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
@@ -240,6 +241,34 @@ class MyceliumAnchor(EvidenceAnchor):
 # Helpers
 # ---------------------------------------------------------------------------
 
+def _format_timestamp_rfc3339(timestamp_s: int) -> str:
+    """Unix seconds -> RFC 3339 UTC, 3-digit ms precision (canonical action-ref.md format)."""
+    dt = time.gmtime(timestamp_s)
+    return time.strftime("%Y-%m-%dT%H:%M:%S.000Z", dt)
+
+
 def _compute_action_ref(agent_id: str, action_type: str, scope: str, timestamp: int) -> str:
-    payload = f"{agent_id}:{action_type}:{scope}:{timestamp}"
-    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+    """Domain-separated, JCS-canonicalized action_ref for this plugin's own hash space.
+
+    Two fixes over the prior implementation:
+    (1) domain separation — "mycelium-evidence-anchor:v1:" prefix, so this plugin's
+        hashes can never collide with the canonical action-ref.md preimage (a bare
+        4-field JCS object with no prefix) or with any other protocol using the same
+        field shape. Gap surfaced indirectly via an AEOESS comment in a2aproject/A2A#2028
+        (general point, not directed at us).
+    (2) canonicalization — RFC 8785 JCS over a field object, matching the shape used by
+        docs/spec/action-ref.md and plugins/agt_evidence_anchor/action_ref.py, instead of
+        ad hoc colon-concatenation. This plugin is intentionally its own hash domain, not
+        an alias for the canonical action_ref — it does not touch or reuse action-ref.md's
+        preimage, which has real production adopters (see ADOPTERS.md) and is not
+        being changed here.
+    """
+    payload = {
+        "agent_id": agent_id,
+        "action_type": action_type,
+        "scope": scope,
+        "timestamp": _format_timestamp_rfc3339(timestamp),
+    }
+    canonical = json.dumps(dict(sorted(payload.items())), separators=(",", ":"), ensure_ascii=False)
+    domain_tagged = f"mycelium-evidence-anchor:v1:{canonical}"
+    return hashlib.sha256(domain_tagged.encode("utf-8")).hexdigest()
