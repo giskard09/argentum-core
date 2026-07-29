@@ -68,3 +68,52 @@ def compute_action_ref(
     }
     canonical = _jcs_encode(payload)
     return hashlib.sha256(canonical).hexdigest()
+
+
+# ---------------------------------------------------------------------------
+# v2 — domain-separated derivation (docs/spec/action-ref.md, "Version negotiation")
+#
+# v1 above is unchanged and permanently valid. v2 exists alongside it, not in
+# place of it. No caller in this repo has been switched to emit v2 by this
+# commit — see docs/rfcs/002-action-ref-v2-domain-separation.md for adoption
+# sequencing, which has not started yet.
+# ---------------------------------------------------------------------------
+
+V2_DOMAIN_TAG = "mycelium.action-ref:v2:"
+
+
+def compute_action_ref_v2(
+    agent_id: str,
+    action_type: str,
+    scope: str,
+    timestamp: str,
+) -> str:
+    """Derive a v2 action_ref: same four fields and JCS rules as v1, with a
+    spec-named domain tag prepended to the canonical bytes before hashing, and
+    a 'v2:' prefix on the returned digest so a verifier never has to guess
+    which derivation produced a given action_ref string.
+
+    Returns "v2:" + 64 lowercase hex characters.
+    """
+    payload = {
+        "agent_id": agent_id,
+        "action_type": action_type,
+        "scope": scope,
+        "timestamp": timestamp,
+    }
+    canonical = _jcs_encode(payload)
+    digest = hashlib.sha256(V2_DOMAIN_TAG.encode("utf-8") + canonical).hexdigest()
+    return f"v2:{digest}"
+
+
+def action_ref_version(action_ref: str) -> str:
+    """Return 'v1' or 'v2' based on the string's own syntax — never a guess.
+
+    v1: bare 64-hex-char string. v2: 'v2:' prefix followed by 64 hex chars.
+    Raises ValueError for anything matching neither shape.
+    """
+    if action_ref.startswith("v2:") and len(action_ref) == 67:
+        return "v2"
+    if len(action_ref) == 64:
+        return "v1"
+    raise ValueError(f"unrecognized action_ref format: {action_ref!r}")

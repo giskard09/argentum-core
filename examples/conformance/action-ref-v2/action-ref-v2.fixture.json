@@ -1,0 +1,57 @@
+{
+  "fixture_id": "action-ref-v2",
+  "version": "v2",
+  "spec": "docs/spec/action-ref.md#version-negotiation",
+  "hash_algo": "sha256",
+  "preimage_format": "jcs-rfc8785-v1",
+  "domain_tag": "mycelium.action-ref:v2:",
+  "generated_at": "2026-07-29",
+  "purpose": "ADDITIVE conformance vectors for action_ref v2 (domain-separated derivation). Does NOT replace or narrow the existing v1 fixture set — a v2-conformant verifier MUST still pass all v1 vectors. Each vector pairs the v1 hash (unchanged derivation) with the v2 hash (same four fields, domain tag prepended before hashing, 'v2:' prefix on the result) for the identical preimage, to demonstrate the two never collide.",
+  "reproduce_in_python": "import hashlib, json\nV2_DOMAIN_TAG = 'mycelium.action-ref:v2:'\ndef jcs(obj): return json.dumps(dict(sorted(obj.items())), separators=(',',':'), ensure_ascii=False).encode('utf-8')\ndef compute_action_ref_v1(payload): return hashlib.sha256(jcs(payload)).hexdigest()\ndef compute_action_ref_v2(payload): return 'v2:' + hashlib.sha256(V2_DOMAIN_TAG.encode('utf-8') + jcs(payload)).hexdigest()",
+  "vectors": [
+    {
+      "id": "arv2-001",
+      "description": "NEXUS oracle signal example — same preimage as the worked v1 example already published in docs/spec/action-ref.md ('Serialization — JCS' section). v1 value here is copied from that published example, not recomputed, to prove this fixture is grounded in the live spec.",
+      "preimage": {
+        "agent_id": "nexus-agent-xa12.onrender.com",
+        "action_type": "oracle.signal",
+        "scope": "BTC",
+        "timestamp": "2025-05-18T11:40:31.000Z"
+      },
+      "jcs_payload": "{\"action_type\":\"oracle.signal\",\"agent_id\":\"nexus-agent-xa12.onrender.com\",\"scope\":\"BTC\",\"timestamp\":\"2025-05-18T11:40:31.000Z\"}",
+      "action_ref_v1": "fdd7f810499f06be24355ca8e2bfb8c4b965cc80c838f41fa074683443d89f5a",
+      "action_ref_v2": "v2:a978a3fe6858ac212091304c618f8ce40d024f2b9bb8e26cfaddf73a8812bf76"
+    },
+    {
+      "id": "arv2-002",
+      "description": "Memory write example — same preimage as the worked v1 example already published in docs/spec/action-ref.md ('Memory provenance attestation' section).",
+      "preimage": {
+        "agent_id": "giskard-self",
+        "action_type": "memory_write",
+        "scope": "mycelium:memory:session_context_v3",
+        "timestamp": "2026-05-26T20:15:00.000Z"
+      },
+      "jcs_payload": "{\"action_type\":\"memory_write\",\"agent_id\":\"giskard-self\",\"scope\":\"mycelium:memory:session_context_v3\",\"timestamp\":\"2026-05-26T20:15:00.000Z\"}",
+      "action_ref_v1": "36fe8d0559bb254c20cdb0e7a0c83e53f0434fc076e856ff769444da2a73b0b4",
+      "action_ref_v2": "v2:1ad5c8fb32817215a0dee78f8ac0160b4b81c8d61e86522830b10e65eda673d6"
+    },
+    {
+      "id": "arv2-003",
+      "description": "Synthetic third vector (payment.send), not tied to a prior published example, to avoid the fixture set relying on only two reused cases.",
+      "preimage": {
+        "agent_id": "agent:custody-example",
+        "action_type": "payment.send",
+        "scope": "vendor:invoice-9182",
+        "timestamp": "2026-07-29T12:00:00.500Z"
+      },
+      "jcs_payload": "{\"action_type\":\"payment.send\",\"agent_id\":\"agent:custody-example\",\"scope\":\"vendor:invoice-9182\",\"timestamp\":\"2026-07-29T12:00:00.500Z\"}",
+      "action_ref_v1": "6500565f1ecf62c9797604d3b05fff439bb1904a5568faf604cf46a1f08eb29e",
+      "action_ref_v2": "v2:769cc9105f1307ab9a2b40ebacf535b77343fc9272e6f431918720b3e9759710"
+    }
+  ],
+  "version_marker_conformance": {
+    "note": "A conformant verifier determines the derivation from the action_ref string's own syntax, never from context or assumption.",
+    "rule": "action_ref_version(s): 'v1' if len(s) == 64 (bare hex); 'v2' if s.startswith('v2:') and len(s) == 67; ValueError otherwise.",
+    "checked_in": "validate.py"
+  }
+}

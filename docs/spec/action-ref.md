@@ -1,6 +1,6 @@
 # action_ref — derivation spec
 
-**Version:** 1.1 | **Published:** 2026-05-23 | **Updated:** 2026-06-03 (×2) | **Stable ref:** [`action-ref-v1.0`](https://github.com/giskard09/argentum-core/blob/action-ref-v1.0/docs/spec/action-ref.md) | **Latest commit:** [96931c9](https://github.com/giskard09/argentum-core/commit/96931c9)
+**Version:** 1.2 | **Published:** 2026-05-23 | **Updated:** 2026-06-03 (×2), 2026-07-29 (version negotiation) | **Stable ref:** [`action-ref-v1.0`](https://github.com/giskard09/argentum-core/blob/action-ref-v1.0/docs/spec/action-ref.md) | **Latest commit:** [96931c9](https://github.com/giskard09/argentum-core/commit/96931c9)
 
 `action_ref` is a deterministic, content-addressed identifier for an agent action. Any party with the four preimage fields can independently compute it — no trust in the emitting system required.
 
@@ -34,6 +34,103 @@ def compute_action_ref(
 **Domain:** the `json.dumps` approach above produces RFC 8785-compatible bytes for the specific input shapes this spec exercises: ASCII-only field values, RFC 3339 timestamp strings in the conformant `YYYY-MM-DDTHH:MM:SS.mmmZ` form (see [Timestamp format](#timestamp-format)), no surrogate-pair Unicode, no `-0.0`. This is the profile's full domain, not a convenience subset — there is no "use a compliant library instead" fallback. A preimage outside this domain (non-ASCII agent identifiers, surrogate-pair scope strings, malformed timestamp grammar, duplicate preimage keys) is not canonicalized by best effort or delegated to a different implementation's number/string handling; the verifier MUST return `OUT_OF_PROFILE_DOMAIN` and stop before any digest comparison — the same pattern already used for `UNSUPPORTED_CANONICAL_PROFILE`. One pinned behavior per profile, never a disjunction between "this path or, failing that, some other path."
 
 Reference implementation: [`plugins/agt_evidence_anchor/action_ref.py`](../../plugins/agt_evidence_anchor/action_ref.py)
+
+## Version negotiation
+
+The derivation above (bare `SHA-256(JCS(preimage))`, no prefix) is **v1**. It has no domain
+tag: the raw JCS bytes of the four canonical fields are hashed directly. This means any
+other protocol that independently arrives at the same four-field shape and SHA-256 would
+produce a colliding reference — a general risk named in an AEOESS comment on
+[a2aproject/A2A#2028](https://github.com/a2aproject/A2A/discussions/2028) (not directed at
+this spec specifically, but it applies to this preimage exactly as described).
+
+**v1 is not deprecated and never will be retired.** Every `action_ref` computed under v1
+— including every hash already anchored on-chain by v1.0-era adopters — remains permanently
+valid and permanently verifiable. This section adds a second derivation (v2) alongside v1;
+it does not replace or narrow v1's guarantees.
+
+### Distinguishing v1 from v2 — the hash string itself carries the version
+
+A verifier MUST NOT guess which derivation produced a given `action_ref` string. The
+version marker is the hash string's own syntax, so no companion field or side-channel
+lookup is required:
+
+- **v1**: a bare 64-character lowercase hex string (unchanged from the original spec).
+  Example: `fdd7f810499f06be24355ca8e2bfb8c4b965cc80c838f41fa074683443d89f5a`
+- **v2**: the literal prefix `v2:` followed by a 64-character lowercase hex string.
+  Example: `v2:1a2b3c4d...` (64 hex chars after the prefix)
+
+A verifier reads the string up to the first `:` (or its absence) to determine which
+derivation to apply, then recomputes and compares. The two forms are syntactically
+disjoint — a v1 hash is never a valid prefix-of or confusable with a `v2:`-prefixed
+string, so there is no parsing ambiguity.
+
+This is a prefix on the **hash string**, not an extra field in the preimage object and
+not a sibling field in the record. Anything that already persists `action_ref` as a bare
+string — including this repo's own `trails.db` — needs no schema migration to support v2
+alongside v1: a v2 value is simply a longer string in the same column.
+
+### v2 derivation
+
+```python
+import hashlib
+import json
+
+V2_DOMAIN_TAG = "mycelium.action-ref:v2:"
+
+def compute_action_ref_v2(
+    agent_id: str,
+    action_type: str,
+    scope: str,
+    timestamp: str,   # RFC 3339 UTC, 3-digit ms precision — same format as v1
+) -> str:
+    payload = {
+        "agent_id": agent_id,
+        "action_type": action_type,
+        "scope": scope,
+        "timestamp": timestamp,
+    }
+    canonical = json.dumps(
+        dict(sorted(payload.items())),
+        separators=(",", ":"),
+        ensure_ascii=False,
+    ).encode("utf-8")
+    digest = hashlib.sha256(V2_DOMAIN_TAG.encode("utf-8") + canonical).hexdigest()
+    return f"v2:{digest}"
+```
+
+The four preimage fields, their types, and the JCS canonicalization rules are **identical
+to v1** — the only difference is that the domain tag `mycelium.action-ref:v2:` (ASCII
+bytes, not itself part of the JCS object) is prepended to the canonical JSON bytes before
+hashing, and the resulting hex digest is prefixed with `v2:` when stored or transmitted.
+
+**Why a spec-named tag, not just a version number:** `"mycelium.action-ref:v2:"` names
+this specific spec, not only "version 2 of something." The risk this closes is
+cross-protocol collision — a different system's hash of the same four-field shape — not
+only cross-version collision within this spec's own history. A version-only tag (e.g.
+`"v2:"` prepended to the JCS bytes with no spec name) would still leave two *different*
+specs that both adopt bare version-numbered domain tags free to collide with each other.
+
+**Why the tag is a byte prefix and not a fifth JCS field:** keeping the preimage at
+exactly four fields preserves the property adopters cite when explaining portability
+(see `ADOPTERS.md`, AURA: "any downstream auditor can recompute `SHA-256(JCS(receipt
+preimage))`") — the object shape a verifier canonicalizes is unchanged between v1 and v2;
+only the bytes hashed alongside it differ.
+
+### Conformance fixtures — v2
+
+[`examples/conformance/action-ref-v2/`](../../examples/conformance/action-ref-v2/) —
+vectors are **additive** to the existing v1 fixture set, not a replacement. A verifier
+claiming v2 conformance MUST still pass all existing v1 vectors; dropping v1 support is
+not a valid migration path.
+
+### Adoption status
+
+This section documents the mechanism only. No adopter has been asked to migrate, no new
+git tag has been cut, and this repository's own production code has not switched default
+emission to v2. Adoption sequencing (which adopters are briefed, in what order, before any
+public v2 announcement) is tracked outside this spec document — see
+[`docs/rfcs/002-action-ref-v2-domain-separation.md`](../rfcs/002-action-ref-v2-domain-separation.md).
 
 ## Fields
 
