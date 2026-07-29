@@ -1,16 +1,17 @@
 {
   "fixture_id": "custody-ref-v1",
-  "version": "v1",
+  "version": "v1.1",
   "spec": "docs/spec/custody-ref.md",
   "hash_algo": "sha256",
   "preimage_format": "jcs-rfc8785-v1",
   "generated_at": "2026-07-29",
-  "purpose": "Conformance vectors for custody-ref-v1: typed, fail-closed pointer to a custody-domain assertion (same_domain / deployer_domain / independent_third_party). Includes the negative case where an independent_third_party claim is falsified by the capturer being the sole signer of the covered action_ref.",
+  "purpose": "Conformance vectors for custody-ref-v1: typed, fail-closed pointer to a custody-domain assertion (same_domain / deployer_domain / independent_third_party). Includes the negative case where an independent_third_party claim is falsified by the capturer being the sole signer of the covered action_ref, and the negative case (found by magentixai, AXES) where the capturer is the deployer's control plane itself and only a surface-level capturer_id != executor_id check would wrongly pass it as independent.",
+  "changelog": "v1.1 (2026-07-29): added deployer_id field to the preimage (all vectors recomputed, hashes changed from v1). Rule 3 generalized per magentixai's (Sansone, AXES) gap report: independent_third_party now also requires capturer_id != deployer_id, closing the case where a deployer's own control plane captures a record signed by a genuine third party and would otherwise pass the old capturer_id != executor_id / capturer_id != signer_id checks alone. cr-001..004 recomputed with deployer_id added but unchanged verdicts. New: cr-005 (negative, the gap case) and cr-006 (positive, same underlying record correctly labeled deployer_domain).",
   "reproduce_in_python": "import hashlib, json\ndef jcs(obj): return json.dumps(dict(sorted(obj.items())), separators=(',',':'), ensure_ascii=False)\ncustody_ref = hashlib.sha256(jcs(preimage).encode()).hexdigest()",
   "vectors": [
     {
       "id": "cr-001",
-      "description": "same_domain, valid: capturer_id and executor_id are the same operator identity (action_ref reused from signing-trust-ref str-001, operator_key case). Structural check: capturer_id == executor_id — satisfied.",
+      "description": "same_domain, valid: capturer_id and executor_id are the same operator identity (action_ref reused from signing-trust-ref str-001, operator_key case). deployer_id equals capturer_id/executor_id — one domain end to end. Structural check: capturer_id == executor_id — satisfied.",
       "custody_type": "same_domain",
       "expect_valid": true,
       "preimage": {
@@ -18,10 +19,11 @@
         "custody_type": "same_domain",
         "capturer_id": "0xDcc84E9798E8eB1b1b48A31B8f35e5AA7b83DBF4",
         "executor_id": "0xDcc84E9798E8eB1b1b48A31B8f35e5AA7b83DBF4",
+        "deployer_id": "0xDcc84E9798E8eB1b1b48A31B8f35e5AA7b83DBF4",
         "timestamp_ms": 1750448700010
       },
-      "jcs_payload": "{\"action_ref\":\"25b9c32fe6ea1df6fd81de158fa2082656fafa5cf419db3a5cd3540e6df0f8b7\",\"capturer_id\":\"0xDcc84E9798E8eB1b1b48A31B8f35e5AA7b83DBF4\",\"custody_type\":\"same_domain\",\"executor_id\":\"0xDcc84E9798E8eB1b1b48A31B8f35e5AA7b83DBF4\",\"timestamp_ms\":1750448700010}",
-      "custody_ref": "a94e562381892b461826d81b38e69b06826973f63edd6a684a221de212578d34",
+      "jcs_payload": "{\"action_ref\":\"25b9c32fe6ea1df6fd81de158fa2082656fafa5cf419db3a5cd3540e6df0f8b7\",\"capturer_id\":\"0xDcc84E9798E8eB1b1b48A31B8f35e5AA7b83DBF4\",\"custody_type\":\"same_domain\",\"deployer_id\":\"0xDcc84E9798E8eB1b1b48A31B8f35e5AA7b83DBF4\",\"executor_id\":\"0xDcc84E9798E8eB1b1b48A31B8f35e5AA7b83DBF4\",\"timestamp_ms\":1750448700010}",
+      "custody_ref": "9d8ac3d8cce5d86fb593d85278591a119f1d8d9b393b17b87b7b44005234d175",
       "paired_signing_trust_ref": {
         "note": "cross-reference only, not part of the hashed preimage",
         "vector_id": "str-001",
@@ -30,7 +32,7 @@
     },
     {
       "id": "cr-002",
-      "description": "deployer_domain, valid: capturer_id is the deployer domain hosting the agent, distinct from the agent's own key (action_ref reused from signing-trust-ref str-002, agent_keypair case). Structural check: capturer_id != executor_id — satisfied.",
+      "description": "deployer_domain, valid: capturer_id is the deployer domain hosting the agent, distinct from the agent's own key (action_ref reused from signing-trust-ref str-002, agent_keypair case). deployer_id equals capturer_id — the capturer IS the deployer, which is the defining trait of this custody_type. Structural check: capturer_id != executor_id AND capturer_id == deployer_id — both satisfied.",
       "custody_type": "deployer_domain",
       "expect_valid": true,
       "preimage": {
@@ -38,10 +40,11 @@
         "custody_type": "deployer_domain",
         "capturer_id": "deployer:giskard09-hosted-agents",
         "executor_id": "0xD6Da69759005DCab1172990C75eE66338E3ade60",
+        "deployer_id": "deployer:giskard09-hosted-agents",
         "timestamp_ms": 1750448700011
       },
-      "jcs_payload": "{\"action_ref\":\"c832ef8610c6989f8c6f5cea51ac019b8ac9860e389110079a895e67595950a2\",\"capturer_id\":\"deployer:giskard09-hosted-agents\",\"custody_type\":\"deployer_domain\",\"executor_id\":\"0xD6Da69759005DCab1172990C75eE66338E3ade60\",\"timestamp_ms\":1750448700011}",
-      "custody_ref": "7dd494b934b10ad14f2359a7a7c279e22d974b199778c165f12fb30eca5e9a50",
+      "jcs_payload": "{\"action_ref\":\"c832ef8610c6989f8c6f5cea51ac019b8ac9860e389110079a895e67595950a2\",\"capturer_id\":\"deployer:giskard09-hosted-agents\",\"custody_type\":\"deployer_domain\",\"deployer_id\":\"deployer:giskard09-hosted-agents\",\"executor_id\":\"0xD6Da69759005DCab1172990C75eE66338E3ade60\",\"timestamp_ms\":1750448700011}",
+      "custody_ref": "759e769819dcb798297d3f5fa8e896c454c0760ec8a80173a0ba4b0e537e570b",
       "paired_signing_trust_ref": {
         "note": "cross-reference only, not part of the hashed preimage",
         "vector_id": "str-002",
@@ -50,7 +53,7 @@
     },
     {
       "id": "cr-003",
-      "description": "independent_third_party, valid: capturer_id (witness-01, an operationally separate ERC-8004 witness wallet) is neither the executor_id (TKCollective 2-of-3 threshold, action_ref reused from signing-trust-ref str-003) nor the signer_id that covers this action_ref. Structural check: capturer_id != executor_id AND capturer_id != paired signer_id — both satisfied, independence is real, not just labeled.",
+      "description": "independent_third_party, valid: capturer_id (witness-01, an operationally separate ERC-8004 witness wallet) is neither the executor_id (TKCollective 2-of-3 threshold, action_ref reused from signing-trust-ref str-003), nor the deployer_id (a distinct hypothetical deployer of the TKCollective agent), nor the signer_id that covers this action_ref. Structural check: capturer_id != executor_id AND capturer_id != deployer_id AND capturer_id != paired signer_id — all three satisfied, independence is real on every axis, not just labeled.",
       "custody_type": "independent_third_party",
       "expect_valid": true,
       "preimage": {
@@ -58,10 +61,11 @@
         "custody_type": "independent_third_party",
         "capturer_id": "0xb32DDF43630aa488162eb498b9bccdfF79fecC00",
         "executor_id": "tkc:2-of-3:0x4a9b3c1d2e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b;0xb5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4;0xc7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6",
+        "deployer_id": "deployer:tkcollective-hosting",
         "timestamp_ms": 1750448700012
       },
-      "jcs_payload": "{\"action_ref\":\"729b8c8ddaa4b136916aaa5175e72041a7c142bb4903ee32ae9ff7b6e2d13da0\",\"capturer_id\":\"0xb32DDF43630aa488162eb498b9bccdfF79fecC00\",\"custody_type\":\"independent_third_party\",\"executor_id\":\"tkc:2-of-3:0x4a9b3c1d2e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b;0xb5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4;0xc7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6\",\"timestamp_ms\":1750448700012}",
-      "custody_ref": "5c1f300a4acb0d242312a25e690106ddd947cbae30d89eb5d53daff686a4da71",
+      "jcs_payload": "{\"action_ref\":\"729b8c8ddaa4b136916aaa5175e72041a7c142bb4903ee32ae9ff7b6e2d13da0\",\"capturer_id\":\"0xb32DDF43630aa488162eb498b9bccdfF79fecC00\",\"custody_type\":\"independent_third_party\",\"deployer_id\":\"deployer:tkcollective-hosting\",\"executor_id\":\"tkc:2-of-3:0x4a9b3c1d2e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b;0xb5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4;0xc7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6\",\"timestamp_ms\":1750448700012}",
+      "custody_ref": "1781b1ef37ab7c3cbc5487d2d15b0175fa0913311134b35ad1a98ab91d342c80",
       "paired_signing_trust_ref": {
         "note": "cross-reference only, not part of the hashed preimage",
         "vector_id": "str-003",
@@ -70,7 +74,7 @@
     },
     {
       "id": "cr-004",
-      "description": "NEGATIVE — independent_third_party declared, but capturer_id equals the sole signer_id covering this action_ref (reused from signing-trust-ref str-001). executor_id was renamed to a distinct hosted-instance label so the naive capturer_id != executor_id check alone would look satisfied — but the deeper cross-check against signing_trust_ref shows capturer_id == signer_id: the only attestation in the system is the issuer's own. This is exactly the failure mode named in the task: a record that declares independent third party when only the issuer attests. A conformant validator MUST reject this vector despite a structurally-valid hash and a superficially-plausible capturer/executor split.",
+      "description": "NEGATIVE — independent_third_party declared, but capturer_id equals the sole signer_id covering this action_ref (reused from signing-trust-ref str-001). executor_id was renamed to a distinct hosted-instance label so the naive capturer_id != executor_id check alone would look satisfied — but the deeper cross-check against signing_trust_ref shows capturer_id == signer_id: the only attestation in the system is the issuer's own. deployer_id is present and distinct from capturer_id (the deployer_id check alone would pass); this vector isolates the signer_id failure mode specifically. A conformant validator MUST reject it.",
       "custody_type": "independent_third_party",
       "expect_valid": false,
       "expect_reason": "capturer_id equals the signer_id of the signing_trust_ref covering the same action_ref — independence is claimed but the only signer is the capturer itself",
@@ -79,14 +83,58 @@
         "custody_type": "independent_third_party",
         "capturer_id": "0xDcc84E9798E8eB1b1b48A31B8f35e5AA7b83DBF4",
         "executor_id": "agent:hosted-instance-42",
+        "deployer_id": "deployer:giskard09-hosted-agents",
         "timestamp_ms": 1750448700013
       },
-      "jcs_payload": "{\"action_ref\":\"25b9c32fe6ea1df6fd81de158fa2082656fafa5cf419db3a5cd3540e6df0f8b7\",\"capturer_id\":\"0xDcc84E9798E8eB1b1b48A31B8f35e5AA7b83DBF4\",\"custody_type\":\"independent_third_party\",\"executor_id\":\"agent:hosted-instance-42\",\"timestamp_ms\":1750448700013}",
-      "custody_ref": "d17da036d4457973188c4bae9d60830bf2fa564b726faebe1b449f70e030e150",
+      "jcs_payload": "{\"action_ref\":\"25b9c32fe6ea1df6fd81de158fa2082656fafa5cf419db3a5cd3540e6df0f8b7\",\"capturer_id\":\"0xDcc84E9798E8eB1b1b48A31B8f35e5AA7b83DBF4\",\"custody_type\":\"independent_third_party\",\"deployer_id\":\"deployer:giskard09-hosted-agents\",\"executor_id\":\"agent:hosted-instance-42\",\"timestamp_ms\":1750448700013}",
+      "custody_ref": "49f6c9aacf0ee0ec4412c45984fc969ef2c7100d6e67d0f39473beb87bb54200",
       "paired_signing_trust_ref": {
         "note": "cross-reference only, not part of the hashed preimage",
         "vector_id": "str-001",
         "signer_id": "0xDcc84E9798E8eB1b1b48A31B8f35e5AA7b83DBF4"
+      }
+    },
+    {
+      "id": "cr-005",
+      "description": "NEGATIVE — the gap reported by magentixai (Sansone, AXES) in axes#3: capturer_id is the deployer's own control plane (deployer:acmehost-control-plane), executor_id is the agent instance it deploys (agent:acmehost-instance-7), and the record is signed by a genuinely distinct third-party attester (0x9E3fB1a2C4D5e6F708192A3b4C5D6e7F8091A2B3 — not a party to either the deployer or the executor). Under the pre-fix Rule 3 (capturer_id != executor_id AND capturer_id != signer_id), this vector would have passed as independent_third_party: both surface conditions hold. It must still be REJECTED, because deployer_id equals capturer_id — the capturer is not a third party at all, it is the deployer itself, which by definition (see custody_type table) has an operational stake in the executor. Structural check under the generalized rule: capturer_id == deployer_id -> fails independent_third_party regardless of the executor_id/signer_id checks.",
+      "custody_type": "independent_third_party",
+      "expect_valid": false,
+      "expect_reason": "capturer_id equals deployer_id — the capturer is the deployer's own control plane, which has an operational stake in the executor by definition, so it cannot be a genuinely independent third party regardless of who signs the record",
+      "preimage": {
+        "action_ref": "f3a1c9e7b2d4568091a2c3e4f5b6d7e8091a2c3e4f5b6d7e8091a2c3e4f5b6d7",
+        "custody_type": "independent_third_party",
+        "capturer_id": "deployer:acmehost-control-plane",
+        "executor_id": "agent:acmehost-instance-7",
+        "deployer_id": "deployer:acmehost-control-plane",
+        "timestamp_ms": 1750448700014
+      },
+      "jcs_payload": "{\"action_ref\":\"f3a1c9e7b2d4568091a2c3e4f5b6d7e8091a2c3e4f5b6d7e8091a2c3e4f5b6d7\",\"capturer_id\":\"deployer:acmehost-control-plane\",\"custody_type\":\"independent_third_party\",\"deployer_id\":\"deployer:acmehost-control-plane\",\"executor_id\":\"agent:acmehost-instance-7\",\"timestamp_ms\":1750448700014}",
+      "custody_ref": "ec8a096c1deb320395644e19a156b94965884757df090f8b0e0b345dd6cee687",
+      "paired_signing_trust_ref": {
+        "note": "cross-reference only, not part of the hashed preimage — synthetic third-party attester, not in signing-trust-ref-v1.fixture.json, used to show the signer_id check alone is insufficient",
+        "vector_id": "synthetic",
+        "signer_id": "0x9E3fB1a2C4D5e6F708192A3b4C5D6e7F8091A2B3"
+      }
+    },
+    {
+      "id": "cr-006",
+      "description": "POSITIVE pair to cr-005 — same underlying record (identical action_ref, capturer_id, executor_id, deployer_id, timestamp_ms), correctly labeled deployer_domain instead of independent_third_party. This is the classification a conformant record of this shape should carry. Structural check: capturer_id != executor_id AND capturer_id == deployer_id — both satisfied.",
+      "custody_type": "deployer_domain",
+      "expect_valid": true,
+      "preimage": {
+        "action_ref": "f3a1c9e7b2d4568091a2c3e4f5b6d7e8091a2c3e4f5b6d7e8091a2c3e4f5b6d7",
+        "custody_type": "deployer_domain",
+        "capturer_id": "deployer:acmehost-control-plane",
+        "executor_id": "agent:acmehost-instance-7",
+        "deployer_id": "deployer:acmehost-control-plane",
+        "timestamp_ms": 1750448700014
+      },
+      "jcs_payload": "{\"action_ref\":\"f3a1c9e7b2d4568091a2c3e4f5b6d7e8091a2c3e4f5b6d7e8091a2c3e4f5b6d7\",\"capturer_id\":\"deployer:acmehost-control-plane\",\"custody_type\":\"deployer_domain\",\"deployer_id\":\"deployer:acmehost-control-plane\",\"executor_id\":\"agent:acmehost-instance-7\",\"timestamp_ms\":1750448700014}",
+      "custody_ref": "c50b87f6342831cc1501cfea69aac784c8d275f7a8305f62f7fde1cab91afe6d",
+      "paired_signing_trust_ref": {
+        "note": "cross-reference only, not part of the hashed preimage — same synthetic attester as cr-005",
+        "vector_id": "synthetic",
+        "signer_id": "0x9E3fB1a2C4D5e6F708192A3b4C5D6e7F8091A2B3"
       }
     }
   ]

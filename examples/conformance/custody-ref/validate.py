@@ -15,7 +15,14 @@ Two independent checks per vector, both required for PASS:
      - same_domain             -> capturer_id == executor_id
      - deployer_domain         -> capturer_id != executor_id
      - independent_third_party -> capturer_id != executor_id
+                                  AND capturer_id != deployer_id
                                   AND capturer_id != paired_signing_trust_ref.signer_id
+
+   The `capturer_id != deployer_id` leg (added in v1.1) closes a gap reported
+   by magentixai (Sansone, AXES, axes#3): a capturer that IS the deployer's
+   own control plane, with the record signed by a genuinely distinct third
+   party, previously passed the other two checks and was wrongly accepted as
+   `independent_third_party` — see cr-005/cr-006 in the fixture set.
 
 The result of check 2 (PASS/FAIL) must equal the vector's declared
 `expect_valid` for the vector to conform.
@@ -48,6 +55,7 @@ def structural_verdict(vec: dict) -> tuple[bool, str]:
     custody_type = p["custody_type"]
     capturer_id = p["capturer_id"]
     executor_id = p["executor_id"]
+    deployer_id = p["deployer_id"]
 
     if custody_type == "same_domain":
         if capturer_id == executor_id:
@@ -62,13 +70,19 @@ def structural_verdict(vec: dict) -> tuple[bool, str]:
     if custody_type == "independent_third_party":
         if capturer_id == executor_id:
             return False, "independent_third_party requires capturer_id != executor_id"
+        if capturer_id == deployer_id:
+            return False, (
+                "independent_third_party requires capturer_id != deployer_id — the capturer "
+                "is the deployer's own control plane, which has an operational stake in the "
+                "executor by definition, so it cannot be a genuinely independent third party"
+            )
         paired_signer_id = vec["paired_signing_trust_ref"]["signer_id"]
         if capturer_id == paired_signer_id:
             return False, (
                 "independent_third_party requires capturer_id != signing_trust_ref.signer_id "
                 "for the same action_ref — the only attestation in the record is the issuer's own"
             )
-        return True, "independent_third_party: capturer distinct from both executor and sole signer"
+        return True, "independent_third_party: capturer distinct from executor, deployer, and sole signer"
 
     return False, f"unknown custody_type: {custody_type}"
 

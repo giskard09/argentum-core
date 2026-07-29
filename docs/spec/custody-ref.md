@@ -4,6 +4,11 @@
 assertion**: the trust-domain relationship between whoever captured/recorded
 an execution record and whoever executed the action it describes.
 
+**v1.1 (2026-07-29):** added `deployer_id` to the preimage and generalized
+Rule 3 (`independent_third_party`) to also require `capturer_id != deployer_id`.
+Preimage hashes for existing fixtures changed; see the fixture set changelog.
+Gap reported by magentixai (Sansone, AXES, axes#3).
+
 ## Motivation
 
 Two byte-identical records — same `action_ref`, same `signing_trust_ref` —
@@ -29,9 +34,17 @@ raised by neldan00077.
   "custody_type": "same_domain" | "deployer_domain" | "independent_third_party",
   "capturer_id":  "<identity of the party that captured/recorded this record>",
   "executor_id":  "<identity of the party that executed the action>",
+  "deployer_id":  "<identity of the party that deploys/operates the executor>",
   "timestamp_ms": <uint64, Unix epoch milliseconds>
 }
 ```
+
+`deployer_id` (added v1.1) names the deployer of `executor_id` explicitly, so a
+verifier can check `independent_third_party` claims against the deployer
+relationship, not only against `executor_id` and the signer. For `same_domain`
+and `deployer_domain` records `deployer_id` is expected to equal `capturer_id`
+or `executor_id` respectively (see Fail-closed structural check below); for
+`independent_third_party` it must differ from `capturer_id`.
 
 `custody-ref` is a **sibling** field to `action_ref`, never a member of its
 preimage. `action_ref`'s four-field preimage (`agent_id`, `action_type`,
@@ -77,23 +90,41 @@ face value:
    `custody_type` claims.
 2. **`deployer_domain`** requires `capturer_id != executor_id`. A deployer
    is by definition distinct from the identity it deploys.
-3. **`independent_third_party`** requires `capturer_id != executor_id`, **and**
-   `capturer_id` must not equal the `signer_id` of the `signing-trust-ref`
-   that covers the same `action_ref`. This second condition is the one that
-   matters: a party can be nominally distinct from the executor
-   (`capturer_id != executor_id`) while still being the sole issuer who
-   signed the whole record — i.e. the only attestation in the system is the
-   issuer's own. `independent_third_party` asserts a witness that is not the
-   issuer; if the only signer covering that `action_ref` is the capturer
-   itself, the assertion is false and the record MUST be rejected, even
-   though the surface-level id inequality (`capturer_id != executor_id`)
-   might otherwise look satisfied.
+3. **`independent_third_party`** requires all three of:
+   - `capturer_id != executor_id`
+   - `capturer_id != deployer_id`
+   - `capturer_id` must not equal the `signer_id` of the `signing-trust-ref`
+     that covers the same `action_ref`
+
+   The last two legs are both needed and neither substitutes for the other.
+   The signer check catches the case where a party is nominally distinct
+   from the executor (`capturer_id != executor_id`) while still being the
+   sole issuer who signed the whole record — i.e. the only attestation in
+   the system is the issuer's own.
+
+   The deployer check (added v1.1, gap reported by magentixai/Sansone, AXES,
+   axes#3) catches a different case: a capturer that IS the deployer's own
+   control plane, with the record signed by a genuinely distinct third
+   party. Before this check existed, such a record passed both the
+   executor-id and the signer-id legs — `capturer_id != executor_id` holds
+   (the control plane isn't the agent) and `capturer_id != signer_id` holds
+   (a real third party signed it) — and would be wrongly accepted as
+   `independent_third_party`. But `deployer_domain`'s own definition says
+   the deployer "has an operational stake in the executor"; a capturer that
+   *is* the deployer cannot simultaneously be a neutral third party, no
+   matter who signs the record. `independent_third_party` asserts a witness
+   that has no operational control over, and no commercial relationship
+   with, the executor — being the deployer is exactly the relationship that
+   rules that out. See `cr-005` (negative) / `cr-006` (positive, same record
+   correctly labeled `deployer_domain`) in the conformance fixtures.
 
 Rule 3 is why `custody-ref` composes with `signing-trust-ref` rather than
 duplicating it: `signing-trust-ref` already names who signs a record and
 under what key model; `custody-ref` reuses that identity to check whether an
 independence claim is real or whether "independent" only means "given a
-different label by the same issuer."
+different label by the same issuer." The `deployer_id` field closes the
+remaining gap: distinctness from the signer is necessary but not sufficient
+— the capturer must also be distinct from the deployer.
 
 ## Relationship to existing primitives
 
@@ -131,6 +162,8 @@ execution status.
 - `cr-002` — `deployer_domain` (valid): capturer is the deployer, distinct from the agent's own executing key.
 - `cr-003` — `independent_third_party` (valid): capturer is a genuinely separate identity from both the executor and the signer.
 - `cr-004` — `independent_third_party` **(negative)**: capturer_id equals the sole signer_id covering that `action_ref` — the only attestation in the record is the issuer's own. Structurally invalid; a conformant validator MUST reject it.
+- `cr-005` — `independent_third_party` **(negative, v1.1)**: capturer_id equals deployer_id — the capturer is the deployer's own control plane, signed by a genuinely distinct third party. Passes the executor-id and signer-id checks alone but fails the deployer-id check. Gap reported by magentixai (Sansone, AXES, axes#3).
+- `cr-006` — `deployer_domain` **(positive, v1.1)**: same underlying record as `cr-005`, correctly labeled.
 
 ## References
 
