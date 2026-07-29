@@ -1,6 +1,8 @@
 # action_ref — derivation spec
 
-**Version:** 1.2 | **Published:** 2026-05-23 | **Updated:** 2026-06-03 (×2), 2026-07-29 (version negotiation) | **Stable ref:** [`action-ref-v1.0`](https://github.com/giskard09/argentum-core/blob/action-ref-v1.0/docs/spec/action-ref.md) | **Latest commit:** [96931c9](https://github.com/giskard09/argentum-core/commit/96931c9)
+**Version:** 1.2 | **Published:** 2026-05-23 | **Updated:** 2026-06-03 (×2), 2026-07-29 (version negotiation, Domain enforcement) | **Stable ref:** [`action-ref-v1.0`](https://github.com/giskard09/argentum-core/blob/action-ref-v1.0/docs/spec/action-ref.md) | **Latest commit:** [96931c9](https://github.com/giskard09/argentum-core/commit/96931c9)
+
+**2026-07-29:** `compute_action_ref`/`compute_action_ref_v2` in the reference implementation now enforce the Domain paragraph below before hashing (previously they hashed any input). Also fixed a wording conflict in the `scope` field table ("non-empty" vs. "pass `\"\"` if not applicable"). Both reported by aeoess (Pidlisnyi) in [#35](https://github.com/giskard09/argentum-core/issues/35). See [`examples/conformance/action-ref-v1-domain-negative/`](../../examples/conformance/action-ref-v1-domain-negative/) for the rejection vectors.
 
 `action_ref` is a deterministic, content-addressed identifier for an agent action. Any party with the four preimage fields can independently compute it — no trust in the emitting system required.
 
@@ -138,14 +140,14 @@ public v2 announcement) is tracked outside this spec document — see
 |-------|------|-------------|
 | `agent_id` | string | Stable identifier for the **executing agent at issuance time** — the terminal executor after full delegation resolution. Not the original delegator; not a display label. In a chain A→B→C where C executes the action, `agent_id` is C. |
 | `action_type` | string | What the agent did — semantic label (`code.execute`, `payment.send`, etc.) |
-| `scope` | string | Terminal executing agent's requested-intent scope — what the agent requested to do at the point of action. Free-form non-empty string; see [Scope conventions](#scope-conventions). Pass `""` if not applicable. |
+| `scope` | string | Terminal executing agent's requested-intent scope — what the agent requested to do at the point of action. Free-form string; see [Scope conventions](#scope-conventions). `""` is the sole exception to non-empty — pass it if scope is not applicable to the action. Any other value MUST be non-empty. |
 | `timestamp` | string | RFC 3339 UTC with 3-digit millisecond precision. Format: `"2026-05-15T10:00:00.123Z"`. The trailing `Z` is mandatory. |
 
 > **Conversion note:** The W3C CG ai-agent-protocol discussion (issue #34) established epoch-millisecond integer as the application-layer canonical representation for timestamp. The `action_ref` preimage carries an RFC 3339 string, not the integer. Implementations holding epoch-ms integers MUST convert to RFC 3339 UTC with three-digit millisecond precision before hashing. Implementations that hash the epoch-ms integer directly (without conversion) will produce a different digest and are not conformant with this spec.
 
 ## Scope conventions
 
-`scope` is a free-form non-empty string with no closed enum. Any value is valid as long as it is non-empty and consistent across all parties deriving the same `action_ref`.
+`scope` is a free-form string with no closed enum. Any value is valid as long as it is consistent across all parties deriving the same `action_ref` — see the field table above for the `""` (not applicable) exception.
 
 **Recommended convention (non-normative):** namespace-prefix with the emitter identifier using `<emitter>:<scope>`.
 

@@ -1,0 +1,96 @@
+{
+  "fixture_id": "action-ref-v1-domain-negative",
+  "version": "v1",
+  "spec": "docs/spec/action-ref.md",
+  "hash_algo": "sha256",
+  "preimage_format": "jcs-rfc8785-v1",
+  "generated_at": "2026-07-29",
+  "attribution": "Vectors reported by aeoess (Pidlisnyi) in giskard09/argentum-core#35, cross-checked against the APS SDK's 13-vector action-ref-v1 conformance set (github.com/aeoess/agent-passport-system, conformance/action-ref-v1/vectors.json).",
+  "purpose": "Domain-rejection conformance vectors for action-ref-v1. docs/spec/action-ref.md's Domain paragraph requires OUT_OF_PROFILE_DOMAIN and a stop before any digest comparison for malformed timestamp grammar and non-ASCII/surrogate-pair field values. Before this fixture set, the reference implementation (plugins/agt_evidence_anchor/action_ref.py) hashed all of these inputs and returned a normal-looking digest instead of rejecting them -- confirmed and fixed same day, see action_ref.py's _validate_domain / OutOfProfileDomainError.",
+  "reproduce_in_python": "from plugins.agt_evidence_anchor.action_ref import compute_action_ref, OutOfProfileDomainError\ntry:\n    compute_action_ref(agent_id, action_type, scope, timestamp)\n    result = 'ACCEPTED'\nexcept OutOfProfileDomainError as e:\n    result = f'REJECTED: {e.field}: {e.reason}'",
+  "vectors": [
+    {
+      "id": "adn-001",
+      "description": "Malformed timestamp: lowercase 't' separator instead of 'T'. One of the five shapes aeoess listed in #35 that the pre-fix implementation hashed without rejecting.",
+      "expect_valid": false,
+      "expect_error_field": "timestamp",
+      "preimage": {
+        "agent_id": "did:aeoess:example",
+        "action_type": "trail.anchor",
+        "scope": "mycelium:av-neg",
+        "timestamp": "2026-05-24t10:30:00.000Z"
+      }
+    },
+    {
+      "id": "adn-002",
+      "description": "Malformed timestamp: lowercase 'z' suffix instead of 'Z'.",
+      "expect_valid": false,
+      "expect_error_field": "timestamp",
+      "preimage": {
+        "agent_id": "did:aeoess:example",
+        "action_type": "trail.anchor",
+        "scope": "mycelium:av-neg",
+        "timestamp": "2026-05-24T10:30:00.000z"
+      }
+    },
+    {
+      "id": "adn-003",
+      "description": "Malformed timestamp: numeric UTC offset ('+00:00') instead of the 'Z' suffix. This is also the shape Python's datetime.isoformat(timespec='milliseconds') produces by default -- named by aeoess as the most likely accidental source of a rejected input.",
+      "expect_valid": false,
+      "expect_error_field": "timestamp",
+      "preimage": {
+        "agent_id": "did:aeoess:example",
+        "action_type": "trail.anchor",
+        "scope": "mycelium:av-neg",
+        "timestamp": "2026-05-24T10:30:00.000+00:00"
+      }
+    },
+    {
+      "id": "adn-004",
+      "description": "Malformed timestamp: second precision, no fractional component at all.",
+      "expect_valid": false,
+      "expect_error_field": "timestamp",
+      "preimage": {
+        "agent_id": "did:aeoess:example",
+        "action_type": "trail.anchor",
+        "scope": "mycelium:av-neg",
+        "timestamp": "2026-05-24T10:30:00Z"
+      }
+    },
+    {
+      "id": "adn-005",
+      "description": "Malformed timestamp: six fractional digits (microseconds) instead of the required three (milliseconds).",
+      "expect_valid": false,
+      "expect_error_field": "timestamp",
+      "preimage": {
+        "agent_id": "did:aeoess:example",
+        "action_type": "trail.anchor",
+        "scope": "mycelium:av-neg",
+        "timestamp": "2026-05-24T10:30:00.000000Z"
+      }
+    },
+    {
+      "id": "av-003",
+      "description": "aeoess's own vector id (#35). scope = 'scope:\u0437\u0432\u0456\u0442/\ud83d\udcc4' -- non-ASCII (Cyrillic) plus an astral-plane character (U+1F4C4, surrogate pair in UTF-16). The Domain paragraph excludes non-ASCII field values and surrogate-pair scope strings by name.",
+      "expect_valid": false,
+      "expect_error_field": "scope",
+      "preimage": {
+        "agent_id": "did:aeoess:example",
+        "action_type": "trail.anchor",
+        "scope": "scope:\u0437\u0432\u0456\u0442/\ud83d\udcc4",
+        "timestamp": "2026-05-24T10:30:00.000Z"
+      }
+    },
+    {
+      "id": "av-007",
+      "description": "aeoess's own vector id (#35). POSITIVE case, not negative: empty scope (''). action-ref.md's field table said scope is a 'Free-form non-empty string' on the same line as 'Pass \"\" if not applicable' -- a wording conflict, not a real domain violation. Fixed in the spec prose (scope table entry, action-ref.md) to state '' as the explicit sole exception to non-empty. This vector documents that empty scope MUST continue to be accepted -- it is not in the Domain paragraph's rejection list (malformed timestamp, non-ASCII/surrogate-pair values), and no code change was needed for it, only the spec's wording.",
+      "expect_valid": true,
+      "preimage": {
+        "agent_id": "did:aeoess:example",
+        "action_type": "trail.anchor",
+        "scope": "",
+        "timestamp": "2026-05-24T10:30:00.000Z"
+      }
+    }
+  ]
+}

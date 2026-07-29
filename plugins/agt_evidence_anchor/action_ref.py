@@ -20,6 +20,44 @@ from __future__ import annotations
 import datetime
 import hashlib
 import json
+import re
+
+
+class OutOfProfileDomainError(ValueError):
+    """Raised when a preimage field falls outside action-ref.md's Domain paragraph.
+
+    Per spec: a verifier MUST return OUT_OF_PROFILE_DOMAIN and stop before any
+    digest comparison — never hash-and-hope. `.field` and `.reason` identify
+    which field failed and why, for callers that want structured handling
+    instead of parsing the message string.
+    """
+
+    def __init__(self, field: str, reason: str) -> None:
+        self.field = field
+        self.reason = reason
+        super().__init__(f"OUT_OF_PROFILE_DOMAIN: {field}: {reason}")
+
+
+_TIMESTAMP_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$")
+
+
+def _validate_domain(agent_id: str, action_type: str, scope: str, timestamp: str) -> None:
+    """Enforce action-ref.md's Domain paragraph. Raises OutOfProfileDomainError.
+
+    - agent_id, action_type, scope: ASCII-only, no surrogate-pair / astral-plane
+      characters (ordinal > 0x7F is rejected either way, which subsumes the
+      surrogate-pair case).
+    - timestamp: exactly `YYYY-MM-DDTHH:MM:SS.mmmZ` — uppercase `T` separator,
+      uppercase `Z` suffix, no numeric offset, exactly 3 fractional digits.
+    """
+    for field_name, value in (("agent_id", agent_id), ("action_type", action_type), ("scope", scope)):
+        if not value.isascii():
+            raise OutOfProfileDomainError(field_name, "non-ASCII character in field value")
+    if not _TIMESTAMP_RE.match(timestamp):
+        raise OutOfProfileDomainError(
+            "timestamp",
+            f"does not match required grammar YYYY-MM-DDTHH:MM:SS.mmmZ: {timestamp!r}",
+        )
 
 
 def _jcs_encode(d: dict[str, str]) -> bytes:
@@ -59,7 +97,12 @@ def compute_action_ref(
     from a datetime object.
 
     Returns the SHA-256 hex digest (64 lowercase hex characters).
+
+    Raises OutOfProfileDomainError if any field falls outside action-ref.md's
+    Domain paragraph (non-ASCII field values, malformed timestamp grammar) —
+    per spec, this must happen before any digest is computed or compared.
     """
+    _validate_domain(agent_id, action_type, scope, timestamp)
     payload = {
         "agent_id": agent_id,
         "action_type": action_type,
@@ -94,7 +137,12 @@ def compute_action_ref_v2(
     which derivation produced a given action_ref string.
 
     Returns "v2:" + 64 lowercase hex characters.
+
+    Raises OutOfProfileDomainError under the same Domain rules as
+    compute_action_ref — v2 shares v1's four-field domain, only the digest
+    derivation differs.
     """
+    _validate_domain(agent_id, action_type, scope, timestamp)
     payload = {
         "agent_id": agent_id,
         "action_type": action_type,
