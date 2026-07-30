@@ -9,6 +9,15 @@ Rule 3 (`independent_third_party`) to also require `capturer_id != deployer_id`.
 Preimage hashes for existing fixtures changed; see the fixture set changelog.
 Gap reported by magentixai (Sansone, AXES, axes#3).
 
+**v1.2 (2026-07-29):** added `boundary_ref` and `capture_phase` as **sibling**
+declarations to `custody-ref` (never preimage members — the preimage from
+v1.1 is unchanged, no hashes affected). Reconciled with magentixai (Sansone,
+AXES) in axes#3: `custody-ref-v1` is being folded in as the reference
+implementation for AXES's `capture_relationship` field assessment (axes#10),
+with a two-sided fixture cross-check against AXES's Golden Trace corpus. See
+[Sibling declarations](#sibling-declarations-boundary_ref--capture_phase)
+below.
+
 ## Motivation
 
 Two byte-identical records — same `action_ref`, same `signing_trust_ref` —
@@ -126,6 +135,77 @@ different label by the same issuer." The `deployer_id` field closes the
 remaining gap: distinctness from the signer is necessary but not sufficient
 — the capturer must also be distinct from the deployer.
 
+## Sibling declarations: `boundary_ref` / `capture_phase`
+
+Two fields carried **alongside** `custody-ref` on the trail record — like
+`signing_trust_ref` and `custody_ref` themselves — never inside its
+preimage. Both were open design questions in v1.1, resolved with magentixai
+(Sansone, AXES) in axes#3.
+
+### `boundary_ref`
+
+A capture boundary declares what was in scope of capture and what was
+deliberately excluded — e.g. an interbank leg of a payment flow that the
+capturing system never observed. Without it, a verifier cannot distinguish a
+faithful gap (disclosed, out of scope) from a silent one (undisclosed,
+looks like nothing happened). `boundary_ref` makes that declaration a
+typed, hashed, verifiable field, the same pattern `custody-ref` applies to
+the capturer/executor/deployer relationship.
+
+Kept **out of `custody-ref`'s preimage** deliberately: the custody-domain
+relationship (who captured relative to who executed) must not change
+identity depending on how the boundary happens to be declared for a given
+run. Folding it into the six-field preimage above would make the same
+capturer/executor/deployer triple hash differently under different boundary
+declarations — the same reasoning that already keeps `custody-ref` itself
+out of `action_ref`'s frozen preimage.
+
+Preimage schema (own SHA-256(JCS(·)), a sibling ref in its own right):
+
+```json
+{
+  "action_ref":       "<action_ref the boundary declaration covers>",
+  "captured_scope":   ["<items that were in scope of capture>"],
+  "excluded_scope":   ["<items deliberately excluded from capture>"]
+}
+```
+
+**Fail-closed structural check:** `captured_scope` and `excluded_scope` MUST
+NOT both be empty arrays. An empty/empty declaration is indistinguishable
+from no declaration at all — a `boundary_ref` that asserts nothing is not a
+degraded case of a real boundary, it is a validation failure, same posture
+as `custody_type`'s closed enum. At least one of the two arrays must be
+non-empty.
+
+### `capture_phase`
+
+```
+capture_phase: "pre_execution" | "at_commit" | "post_execution"
+```
+
+A typed declaration of when, relative to the executed action, the record
+was captured — carried **in addition to** `custody-ref`'s `timestamp_ms`,
+never in place of it. The pre-versus-post distinction ("was this sealed
+before the outcome existed") is load-bearing for probative weight and is
+not always safely derivable from a raw timestamp alone under clock skew or
+a soft execution boundary — it earns an explicit, checked field rather than
+being inferred.
+
+**Fail-closed structural check**, against a sibling `execution_commit_ts`
+(uint64 ms, the moment the action's outcome was committed) that MUST be
+present on the record for `capture_phase` to be checkable — same pattern
+as Rule 3 requiring `executor_id` and a deployer reference both present:
+
+- `pre_execution` requires `custody_ref.preimage.timestamp_ms <= execution_commit_ts`.
+- `post_execution` requires `custody_ref.preimage.timestamp_ms >= execution_commit_ts`.
+- `at_commit` has no ordering requirement beyond both timestamps being
+  present — it declares "at the same operational step as commit," which
+  clock skew alone cannot falsify.
+- An unrecognized `capture_phase` value, or a record declaring the field
+  without a paired `execution_commit_ts`, MUST be rejected — the phase
+  claim cannot be checked, and an unverifiable claim is treated as false,
+  not passed through.
+
 ## Relationship to existing primitives
 
 ```
@@ -164,6 +244,32 @@ execution status.
 - `cr-004` — `independent_third_party` **(negative)**: capturer_id equals the sole signer_id covering that `action_ref` — the only attestation in the record is the issuer's own. Structurally invalid; a conformant validator MUST reject it.
 - `cr-005` — `independent_third_party` **(negative, v1.1)**: capturer_id equals deployer_id — the capturer is the deployer's own control plane, signed by a genuinely distinct third party. Passes the executor-id and signer-id checks alone but fails the deployer-id check. Gap reported by magentixai (Sansone, AXES, axes#3).
 - `cr-006` — `deployer_domain` **(positive, v1.1)**: same underlying record as `cr-005`, correctly labeled.
+- `cr-007` — `capture_phase: pre_execution` **(positive, v1.2)**: custody `timestamp_ms` precedes `execution_commit_ts` — consistent with the declared phase.
+- `cr-008` — `capture_phase: post_execution` **(negative, v1.2)**: declared `post_execution` but custody `timestamp_ms` precedes `execution_commit_ts` — the record claims it was sealed after the outcome existed when it was actually sealed before. Structurally invalid.
+- `cr-009` — `boundary_ref` **(positive, v1.2)**: `captured_scope` non-empty, `excluded_scope` non-empty (explicit disclosed gap, AXES's `outside_capture_boundary` pattern) — valid declaration.
+- `cr-010` — `boundary_ref` **(negative, v1.2)**: `captured_scope` and `excluded_scope` both empty — an undeclared boundary masquerading as a declared one. Structurally invalid.
+
+## Interop note — AXES cross-check
+
+`custody-ref-v1` is the reference implementation for AXES's `capture_relationship`
+field assessment (magentixai/axes#10; proposed by neldan00077 on the AXES
+side, `custody-ref-v1` credited as the implementation). Two-sided fixture
+cross-check: this repo's `examples/conformance/custody-ref/` vectors run
+against AXES's Golden Trace corpus (`examples/golden-trace`,
+`examples/golden-trace-ind` in magentixai/axes), and AXES's custody vectors
+seeded in axes#6 (including a "deployer-signed twin" matching `cr-005`/`cr-006`)
+run against `custody-ref-v1`. A clean pass in both directions is the interop
+evidence the field assessment needs — not yet run as of v1.2, pending AXES's
+seed update.
+
+AXES also tracks a **corroboration_state** per fact (who confirms it,
+distinct from who captured it) and proposed one consistency rule between the
+two suites: a fact must not declare `independent_third_party` custody while
+its corroboration is only issuer-internal, or vice versa. `custody-ref-v1`
+does not implement a corroboration primitive itself (no `corroboration_state`
+field exists in this repo's trail records today) — noted here as a forward
+compatibility point for whichever side that lands on next, not implemented
+in v1.2.
 
 ## References
 

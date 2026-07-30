@@ -1,16 +1,17 @@
 {
   "fixture_id": "custody-ref-v1",
-  "version": "v1.1",
+  "version": "v1.2",
   "spec": "docs/spec/custody-ref.md",
   "hash_algo": "sha256",
   "preimage_format": "jcs-rfc8785-v1",
   "generated_at": "2026-07-29",
-  "purpose": "Conformance vectors for custody-ref-v1: typed, fail-closed pointer to a custody-domain assertion (same_domain / deployer_domain / independent_third_party). Includes the negative case where an independent_third_party claim is falsified by the capturer being the sole signer of the covered action_ref, and the negative case (found by magentixai, AXES) where the capturer is the deployer's control plane itself and only a surface-level capturer_id != executor_id check would wrongly pass it as independent.",
-  "changelog": "v1.1 (2026-07-29): added deployer_id field to the preimage (all vectors recomputed, hashes changed from v1). Rule 3 generalized per magentixai's (Sansone, AXES) gap report: independent_third_party now also requires capturer_id != deployer_id, closing the case where a deployer's own control plane captures a record signed by a genuine third party and would otherwise pass the old capturer_id != executor_id / capturer_id != signer_id checks alone. cr-001..004 recomputed with deployer_id added but unchanged verdicts. New: cr-005 (negative, the gap case) and cr-006 (positive, same underlying record correctly labeled deployer_domain).",
+  "purpose": "Conformance vectors for custody-ref-v1: typed, fail-closed pointer to a custody-domain assertion (same_domain / deployer_domain / independent_third_party), plus its two v1.2 sibling declarations (boundary_ref, capture_phase). Includes the negative case where an independent_third_party claim is falsified by the capturer being the sole signer of the covered action_ref, the negative case (found by magentixai, AXES) where the capturer is the deployer's control plane itself, and negative cases for an undeclared capture boundary and an inconsistent capture_phase claim.",
+  "changelog": "v1.2 (2026-07-29): added boundary_ref (own sibling ref, own preimage: action_ref/captured_scope/excluded_scope) and capture_phase (sibling enum, checked against a paired execution_commit_ts) -- both siblings to custody-ref, never preimage members; custody-ref's own v1.1 preimage/hashes are unchanged. cr-007/cr-008 exercise capture_phase (positive/negative), cr-009/cr-010 exercise boundary_ref (positive/negative). Reconciled design with magentixai (Sansone, AXES) in axes#3; custody-ref-v1 folded in as reference implementation for AXES's capture_relationship assessment (axes#10). v1.1 (2026-07-29): added deployer_id field to the preimage (all vectors recomputed, hashes changed from v1). Rule 3 generalized per magentixai's (Sansone, AXES) gap report: independent_third_party now also requires capturer_id != deployer_id, closing the case where a deployer's own control plane captures a record signed by a genuine third party and would otherwise pass the old capturer_id != executor_id / capturer_id != signer_id checks alone. cr-001..004 recomputed with deployer_id added but unchanged verdicts. New: cr-005 (negative, the gap case) and cr-006 (positive, same underlying record correctly labeled deployer_domain).",
   "reproduce_in_python": "import hashlib, json\ndef jcs(obj): return json.dumps(dict(sorted(obj.items())), separators=(',',':'), ensure_ascii=False)\ncustody_ref = hashlib.sha256(jcs(preimage).encode()).hexdigest()",
   "vectors": [
     {
       "id": "cr-001",
+      "kind": "custody",
       "description": "same_domain, valid: capturer_id and executor_id are the same operator identity (action_ref reused from signing-trust-ref str-001, operator_key case). deployer_id equals capturer_id/executor_id — one domain end to end. Structural check: capturer_id == executor_id — satisfied.",
       "custody_type": "same_domain",
       "expect_valid": true,
@@ -32,6 +33,7 @@
     },
     {
       "id": "cr-002",
+      "kind": "custody",
       "description": "deployer_domain, valid: capturer_id is the deployer domain hosting the agent, distinct from the agent's own key (action_ref reused from signing-trust-ref str-002, agent_keypair case). deployer_id equals capturer_id — the capturer IS the deployer, which is the defining trait of this custody_type. Structural check: capturer_id != executor_id AND capturer_id == deployer_id — both satisfied.",
       "custody_type": "deployer_domain",
       "expect_valid": true,
@@ -53,6 +55,7 @@
     },
     {
       "id": "cr-003",
+      "kind": "custody",
       "description": "independent_third_party, valid: capturer_id (witness-01, an operationally separate ERC-8004 witness wallet) is neither the executor_id (TKCollective 2-of-3 threshold, action_ref reused from signing-trust-ref str-003), nor the deployer_id (a distinct hypothetical deployer of the TKCollective agent), nor the signer_id that covers this action_ref. Structural check: capturer_id != executor_id AND capturer_id != deployer_id AND capturer_id != paired signer_id — all three satisfied, independence is real on every axis, not just labeled.",
       "custody_type": "independent_third_party",
       "expect_valid": true,
@@ -74,6 +77,7 @@
     },
     {
       "id": "cr-004",
+      "kind": "custody",
       "description": "NEGATIVE — independent_third_party declared, but capturer_id equals the sole signer_id covering this action_ref (reused from signing-trust-ref str-001). executor_id was renamed to a distinct hosted-instance label so the naive capturer_id != executor_id check alone would look satisfied — but the deeper cross-check against signing_trust_ref shows capturer_id == signer_id: the only attestation in the system is the issuer's own. deployer_id is present and distinct from capturer_id (the deployer_id check alone would pass); this vector isolates the signer_id failure mode specifically. A conformant validator MUST reject it.",
       "custody_type": "independent_third_party",
       "expect_valid": false,
@@ -96,6 +100,7 @@
     },
     {
       "id": "cr-005",
+      "kind": "custody",
       "description": "NEGATIVE — the gap reported by magentixai (Sansone, AXES) in axes#3: capturer_id is the deployer's own control plane (deployer:acmehost-control-plane), executor_id is the agent instance it deploys (agent:acmehost-instance-7), and the record is signed by a genuinely distinct third-party attester (0x9E3fB1a2C4D5e6F708192A3b4C5D6e7F8091A2B3 — not a party to either the deployer or the executor). Under the pre-fix Rule 3 (capturer_id != executor_id AND capturer_id != signer_id), this vector would have passed as independent_third_party: both surface conditions hold. It must still be REJECTED, because deployer_id equals capturer_id — the capturer is not a third party at all, it is the deployer itself, which by definition (see custody_type table) has an operational stake in the executor. Structural check under the generalized rule: capturer_id == deployer_id -> fails independent_third_party regardless of the executor_id/signer_id checks.",
       "custody_type": "independent_third_party",
       "expect_valid": false,
@@ -118,6 +123,7 @@
     },
     {
       "id": "cr-006",
+      "kind": "custody",
       "description": "POSITIVE pair to cr-005 — same underlying record (identical action_ref, capturer_id, executor_id, deployer_id, timestamp_ms), correctly labeled deployer_domain instead of independent_third_party. This is the classification a conformant record of this shape should carry. Structural check: capturer_id != executor_id AND capturer_id == deployer_id — both satisfied.",
       "custody_type": "deployer_domain",
       "expect_valid": true,
@@ -136,6 +142,57 @@
         "vector_id": "synthetic",
         "signer_id": "0x9E3fB1a2C4D5e6F708192A3b4C5D6e7F8091A2B3"
       }
+    },
+    {
+      "id": "cr-007",
+      "kind": "capture_phase",
+      "description": "capture_phase: pre_execution, valid (v1.2). Reuses cr-002's custody preimage/custody_ref (deployer_domain, timestamp_ms=1750448700011). execution_commit_ts=1750448700500 is later than the custody timestamp -- consistent with a record captured before the outcome existed.",
+      "custody_ref": "759e769819dcb798297d3f5fa8e896c454c0760ec8a80173a0ba4b0e537e570b",
+      "capture_phase": "pre_execution",
+      "execution_commit_ts": 1750448700500,
+      "expect_valid": true
+    },
+    {
+      "id": "cr-008",
+      "kind": "capture_phase",
+      "description": "capture_phase: post_execution, NEGATIVE (v1.2). Same custody_ref/execution_commit_ts as cr-007, but declares post_execution -- the record claims it was sealed after the outcome existed, while its own timestamp_ms (1750448700011) actually precedes execution_commit_ts (1750448700500). Structurally inconsistent; a conformant validator MUST reject it.",
+      "custody_ref": "759e769819dcb798297d3f5fa8e896c454c0760ec8a80173a0ba4b0e537e570b",
+      "capture_phase": "post_execution",
+      "execution_commit_ts": 1750448700500,
+      "expect_valid": false,
+      "expect_reason": "capture_phase declares post_execution but custody timestamp_ms precedes execution_commit_ts"
+    },
+    {
+      "id": "cr-009",
+      "kind": "boundary_ref",
+      "description": "boundary_ref, valid (v1.2). captured_scope and excluded_scope both non-empty -- an explicit disclosed gap (AXES's outside_capture_boundary pattern: the interbank pacs.008 leg was never observed by the capturing system, and the declaration says so instead of staying silent about it).",
+      "preimage": {
+        "action_ref": "c832ef8610c6989f8c6f5cea51ac019b8ac9860e389110079a895e67595950a2",
+        "captured_scope": [
+          "payment.instruction.pain001",
+          "payment.status.pacs002"
+        ],
+        "excluded_scope": [
+          "payment.interbank.pacs008"
+        ]
+      },
+      "jcs_payload": "{\"action_ref\":\"c832ef8610c6989f8c6f5cea51ac019b8ac9860e389110079a895e67595950a2\",\"captured_scope\":[\"payment.instruction.pain001\",\"payment.status.pacs002\"],\"excluded_scope\":[\"payment.interbank.pacs008\"]}",
+      "boundary_ref": "d4a5c72dab4b0e6817f589aaeb796ca5c55e6b20efec2b08a93102af3c9b7538",
+      "expect_valid": true
+    },
+    {
+      "id": "cr-010",
+      "kind": "boundary_ref",
+      "description": "boundary_ref, NEGATIVE (v1.2). captured_scope and excluded_scope both empty -- indistinguishable from no boundary declaration at all. An empty/empty boundary_ref does not mean 'nothing was excluded', it means the declaration asserts nothing; a conformant validator MUST reject it rather than treat it as a vacuous pass.",
+      "preimage": {
+        "action_ref": "c832ef8610c6989f8c6f5cea51ac019b8ac9860e389110079a895e67595950a2",
+        "captured_scope": [],
+        "excluded_scope": []
+      },
+      "jcs_payload": "{\"action_ref\":\"c832ef8610c6989f8c6f5cea51ac019b8ac9860e389110079a895e67595950a2\",\"captured_scope\":[],\"excluded_scope\":[]}",
+      "boundary_ref": "f545de7ec9410419e8c3316cfe54098126f078d9577ebc6498f96c29ff771a2f",
+      "expect_valid": false,
+      "expect_reason": "captured_scope and excluded_scope are both empty -- indistinguishable from no boundary declaration"
     }
   ]
 }
