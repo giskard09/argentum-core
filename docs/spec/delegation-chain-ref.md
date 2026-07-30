@@ -70,6 +70,7 @@ delegation_chain_ref = hashlib.sha256(jcs(chain_artifact).encode()).hexdigest()
 | `delegator` | string | Agent that granted this delegation. Must equal `hops[i-1].delegatee` for all non-root hops. |
 | `delegation_ref` | SHA-256 hex | Hash of the delegation artifact for this hop, derived per [`delegation-ref.md`](./delegation-ref.md). |
 | `scope` | string | Scope of this hop. Implementers SHOULD verify it is equal to or a subset of the parent hop's scope. |
+| `hop_signature` | base64 (optional) | Ed25519 signature by `delegator` over the UTF-8 bytes of this hop's `delegation_ref`. Additive field — omitting it does not change conformance of a chain that predates it (see "Cross-org attenuation" below). |
 
 ---
 
@@ -132,6 +133,57 @@ same chain. See `chain-002-hops-reordered-negative` in the conformance
 fixture for a byte-level demonstration (same three hop objects as
 `chain-001-three-hop-payment-route`, hop 0 and hop 1 swapped, digest
 differs).
+
+---
+
+## Cross-org attenuation via hop_signature (additive, optional)
+
+`chain_continuity` (invariant 1) only proves that the claimed `delegatee`/`delegator`
+strings line up — it says nothing about who actually authorized a hop when the parties
+are independent organizations with no shared authority. `hop_signature` closes that gap:
+each hop's `delegator` signs the UTF-8 bytes of that hop's `delegation_ref` with an
+Ed25519 keypair, and a verifier checks the signature against the delegator's known
+public key before treating the hop as attenuated rather than merely claimed.
+
+- **Optional and additive.** A hop without `hop_signature` conforms exactly as before —
+  this field was not part of `delegation-chain-ref-v1.0` (tag, 2026-05-26) and every
+  existing conformant chain artifact, including the canonical fixture in this document
+  and `docs/spec/fixtures/delegation-chain-ref-v1.fixture.json`, produces the same
+  `delegation_chain_ref` digest with or without this section — the field only enters the
+  hash for artifacts that include it, which are new artifacts by definition.
+- **Required for a cross-org claim.** A chain where hops span independent
+  organizations (no shared signing authority between `delegator` values) MUST carry a
+  valid `hop_signature` on every hop to be treated as verified rather than merely
+  claimed continuity. Same-operator chains (e.g. this spec's own root example, where
+  giskard-self/pioneer-agent-001/lightning share an operator) are conformant without it.
+- **Failure mode `hop_signature_invalid`.** A hop signature that does not verify against
+  its claimed `delegator`'s public key — including a valid signature copied from a
+  different hop (`signature_substitution`) — MUST be rejected. See
+  `cross-org-neg-signature-substitution` in
+  `examples/conformance/delegation-chain-ref/cross-org-vectors.json` for a case where
+  chain continuity, root/leaf anchoring and scope narrowing all still pass, and only the
+  signature check catches the forgery.
+- **Key resolution is implementer-defined.** This spec does not mandate a registry; the
+  conformance fixture is self-contained (embeds a `pubkeys` map) so it verifies offline
+  without depending on a live key-registry service. A production verifier may resolve
+  keys however it already does for signed artifacts in its system (e.g. a pubkey
+  registry with historical epoch resolution).
+
+---
+
+## Replay guard (additive, optional)
+
+`delegation_chain_ref` and `hop.delegation_ref` are content-addressed hashes, not
+single-use tokens by themselves — nothing in the base invariants stops a chain that was
+already accepted from being resubmitted to claim the same authorization a second time.
+A conformant verifier SHOULD track `chain_id` and every hop's `delegation_ref` it has
+already accepted, and reject a resubmission of either as `replay_detected`, even when
+the resubmitted artifact is byte-identical and would otherwise pass every other
+invariant. See `examples/conformance/delegation-chain-ref/replay-vectors.json`
+(`replay-001-first-submission` PASS, `replay-002-resubmission-same-chain-id` FAIL —
+vectors run in order, registry state carries across the file). Same additive pattern as
+`hop_signature`: a verifier without replay tracking is not non-conformant for chains it
+has never seen before, but MUST NOT claim replay protection unless it holds this state.
 
 ---
 

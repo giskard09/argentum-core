@@ -1,0 +1,82 @@
+{
+  "spec_version": "delegation-chain-ref-v1",
+  "description": "Replay guard conformance vectors. A chain_id (and each hop's delegation_ref) MUST NOT be accepted twice by the same verifier instance -- resubmitting an already-seen chain_id is a replay, even if the resubmitted artifact is byte-identical and would otherwise verify. Vectors MUST be run in order (registry state carries across vectors within this file).",
+  "vectors": [
+    {
+      "id": "replay-001-first-submission",
+      "description": "First submission of chain-cross-org-001. Accepted -- registry has not seen this chain_id or any of its hop delegation_ref values before.",
+      "expected": "PASS",
+      "chain_artifact": {
+        "chain_id": "chain-cross-org-001",
+        "hops": [
+          {
+            "delegatee": "test-cross-org-b",
+            "delegator": "test-cross-org-a",
+            "delegation_ref": "1ba2a745ae11667c79fef32ddb1b3d7ad2213de7a8311dbc58a4f071670e426e",
+            "scope": "mycelium:payment",
+            "hop_signature": "2r0LLk0J14+uO3HISubqWnY0firMIhwpBooI5XbJ2bq/aKLj/ja0ZOaDG3PQi9KdlyppFBAPOGr6UytnPpXlCw=="
+          },
+          {
+            "delegatee": "test-cross-org-c",
+            "delegator": "test-cross-org-b",
+            "delegation_ref": "020d42b8ce674bdbb2d425992f5b1351edb999d10c830785b883b204155bda95",
+            "scope": "mycelium:payment",
+            "hop_signature": "LDsgvC90WBm74cf6QfZXdKuPjnFiiDwSDrV7jwFVCVteHDN8t+cCpuIqFkg6rVro1LWsS7tNODeWuKuEL+GLDw=="
+          }
+        ],
+        "leaf_action_ref": "9e727d4eb437fd2c78c138430a2a26f252f5d6363d940c1e627eb11deffa695b",
+        "root_delegator": "test-cross-org-a",
+        "scope": "mycelium:payment",
+        "version": "delegation-chain-ref-v1"
+      },
+      "delegation_chain_ref": "4f7d0eb38ccb6a018f8f77600250f4dc27697aeaf9f2790f7c58d9dd71cf80d0",
+      "leaf_preimage": {
+        "agent_id": "test-cross-org-c",
+        "action_type": "payment.route",
+        "scope": "mycelium:payment",
+        "timestamp": "2026-08-01T10:00:00.000Z"
+      }
+    },
+    {
+      "id": "replay-002-resubmission-same-chain-id",
+      "description": "Byte-identical resubmission of the exact same chain_artifact (same chain_id, same hops, same delegation_ref values) already accepted in replay-001. Every per-vector invariant (continuity/anchoring/scope/signature) still passes in isolation -- only the replay guard, which tracks state across submissions, catches this.",
+      "expected": "FAIL",
+      "failure_mode": "replay_detected",
+      "chain_artifact": {
+        "chain_id": "chain-cross-org-001",
+        "hops": [
+          {
+            "delegatee": "test-cross-org-b",
+            "delegator": "test-cross-org-a",
+            "delegation_ref": "1ba2a745ae11667c79fef32ddb1b3d7ad2213de7a8311dbc58a4f071670e426e",
+            "scope": "mycelium:payment",
+            "hop_signature": "2r0LLk0J14+uO3HISubqWnY0firMIhwpBooI5XbJ2bq/aKLj/ja0ZOaDG3PQi9KdlyppFBAPOGr6UytnPpXlCw=="
+          },
+          {
+            "delegatee": "test-cross-org-c",
+            "delegator": "test-cross-org-b",
+            "delegation_ref": "020d42b8ce674bdbb2d425992f5b1351edb999d10c830785b883b204155bda95",
+            "scope": "mycelium:payment",
+            "hop_signature": "LDsgvC90WBm74cf6QfZXdKuPjnFiiDwSDrV7jwFVCVteHDN8t+cCpuIqFkg6rVro1LWsS7tNODeWuKuEL+GLDw=="
+          }
+        ],
+        "leaf_action_ref": "9e727d4eb437fd2c78c138430a2a26f252f5d6363d940c1e627eb11deffa695b",
+        "root_delegator": "test-cross-org-a",
+        "scope": "mycelium:payment",
+        "version": "delegation-chain-ref-v1"
+      },
+      "delegation_chain_ref": "4f7d0eb38ccb6a018f8f77600250f4dc27697aeaf9f2790f7c58d9dd71cf80d0",
+      "leaf_preimage": {
+        "agent_id": "test-cross-org-c",
+        "action_type": "payment.route",
+        "scope": "mycelium:payment",
+        "timestamp": "2026-08-01T10:00:00.000Z"
+      }
+    }
+  ],
+  "pubkeys": {
+    "test-cross-org-a": "YkoGsWsHtv8M1jJlkzf4eHN+2Ot5IhfxX7T+r9n90oQ=",
+    "test-cross-org-b": "ZGskR4ValAEIejE8vbDRi9Afu5a2Zbm3MIiJHFmzyiY=",
+    "test-cross-org-c": "Y7k4zLK0NanEbxuA0fX8ZEnqT8L72sHinxc8QVHp804="
+  }
+}
