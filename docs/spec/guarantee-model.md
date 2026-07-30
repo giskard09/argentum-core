@@ -133,6 +133,37 @@ pre-execution gate and a weak or missing `confirmation_predicate`, or
 vice versa — the `*-action-ref-anchor` worked examples series exists
 precisely because those two axes vary independently across backends.
 
+## Pre-execution verdict correlation: `verdict_ref`
+
+`confirmation_predicate`/`outcome_handle` above correlate a trail to its **post-execution**
+refetch. The same correlation problem exists one step earlier, on the **pre-execution** side,
+wherever a policy gate or guardrail evaluates a tool call and produces its own verdict
+artifact before the call runs — e.g. `GuardrailResult` in
+[`microsoft/autogen#7881`](https://github.com/microsoft/autogen/pull/7881), which today
+carries `decision`/`reason`/`modified_args`/`metadata: dict[str, Any]` but no dedicated slot
+tying that verdict back to the call it evaluated. Raised by babyblueviper1
+([`autogen#8008`](https://github.com/microsoft/autogen/issues/8008), comment
+[`5131127564`](https://github.com/microsoft/autogen/issues/8008#issuecomment-5131127564)),
+who independently derives a structurally identical correlation key on their own side
+(`decision_ref = SHA-256(JCS({artifact_hash, artifact_type, policy_version, verdict,
+source_class}))`) — an instance-identity key distinct from the full verdict payload, same
+relationship `action_ref` has to `original_args_digest`/`effective_args_digest`.
+
+This is a spec pattern, not code this repo ships into `autogen` or any other guardrail
+implementation — the field belongs on the gate's own verdict type, wherever that lives:
+
+| Field | Type | Semantics | When null |
+|---|---|---|---|
+| `verdict_ref` | `str \| None` | The `action_ref` (this repo's canonical form, `SHA-256(JCS({agent_id, action_type, scope, timestamp}))`, or a caller's own equivalent identity key) supplied as an input field into the gate's own verdict artifact at evaluation time, so the verdict's own correlation key (e.g. `decision_ref`) transitively commits to it. | The caller had no upstream `action_ref` to bind — most guardrails run standalone today. Absence is not an error; it is the same `no-observation-path` shape as `outcome_handle`, one stage earlier: the gate did evaluate, it just has nothing external to correlate against. |
+
+A verifier holding both records — the gate's own verdict artifact (with its `verdict_ref`)
+and this repo's `action_ref` trail — can correlate them on one shared key without either
+system trusting the other's internal bookkeeping, the same non-null/null discipline
+`outcome_handle` already establishes, applied to the input side of execution instead of the
+output side. `verdict_ref` is deliberately not scoped to any single caller's wrapper: any
+policy gate that accepts an external identity key as an input field to its own verdict can
+adopt the same shape.
+
 ## Canonical key derivation
 
 All three systems converge on the same linking key:
