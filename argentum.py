@@ -341,12 +341,49 @@ async def _usdc_poller():
             pass  # poller nunca muere por error puntual
 
 
+# Freshness window (guarantee-model.md, "Crash-after-charge handling"): cuánto esperar
+# un receipt antes de resolver PENDING/null:non-arrival-observed -> FAILED. Arbitrum
+# finality de referencia es ~12 bloques (segundos), 900s da margen generoso a RPC
+# lag/reorg sin dejar trails en PENDING indefinido.
+ANCHOR_FRESHNESS_TTL_SECONDS = int(os.getenv("ANCHOR_FRESHNESS_TTL_SECONDS", "900"))
+
+
+def _classify_anchor_receipt(
+    receipt: Optional[dict], submitted_at: Optional[int], now: int, ttl: int = ANCHOR_FRESHNESS_TTL_SECONDS
+) -> str:
+    """Clasificación pura, sin I/O — testable sin mockear RPC/asyncio.
+
+    Implementa el confirmation_predicate de guarantee-model.md ("tx receipt exists
+    and status == 1") más las dos transiciones terminales que faltaban (Open item,
+    not a spec gap, guarantee-model.md tabla On-chain row):
+
+    - 'confirm'      — receipt.status == 0x1 → COMMITTED (anchor_status='anchored').
+    - 'fail_revert'  — receipt.status == 0x0 → FAILED terminal, inmediato (la
+      ejecución no completó — no hace falta esperar el TTL, ya se sabe el resultado).
+    - 'fail_timeout' — sin receipt y submitted_at supera la freshness window →
+      FAILED terminal (PENDING/null:non-arrival-observed que resuelve a FAILED por
+      'Crash-after-charge handling' paso 4 — no es un estado nuevo).
+    - 'wait'         — sigue PENDING/non-null, reintentar en el próximo ciclo.
+    """
+    if receipt:
+        status = receipt.get("status")
+        if status == "0x1":
+            return "confirm"
+        if status == "0x0":
+            return "fail_revert"
+    if submitted_at is not None and (now - int(submitted_at)) > ttl:
+        return "fail_timeout"
+    return "wait"
+
+
 async def _anchor_confirmation_poller():
-    """Confirma trails cuya TX fue enviada pero no verificada on-chain.
+    """Confirma o falla trails cuya TX fue enviada pero no verificada on-chain.
 
     Lee trails con anchor_status='submitted', llama eth_getTransactionReceipt.
-    Si status==0x1 → anchor_status='anchored' + anchor_block. No depende de eventos
-    del contrato — funciona con GiskardPayments v2 y cualquier versión futura.
+    status==0x1 → anchor_status='anchored' (COMMITTED). status==0x0 → 'failed'
+    (revert, terminal inmediato). Sin receipt tras ANCHOR_FRESHNESS_TTL_SECONDS →
+    'failed' (non-arrival-observed, terminal). No depende de eventos del contrato —
+    funciona con GiskardPayments v2 y cualquier versión futura.
     """
     while True:
         await asyncio.sleep(30)
@@ -354,6 +391,7 @@ async def _anchor_confirmation_poller():
             pending = mycelium_trails.get_submitted_trails(TRAILS_DB, limit=20)
             if not pending:
                 continue
+            now = int(time.time())
             async with httpx.AsyncClient(timeout=10) as client:
                 for trail in pending:
                     tx = trail["tx_hash"]
@@ -367,7 +405,10 @@ async def _anchor_confirmation_poller():
                     try:
                         resp = await client.post(ARB_RPC, json=payload, timeout=8)
                         receipt = resp.json().get("result")
-                        if receipt and receipt.get("status") == "0x1":
+                        action = _classify_anchor_receipt(
+                            receipt, trail.get("anchor_submitted_at"), now
+                        )
+                        if action == "confirm":
                             block_number = int(receipt.get("blockNumber", "0x0"), 16)
                             mycelium_trails.confirm_trail_anchor(
                                 TRAILS_DB, trail["trail_id"], block_number
@@ -381,6 +422,14 @@ async def _anchor_confirmation_poller():
                                         hook, trail["trail_id"], tx,
                                         datetime.now(timezone.utc).isoformat(),
                                     )
+                        elif action == "fail_revert":
+                            mycelium_trails.fail_trail_anchor(
+                                TRAILS_DB, trail["trail_id"], "reverted"
+                            )
+                        elif action == "fail_timeout":
+                            mycelium_trails.fail_trail_anchor(
+                                TRAILS_DB, trail["trail_id"], "non_arrival_timeout"
+                            )
                     except Exception:
                         pass
         except Exception:

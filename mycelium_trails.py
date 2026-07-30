@@ -128,6 +128,8 @@ _DDL_MIGRATIONS = [
     "ALTER TABLE trails ADD COLUMN anchor_status TEXT",
     "ALTER TABLE trails ADD COLUMN anchor_block INTEGER",
     "ALTER TABLE trails ADD COLUMN preimage_json TEXT",
+    "ALTER TABLE trails ADD COLUMN anchor_submitted_at INTEGER",
+    "ALTER TABLE trails ADD COLUMN anchor_fail_reason TEXT",
 ]
 
 
@@ -272,29 +274,55 @@ def _row_to_dict(row: sqlite3.Row) -> dict:
         "origin": row["origin"] if "origin" in keys else None,
         "anchor_status": row["anchor_status"] if "anchor_status" in keys else None,
         "anchor_block": row["anchor_block"] if "anchor_block" in keys else None,
+        "anchor_fail_reason": row["anchor_fail_reason"] if "anchor_fail_reason" in keys else None,
         "preimage_json": row["preimage_json"] if "preimage_json" in keys else None,
     }
 
 
 def set_trail_tx_hash(db_path: str, trail_id: str, tx_hash: str) -> None:
-    """Marca tx_hash y anchor_status='submitted' tras enviar la TX. No implica confirmación."""
+    """Marca tx_hash y anchor_status='submitted' tras enviar la TX. No implica confirmación.
+
+    anchor_submitted_at ancla el reloj de la freshness window (guarantee-model.md,
+    'Crash-after-charge handling') independiente del timestamp del trail — es cuando
+    la TX salió al broadcast, no cuando se creó el trail record.
+    """
     conn = _connect(db_path)
     try:
         conn.execute(
-            "UPDATE trails SET tx_hash = ?, anchor_status = 'submitted' WHERE trail_id = ?",
-            (tx_hash, trail_id),
+            "UPDATE trails SET tx_hash = ?, anchor_status = 'submitted', "
+            "anchor_submitted_at = ? WHERE trail_id = ?",
+            (tx_hash, int(time.time()), trail_id),
         )
     finally:
         conn.close()
 
 
 def confirm_trail_anchor(db_path: str, trail_id: str, block_number: int) -> None:
-    """Marca anchor_status='anchored' y anchor_block tras confirmar receipt status==1 on-chain."""
+    """Marca anchor_status='anchored' (COMMITTED) y anchor_block tras confirmar receipt status==1 on-chain."""
     conn = _connect(db_path)
     try:
         conn.execute(
             "UPDATE trails SET anchor_status = 'anchored', anchor_block = ? WHERE trail_id = ?",
             (block_number, trail_id),
+        )
+    finally:
+        conn.close()
+
+
+def fail_trail_anchor(db_path: str, trail_id: str, reason: str) -> None:
+    """Marca anchor_status='failed' (FAILED, terminal) por guarantee-model.md.
+
+    reason: 'reverted' (receipt.status==0x0 — la ejecución no completó) o
+    'non_arrival_timeout' (ningún receipt llegó dentro de la freshness window —
+    PENDING/null:non-arrival-observed que resuelve a FAILED per 'Crash-after-charge
+    handling' paso 4). No es un estado nuevo — ambos casos ya estaban cubiertos por
+    la tabla del spec, solo faltaba la transición en código.
+    """
+    conn = _connect(db_path)
+    try:
+        conn.execute(
+            "UPDATE trails SET anchor_status = 'failed', anchor_fail_reason = ? WHERE trail_id = ?",
+            (reason, trail_id),
         )
     finally:
         conn.close()
@@ -318,12 +346,20 @@ def get_submitted_trails(db_path: str, limit: int = 50) -> list[dict]:
     conn = _connect(db_path)
     try:
         rows = conn.execute(
-            "SELECT trail_id, agent_id, tx_hash FROM trails "
+            "SELECT trail_id, agent_id, tx_hash, anchor_submitted_at FROM trails "
             "WHERE tx_hash IS NOT NULL AND anchor_status = 'submitted' "
             "ORDER BY timestamp DESC LIMIT ?",
             (limit,),
         ).fetchall()
-        return [{"trail_id": r["trail_id"], "agent_id": r["agent_id"], "tx_hash": r["tx_hash"]} for r in rows]
+        return [
+            {
+                "trail_id": r["trail_id"],
+                "agent_id": r["agent_id"],
+                "tx_hash": r["tx_hash"],
+                "anchor_submitted_at": r["anchor_submitted_at"] if "anchor_submitted_at" in r.keys() else None,
+            }
+            for r in rows
+        ]
     finally:
         conn.close()
 
@@ -361,7 +397,8 @@ def get_trail_by_id(db_path: str, trail_id: str) -> Optional[dict]:
             SELECT trail_id, agent_id, service, operation, timestamp,
                    karma_at_time, success, signature_ref, scope, delegation_ref,
                    parent_trail_id, root_trail_id, negotiation_ref, action_ref,
-                   tx_hash, origin, anchor_status, anchor_block, preimage_json
+                   tx_hash, origin, anchor_status, anchor_block, anchor_fail_reason,
+                   preimage_json
             FROM trails WHERE trail_id=?
             """,
             (trail_id,),
