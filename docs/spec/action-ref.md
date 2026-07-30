@@ -1,6 +1,11 @@
 # action_ref — derivation spec
 
-**Version:** 1.2 | **Published:** 2026-05-23 | **Updated:** 2026-06-03 (×2), 2026-07-29 (version negotiation, Domain enforcement) | **Stable ref:** [`action-ref-v1.0`](https://github.com/giskard09/argentum-core/blob/action-ref-v1.0/docs/spec/action-ref.md) | **Latest commit:** [96931c9](https://github.com/giskard09/argentum-core/commit/96931c9)
+**Version:** 1.2 | **Published:** 2026-05-23 | **Updated:** 2026-06-03 (×2), 2026-07-29 (version negotiation, Domain enforcement) | **Stable ref (v1):** [`action-ref-v1.0`](https://github.com/giskard09/argentum-core/blob/action-ref-v1.0/docs/spec/action-ref.md) | **Stable ref (v2, domain separation):** [`action-ref-v2.0`](https://github.com/giskard09/argentum-core/blob/action-ref-v2.0/docs/spec/action-ref.md) | **Latest commit:** [96931c9](https://github.com/giskard09/argentum-core/commit/96931c9)
+
+**2026-07-30:** Tagged `action-ref-v2.0` — gate condition met, the two production
+adopters (SafeAgent/azender1, CTEF/kenneives) were briefed on the domain-separation
+gap by email the same day. v1 (bare 64-hex) is untouched and permanently valid; v2 is
+strictly additive per [RFC 002](../rfcs/002-action-ref-v2-domain-separation.md).
 
 **2026-07-29:** `compute_action_ref`/`compute_action_ref_v2` in the reference implementation now enforce the Domain paragraph below before hashing (previously they hashed any input). Also fixed a wording conflict in the `scope` field table ("non-empty" vs. "pass `\"\"` if not applicable"). Both reported by aeoess (Pidlisnyi) in [#35](https://github.com/giskard09/argentum-core/issues/35). See [`examples/conformance/action-ref-v1-domain-negative/`](../../examples/conformance/action-ref-v1-domain-negative/) for the rejection vectors.
 
