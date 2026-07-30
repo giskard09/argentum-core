@@ -55,6 +55,23 @@ on repeated, independent query.
 - **`PENDING/non-null`** — effect crossed the boundary, follow-up verification handle exists. The signer knows where to look; the next agent turn or operator can verify independently.
 - **`PENDING/null`** (degraded) — effect may have crossed the boundary, but the signer crashed before recovering the reference. The honest record is "I started, I do not know if it landed, I have nothing to hand off." This is a different quality of not-knowing, not a different outcome.
 
+`PENDING/null` itself collapses two evidentiarily distinct cases — raised directly by
+xsa520 ([`A2A#1672`](https://github.com/a2aproject/A2A/issues/1672), comment
+[`5128801280`](https://github.com/a2aproject/A2A/issues/1672#issuecomment-5128801280)),
+following up on the sandboxed-filesystem/evidence-path backend below where both are
+observable in practice:
+
+- **`PENDING/null:non-arrival-observed`** — an independent observation path exists, but no
+  correlated outcome arrives within the freshness window. The system watched and saw nothing
+  land — a negative result, not an absence of monitoring.
+- **`PENDING/null:no-observation-path`** — no independent observation path exists at all. The
+  system has no way to know whether the effect landed, independent of whether it did.
+
+Both surface as `outcome_handle: null` today; the sub-state is a property of whether a
+backend's negative-evidence condition can fire at all, not of the handle itself. This is the
+same shape as the non-null/null split above, one level down: it narrows what "I don't know"
+means without inventing a new terminal status.
+
 ### Crash-after-charge handling
 
 For non-idempotent external systems (payments, regulated actions), the crash window between
@@ -106,6 +123,7 @@ across the `*-action-ref-anchor` worked examples series.
 | Payment processor REST API (PayPal `capture`, pattern from [`paypal-action-ref-anchor`](https://github.com/giskard09/paypal-action-ref-anchor)) | processor's capture id (`purchase_units[].payments.captures[0].id`) | idempotent `GET` on that id returns a terminal `status` value (e.g. `COMPLETED`) — not the response to the original write | bounded by the processor's own settlement SLA (typically seconds, not on-chain finality) |
 | MPC/custody signer (Turnkey `eth_send_transaction`, pattern from [`turnkey-action-ref-anchor`](https://github.com/giskard09/turnkey-action-ref-anchor)) | `eth.txHash` from the poll response | same predicate as the on-chain row above once the tx lands — the signer only adds an intermediate `ACTIVITY_STATUS_*` state before broadcast, which is not itself the confirmation | signer-side polling interval + underlying chain finality |
 | MPC signer with confirmation gate (Fireblocks `x402_get_and_pay`, pattern from [`fireblocks-action-ref-anchor`](https://github.com/giskard09/fireblocks-action-ref-anchor)) | facilitator's `transaction` field from the `PAYMENT-RESPONSE` header | same on-chain predicate as above; the `confirmed` flag in this backend is a **pre-execution** approval gate, not the post-execution `confirmation_predicate` — the two are orthogonal and must not be conflated | same as on-chain row |
+| Sandboxed filesystem / evidence-path (no on-chain settlement, no REST capture id, no MPC signer — raised by xsa520, [`A2A#1672`](https://github.com/a2aproject/A2A/issues/1672), comment [`5125166130`](https://github.com/a2aproject/A2A/issues/1672#issuecomment-5125166130), agreed as its own row rather than a REST variant in comment [`5128801280`](https://github.com/a2aproject/A2A/issues/1672#issuecomment-5128801280)) | path/handle to the evidence artifact in the sandbox's own store (e.g. an append-only log offset or artifact digest the sandbox assigns at write time) | an independent read of that path/handle returns the artifact with content matching the claimed effect — not the sandbox's own write ack. Absent an independent observation path for the backend, the predicate cannot fire at all, which is exactly the `PENDING/null:no-observation-path` case above | bounded by however often the evidence-path store is independently polled or re-read; no chain-finality analog |
 
 The distinction the table makes explicit: `confirmation_predicate` is
 always a property of the **outcome refetch**, never of any pre-execution
