@@ -13,6 +13,9 @@ Checks five invariants per spec (delegation-chain-ref-v1):
      are independent parties with no shared authority).
 
 delegation_chain_ref byte-match is also verified against SHA-256(JCS(chain_artifact)).
+
+Dependency: PyNaCl (Ed25519 verification for check 5). Install with
+`pip install -r requirements.txt` before running.
 """
 
 import base64
