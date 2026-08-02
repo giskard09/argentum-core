@@ -2517,7 +2517,11 @@ def get_trail(trail_id: str):
             try:
                 import json as _json_ap, hashlib as _hs_ap
                 preimage = _json_ap.loads(preimage_raw)
-                canonical = _json_ap.dumps(preimage, sort_keys=True, separators=(",", ":"),
+                # See mycelium_trails.set_trail_preimage: sort by UTF-16 code unit
+                # (JCS/RFC 8785), not Python's default code-point sort.
+                _sorted_keys = sorted(preimage.keys(), key=lambda k: k.encode("utf-16-be", "surrogatepass"))
+                _ordered = {k: preimage[k] for k in _sorted_keys}
+                canonical = _json_ap.dumps(_ordered, sort_keys=False, separators=(",", ":"),
                                            ensure_ascii=False).encode("utf-8")
                 computed_ref = _hs_ap.sha256(canonical).hexdigest()
                 anchor_proof = {
