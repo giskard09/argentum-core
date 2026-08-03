@@ -164,6 +164,31 @@ output side. `verdict_ref` is deliberately not scoped to any single caller's wra
 policy gate that accepts an external identity key as an input field to its own verdict can
 adopt the same shape.
 
+## Reliance policy is out of scope, by design
+
+Everything above — `trail_status`/`outcome_handle`, `confirmation_predicate` per backend,
+`verdict_ref` — preserves facts independently and lets a verifier correlate them on a shared
+key. None of it prescribes which combination of confirmed facts is *sufficient* to authorize
+a given downstream action. Raised directly by xsa520
+([`A2A#1672`](https://github.com/a2aproject/A2A/issues/1672), comment
+[`5161421422`](https://github.com/a2aproject/A2A/issues/1672#issuecomment-5161421422)):
+preserving independently observable facts does not determine which combination is sufficient
+for a particular downstream action — a card discovery flow, a low-risk message exchange, and
+a delegated action with external consequence may reasonably require different limbs,
+freshness windows, and assurance thresholds. Otherwise the boolean simply moves downstream:
+the limbs stay separate in the receipt, but the consumer silently treats one fixed
+combination as universally "verified."
+
+This was already the shape of every guarantee above — "consumers can adopt either
+independently based on their requirements" (Composing Layer 2 + Layer 4, above) — but it was
+never named as a general principle. It is one now: **this spec defines and preserves facts;
+it does not define a reliance policy over them.** Deciding which facts must be present, how
+fresh they must be, and what assurance threshold applies for a given action class is the
+responsibility of the receiving system, not the protocol. This mirrors the
+`confirmation_predicate` gap closed above (also raised by xsa520) — the pattern was implicit
+in how the repo's own integration behaves, and the fix there was the same: name the boundary
+explicitly instead of leaving it to be inferred from behavior.
+
 ## Canonical key derivation
 
 All three systems converge on the same linking key:
