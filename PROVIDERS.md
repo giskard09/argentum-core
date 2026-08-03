@@ -27,3 +27,14 @@ The claim is the merged conformance set plus production trails, not this table.
 GitHub Action that verifies an implementation (or vendored fixtures) against the frozen
 `action-ref-v1-jcs-sha256` profile in minutes. The claim is the green run with the pinned
 action (`@v1`), not a badge. A row above is added only after manual verification of that run.
+
+### Verified conformant implementations
+
+Independent implementations that pass `action-ref-conformance@v1` against the frozen
+`action-ref-v1-jcs-sha256` profile, verified via pinned CI (not a self-reported badge) —
+distinct from the Providers table above, which requires production trails submitted to
+ARGENTUM.
+
+| Implementation | Repo | Verified run | Since |
+|-----------------|------|--------------|-------|
+| whawk46 (flareclaw-verifier) | [flareclaw-conformance](https://github.com/whawk46/flareclaw-conformance) | [30819828942](https://github.com/whawk46/flareclaw-conformance/actions/runs/30819828942) | 2026-08-03 |
