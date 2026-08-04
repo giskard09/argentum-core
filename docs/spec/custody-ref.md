@@ -18,6 +18,12 @@ with a two-sided fixture cross-check against AXES's Golden Trace corpus. See
 [Sibling declarations](#sibling-declarations-boundary_ref--capture_phase)
 below.
 
+**2026-08-04:** named an explicit boundary — behavioral decorrelation across
+providers marked `independent_third_party` is out of scope for this spec.
+Gap raised by AlgoVoi (chopmob-cloud) in A2A discussion#1734. No preimage or
+hash changes; documentation only. See
+[Decorrelation is out of scope, by design](#decorrelation-is-out-of-scope-by-design).
+
 ## Motivation
 
 Two byte-identical records — same `action_ref`, same `signing_trust_ref` —
@@ -205,6 +211,46 @@ as Rule 3 requiring `executor_id` and a deployer reference both present:
   without a paired `execution_commit_ts`, MUST be rejected — the phase
   claim cannot be checked, and an unverifiable claim is treated as false,
   not passed through.
+
+## Decorrelation is out of scope, by design
+
+Everything above — Rule 3's three legs, the `capturer_id`/`executor_id`/`deployer_id`/
+`signer_id` distinctness checks — verifies independence **structurally**: are the parties
+different identities, holding different keys, under different custody. Raised by AlgoVoi
+(chopmob-cloud) in the `kenneives` CTEF matrix thread
+([A2A discussion#1734](https://github.com/a2aproject/A2A/discussions/1734), 2026-08-04):
+structural distinctness does not rule out two providers running the same canonicalization
+engine or library underneath, undeclared. That is invisible to any check over identities
+and keys — it can only surface **behaviorally**, by running the same adversarial input
+against every provider marked `independent_third_party` and checking whether they diverge
+at the edges. Convergence on every hostile input, regardless of what the key/custody
+records say, is evidence of a shared engine, not of independence.
+
+A second, inverse failure mode applies to the same gap: N providers can be genuinely
+independent by every structural check above and still share the same blind spot — the
+same canonicalization edge case, the same unhandled input shape — so that unanimity across
+independent providers gets read as corroboration when it is really N independent
+implementations of one common oversight. A composite score built only from provider
+agreement cannot distinguish the two; it needs at least one check that depends on no
+provider's mechanism at all (e.g. recomputing a claim by hand from raw bytes) before
+treating unanimity as confirmation rather than a shared blind spot.
+
+Both are real gaps in the eye of a verifier consuming a `custody_ref` today. Neither is
+addressed by this spec, and neither has to be for `custody_ref` to do its job:
+**`custody_ref` asserts identity separation, not behavioral independence.** A
+decorrelation check — an adversarial input corpus, a divergence measurement across
+providers, a rule for how much convergence is too much — is a different kind of primitive,
+built on top of a set of providers that custody-ref has already told you are structurally
+distinct. Folding it into `custody-ref`'s preimage would conflate two different claims
+under one hash, the same reasoning that already keeps `boundary_ref` and `capture_phase`
+as siblings rather than preimage members. If a decorrelation-check primitive is designed,
+it belongs as its own sibling ref alongside `custody_ref`, not inside it — same shape as
+`guarantee-model.md`'s treatment of reliance policy: this spec preserves and checks a fact,
+it does not decide what further checks a consumer must run before trusting the aggregate.
+
+Not implemented as of v1.2. No adversarial corpus, divergence fixtures, or scoring rule
+exist yet in this repo. Tracked here as a named boundary rather than left to be inferred
+from what's missing.
 
 ## Relationship to existing primitives
 
