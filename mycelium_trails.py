@@ -330,18 +330,12 @@ def fail_trail_anchor(db_path: str, trail_id: str, reason: str) -> None:
 
 def set_trail_preimage(db_path: str, trail_id: str, preimage: dict) -> None:
     """Guarda el preimage JCS raw del trail para permitir recomputation independiente del action_ref."""
-    import json as _json
+    from jcs import jcs_dumps
     conn = _connect(db_path)
     try:
-        # RFC 8785 (JCS) sorts object keys by UTF-16 code unit, not Unicode code
-        # point -- Python's json.dumps(sort_keys=True) sorts by code point, which
-        # diverges from JS Array.prototype.sort() (and thus JCS) for any key
-        # outside the BMP (astral code points encode as surrogate pairs).
-        sorted_keys = sorted(preimage.keys(), key=lambda k: k.encode("utf-16-be", "surrogatepass"))
-        ordered = {k: preimage[k] for k in sorted_keys}
         conn.execute(
             "UPDATE trails SET preimage_json = ? WHERE trail_id = ?",
-            (_json.dumps(ordered, sort_keys=False, separators=(",", ":")), trail_id),
+            (jcs_dumps(preimage), trail_id),
         )
     finally:
         conn.close()

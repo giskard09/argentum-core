@@ -13,6 +13,7 @@ import html as _html
 import json, uuid, time, httpx, sqlite3, hmac, hashlib, os
 _started_at = time.time()
 import mycelium_trails
+from jcs import jcs_bytes
 from datetime import datetime, timezone
 from typing import Optional
 from fastapi import FastAPI, HTTPException, Request
@@ -638,7 +639,7 @@ def og_image():
 def _jcs_response(obj: dict) -> Response:
     """Serialize obj as JCS/RFC 8785 canonical JSON (sorted keys, no whitespace)
     so raw bytes served == canonicalized bytes, hash-stable from day one."""
-    body = json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+    body = jcs_bytes(obj, ensure_ascii=False)
     return Response(content=body, media_type="application/json")
 
 @app.get("/.well-known/agent.json")
@@ -1145,7 +1146,7 @@ def _sign_badge(payload: dict) -> str:
     """Sign a badge payload with the Argentum server key. Returns base64 signature."""
     import base64
     from nacl.signing import SigningKey
-    canonical = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    canonical = jcs_bytes(payload)
     sk = SigningKey(base64.b64decode(ARGENTUM_SIGNING_KEY))
     return base64.b64encode(sk.sign(canonical).signature).decode("ascii")
 
@@ -1202,7 +1203,7 @@ def verify_karma_badge(agent_id: str, body: dict):
     if not ARGENTUM_VERIFY_KEY:
         raise HTTPException(status_code=503, detail="verify key not configured")
 
-    canonical = json.dumps(badge, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    canonical = jcs_bytes(badge)
     try:
         vk = VerifyKey(base64.b64decode(ARGENTUM_VERIFY_KEY))
         vk.verify(canonical, base64.b64decode(signature))
@@ -2517,12 +2518,7 @@ def get_trail(trail_id: str):
             try:
                 import json as _json_ap, hashlib as _hs_ap
                 preimage = _json_ap.loads(preimage_raw)
-                # See mycelium_trails.set_trail_preimage: sort by UTF-16 code unit
-                # (JCS/RFC 8785), not Python's default code-point sort.
-                _sorted_keys = sorted(preimage.keys(), key=lambda k: k.encode("utf-16-be", "surrogatepass"))
-                _ordered = {k: preimage[k] for k in _sorted_keys}
-                canonical = _json_ap.dumps(_ordered, sort_keys=False, separators=(",", ":"),
-                                           ensure_ascii=False).encode("utf-8")
+                canonical = jcs_bytes(preimage, ensure_ascii=False)
                 computed_ref = _hs_ap.sha256(canonical).hexdigest()
                 anchor_proof = {
                     "preimage": preimage,
