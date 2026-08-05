@@ -1,0 +1,135 @@
+{
+  "fixture_id": "art12-log-integrity-notes",
+  "version": "v1",
+  "spec": "docs/compliance/regulatory-compliance.md#1-eu-ai-act-art-12",
+  "hash_algo": "sha256",
+  "preimage_format": "jcs-rfc8785-v1",
+  "generated_at": "2026-08-05",
+  "purpose": "Vectors for the verification path left unspecified by EU AI Act Art. 12: whether a party that did not produce a log record can determine that the record was not rewritten before it was read. Art. 12(2) describes three classes of reader who did not produce the log (Art. 79(1) risk identification, Art. 72 post-market monitoring, Art. 26(5) deployer monitoring) and prescribes no mechanism by which any of them gains that confidence. These vectors demonstrate one mechanism. They are NOT Article 12 conformance vectors -- the Article prescribes no technical mechanism, so conformance vectors for it cannot exist.",
+  "not_a_claim": [
+    "Art. 12 does not require tamper-evidence, anchoring, or third-party recomputability.",
+    "Passing these vectors does not make a system compliant with Art. 12 or any part of the AI Act.",
+    "The Art. 12(3) field shape used here applies only to Annex III point 1(a) systems; it is used as an illustration because it is the only place the Article is concrete.",
+    "No transaction hash is asserted: this fixture is anchor-agnostic and its records are synthetic.",
+    "Binding a verifier identifier in the preimage proves the field was not substituted, not that the identifier is truthful."
+  ],
+  "reproduce_in_python": "import hashlib, json\ndef jcs(obj): return json.dumps(dict(sorted(obj.items())), separators=(',',':'), ensure_ascii=False)\nrecord_digest = 'sha256:' + hashlib.sha256(jcs(record).encode()).hexdigest()",
+  "digests": {
+    "base_record": "sha256:358697dddc1126f498d9cca6b7bcc5298e04ba2668405bf2af9998b40d9ec0c8",
+    "tampered_record": "sha256:acc5a8ba9dbcf1daf3b7d9f6cf0cbbef5b2d483324f4ec80e02055c35443e74d",
+    "anchored_digest": "sha256:358697dddc1126f498d9cca6b7bcc5298e04ba2668405bf2af9998b40d9ec0c8"
+  },
+  "vectors": [
+    {
+      "id": "a12-001",
+      "name": "third_party_reader_confirms_unmodified_record",
+      "description": "A reader who did not produce the record (market surveillance authority under Art. 79(1), or a post-market monitoring recipient under Art. 72) holds the log record and the externally anchored digest. It recomputes SHA-256(JCS(record)) and finds a match. No operator key and no operator infrastructure are used. Result: PASS.",
+      "record": {
+        "use_start": "2026-08-03T09:14:22.480Z",
+        "use_end": "2026-08-03T09:14:23.115Z",
+        "reference_database": "synthetic-watchlist-v7",
+        "matched_input_ref": "sha256:0f3a1c77c4a1b5f7e2d9a04b8c6e1f35d27b90aa4e6c8137fb52d0e9a7c41b68",
+        "human_verifier_ref": "did:example:verifier-4471",
+        "risk_event_class": "match_confirmed_by_human",
+        "action_ref": "sha256:9752a870dac7100010453be9494ec631c78fd55bb7cb41355cf03592da3862ce"
+      },
+      "anchored_digest": "sha256:358697dddc1126f498d9cca6b7bcc5298e04ba2668405bf2af9998b40d9ec0c8",
+      "expected_result": "PASS"
+    },
+    {
+      "id": "a12-002",
+      "name": "human_verifier_bound_in_preimage",
+      "description": "Art. 12(3)(d) requires identifying the natural person involved in verification. Because human_verifier_ref is inside the hashed preimage, substituting the verifier after the fact changes the digest. This vector asserts only that the field is bound -- it does NOT assert that the identifier is truthful. Binding is not identity assurance.",
+      "record": {
+        "use_start": "2026-08-03T09:14:22.480Z",
+        "use_end": "2026-08-03T09:14:23.115Z",
+        "reference_database": "synthetic-watchlist-v7",
+        "matched_input_ref": "sha256:0f3a1c77c4a1b5f7e2d9a04b8c6e1f35d27b90aa4e6c8137fb52d0e9a7c41b68",
+        "human_verifier_ref": "did:example:verifier-4471",
+        "risk_event_class": "match_confirmed_by_human",
+        "action_ref": "sha256:9752a870dac7100010453be9494ec631c78fd55bb7cb41355cf03592da3862ce"
+      },
+      "anchored_digest": "sha256:358697dddc1126f498d9cca6b7bcc5298e04ba2668405bf2af9998b40d9ec0c8",
+      "field_under_test": "human_verifier_ref",
+      "expected_result": "PASS"
+    },
+    {
+      "id": "a12-003",
+      "name": "record_edited_after_anchor_is_detected",
+      "description": "use_end is moved 6.8 s later to make the human verification window appear compliant. Nothing else changes. The reader recomputes and diverges from the anchored digest. Result: FAIL.",
+      "record": {
+        "use_start": "2026-08-03T09:14:22.480Z",
+        "use_end": "2026-08-03T09:14:29.900Z",
+        "reference_database": "synthetic-watchlist-v7",
+        "matched_input_ref": "sha256:0f3a1c77c4a1b5f7e2d9a04b8c6e1f35d27b90aa4e6c8137fb52d0e9a7c41b68",
+        "human_verifier_ref": "did:example:verifier-4471",
+        "risk_event_class": "match_confirmed_by_human",
+        "action_ref": "sha256:9752a870dac7100010453be9494ec631c78fd55bb7cb41355cf03592da3862ce"
+      },
+      "anchored_digest": "sha256:358697dddc1126f498d9cca6b7bcc5298e04ba2668405bf2af9998b40d9ec0c8",
+      "expected_result": "FAIL",
+      "expected_error_code": "RECORD_MODIFIED_AFTER_ANCHOR"
+    },
+    {
+      "id": "a12-004",
+      "name": "valid_operator_signature_does_not_rescue_a_modified_record",
+      "description": "The operator re-signs the modified record with a key that validates correctly. A verifier checking only the signature accepts it. A verifier recomputing against the external anchor still rejects it. This is the vector that distinguishes operator-signed receipts from operator-independent evidence: the signature attests that someone holding the operator key asserted the record, not that the record is the one that existed at the time of the event.",
+      "record": {
+        "use_start": "2026-08-03T09:14:22.480Z",
+        "use_end": "2026-08-03T09:14:29.900Z",
+        "reference_database": "synthetic-watchlist-v7",
+        "matched_input_ref": "sha256:0f3a1c77c4a1b5f7e2d9a04b8c6e1f35d27b90aa4e6c8137fb52d0e9a7c41b68",
+        "human_verifier_ref": "did:example:verifier-4471",
+        "risk_event_class": "match_confirmed_by_human",
+        "action_ref": "sha256:9752a870dac7100010453be9494ec631c78fd55bb7cb41355cf03592da3862ce"
+      },
+      "operator_signature": "ed25519:synthetic-signature-valid-under-operator-key",
+      "operator_signature_validates": true,
+      "anchored_digest": "sha256:358697dddc1126f498d9cca6b7bcc5298e04ba2668405bf2af9998b40d9ec0c8",
+      "expected_result": "FAIL",
+      "expected_error_code": "RECORD_MODIFIED_AFTER_ANCHOR"
+    },
+    {
+      "id": "a12-005",
+      "name": "verifier_without_operator_key_or_access_reaches_a_verdict",
+      "description": "Same inputs as a12-001, asserted as a capability rather than a value: the verifier is given only the record and the anchored digest -- no operator public key, no API credential, no access to operator infrastructure -- and still reaches a determinate verdict. This is the property Art. 12(2) implies for its three classes of reader and does not specify how to obtain.",
+      "record": {
+        "use_start": "2026-08-03T09:14:22.480Z",
+        "use_end": "2026-08-03T09:14:23.115Z",
+        "reference_database": "synthetic-watchlist-v7",
+        "matched_input_ref": "sha256:0f3a1c77c4a1b5f7e2d9a04b8c6e1f35d27b90aa4e6c8137fb52d0e9a7c41b68",
+        "human_verifier_ref": "did:example:verifier-4471",
+        "risk_event_class": "match_confirmed_by_human",
+        "action_ref": "sha256:9752a870dac7100010453be9494ec631c78fd55bb7cb41355cf03592da3862ce"
+      },
+      "anchored_digest": "sha256:358697dddc1126f498d9cca6b7bcc5298e04ba2668405bf2af9998b40d9ec0c8",
+      "verifier_inputs": [
+        "record",
+        "anchored_digest"
+      ],
+      "verifier_inputs_denied": [
+        "operator_public_key",
+        "operator_api_credential",
+        "operator_infrastructure_access"
+      ],
+      "expected_result": "PASS"
+    },
+    {
+      "id": "a12-006",
+      "name": "out_of_profile_domain_is_rejected_before_comparison",
+      "description": "human_verifier_ref carries a non-ASCII character, outside the profile domain declared in docs/spec/action-ref.md. The verifier must stop with OUT_OF_PROFILE_DOMAIN before any digest comparison -- it must not canonicalise on a best-effort basis and must not fall back to another implementation's string handling. One pinned behaviour per profile.",
+      "record": {
+        "use_start": "2026-08-03T09:14:22.480Z",
+        "use_end": "2026-08-03T09:14:23.115Z",
+        "reference_database": "synthetic-watchlist-v7",
+        "matched_input_ref": "sha256:0f3a1c77c4a1b5f7e2d9a04b8c6e1f35d27b90aa4e6c8137fb52d0e9a7c41b68",
+        "human_verifier_ref": "did:example:verificador-Ñ4471",
+        "risk_event_class": "match_confirmed_by_human",
+        "action_ref": "sha256:9752a870dac7100010453be9494ec631c78fd55bb7cb41355cf03592da3862ce"
+      },
+      "anchored_digest": "sha256:358697dddc1126f498d9cca6b7bcc5298e04ba2668405bf2af9998b40d9ec0c8",
+      "expected_result": "FAIL",
+      "expected_error_code": "OUT_OF_PROFILE_DOMAIN"
+    }
+  ]
+}
