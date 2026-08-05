@@ -24,6 +24,13 @@ Gap raised by AlgoVoi (chopmob-cloud) in A2A discussion#1734. No preimage or
 hash changes; documentation only. See
 [Decorrelation is out of scope, by design](#decorrelation-is-out-of-scope-by-design).
 
+**2026-08-05:** named a third, distinct independence property — independence
+of the whole composed system from any provider's mechanism, not just among
+providers — and the L2-sequencer-vs-Bitcoin-PoW limit this implies for
+`AnchorRegistry`. Raised by babyblueviper1 in the same A2A discussion#1734
+thread. No preimage or hash changes; documentation only. See
+[A third property: independence from the composed system itself](#a-third-property-independence-from-the-composed-system-itself).
+
 ## Motivation
 
 Two byte-identical records — same `action_ref`, same `signing_trust_ref` —
@@ -251,6 +258,38 @@ it does not decide what further checks a consumer must run before trusting the a
 Not implemented as of v1.2. No adversarial corpus, divergence fixtures, or scoring rule
 exist yet in this repo. Tracked here as a named boundary rather than left to be inferred
 from what's missing.
+
+## A third property: independence from the composed system itself
+
+The two properties above — structural (Rule 3) and behavioral (decorrelation) — both
+check independence **among** the providers in a set. babyblueviper1 named a distinct third
+property in the same thread: independence **of the whole composed system**, i.e. an anchor
+that depends on no mechanism internal to the set of providers being checked at all. Her own
+example: an OpenTimestamps→Bitcoin anchor. Bitcoin's proof-of-work cannot share this
+system's blind spots because it doesn't derive from anything this system controls,
+configures, or could quietly influence — not the providers' keys, not their
+canonicalization code, not their choice of adversarial corpus.
+
+This is a different axis than the first two, not a stronger version of either. A set of
+providers can pass Rule 3 (distinct keys) and a decorrelation check (diverge on hostile
+inputs) while every one of them still ultimately settles against infrastructure this
+system's own operator influences. Structural and behavioral independence describe the
+relationships *among* the providers; this third property describes the relationship
+*between the whole set and whatever it ultimately anchors to*.
+
+**An uncomfortable fact worth stating plainly, not leaving implicit:** `AnchorRegistry`
+anchors on Base, Arbitrum One, and Ink — three OP-stack rollups, each with a centralized
+sequencer (Offchain Labs for Arbitrum, Coinbase for Base, Ink's own team for Ink), not
+Bitcoin-style decentralized proof-of-work. `AnchorRegistry` itself is permissionless and
+ownerless as a contract — anyone can call `anchor()`, no admin key controls it — but the
+settlement layer underneath is not independent of a small number of identifiable
+sequencer operators the way Bitcoin's PoW is independent of any single miner or pool.
+Permissionless-at-the-contract-layer and independent-of-the-composed-system are two
+different claims; this spec has only ever made the first one. This is a real limit, not a
+defect to be patched — anchoring to Bitcoin instead is a legitimate design choice with its
+own tradeoffs (cost, latency, no native smart-contract layer to hold the registry logic
+itself), not a strictly better substitute. Naming the limit here is what keeps
+"permissionless" from being read as a broader claim than this spec actually makes.
 
 ## Relationship to existing primitives
 
