@@ -16,8 +16,9 @@ named the old profile_id remains verifiable exactly as it always was.
 """
 
 import hashlib
-import json
 import pathlib
+
+from jcs import jcs_bytes
 
 _PROFILES_DIR = pathlib.Path(__file__).parent
 
@@ -41,7 +42,7 @@ _cache: dict[str, dict] = {}
 
 
 def _jcs(obj: dict) -> bytes:
-    return json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+    return jcs_bytes(obj, ensure_ascii=False)
 
 
 def resolve(profile_id: str) -> dict | None:

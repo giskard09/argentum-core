@@ -10,7 +10,6 @@ Cadena de confianza:
 Sin firma o firma inválida → karma_discount devuelve base_price. Opt-in, no rompe clientes viejos.
 """
 import base64
-import json
 import threading
 import time
 from typing import Optional
@@ -19,6 +18,8 @@ import httpx
 from nacl.exceptions import BadSignatureError
 from nacl.signing import SigningKey, VerifyKey
 
+from jcs import jcs_bytes
+
 MARKS_URL = "http://localhost:8015"
 SIGNATURE_TTL_SECONDS = 60
 NONCE_CACHE_MAX = 10_000
@@ -26,11 +27,7 @@ NONCE_CACHE_MAX = 10_000
 
 def build_payload(agent_id: str, timestamp: int, nonce: str) -> bytes:
     """Canonical payload bytes for signing/verification."""
-    return json.dumps(
-        {"agent_id": agent_id, "timestamp": int(timestamp), "nonce": nonce},
-        sort_keys=True,
-        separators=(",", ":"),
-    ).encode("utf-8")
+    return jcs_bytes({"agent_id": agent_id, "timestamp": int(timestamp), "nonce": nonce})
 
 
 def sign_request(signing_key_b64: str, agent_id: str, timestamp: int, nonce: str) -> str:
