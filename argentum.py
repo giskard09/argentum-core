@@ -2263,20 +2263,23 @@ def trails_dashboard(client: Optional[str] = None, limit: int = 50, show_interna
     conn = mycelium_trails._connect(TRAILS_DB)
     if client:
         rows = conn.execute(
-            "SELECT trail_id, agent_id, service, operation, scope, timestamp, action_ref, success, origin, tx_hash "
+            "SELECT trail_id, agent_id, service, operation, scope, timestamp, action_ref, success, origin, "
+            "tx_hash, anchor_status, anchor_fail_reason "
             "FROM trails WHERE (agent_id = ? OR service = ?) "
             "ORDER BY timestamp DESC LIMIT ?",
             (client, client, min(limit, 200)),
         ).fetchall()
     elif show_internal:
         rows = conn.execute(
-            "SELECT trail_id, agent_id, service, operation, scope, timestamp, action_ref, success, origin, tx_hash "
+            "SELECT trail_id, agent_id, service, operation, scope, timestamp, action_ref, success, origin, "
+            "tx_hash, anchor_status, anchor_fail_reason "
             "FROM trails ORDER BY timestamp DESC LIMIT ?",
             (min(limit, 200),),
         ).fetchall()
     else:
         rows = conn.execute(
-            "SELECT trail_id, agent_id, service, operation, scope, timestamp, action_ref, success, origin, tx_hash "
+            "SELECT trail_id, agent_id, service, operation, scope, timestamp, action_ref, success, origin, "
+            "tx_hash, anchor_status, anchor_fail_reason "
             "FROM trails WHERE origin != 'pioneer' "
             "ORDER BY timestamp DESC LIMIT ?",
             (min(limit, 200),),
@@ -2304,11 +2307,26 @@ def trails_dashboard(client: Optional[str] = None, limit: int = 50, show_interna
         else:
             origin_badge = '<span class="badge-internal" title="Trail interno — generado por el sistema">internal</span>'
         tx_hash_val = r["tx_hash"] if "tx_hash" in r.keys() else None
-        if tx_hash_val:
+        anchor_status_val = r["anchor_status"] if "anchor_status" in r.keys() else None
+        anchor_fail_reason_val = r["anchor_fail_reason"] if "anchor_fail_reason" in r.keys() else None
+        if not tx_hash_val:
+            # No tx broadcast yet.
+            anchor_cell = '<span class="anchor-pending">pending</span>'
+        elif anchor_status_val == "anchored":
+            # tx_hash's qualifier (anchor_status) travels with it, not just the raw hash —
+            # state-provenance-travels-with-value: only render the "confirmed" link once
+            # the poller has actually classified the receipt, not merely because a
+            # tx_hash string exists (see mycelium_trails.set_trail_tx_hash vs
+            # confirm_trail_anchor/fail_trail_anchor).
             tx_short = tx_hash_val[:10] + "…" + tx_hash_val[-6:]
             anchor_cell = f'<a class="anchor-link" href="https://arbiscan.io/tx/{e(tx_hash_val, quote=True)}" target="_blank" rel="noopener noreferrer" title="{e(tx_hash_val, quote=True)}">{e(tx_short)} ↗</a>'
+        elif anchor_status_val == "failed":
+            reason = anchor_fail_reason_val or "unknown"
+            anchor_cell = f'<span class="anchor-failed" title="{e(tx_hash_val, quote=True)}">failed: {e(reason)}</span>'
         else:
-            anchor_cell = '<span class="anchor-pending">pending</span>'
+            # anchor_status is 'submitted', null, or any other unresolved value —
+            # tx broadcast but not yet classified anchored/failed by the poller.
+            anchor_cell = '<span class="anchor-pending">pending confirmation</span>'
         rows_html += f"""<tr>
           <td class="mono dim">{e(r["trail_id"] or "")[:8]}</td>
           <td>{e(r["agent_id"])}</td>
@@ -2375,6 +2393,7 @@ def trails_dashboard(client: Optional[str] = None, limit: int = 50, show_interna
   .anchor-link{{color:#60a5fa;font-family:'JetBrains Mono','Fira Code',monospace;font-size:.75rem;text-decoration:none}}
   .anchor-link:hover{{text-decoration:underline}}
   .anchor-pending{{color:#475569;font-size:.75rem}}
+  .anchor-failed{{color:#f87171;font-size:.75rem;font-weight:600}}
 </style>
 </head>
 <body>
