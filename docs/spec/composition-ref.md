@@ -119,6 +119,8 @@ The `composition_key` is client-generated. Without it, recomposing the same acti
 | `"cache"` | Key was retrieved from a local or in-process cache. Resolution occurred before the hot path; a stale-key window exists between cache population and use. |
 | `"resolver"` | Key was fetched from a remote resolver at verification time. An allowlist profile is required to constrain the resolver endpoint; `key_source` in the signed artifact makes the resolution method auditable across the record's lifetime. |
 
+The `inline`/`cache`/`resolver` taxonomy originates from [kenneives' comment on a2aproject/A2A#1829](https://github.com/a2aproject/A2A/issues/1829#issuecomment-4664428614) (2026-06-09). This spec formalizes it as a signed, hash-relevant field with its own preimage, `key_origin_proof`, and `cache_parent_ref` extensions.
+
 When `key_source = "inline"` the self-certifying path holds end-to-end: the verifier needs no network access and the artifact is fully self-describing. For `"cache"` and `"resolver"`, the audit trail produced by `composition_ref` makes the trust posture explicit — the same `action_ref` with a different `key_source` represents a meaningfully different verification claim.
 
 ---
