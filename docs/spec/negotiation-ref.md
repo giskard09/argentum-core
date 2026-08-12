@@ -68,6 +68,46 @@ Mycelium stores `negotiation_ref` verbatim as a `TEXT` field. The system applies
 
 ---
 
+## Pattern: `policy_commitment` for policy/rubric-based artifacts
+
+**2026-08-12:** documented after reviewing babyblueviper1's ERC-8299 reference
+implementation (`ethereum/ERCs#1810`), which found that a bare `policy_version`
+string (e.g. `"invinoveritas.review.v9"`) is a label, not a pin — a verifier has
+to trust the producer's later account of what that version meant, since the
+string itself isn't recomputable against anything.
+
+`negotiation_ref` already avoids this class of gap by construction: it hashes
+whatever `negotiation_artifact` object is supplied, with no schema imposed, so
+nothing stops a producer from including a recomputable commitment instead of a
+bare label. This section makes that pattern explicit rather than leaving it
+implicit in "any JSON object."
+
+When `negotiation_artifact` represents a policy- or rubric-based authorization
+(as opposed to a simple capability-grant), include a `policy_commitment` field
+alongside — not replacing — `policy_version`:
+
+```python
+policy_commitment = SHA256(JCS({
+    "policy_version":          "<string>",
+    "rubric_sha256":           "<sha256 hex of the rubric text>",
+    "conformance_suite_repo":  "<string>",
+    "conformance_suite_commit": "<string>",
+}))
+```
+
+`policy_version` stays useful as a human-readable label. `policy_commitment` is
+what a stranger actually recomputes: fetch the rubric text and conformance
+vectors at the pinned commit, hash them the same way, and confirm the producer's
+later claim about what the policy said at that version is the same thing they
+committed to at negotiation time — independent of the producer's word.
+
+This is documentation only. No change to the derivation, no new required field,
+no effect on any existing `negotiation_ref` hash — a `negotiation_artifact`
+without `policy_commitment` remains fully conformant; the field is a recommended
+convention for a specific artifact shape, not a spec requirement.
+
+---
+
 ## Position in the envelope
 
 ```json
