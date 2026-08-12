@@ -2,7 +2,7 @@
 
 Near-miss conformance vectors for the `action_ref` spec. Each vector represents a failure mode that a verifier **MUST** reject (fail-closed). An implementation that returns the correct `expected_error_code` for each input satisfies the near-miss boundary of `action-ref-v1`.
 
-**Source:** [`agentgraph-co/agentgraph`](https://github.com/agentgraph-co/agentgraph) @ commit `a07cdf8`  
+**Source:** [`AgentAvow/AgentAvow`](https://github.com/AgentAvow/AgentAvow) @ commit `a07cdf8`  
 **Published at:** `https://agentgraph.co/.well-known/action-ref-near-miss-vectors.json`  
 **Spec:** `draft-giskard-aeoess-action-ref`  
 **Canonicalization:** RFC 8785 (JCS)
@@ -44,4 +44,4 @@ Run `python3 verify.py` to validate all five vectors.
 
 ## Attribution
 
-Vectors authored by [agentgraph-co/agentgraph](https://github.com/agentgraph-co/agentgraph), incorporated per [A2A discussion #1734](https://github.com/a2aproject/A2A/discussions/1734#discussioncomment-17124409).
+Vectors authored by [AgentAvow/AgentAvow](https://github.com/AgentAvow/AgentAvow) (ex-AgentGraph), incorporated per [A2A discussion #1734](https://github.com/a2aproject/A2A/discussions/1734#discussioncomment-17124409).

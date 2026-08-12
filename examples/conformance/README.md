@@ -8,7 +8,7 @@ This directory contains conformance fixtures for the action-ref-v1 spec and Myce
 4. **negative fixtures** — cases that MUST fail validation: missing required field, tampered hash.
 5. **CTEF vectors** — cross-extension matrix fixtures for `urn:mycelium:trail` (CTEF v0.3.3 row #2).
 6. **memory provenance** — `action_type: "memory_write"` + `scope: <memory_key>` pattern for content-addressed receipts per write. Covers OWASP ASI06 gap class #2. See commit [de7dd7e](https://github.com/giskard09/argentum-core/commit/de7dd7e0c09365f465d2c14c62817b1d19e4adef) and `docs/spec/action-ref.md` (memory provenance section).
-7. **near-miss vectors** — failure-mode boundary fixtures (`AMBIGUOUS_ISSUER_BINDING`, `RESCOPED_REPLAY`, `SEMANTIC_DRIFT`). Source: [agentgraph-co/agentgraph](https://github.com/agentgraph-co/agentgraph) @ `a07cdf8`.
+7. **near-miss vectors** — failure-mode boundary fixtures (`AMBIGUOUS_ISSUER_BINDING`, `RESCOPED_REPLAY`, `SEMANTIC_DRIFT`). Source: [AgentAvow/AgentAvow](https://github.com/AgentAvow/AgentAvow) @ `a07cdf8`.
 8. **recompute-drift vectors** - recomputation-property fixtures: 5 positive baselines (basic, unicode, empty scope, `.000` / `.999` millisecond edges) plus 9 negatives across four drift families (field order, timestamp form, casing, payload). Standalone stdlib runner included. See [`recompute-drift-v1/`](./recompute-drift-v1/).
 
 ---
@@ -192,7 +192,7 @@ No authentication required.
 
 ## Cross-references
 
-- CTEF v0.3.3 working doc: `agentgraph-co/agentgraph/docs/standards/v0.3.3-working-doc.md` (branch: `v0.3.3-cross-extension-matrix`)
+- CTEF v0.3.3 working doc: `AgentAvow/AgentAvow/docs/standards/v0.3.3-working-doc.md` (branch: `v0.3.3-cross-extension-matrix`)
 - Full TrailRecord schema: [`docs/MYCELIUM_TRAILS_REFERENCE.md`](../../docs/MYCELIUM_TRAILS_REFERENCE.md)
 - action_ref derivation spec: [`docs/spec/action-ref.md`](../../docs/spec/action-ref.md)
 - CTEF canonical anchor: [`cte-test-vectors.json`](https://agentgraph.co/.well-known/cte-test-vectors.json) (agentgraph-co/agentgraph, v0.3.1)

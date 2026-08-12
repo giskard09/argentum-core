@@ -80,7 +80,7 @@ The same `action_ref` is independently computable from:
 | SafeAgent `/claim` (azender1) | [azender1/SafeAgent](https://github.com/azender1/SafeAgent) — joint spec [argentum-core#7](https://github.com/giskard09/argentum-core/issues/7) |
 | Nobulex covenant receipt (arian-gogani) | [MetaGPT#1991](https://github.com/geekan/MetaGPT/issues/1991) |
 | NEXUS oracle receipt (RileyCraig14) | [nexus-agent-xa12.onrender.com/receipt](https://nexus-agent-xa12.onrender.com/receipt) |
-| CTEF v0.3.3 matrix row #2 | [kenneives/agentgraph PR #20](https://github.com/kenneives/agentgraph/pull/20) — `urn:mycelium:trail`, 3 vectors byte-matched |
+| CTEF v0.3.3 matrix row #2 | [kenneives/AgentAvow PR #20](https://github.com/kenneives/AgentAvow/pull/20) — `urn:mycelium:trail`, 3 vectors byte-matched |
 
 Any verifier holding one artifact can validate against another without trusting either
 system.

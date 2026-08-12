@@ -27,7 +27,7 @@ explicitly declined to integrate. See MOAT.txt / RETROSPECTIVA.txt for the full 
 
 **Contact:** [kenneives](https://github.com/kenneives)
 **Use case:** `urn:mycelium:trail` confirmed as official namespace in CTEF v0.3.3, `custody-ref-v1.2` adopted as their own reference implementation. REQUIRED as of CTEF v0.4.
-**Evidence:** [agentgraph-co/agentgraph PR #20](https://github.com/agentgraph-co/agentgraph/pull/20) — 3 conformance vectors, byte-match.
+**Evidence:** [AgentAvow/AgentAvow PR #20](https://github.com/AgentAvow/AgentAvow/pull/20) — 3 conformance vectors, byte-match.
 **Status:** Merged 2026-07-23.
 
 ### Agent Passport System (APS)
