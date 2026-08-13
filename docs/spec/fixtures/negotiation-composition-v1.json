@@ -58,6 +58,29 @@
         "tx_hash": "Real Base mainnet anchor (pioneer-agent-001 Oasis payment 2026-04-13). Used as canonical tx_hash reference across fixtures.",
         "expires_at": "Grant expires 2026-05-27 — within the CTEF synthesis window, intentional."
       }
+    },
+    {
+      "id": "negotiation-002-tampered-expires-at-reject",
+      "expect": "reject",
+      "based_on": "negotiation-001-capability-grant",
+      "tampered_field": "expires_at",
+      "description": "MUST-FAIL vector: identical negotiation_artifact to negotiation-001-capability-grant except expires_at advanced by one day (simulates a post-grant tamper). Proves negotiation_ref is load-bearing, not decorative — a single-field mutation MUST produce a negotiation_ref that differs from the original, never a collision.",
+      "negotiation_artifact": {
+        "capability": "delegation.execute",
+        "expires_at": "2026-05-28T00:00:00.000Z",
+        "grantee": "pioneer-agent-001",
+        "grantor": "giskard-self",
+        "scope": "mycelium:delegation",
+        "version": "negotiation-ref-v1"
+      },
+      "artifact_jcs_payload": "{\"capability\":\"delegation.execute\",\"expires_at\":\"2026-05-28T00:00:00.000Z\",\"grantee\":\"pioneer-agent-001\",\"grantor\":\"giskard-self\",\"scope\":\"mycelium:delegation\",\"version\":\"negotiation-ref-v1\"}",
+      "artifact_canonical_bytes_hex": "7b226361706162696c697479223a2264656c65676174696f6e2e65786563757465222c22657870697265735f6174223a22323032362d30352d32385430303a30303a30302e3030305a222c226772616e746565223a2270696f6e6565722d6167656e742d303031222c226772616e746f72223a226769736b6172642d73656c66222c2273636f7065223a226d7963656c69756d3a64656c65676174696f6e222c2276657273696f6e223a226e65676f74696174696f6e2d7265662d7631227d",
+      "negotiation_ref": "ff4e11813fe89aec292804c6d6634a63f5fa88a88d7dd53d9dffb63d8f0d1bf5",
+      "assertion": "negotiation_ref of this vector MUST NOT equal a0e8bc2658eee9266d87d56b205a5f01e5b1ecc445f0693b3bba46cb8764ad52 (negotiation-001-capability-grant's negotiation_ref) — a conformant implementation that produces a collision here is non-conformant regardless of what it does with the positive vector.",
+      "notes": {
+        "credit": "Vector shape suggested by babyblueviper1, ethereum/ERCs#1810 (2026-08-13) — a tampered negotiation_artifact recomputing to a DIFFERENT negotiation_ref, proving the hash is load-bearing.",
+        "why_this_field": "expires_at chosen because it is the field most likely to be silently bumped post-grant in a real integration (extension request handled by mutating the record instead of issuing a new one) — the failure mode this vector guards against is realistic, not synthetic."
+      }
     }
   ]
 }
