@@ -84,10 +84,72 @@ def fork_conflict(position: int, head_x: str, prior_x: str, head_y: str, prior_y
     }
 
 
-def admits(vector: dict) -> bool:
+# Admission has three real outcomes, not two. A vector missing signer.key_id or
+# artifact.actor.payment_signer is genuinely indeterminable -- not the same claim
+# as "the signer is independent" (ADMITTED). Collapsing "can't tell" into the
+# permissive branch is the exact bug shape that produced a real vulnerability in
+# a sibling stack in this domain (BabyBlueViper1's PQ companion-signature check: a
+# retired-but-unanchored key read as "not determined" and "authorized" collapsed
+# to the same True) and, independently, in Merlini's recompute-kit the same night
+# (an environment failure read as "verified false" because the control only
+# checked "exit code != 0", not the exact code). Two independent precedents of
+# the same antipattern in one WG session (trustless-ai: Merlini/BabyBlueViper1/
+# Pavlo) -- this is a shape, not a one-off.
+ADMISSION_ADMITTED = "admitted"
+ADMISSION_REJECTED = "rejected"
+ADMISSION_UNRESOLVED = "unresolved"
+
+
+def _admission_raw_checks(vector: dict) -> tuple[bool, bool, bool]:
+    """Three raw, independently-computed booleans -- kept separate from the
+    state selection below so the mutual-exclusivity check in admission_status()
+    is a real guard against a future edit that makes two of them overlap, not
+    just a comment asserting they can't."""
+    signer = vector.get("signer") or {}
+    actor = (vector.get("artifact") or {}).get("actor") or {}
+    key_id = signer.get("key_id")
+    payment_signer = actor.get("payment_signer")
+
+    is_unresolved = key_id is None or payment_signer is None
+    is_admitted = (not is_unresolved) and key_id != payment_signer
+    is_rejected = (not is_unresolved) and key_id == payment_signer
+    return is_admitted, is_rejected, is_unresolved
+
+
+def _assert_exclusive(is_admitted: bool, is_rejected: bool, is_unresolved: bool) -> None:
+    """Exactly one of the three admission states may hold. Kept as its own
+    function (rather than inlined in admission_status) so it's directly
+    testable against fabricated, impossible combinations -- not only
+    reachable through _admission_raw_checks, which by construction can't
+    currently produce one."""
+    if sum((is_admitted, is_rejected, is_unresolved)) != 1:
+        raise ValueError(
+            "admission_status: impossible combination -- "
+            f"admitted={is_admitted} rejected={is_rejected} unresolved={is_unresolved}"
+        )
+
+
+def admission_status(vector: dict) -> str:
     """Axis 1: admission. A decision signed by the actor's own payment wallet is
-    self-approval, not an independent verdict -- fail closed regardless of hash validity."""
-    return vector["signer"]["key_id"] != vector["artifact"]["actor"]["payment_signer"]
+    self-approval, not an independent verdict -- fail closed regardless of hash
+    validity. A decision where the signer or payment_signer is missing entirely
+    is neither of those claims -- it's unresolved, and unresolved is never the
+    permissive (ADMITTED) default."""
+    is_admitted, is_rejected, is_unresolved = _admission_raw_checks(vector)
+    _assert_exclusive(is_admitted, is_rejected, is_unresolved)
+    if is_admitted:
+        return ADMISSION_ADMITTED
+    if is_rejected:
+        return ADMISSION_REJECTED
+    return ADMISSION_UNRESOLVED
+
+
+def admits(vector: dict) -> bool:
+    """Legacy boolean projection of admission_status(). Defined as a strict
+    equality check, not independent logic, so it structurally cannot diverge
+    from the named field -- there is no code path where this returns True while
+    admission_status(vector) != ADMISSION_ADMITTED."""
+    return admission_status(vector) == ADMISSION_ADMITTED
 
 
 def recomputes(vector: dict) -> bool:
