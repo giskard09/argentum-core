@@ -50,7 +50,12 @@ def test_astral_key_sorts_before_bmp_key_utf16_order(db):
     row = mycelium_trails.get_trail_by_id(db, trail_id)
     stored = row["preimage_json"]
 
-    expected = json.dumps({EMOJI: "b", BMP_HIGH: "a"}, sort_keys=False, separators=(",", ":"))
+    # ensure_ascii=False: RFC 8785 requires literal UTF-8 for non-ASCII
+    # chars, not \uXXXX escapes (the other bug jcs.py fixed, see
+    # test_jcs_rfc8785_a2a_vectors.py::test_c2_non_ascii_literal_utf8).
+    expected = json.dumps(
+        {EMOJI: "b", BMP_HIGH: "a"}, sort_keys=False, separators=(",", ":"), ensure_ascii=False
+    )
     assert stored == expected, f"expected JCS/UTF-16 key order, got: {stored!r}"
 
     wrong_order = json.dumps({BMP_HIGH: "a", EMOJI: "b"}, sort_keys=True, separators=(",", ":"))
