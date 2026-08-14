@@ -517,19 +517,44 @@ def verify_chain(db_path: str, trail_id: str) -> dict:
       (a) cada eslabón tiene signature_ref no nulo (proxy de firma válida)
       (b) delegation_ref es consistente con parent_trail_id donde ambos están presentes
 
-    Retorna: { valid: bool, broken_at: trail_id | None, reason: str | None }
+    negotiation_linkage: distingue en el propio resultado si trail_id declaró un
+    negotiation_ref o no — "absent" (campo null, ninguna afirmación de acuerdo previo)
+    vs "present" (campo seteado; Mycelium no valida el artefacto referenciado, ver
+    negotiation-ref.md invariante 3 — el estado es "presente sin verificar", no "verificado").
+    Sin este campo la distinción vive solo en la spec, no sobrevive a quien lee el resultado.
+
+    Retorna: { valid: bool, broken_at: trail_id | None, reason: str | None,
+               negotiation_linkage: "absent" | "present" | None }
     """
+    target = get_trail_by_id(db_path, trail_id)
+    negotiation_linkage = "present" if (target and target.get("negotiation_ref")) else "absent"
+
     visited = set()
     current_id = trail_id
     while current_id:
         if current_id in visited:
-            return {"valid": False, "broken_at": current_id, "reason": "cycle_detected"}
+            return {
+                "valid": False,
+                "broken_at": current_id,
+                "reason": "cycle_detected",
+                "negotiation_linkage": negotiation_linkage,
+            }
         visited.add(current_id)
         trail = get_trail_by_id(db_path, current_id)
         if trail is None:
-            return {"valid": False, "broken_at": current_id, "reason": "trail_not_found"}
+            return {
+                "valid": False,
+                "broken_at": current_id,
+                "reason": "trail_not_found",
+                "negotiation_linkage": negotiation_linkage,
+            }
         if not trail.get("signature_ref"):
-            return {"valid": False, "broken_at": current_id, "reason": "missing_signature_ref"}
+            return {
+                "valid": False,
+                "broken_at": current_id,
+                "reason": "missing_signature_ref",
+                "negotiation_linkage": negotiation_linkage,
+            }
         # si tiene parent_trail_id y delegation_ref, delegation_ref debe referenciar al parent
         if trail.get("parent_trail_id") and trail.get("delegation_ref"):
             if trail["parent_trail_id"] not in trail["delegation_ref"]:
@@ -537,9 +562,15 @@ def verify_chain(db_path: str, trail_id: str) -> dict:
                     "valid": False,
                     "broken_at": current_id,
                     "reason": "delegation_ref_parent_mismatch",
+                    "negotiation_linkage": negotiation_linkage,
                 }
         current_id = trail.get("parent_trail_id")
-    return {"valid": True, "broken_at": None, "reason": None}
+    return {
+        "valid": True,
+        "broken_at": None,
+        "reason": None,
+        "negotiation_linkage": negotiation_linkage,
+    }
 
 
 def list_trails_by_service(
