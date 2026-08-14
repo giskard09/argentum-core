@@ -66,6 +66,12 @@ Mycelium stores `negotiation_ref` verbatim as a `TEXT` field. The system applies
 
 `negotiation_ref` is `null` when not supplied. Its presence signals that an upstream agreement exists; its absence makes no claim about whether one exists or not.
 
+**5. the absent/present distinction MUST surface in the verifier's output**
+
+Invariant 4 is a guarantee about the field's semantics, not about what a verifier reports. A verifier implementation MUST expose whether `negotiation_ref` was absent or present as an explicit output field — not leave the distinction implicit in "the key is missing from the JSON" or in operator knowledge of the spec. Reference implementation: `mycelium_trails.verify_chain()` returns `negotiation_linkage: "absent" | "present"`. `"present"` means the field was supplied, not that the referenced artifact was verified — see invariant 3.
+
+(2026-08-14, credit: Henri Sirkkavaara / draft-sirkkavaara-vaara-receipt, scitt@ietf.org thread on draft-fassbender-scitt-time-anchor-03 — the same absent-vs-unverified distinction argued there for time-anchor receipts applies directly to negotiation_ref.)
+
 ---
 
 ## Pattern: `policy_commitment` for policy/rubric-based artifacts
