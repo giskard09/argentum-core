@@ -47,12 +47,21 @@ def _validate_domain(agent_id: str, action_type: str, scope: str, timestamp: str
     - agent_id, action_type, scope: ASCII-only, no surrogate-pair / astral-plane
       characters (ordinal > 0x7F is rejected either way, which subsumes the
       surrogate-pair case).
+    - scope: non-empty. Corrected 2026-08-15 -- action-ref.md previously
+      allowed "" as an explicit "not applicable" exception here, contradicting
+      draft-etcheverry-action-ref-02 §6 ("free-form non-empty string", no
+      exception). The I-D is the public document already committed to; the
+      local spec was wrong and is now aligned to it. See av-007 in
+      examples/conformance/action-ref-v1-domain-negative/ for the reversed
+      conformance vector (previously expect_valid: true).
     - timestamp: exactly `YYYY-MM-DDTHH:MM:SS.mmmZ` — uppercase `T` separator,
       uppercase `Z` suffix, no numeric offset, exactly 3 fractional digits.
     """
     for field_name, value in (("agent_id", agent_id), ("action_type", action_type), ("scope", scope)):
         if not value.isascii():
             raise OutOfProfileDomainError(field_name, "non-ASCII character in field value")
+    if not scope:
+        raise OutOfProfileDomainError("scope", "must be a non-empty string -- no \"not applicable\" exception")
     if not _TIMESTAMP_RE.match(timestamp):
         raise OutOfProfileDomainError(
             "timestamp",

@@ -129,3 +129,26 @@ def test_grammar_gate_still_rejects_malformed_shape():
     with pytest.raises(OutOfProfileDomainError) as exc_info:
         _validate_domain("agent", "action", "scope", "2026-05-15 10:00:00.123Z")  # space not T
     assert exc_info.value.field == "timestamp"
+
+
+# Scope non-empty, self-audit 2026-08-15: action-ref.md previously allowed ""
+# as a "not applicable" exception, contradicting the published
+# draft-etcheverry-action-ref-02 §6 (non-empty, no exception). The local spec
+# was corrected to match the public I-D. See av-007 in
+# examples/conformance/action-ref-v1-domain-negative/ (reversed from
+# expect_valid: true).
+
+def test_empty_scope_rejected():
+    with pytest.raises(OutOfProfileDomainError) as exc_info:
+        _validate_domain("agent", "action", "", "2026-05-15T10:00:00.123Z")
+    assert exc_info.value.field == "scope"
+
+
+def test_empty_scope_rejected_via_compute_action_ref():
+    with pytest.raises(OutOfProfileDomainError) as exc_info:
+        compute_action_ref("agent", "action", "", "2026-05-15T10:00:00.123Z")
+    assert exc_info.value.field == "scope"
+
+
+def test_non_empty_scope_still_accepted():
+    _validate_domain("agent", "action", "trade:execute", "2026-05-15T10:00:00.123Z")  # must not raise

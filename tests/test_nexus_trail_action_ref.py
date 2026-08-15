@@ -52,11 +52,11 @@ def _colon_ref(fields):
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
-def _post(client, action_ref):
+def _post(client, action_ref, preimage=None):
     return client.post("/nexus/trail", json={
         "action_ref": action_ref,
         "service": "test-service",
-        "preimage": _FIELDS,
+        "preimage": preimage if preimage is not None else _FIELDS,
     })
 
 
@@ -93,3 +93,47 @@ def test_arbitrary_garbage_action_ref_rejected(tmp_path):
     _, client = _client(tmp_path)
     r = _post(client, "0" * 64)
     assert r.status_code == 422
+
+
+# Scope non-empty, self-audit 2026-08-15: action-ref.md previously allowed ""
+# as an explicit "not applicable" exception, contradicting the published
+# draft-etcheverry-action-ref-02 §6 ("free-form non-empty string", no
+# exception). action-ref.md was corrected to match the public I-D. Retroactive
+# impact checked before this fix: 0 production trails via /nexus/trail had
+# empty scope.
+
+def test_empty_string_scope_rejected(tmp_path):
+    _, client = _client(tmp_path)
+    fields = dict(_FIELDS, scope="")
+    r = _post(client, _jcs_ref(fields), preimage=fields)
+    assert r.status_code == 422
+    assert r.json()["error"] == "action_ref mismatch"
+    assert "non-empty" in r.json()["detail"]
+
+
+def test_missing_scope_key_rejected(tmp_path):
+    _, client = _client(tmp_path)
+    r = client.post("/nexus/trail", json={
+        "action_ref": _jcs_ref(dict(_FIELDS, scope="")),
+        "service": "test-service",
+        "preimage": {k: v for k, v in _FIELDS.items() if k != "scope"},
+    })
+    assert r.status_code == 422
+
+
+def test_empty_scope_not_silently_stored(tmp_path):
+    argentum, client = _client(tmp_path)
+    fields = dict(_FIELDS, scope="")
+    ref = _jcs_ref(fields)
+    _post(client, ref, preimage=fields)
+
+    import mycelium_trails
+    row = mycelium_trails.get_trail_by_action_ref(argentum.TRAILS_DB, _FIELDS["agent_id"], ref)
+    assert row is None
+
+
+def test_non_empty_scope_still_accepted(tmp_path):
+    """Control inverse -- the fix must not reject legitimate non-empty scopes."""
+    _, client = _client(tmp_path)
+    r = _post(client, _jcs_ref(_FIELDS))  # _FIELDS already has a real scope
+    assert r.status_code == 201

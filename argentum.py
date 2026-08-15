@@ -3135,6 +3135,33 @@ async def nexus_trail(request: Request):
             status_code=400,
         )
 
+    # action-ref.md / draft-etcheverry-action-ref-02 §6: scope is a free-form
+    # NON-EMPTY string, no "not applicable" exception -- corrected 2026-08-15
+    # (the local spec previously allowed "" as an exception, contradicting the
+    # published I-D; the I-D is the public commitment, the local spec was
+    # wrong). Rejected here, before hash comparison, same as any other
+    # OUT_OF_PROFILE_DOMAIN input -- not folded into _validate_domain (used by
+    # the plugins/agt_evidence_anchor worked-example path) because that
+    # validator's timestamp grammar assumes RFC 3339 only, while this
+    # endpoint's own documented contract also accepts epoch-ms strings
+    # (NEXUS packet_version 1.0) -- wiring the full validator in here would
+    # reject real, currently-valid NEXUS timestamps as a side effect of an
+    # unrelated fix. Scope is a self-contained, unambiguous field to check
+    # standalone.
+    if not scope:
+        return JSONResponse(
+            {
+                "error": "action_ref mismatch",
+                "detail": (
+                    "preimage.scope must be a non-empty string. "
+                    "scope captures the terminal executing agent's requested-intent "
+                    "at the point of action; there is no \"not applicable\" value."
+                ),
+                "preimage_fields": ["action_type", "agent_id", "scope", "timestamp"],
+            },
+            status_code=422,
+        )
+
     # Recomputar action_ref para validar integridad del receipt. Un solo camino
     # de derivación válido (JCS, RFC 8785, via jcs.py) -- rechaza explícitamente
     # (422) en vez de aceptar en silencio una derivación no oficial. Hasta
