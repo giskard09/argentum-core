@@ -137,3 +137,75 @@ def test_non_empty_scope_still_accepted(tmp_path):
     _, client = _client(tmp_path)
     r = _post(client, _jcs_ref(_FIELDS))  # _FIELDS already has a real scope
     assert r.status_code == 201
+
+
+# Unified validator, self-audit 2026-08-15: /nexus/trail was never wired to
+# _validate_domain at all (not for ASCII, not for timestamp, not for scope
+# until the point fix) -- the earlier "MEDIUM closed" claims for the
+# timestamp-grammar fix only held for plugins/agt_evidence_anchor, not this
+# endpoint. Fixed by calling the shared validator directly. These tests
+# confirm the endpoint and the validator now agree on the same input.
+
+def test_epoch_ms_timestamp_accepted_end_to_end(tmp_path):
+    _, client = _client(tmp_path)
+    fields = dict(_FIELDS, timestamp="1785179401774")  # real production value
+    r = _post(client, _jcs_ref(fields), preimage=fields)
+    assert r.status_code == 201
+
+
+def test_epoch_seconds_masquerading_as_ms_rejected_end_to_end(tmp_path):
+    """The exact production anomaly (10-digit epoch-seconds) must now 422."""
+    _, client = _client(tmp_path)
+    fields = dict(_FIELDS, timestamp="1782783599")
+    r = _post(client, _jcs_ref(fields), preimage=fields)
+    assert r.status_code == 422
+    assert "OUT_OF_PROFILE_DOMAIN" in r.json()["detail"]
+
+
+def test_impossible_calendar_timestamp_rejected_end_to_end(tmp_path):
+    """Same MEDIUM as the plugin path, now actually enforced in production."""
+    _, client = _client(tmp_path)
+    fields = dict(_FIELDS, timestamp="2026-02-30T25:99:99.000Z")
+    r = _post(client, _jcs_ref(fields), preimage=fields)
+    assert r.status_code == 422
+    assert "OUT_OF_PROFILE_DOMAIN" in r.json()["detail"]
+
+
+def test_non_ascii_field_rejected_end_to_end(tmp_path):
+    """ASCII-only was also never enforced by this endpoint before this fix."""
+    _, client = _client(tmp_path)
+    fields = dict(_FIELDS, scope="scope:звіт")
+    r = _post(client, _jcs_ref(fields), preimage=fields)
+    assert r.status_code == 422
+    assert "OUT_OF_PROFILE_DOMAIN" in r.json()["detail"]
+
+
+@pytest.mark.parametrize("ts", [
+    "1785179401774",              # epoch-ms
+    "2026-05-15T10:00:00.123Z",   # RFC 3339
+])
+def test_endpoint_and_shared_validator_agree_on_valid_input(tmp_path, ts):
+    """Same verdict, both layers -- the whole point of unifying them."""
+    from plugins.agt_evidence_anchor.action_ref import _validate_domain
+    fields = dict(_FIELDS, timestamp=ts)
+    _validate_domain(fields["agent_id"], fields["action_type"], fields["scope"], fields["timestamp"])  # must not raise
+
+    _, client = _client(tmp_path)
+    r = _post(client, _jcs_ref(fields), preimage=fields)
+    assert r.status_code == 201
+
+
+@pytest.mark.parametrize("ts", [
+    "1782783599",                 # epoch-seconds masquerading as ms
+    "2026-02-30T25:99:99.000Z",   # impossible calendar date
+    "not-a-timestamp",
+])
+def test_endpoint_and_shared_validator_agree_on_invalid_input(tmp_path, ts):
+    from plugins.agt_evidence_anchor.action_ref import _validate_domain, OutOfProfileDomainError
+    fields = dict(_FIELDS, timestamp=ts)
+    with pytest.raises(OutOfProfileDomainError):
+        _validate_domain(fields["agent_id"], fields["action_type"], fields["scope"], fields["timestamp"])
+
+    _, client = _client(tmp_path)
+    r = _post(client, _jcs_ref(fields), preimage=fields)
+    assert r.status_code == 422

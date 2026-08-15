@@ -14,6 +14,7 @@ import json, uuid, time, httpx, sqlite3, hmac, hashlib, os
 _started_at = time.time()
 import mycelium_trails
 from jcs import jcs_bytes
+from plugins.agt_evidence_anchor.action_ref import _validate_domain, OutOfProfileDomainError
 from datetime import datetime, timezone
 from typing import Optional
 from fastapi import FastAPI, HTTPException, Request
@@ -3135,28 +3136,24 @@ async def nexus_trail(request: Request):
             status_code=400,
         )
 
-    # action-ref.md / draft-etcheverry-action-ref-02 §6: scope is a free-form
-    # NON-EMPTY string, no "not applicable" exception -- corrected 2026-08-15
-    # (the local spec previously allowed "" as an exception, contradicting the
-    # published I-D; the I-D is the public commitment, the local spec was
-    # wrong). Rejected here, before hash comparison, same as any other
-    # OUT_OF_PROFILE_DOMAIN input -- not folded into _validate_domain (used by
-    # the plugins/agt_evidence_anchor worked-example path) because that
-    # validator's timestamp grammar assumes RFC 3339 only, while this
-    # endpoint's own documented contract also accepts epoch-ms strings
-    # (NEXUS packet_version 1.0) -- wiring the full validator in here would
-    # reject real, currently-valid NEXUS timestamps as a side effect of an
-    # unrelated fix. Scope is a self-contained, unambiguous field to check
-    # standalone.
-    if not scope:
+    # Un solo validador de dominio real, no una reimplementación paralela.
+    # Self-audit 2026-08-15: hasta este fix, /nexus/trail -- el único caller
+    # de producción real de este esquema -- nunca llamaba a _validate_domain
+    # para NINGÚN campo (ni ASCII, ni timestamp, ni scope). El fix del
+    # timestamp grammar-gate (2026-08-14) y el fix puntual de scope vacío que
+    # siguió solo protegían plugins/agt_evidence_anchor (usado por los worked
+    # examples propios), no este endpoint -- el mismo patrón "reimplementa
+    # aparte y se atrasa" se repitió dos veces la misma noche con el mismo
+    # endpoint. _validate_domain ahora acepta RFC 3339 O epoch-ms (extendido
+    # para esto, ver action_ref.py) -- ya no hace falta una excepción puntual
+    # para el formato NEXUS.
+    try:
+        _validate_domain(agent_id, action_type, scope, str(ts))
+    except OutOfProfileDomainError as e:
         return JSONResponse(
             {
                 "error": "action_ref mismatch",
-                "detail": (
-                    "preimage.scope must be a non-empty string. "
-                    "scope captures the terminal executing agent's requested-intent "
-                    "at the point of action; there is no \"not applicable\" value."
-                ),
+                "detail": f"OUT_OF_PROFILE_DOMAIN: {e.field}: {e.reason}",
                 "preimage_fields": ["action_type", "agent_id", "scope", "timestamp"],
             },
             status_code=422,

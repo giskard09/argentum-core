@@ -12,7 +12,10 @@ JCS (RFC 8785) for a dict with only string values is equivalent to
 json.dumps with sorted keys, no spaces, and UTF-8 encoding. We implement
 it inline to avoid adding an external dependency for this simple case.
 
-timestamp format: "2026-05-15T10:00:00.123Z" (3-digit ms, mandatory Z).
+timestamp format: RFC 3339 UTC, "2026-05-15T10:00:00.123Z" (3-digit ms,
+mandatory Z) -- OR an all-digit epoch-ms string within a plausible range
+(NEXUS packet_version 1.0 wire format). See _validate_domain for the exact
+domain rule; compute_action_ref hashes whichever string form was given.
 """
 
 from __future__ import annotations
@@ -39,6 +42,18 @@ class OutOfProfileDomainError(ValueError):
 
 
 _TIMESTAMP_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$")
+_EPOCH_MS_RE = re.compile(r"^\d+$")
+
+# Sane bound for the epoch-ms branch, self-audit 2026-08-15. Any all-digit
+# string is grammatically an integer, but a value like "1782783599" (10
+# digits -- epoch *seconds*, not ms) interpreted as ms lands on 1970-01-21,
+# not a real agent trail date. Bounding to a plausible operating window turns
+# that into a rejection instead of a silently-accepted nonsense timestamp --
+# same "grammar isn't enough, must denote a real instant" principle as the
+# RFC 3339 calendar check below, applied to the numeric branch. Wide enough
+# to never need touching for the life of this profile.
+_EPOCH_MS_MIN = int(datetime.datetime(2020, 1, 1, tzinfo=datetime.timezone.utc).timestamp() * 1000)
+_EPOCH_MS_MAX = int(datetime.datetime(2100, 1, 1, tzinfo=datetime.timezone.utc).timestamp() * 1000)
 
 
 def _validate_domain(agent_id: str, action_type: str, scope: str, timestamp: str) -> None:
@@ -54,18 +69,47 @@ def _validate_domain(agent_id: str, action_type: str, scope: str, timestamp: str
       local spec was wrong and is now aligned to it. See av-007 in
       examples/conformance/action-ref-v1-domain-negative/ for the reversed
       conformance vector (previously expect_valid: true).
-    - timestamp: exactly `YYYY-MM-DDTHH:MM:SS.mmmZ` — uppercase `T` separator,
-      uppercase `Z` suffix, no numeric offset, exactly 3 fractional digits.
+    - timestamp: EITHER exactly `YYYY-MM-DDTHH:MM:SS.mmmZ` (RFC 3339, uppercase
+      `T`/`Z`, no numeric offset, exactly 3 fractional digits) OR an all-digit
+      string denoting epoch-milliseconds within a plausible range. The
+      epoch-ms form was NEXUS's documented wire format (packet_version 1.0)
+      from day one, but /nexus/trail validated it with its own separate,
+      ad-hoc logic instead of this function -- unified 2026-08-15 so there is
+      one real reference validator, not one "reference" validator plus one
+      the only production caller actually used. Neither format is derivable
+      from a single JCS preimage byte-for-byte differently -- this function
+      just decides ACCEPT/REJECT before hashing; the caller still hashes
+      whatever string was actually provided.
     """
     for field_name, value in (("agent_id", agent_id), ("action_type", action_type), ("scope", scope)):
         if not value.isascii():
             raise OutOfProfileDomainError(field_name, "non-ASCII character in field value")
     if not scope:
         raise OutOfProfileDomainError("scope", "must be a non-empty string -- no \"not applicable\" exception")
+
+    if _EPOCH_MS_RE.match(timestamp):
+        ms = int(timestamp)
+        if not (_EPOCH_MS_MIN <= ms <= _EPOCH_MS_MAX):
+            # ms itself can be large enough that reconstructing a datetime for
+            # the diagnostic overflows (e.g. 17 digits -> year 300000+, past
+            # datetime.MAXYEAR) -- the rejection must not depend on that
+            # succeeding, only the message detail does.
+            try:
+                as_date = str(datetime.datetime.fromtimestamp(ms / 1000, tz=datetime.timezone.utc))
+            except (ValueError, OverflowError, OSError):
+                as_date = "unrepresentable as a datetime -- too far out of range"
+            raise OutOfProfileDomainError(
+                "timestamp",
+                f"all-digit (epoch-ms) but outside the plausible range "
+                f"[{_EPOCH_MS_MIN}, {_EPOCH_MS_MAX}]: {timestamp!r} (as a date: {as_date})",
+            )
+        return
+
     if not _TIMESTAMP_RE.match(timestamp):
         raise OutOfProfileDomainError(
             "timestamp",
-            f"does not match required grammar YYYY-MM-DDTHH:MM:SS.mmmZ: {timestamp!r}",
+            f"does not match either accepted grammar -- RFC 3339 "
+            f"(YYYY-MM-DDTHH:MM:SS.mmmZ) or all-digit epoch-ms: {timestamp!r}",
         )
     # The regex above checks grammar only -- "2026-02-30T25:99:99.000Z" matches
     # it byte-for-byte while denoting no real instant (day 30 doesn't exist in
@@ -116,9 +160,10 @@ def compute_action_ref(
 ) -> str:
     """Derive action_ref from the four canonical fields.
 
-    timestamp must already be in RFC 3339 UTC format with 3-digit ms precision
-    (e.g. "2026-05-15T10:00:00.123Z"). Use format_timestamp() to produce it
-    from a datetime object.
+    timestamp must already be a string, either RFC 3339 UTC with 3-digit ms
+    precision (e.g. "2026-05-15T10:00:00.123Z" -- use format_timestamp() to
+    produce it from a datetime object) or all-digit epoch-ms within a
+    plausible range (NEXUS packet_version 1.0 wire format).
 
     Returns the SHA-256 hex digest (64 lowercase hex characters).
 
