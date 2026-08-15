@@ -145,7 +145,7 @@ public v2 announcement) is tracked outside this spec document — see
 |-------|------|-------------|
 | `agent_id` | string | Stable identifier for the **executing agent at issuance time** — the terminal executor after full delegation resolution. Not the original delegator; not a display label. In a chain A→B→C where C executes the action, `agent_id` is C. |
 | `action_type` | string | What the agent did — semantic label (`code.execute`, `payment.send`, etc.) |
-| `scope` | string | Terminal executing agent's requested-intent scope — what the agent requested to do at the point of action. Free-form string; see [Scope conventions](#scope-conventions). `""` is the sole exception to non-empty — pass it if scope is not applicable to the action. Any other value MUST be non-empty. |
+| `scope` | string | Terminal executing agent's requested-intent scope — what the agent requested to do at the point of action. Free-form non-empty string; see [Scope conventions](#scope-conventions). Any value is valid as long as it is non-empty and consistent across all parties deriving the same `action_ref`. |
 | `timestamp` | string | RFC 3339 UTC with 3-digit millisecond precision. Format: `"2026-05-15T10:00:00.123Z"`. The trailing `Z` is mandatory. |
 
 > **Conversion note:** The W3C CG ai-agent-protocol discussion (issue #34) established epoch-millisecond integer as the application-layer canonical representation for timestamp. The `action_ref` preimage carries an RFC 3339 string, not the integer. Implementations holding epoch-ms integers MUST convert to RFC 3339 UTC with three-digit millisecond precision before hashing. Implementations that hash the epoch-ms integer directly (without conversion) will produce a different digest and are not conformant with this spec.

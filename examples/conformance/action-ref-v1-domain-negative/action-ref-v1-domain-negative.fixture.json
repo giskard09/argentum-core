@@ -83,8 +83,9 @@
     },
     {
       "id": "av-007",
-      "description": "aeoess's own vector id (#35). POSITIVE case, not negative: empty scope (''). action-ref.md's field table said scope is a 'Free-form non-empty string' on the same line as 'Pass \"\" if not applicable' -- a wording conflict, not a real domain violation. Fixed in the spec prose (scope table entry, action-ref.md) to state '' as the explicit sole exception to non-empty. This vector documents that empty scope MUST continue to be accepted -- it is not in the Domain paragraph's rejection list (malformed timestamp, non-ASCII/surrogate-pair values), and no code change was needed for it, only the spec's wording.",
-      "expect_valid": true,
+      "description": "aeoess's own vector id (#35). REVERSED 2026-08-15: the 2026-07-29 fix resolved the field-table wording conflict ('non-empty' vs 'pass \"\" if not applicable') by picking the permissive reading and marking this vector expect_valid: true. That was wrong -- draft-etcheverry-action-ref-02 Section 6 (the public I-D we already committed to) says scope 'is a free-form non-empty string. Any value is valid as long as it is non-empty', no exception. action-ref.md is corrected to match the published I-D (the I-D is the document we compromised externally; the local spec conforms to it, not the reverse). Empty scope is now OUT_OF_PROFILE_DOMAIN, same family as the other vectors in this fixture. Retroactive impact checked before this change: 0 production trails via /nexus/trail had empty scope, so no existing data is affected. NOTE for cross-implementation parity: this reverses the digest aeoess's APS SDK vector av-007 expects (previously matched, cea68656343a06fad083af9a283329af96fcbc6c5fa183229823070fe635641b) -- their published vector still expects ACCEPT on empty scope. This is a known, deliberate divergence pending outreach to aeoess, not an oversight.",
+      "expect_valid": false,
+      "expect_error_field": "scope",
       "preimage": {
         "agent_id": "did:aeoess:example",
         "action_type": "trail.anchor",
