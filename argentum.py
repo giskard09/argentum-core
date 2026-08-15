@@ -3135,40 +3135,38 @@ async def nexus_trail(request: Request):
             status_code=400,
         )
 
-    # Recomputar action_ref para validar integridad del receipt
-    import json as _json2
-    canonical = _json2.dumps(
-        dict(sorted({"agent_id": agent_id, "action_type": action_type,
-                     "scope": scope or "", "timestamp": str(ts)}.items())),
-        separators=(",", ":"),
-        ensure_ascii=False,
-    ).encode("utf-8")
-    expected = hashlib.sha256(canonical).hexdigest()
+    # Recomputar action_ref para validar integridad del receipt. Un solo camino
+    # de derivación válido (JCS, RFC 8785, via jcs.py) -- rechaza explícitamente
+    # (422) en vez de aceptar en silencio una derivación no oficial. Hasta
+    # 2026-08-14 este endpoint también aceptaba un segundo esquema legacy
+    # "colon-separated" (agent_id:action_type:scope:ts) en paralelo -- eso
+    # rompía la garantía de operator-independence de action-ref.md/draft-
+    # etcheverry-action-ref-02 (dos derivaciones distintas "conformantes"
+    # sobre el mismo action_ref). FINDING-001, self-audit 2026-08-14.
+    expected = jcs_bytes(
+        {"agent_id": agent_id, "action_type": action_type, "scope": scope or "", "timestamp": str(ts)}
+    )
+    expected = hashlib.sha256(expected).hexdigest()
 
-    # NEXUS usa preimage_format "agent_id:action_type:scope:ts" (colon-separated)
-    # pero el spec action-ref.md v1.0 usa JCS. Aceptamos ambos durante transición.
     if action_ref != expected:
-        colon_payload = f"{agent_id}:{action_type}:{scope or ''}:{int(ts)}"
-        colon_ref = hashlib.sha256(colon_payload.encode("utf-8")).hexdigest()
-        if action_ref != colon_ref:
-            return JSONResponse(
-                {
-                    "error": "action_ref mismatch",
-                    "detail": (
-                        "Recomputed action_ref does not match the provided value. "
-                        "Preimage must be: {\"action_type\": str, \"agent_id\": str, "
-                        "\"scope\": str, \"timestamp\": str} — JCS order (lexicographic). "
-                        f"Expected (JCS): {expected!r}. "
-                        f"Received: {action_ref!r}. "
-                        "Common causes: timestamp as integer instead of string, "
-                        "extra or missing fields in preimage, wrong field names (use 'timestamp' not 'ts')."
-                    ),
-                    "preimage_fields": ["action_type", "agent_id", "scope", "timestamp"],
-                    "timestamp_format": "string — ISO 8601 or Unix ms as string, e.g. \"1782900000000\"",
-                    "canonical_form": "SHA-256(JCS({action_type, agent_id, scope, timestamp})) — RFC 8785",
-                },
-                status_code=422,
-            )
+        return JSONResponse(
+            {
+                "error": "action_ref mismatch",
+                "detail": (
+                    "Recomputed action_ref does not match the provided value. "
+                    "Preimage must be: {\"action_type\": str, \"agent_id\": str, "
+                    "\"scope\": str, \"timestamp\": str} — JCS order (lexicographic). "
+                    f"Expected (JCS): {expected!r}. "
+                    f"Received: {action_ref!r}. "
+                    "Common causes: timestamp as integer instead of string, "
+                    "extra or missing fields in preimage, wrong field names (use 'timestamp' not 'ts')."
+                ),
+                "preimage_fields": ["action_type", "agent_id", "scope", "timestamp"],
+                "timestamp_format": "string — ISO 8601 or Unix ms as string, e.g. \"1782900000000\"",
+                "canonical_form": "SHA-256(JCS({action_type, agent_id, scope, timestamp})) — RFC 8785",
+            },
+            status_code=422,
+        )
 
     # Consume PAYG credit before hitting Free monthly limit
     payg_account = mycelium_trails.get_payg_account_by_agent(TRAILS_DB, agent_id)

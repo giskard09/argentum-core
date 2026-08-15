@@ -8,7 +8,12 @@ import pytest
 import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../../.."))
 
-from plugins.agt_evidence_anchor.action_ref import compute_action_ref, format_timestamp
+from plugins.agt_evidence_anchor.action_ref import (
+    compute_action_ref,
+    format_timestamp,
+    OutOfProfileDomainError,
+    _validate_domain,
+)
 import datetime
 
 
@@ -86,3 +91,41 @@ def test_format_timestamp_ends_with_Z():
     # ms part is always 3 digits
     ms_part = result.split(".")[1].rstrip("Z")
     assert len(ms_part) == 3
+
+
+# MEDIUM finding, self-audit 2026-08-14: the timestamp grammar-gate (_TIMESTAMP_RE)
+# only checked shape (\d{4}-\d{2}-\d{2}T...) -- "2026-02-30T25:99:99.000Z" matches
+# that regex byte-for-byte while denoting no real instant. A timestamp must denote
+# a real calendar instant, not just have the right grammar.
+
+@pytest.mark.parametrize("bad_timestamp,why", [
+    ("2026-02-30T25:99:99.000Z", "everything out of range at once"),
+    ("2026-02-30T10:00:00.000Z", "Feb 30 doesn't exist in any year"),
+    ("2026-02-29T00:00:00.000Z", "2026 is not a leap year"),
+    ("2026-13-01T00:00:00.000Z", "month 13"),
+    ("2026-04-31T00:00:00.000Z", "April has 30 days"),
+    ("2026-05-15T25:00:00.000Z", "hour 25"),
+    ("2026-05-15T10:60:00.000Z", "minute 60"),
+    ("2026-05-15T10:00:60.000Z", "second 60"),
+])
+def test_grammatically_valid_but_impossible_timestamp_rejected(bad_timestamp, why):
+    with pytest.raises(OutOfProfileDomainError) as exc_info:
+        _validate_domain("agent", "action", "scope", bad_timestamp)
+    assert exc_info.value.field == "timestamp"
+
+
+@pytest.mark.parametrize("good_timestamp", [
+    "2026-05-15T10:00:00.123Z",
+    "2028-02-29T00:00:00.000Z",  # 2028 IS a leap year -- must still be accepted
+    "2026-12-31T23:59:59.999Z",
+    "2026-01-01T00:00:00.000Z",
+])
+def test_real_calendar_instants_still_accepted(good_timestamp):
+    _validate_domain("agent", "action", "scope", good_timestamp)  # must not raise
+
+
+def test_grammar_gate_still_rejects_malformed_shape():
+    # unaffected by this fix -- still caught by _TIMESTAMP_RE before strptime runs
+    with pytest.raises(OutOfProfileDomainError) as exc_info:
+        _validate_domain("agent", "action", "scope", "2026-05-15 10:00:00.123Z")  # space not T
+    assert exc_info.value.field == "timestamp"
