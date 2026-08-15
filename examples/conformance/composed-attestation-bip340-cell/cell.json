@@ -1,0 +1,19 @@
+{
+  "cell_schema": "mycelium.bip340-cell.v1",
+  "preimage": {
+    "schema": "mycelium.bip340-cell.v1",
+    "authority_ref": "v2:a978a3fe6858ac212091304c618f8ce40d024f2b9bb8e26cfaddf73a8812bf76",
+    "co_suite_ref": "trustless-ai/composed-attestation-note#R3",
+    "issued_at": "2026-08-15T00:00:00.000Z"
+  },
+  "preimage_jcs": "{\"authority_ref\":\"v2:a978a3fe6858ac212091304c618f8ce40d024f2b9bb8e26cfaddf73a8812bf76\",\"co_suite_ref\":\"trustless-ai/composed-attestation-note#R3\",\"issued_at\":\"2026-08-15T00:00:00.000Z\",\"schema\":\"mycelium.bip340-cell.v1\"}",
+  "authority_ref_source": "examples/conformance/action-ref-v2/action-ref-v2.fixture.json#arv2-001 (argentum-core) -- same preimage as the worked v1 example published in docs/spec/action-ref.md ('Serialization -- JCS' section)",
+  "signature": {
+    "scheme": "bip340-schnorr-secp256k1",
+    "note": "msg = raw JCS preimage bytes above (variable length, not a pre-hashed 32-byte digest) -- BIP-340's challenge tagged-hash handles arbitrary-length msg internally; see bip340.py docstring.",
+    "pubkey_x_only": "ec16eef2f71d0093c0465f8e29c57d70b247e522b006cddbfa20cf51809bdada",
+    "sig": "2710d60a6d2f0887ad1f375bd10ff6b4ae6c5b600007bffe29a13fb8796a22a57c61eaeed11e165490906710654d8023858b33b533b6ae71797d059875a3d425",
+    "aux_rand": "b7a0a76e3786d0c064841fe98465bcd3f59648de8051a18b5ea5fc483f41d213"
+  },
+  "verify": "recompute preimage_jcs = JCS(preimage) with sort_keys/no-space separators/utf-8; bip340.schnorr_verify(preimage_jcs.encode(), bytes.fromhex(pubkey_x_only), bytes.fromhex(sig)) must be True; preimage.authority_ref must equal, byte-for-byte, the v2 action_ref string emitted by this suite -- drop this cell's signature and the co-suite leg's own signed preimage (which embeds the identical authority_ref string) is what R3 checks fails without it."
+}
