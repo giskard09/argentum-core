@@ -152,3 +152,42 @@ def test_empty_scope_rejected_via_compute_action_ref():
 
 def test_non_empty_scope_still_accepted():
     _validate_domain("agent", "action", "trade:execute", "2026-05-15T10:00:00.123Z")  # must not raise
+
+
+# Unified validator, self-audit 2026-08-15: /nexus/trail is the only real
+# production caller of this validation logic and only ever accepted RFC 3339
+# OR epoch-ms strings (NEXUS packet_version 1.0). _validate_domain now
+# supports both, so /nexus/trail can call the shared validator instead of
+# reimplementing timestamp checking on its own -- the same "reimplements
+# apart and drifts" pattern that caused FINDING-001 and the earlier
+# timestamp-grammar MEDIUM.
+
+@pytest.mark.parametrize("epoch_ms", [
+    "1785179401774",  # real production value (nandana-design-partner-test)
+    "1577836800000",  # exactly _EPOCH_MS_MIN (2020-01-01T00:00:00Z)
+    "4102444799999",  # just inside _EPOCH_MS_MAX (2099-12-31T23:59:59.999Z)
+])
+def test_epoch_ms_within_range_accepted(epoch_ms):
+    _validate_domain("agent", "action", "scope", epoch_ms)  # must not raise
+
+
+@pytest.mark.parametrize("bad_epoch_ms,why", [
+    ("1782783599", "10 digits -- epoch SECONDS, not ms; the real production "
+                    "anomaly this bound was designed to catch (maps to "
+                    "1970-01-21 if misread as ms)"),
+    ("0", "epoch itself, 1970-01-01, before the plausible operating window"),
+    ("9999999999999999", "absurdly far future, outside the upper bound"),
+])
+def test_epoch_ms_outside_range_rejected(bad_epoch_ms, why):
+    with pytest.raises(OutOfProfileDomainError) as exc_info:
+        _validate_domain("agent", "action", "scope", bad_epoch_ms)
+    assert exc_info.value.field == "timestamp"
+
+
+def test_epoch_ms_and_rfc3339_both_accepted_for_compute_action_ref():
+    """Control inverse -- neither format broke the other when both were added."""
+    ref_rfc3339 = compute_action_ref("agent-x", "action", "scope", "2026-05-15T10:00:00.000Z")
+    ref_epoch = compute_action_ref("agent-x", "action", "scope", "1747303200000")
+    assert len(ref_rfc3339) == 64
+    assert len(ref_epoch) == 64
+    assert ref_rfc3339 != ref_epoch  # different preimage strings, different digests, as expected
