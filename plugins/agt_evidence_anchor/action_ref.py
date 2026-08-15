@@ -58,6 +58,21 @@ def _validate_domain(agent_id: str, action_type: str, scope: str, timestamp: str
             "timestamp",
             f"does not match required grammar YYYY-MM-DDTHH:MM:SS.mmmZ: {timestamp!r}",
         )
+    # The regex above checks grammar only -- "2026-02-30T25:99:99.000Z" matches
+    # it byte-for-byte while denoting no real instant (day 30 doesn't exist in
+    # February, hour/minute/second are out of range). MEDIUM finding, self-audit
+    # 2026-08-14: a timestamp must denote a real calendar instant, not just have
+    # the right shape. strptime with an explicit format raises ValueError on any
+    # semantically invalid field (month/day/hour/minute/second range, including
+    # non-leap Feb 29) without accepting the offset-less/lenient variants
+    # fromisoformat would.
+    try:
+        datetime.datetime.strptime(timestamp, "%Y-%m-%dT%H:%M:%S.%fZ")
+    except ValueError as e:
+        raise OutOfProfileDomainError(
+            "timestamp",
+            f"matches the required grammar but does not denote a real calendar instant: {timestamp!r} ({e})",
+        )
 
 
 def _jcs_encode(d: dict[str, str]) -> bytes:
