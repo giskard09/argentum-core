@@ -2,6 +2,22 @@
 
 **Version:** 1.2 | **Published:** 2026-05-23 | **Updated:** 2026-06-03 (×2), 2026-07-29 (version negotiation, Domain enforcement) | **Stable ref (v1):** [`action-ref-v1.0`](https://github.com/giskard09/argentum-core/blob/action-ref-v1.0/docs/spec/action-ref.md) | **Stable ref (v2, domain separation):** [`action-ref-v2.0`](https://github.com/giskard09/argentum-core/blob/action-ref-v2.0/docs/spec/action-ref.md) | **Latest commit:** [96931c9](https://github.com/giskard09/argentum-core/commit/96931c9)
 
+**2026-08-16:** ASCII-only Domain enforcement (2026-07-29, above) closes Unicode
+normalization ambiguity (NFC vs. NFD) by design for this canonical profile — NFC and
+NFD only diverge on non-ASCII code points, and any non-ASCII value in `agent_id`,
+`action_type`, or `scope` is already rejected with `OUT_OF_PROFILE_DOMAIN` before
+hashing, so the two forms can never reach the preimage differently. This is an
+intentional consequence of the ASCII-only Domain, not a gap pending a fix — see the
+Domain paragraph below. Flagged for verification by Henri Sirkkavaara (SCITT list,
+2026-08-16, general NFC/NFD-before-JCS point raised in an unrelated ARP/Certisyn
+thread). Separately, the community plugin
+[`mycelium_evidence_anchor.py`](../../mycelium_evidence_anchor.py) computes its own
+domain-separated hash (`mycelium-evidence-anchor:v1:` prefix, distinct hash space, no
+production adopters) without this repo's ASCII-only Domain restriction — there,
+NFC/NFD divergence was a real gap, closed by normalizing `agent_id`/`action_type`/
+`scope` to NFC before hashing (unrelated to and does not change this canonical
+`action_ref` profile).
+
 **2026-07-30:** Tagged `action-ref-v2.0` — gate condition met, the two production
 adopters (SafeAgent/azender1, CTEF/kenneives) were briefed on the domain-separation
 gap by email the same day. v1 (bare 64-hex) is untouched and permanently valid; v2 is

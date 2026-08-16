@@ -92,6 +92,30 @@
         "scope": "",
         "timestamp": "2026-05-24T10:30:00.000Z"
       }
+    },
+    {
+      "id": "nfc-001",
+      "description": "Unicode normalization symmetry check, prompted by Henri Sirkkavaara (SCITT list, 2026-08-16) raising NFC-vs-NFD-before-JCS ambiguity in an unrelated ARP/Certisyn thread. agent_id in NFC form: 'agent-café', precomposed U+00E9 (LATIN SMALL LETTER E WITH ACUTE). Non-ASCII, so the Domain paragraph rejects it -- same as its NFD twin below, confirming the ASCII-only profile closes NFC/NFD divergence by rejecting both forms identically rather than accepting one and not the other.",
+      "expect_valid": false,
+      "expect_error_field": "agent_id",
+      "preimage": {
+        "agent_id": "agent-café",
+        "action_type": "trail.anchor",
+        "scope": "mycelium:av-neg",
+        "timestamp": "2026-05-24T10:30:00.000Z"
+      }
+    },
+    {
+      "id": "nfc-002",
+      "description": "Same logical agent_id as nfc-001, NFD form: 'agent-café', base 'e' (U+0065) plus COMBINING ACUTE ACCENT (U+0301). Two code points, byte-different from nfc-001's single precomposed code point, but the same visible identifier. Must be rejected the same way (same field, same error) -- if this vector's outcome ever diverged from nfc-001's, NFC/NFD would silently produce two different treatments for one identity, exactly the gap this profile is designed to close.",
+      "expect_valid": false,
+      "expect_error_field": "agent_id",
+      "preimage": {
+        "agent_id": "agent-café",
+        "action_type": "trail.anchor",
+        "scope": "mycelium:av-neg",
+        "timestamp": "2026-05-24T10:30:00.000Z"
+      }
     }
   ]
 }

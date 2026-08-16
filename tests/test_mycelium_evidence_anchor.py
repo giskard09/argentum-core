@@ -1,6 +1,7 @@
 """Tests for MyceliumAnchor — EvidenceAnchor community plugin."""
 
 import hashlib
+import unicodedata
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -49,6 +50,38 @@ class TestComputeActionRef:
         ref = _compute_action_ref("x", "y", "z", 0)
         assert len(ref) == 64
         int(ref, 16)  # must be valid hex
+
+    # NFC vs NFD: precomposed accented char (single code point) vs base char
+    # + combining mark (two code points) — visually identical, byte-different.
+    # Built via unicodedata.normalize rather than relying on a source-literal
+    # glyph, since editors/tooling commonly normalize typed unicode to NFC on
+    # save, which would silently defeat the "these are really different
+    # bytes" premise the test depends on.
+    _RAW_ACCENTED = "café"  # "café", NFC form (single U+00E9)
+
+    def test_nfc_nfd_agent_id_same_ref(self):
+        nfc = unicodedata.normalize("NFC", self._RAW_ACCENTED)
+        nfd = unicodedata.normalize("NFD", self._RAW_ACCENTED)
+        assert nfc != nfd  # sanity: the two forms really are different bytes
+        a = _compute_action_ref(f"agent-{nfc}", "agt:evidence_anchor", "agt-evidence", 1000)
+        b = _compute_action_ref(f"agent-{nfd}", "agt:evidence_anchor", "agt-evidence", 1000)
+        assert a == b
+
+    def test_nfc_nfd_scope_same_ref(self):
+        nfc = unicodedata.normalize("NFC", self._RAW_ACCENTED)
+        nfd = unicodedata.normalize("NFD", self._RAW_ACCENTED)
+        assert nfc != nfd
+        a = _compute_action_ref("agent-1", "agt:evidence_anchor", f"scope-{nfc}", 1000)
+        b = _compute_action_ref("agent-1", "agt:evidence_anchor", f"scope-{nfd}", 1000)
+        assert a == b
+
+    def test_nfc_nfd_action_type_same_ref(self):
+        nfc = unicodedata.normalize("NFC", self._RAW_ACCENTED)
+        nfd = unicodedata.normalize("NFD", self._RAW_ACCENTED)
+        assert nfc != nfd
+        a = _compute_action_ref("agent-1", f"op-{nfc}", "agt-evidence", 1000)
+        b = _compute_action_ref("agent-1", f"op-{nfd}", "agt-evidence", 1000)
+        assert a == b
 
 
 # ---------------------------------------------------------------------------

@@ -20,6 +20,7 @@ from __future__ import annotations
 import hashlib
 import json
 import time
+import unicodedata
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
@@ -250,7 +251,7 @@ def _format_timestamp_rfc3339(timestamp_s: int) -> str:
 def _compute_action_ref(agent_id: str, action_type: str, scope: str, timestamp: int) -> str:
     """Domain-separated, JCS-canonicalized action_ref for this plugin's own hash space.
 
-    Two fixes over the prior implementation:
+    Three fixes over the prior implementation:
     (1) domain separation — "mycelium-evidence-anchor:v1:" prefix, so this plugin's
         hashes can never collide with the canonical action-ref.md preimage (a bare
         4-field JCS object with no prefix) or with any other protocol using the same
@@ -262,7 +263,20 @@ def _compute_action_ref(agent_id: str, action_type: str, scope: str, timestamp: 
         an alias for the canonical action_ref — it does not touch or reuse action-ref.md's
         preimage, which has real production adopters (see ADOPTERS.md) and is not
         being changed here.
+    (3) Unicode normalization — agent_id/action_type/scope here come from caller-supplied
+        `metadata` with no ASCII-only Domain restriction (unlike action_ref.py's
+        `_validate_domain`, which rejects any non-ASCII value outright before hashing —
+        that makes NFC vs NFD moot on the canonical path). This plugin genuinely allows
+        non-ASCII values, so two byte-different but visually-identical strings (NFC vs
+        NFD composition of the same agent_id) would otherwise hash to two different
+        action_ref values for the same logical identity. Flagged by Henri Sirkkavaara
+        (SCITT list, 2026-08-16) against RFC 8785/JCS generally; this is the one site in
+        this repo where it was a live gap rather than already closed by the ASCII-only
+        Domain check. 2026-08-16.
     """
+    agent_id = unicodedata.normalize("NFC", agent_id)
+    action_type = unicodedata.normalize("NFC", action_type)
+    scope = unicodedata.normalize("NFC", scope)
     payload = {
         "agent_id": agent_id,
         "action_type": action_type,
