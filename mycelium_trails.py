@@ -518,13 +518,21 @@ def verify_chain(db_path: str, trail_id: str) -> dict:
       (b) delegation_ref es consistente con parent_trail_id donde ambos están presentes
 
     negotiation_linkage: distingue en el propio resultado si trail_id declaró un
-    negotiation_ref o no — "absent" (campo null, ninguna afirmación de acuerdo previo)
-    vs "present" (campo seteado; Mycelium no valida el artefacto referenciado, ver
-    negotiation-ref.md invariante 3 — el estado es "presente sin verificar", no "verificado").
-    Sin este campo la distinción vive solo en la spec, no sobrevive a quien lee el resultado.
+    negotiation_ref o no — "absent" (registro leído, campo null/ausente, ninguna
+    afirmación de acuerdo previo) vs "present" (registro leído, campo seteado con
+    un valor no vacío; Mycelium no valida el artefacto referenciado, ver
+    negotiation-ref.md invariante 3 — el estado es "presente sin verificar", no
+    "verificado") vs "malformed" (registro leído, campo seteado pero string vacía
+    — se suministró el campo pero sin contenido útil, distinto de no haberlo
+    puesto) vs None (el registro de trail_id nunca se pudo leer — mismo criterio
+    unreached/ran-and-failed que `reason` de más abajo: no hay nada sobre lo que
+    evaluar negotiation_ref, no equivale a "leí y estaba ausente").
+    Reportado por Aleksei Chirkunov, scitt@ietf.org, 2026-08-16: el código previo
+    colapsaba "nunca se pudo leer trail_id" y "campo vacío suministrado" en el
+    mismo "absent" que "campo realmente ausente", perdiendo ambas distinciones.
 
     Retorna: { valid: bool, broken_at: trail_id | None, reason: str | None,
-               negotiation_linkage: "absent" | "present" | None }
+               negotiation_linkage: "absent" | "present" | "malformed" | None }
 
     reason particiona en dos categorías (aditivo, no cambia el contrato de
     retorno -- propuesto por Henri Sirkkavaara, scitt@ietf.org, 2026-08-16, en
@@ -549,7 +557,16 @@ def verify_chain(db_path: str, trail_id: str) -> dict:
     Detalle y tabla completa: docs/spec/negotiation-ref.md.
     """
     target = get_trail_by_id(db_path, trail_id)
-    negotiation_linkage = "present" if (target and target.get("negotiation_ref")) else "absent"
+    if target is None:
+        negotiation_linkage = None
+    else:
+        raw_negotiation_ref = target.get("negotiation_ref")
+        if raw_negotiation_ref is None:
+            negotiation_linkage = "absent"
+        elif raw_negotiation_ref == "":
+            negotiation_linkage = "malformed"
+        else:
+            negotiation_linkage = "present"
 
     visited = set()
     current_id = trail_id
