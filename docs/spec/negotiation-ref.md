@@ -74,6 +74,53 @@ Invariant 4 is a guarantee about the field's semantics, not about what a verifie
 
 ---
 
+## `verify_chain()` — `reason` partition: unreached vs. ran-and-failed
+
+**2026-08-16:** `verify_chain()`'s `valid` field is binary (`True`/`False`). Henri
+Sirkkavaara (scitt@ietf.org, 2026-08-16) asked whether that collapses two
+distinct situations that his own grader keeps separate (`pass`/`fail`/`unproved`):
+a check that ran and produced a negative result, versus a check that could
+never be reached in the first place — specifically naming
+`missing_signature_ref` as a case he couldn't tell apart from outside the code
+("checked but absent" — legitimate finding, or a failure to even obtain the
+record to check?).
+
+Rather than a breaking change to `verify_chain()`'s return contract (adding a
+third state to `valid`, or a new top-level field every existing caller would
+need to learn), the fix is additive and reader-compatible: document that the
+`reason` strings `verify_chain()` already returns partition cleanly into the
+two categories Henri distinguishes. Nobody reading `valid: False` today loses
+anything — this makes explicit a property the implementation already has, it
+does not add one.
+
+**Why the partition is clean:** `get_trail_by_id()` is binary by construction
+— SQLite has no partial-column read, so it returns `None` or a fully-populated
+dict, never a partial record. In `verify_chain()`, the `trail_not_found` check
+runs first, on the raw result of `get_trail_by_id()`, and returns immediately
+if it's `None`. Every other `reason` below it evaluates fields (`signature_ref`,
+`delegation_ref`, `parent_trail_id`) on a record that has already been read in
+full — there is no code path where one of those fields is checked without the
+whole row being in memory first.
+
+| `reason` | Category | Why |
+|---|---|---|
+| `trail_not_found` | **unreached** | `get_trail_by_id()` returned `None` — the record was never obtained, so nothing about it (signature, delegation, cycle) could be evaluated at all. |
+| `missing_signature_ref` | **ran-and-failed** | The record was read in full; `signature_ref` was checked and found empty. A definitive negative answer, not a missing check — this is the case Henri asked about explicitly. |
+| `delegation_ref_parent_mismatch` | **ran-and-failed** | Two records (current and parent) were both read and compared; they don't agree. |
+| `cycle_detected` | **ran-and-failed** | A structural finding over records already read — the repeated `trail_id` was necessarily fetched and visited before being detected as a repeat. |
+
+Reference implementation: `mycelium_trails.verify_chain()` — see the docstring
+above each `return` for the same partition inline in the code. This is
+documentation only; `verify_chain()`'s logic, signature, and return contract
+are unchanged. Whether to add a third state to `valid` (or an `unreached`
+boolean) is a separate design decision, evaluated later if at all — not made
+here.
+
+Credit: Henri Sirkkavaara proposed the additive-partition approach over a
+breaking third state, scitt@ietf.org, 2026-08-16.
+
+---
+
 ## Pattern: `policy_commitment` for policy/rubric-based artifacts
 
 **2026-08-12:** documented after reviewing babyblueviper1's ERC-8299 reference
