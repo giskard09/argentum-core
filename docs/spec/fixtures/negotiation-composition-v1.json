@@ -7,7 +7,7 @@
   "artifact_format": "jcs-rfc8785-v1",
   "generated_at": "2026-05-24",
   "purpose": "Formal conformance substrate for negotiation-ref-v1. An external implementer who reproduces negotiation_ref byte-identical from the stated negotiation_artifact has a conformant implementation. The action_ref is derived independently from the four preimage fields — negotiation_ref never enters the preimage.",
-  "reproduce_in_python": "import hashlib, json\ndef jcs(obj): return json.dumps(obj, separators=(',',':'), sort_keys=True, ensure_ascii=False)\nnegotiation_ref = hashlib.sha256(jcs(negotiation_artifact).encode()).hexdigest()",
+  "reproduce_in_python": "import hashlib, json\ndef jcs(obj): return json.dumps(obj, separators=(',',':'), sort_keys=True, ensure_ascii=False)\n# negotiation_ref: only defined when negotiation_artifact is not null (present case).\n# When negotiation_artifact is null (negotiation-003-absent), there is nothing to hash --\n# negotiation_ref in the envelope is the literal JSON null, not a derived value, and the\n# verifier's output field is negotiation_linkage: \"absent\", not a recomputed hash.\nif negotiation_artifact is not None:\n    negotiation_ref = hashlib.sha256(jcs(negotiation_artifact).encode()).hexdigest()\nelse:\n    negotiation_ref = None\n# action_ref (both present and absent cases) is independent of negotiation_ref/negotiation_artifact:\naction_ref = hashlib.sha256(jcs(action_preimage).encode()).hexdigest()",
   "vectors": [
     {
       "id": "negotiation-001-capability-grant",
@@ -80,6 +80,87 @@
       "notes": {
         "credit": "Vector shape suggested by babyblueviper1, ethereum/ERCs#1810 (2026-08-13) — a tampered negotiation_artifact recomputing to a DIFFERENT negotiation_ref, proving the hash is load-bearing.",
         "why_this_field": "expires_at chosen because it is the field most likely to be silently bumped post-grant in a real integration (extension request handled by mutating the record instead of issuing a new one) — the failure mode this vector guards against is realistic, not synthetic."
+      }
+    },
+    {
+      "id": "negotiation-003-absent",
+      "description": "A trail record with no upstream negotiation artifact — negotiation_ref was never supplied. Exercises invariant 5: the absent/present distinction MUST surface in the verifier's output as an explicit field, not be left implicit in 'the key is missing from the JSON'. envelope.negotiation_ref is explicitly null (present as a key with value null, not omitted) — a conformant verifier reading this envelope MUST report negotiation_linkage: \"absent\", the same string the reference implementation (mycelium_trails.verify_chain()) returns for this case, exercised in tests/test_negotiation_linkage_status.py::test_verify_chain_reports_absent_when_no_negotiation_ref.",
+      "negotiation_artifact": null,
+      "action_preimage": {
+        "action_type": "oasis.enter",
+        "agent_id": "pioneer-agent-001",
+        "scope": "mycelium:oasis",
+        "timestamp": "2026-08-16T09:00:00.000Z"
+      },
+      "action_preimage_jcs_payload": "{\"action_type\":\"oasis.enter\",\"agent_id\":\"pioneer-agent-001\",\"scope\":\"mycelium:oasis\",\"timestamp\":\"2026-08-16T09:00:00.000Z\"}",
+      "action_preimage_canonical_bytes_hex": "7b22616374696f6e5f74797065223a226f617369732e656e746572222c226167656e745f6964223a2270696f6e6565722d6167656e742d303031222c2273636f7065223a226d7963656c69756d3a6f61736973222c2274696d657374616d70223a22323032362d30382d31365430393a30303a30302e3030305a227d",
+      "action_ref": "802c204e0e59623b615c71c97085a157b3f910da8739abd87aac71f1a347b0f2",
+      "envelope": {
+        "action_ref": "802c204e0e59623b615c71c97085a157b3f910da8739abd87aac71f1a347b0f2",
+        "hash_algo": "sha256",
+        "negotiation_ref": null,
+        "packet_version": "1.0",
+        "preimage": {
+          "action_type": "oasis.enter",
+          "agent_id": "pioneer-agent-001",
+          "scope": "mycelium:oasis",
+          "timestamp": "2026-08-16T09:00:00.000Z"
+        },
+        "preimage_format": "jcs-rfc8785-v1",
+        "trail_status": "COMMITTED",
+        "tx_hash": "0x7fd0a8ededd1feb65ab37b3324218a0386dbf124174cf122bffc40717c057b84"
+      },
+      "envelope_canonical_bytes_hex": "7b22616374696f6e5f726566223a2238303263323034653065353936323362363135633731633937303835613135376233663931306461383733396162643837616163373166316133343762306632222c22686173685f616c676f223a22736861323536222c226e65676f74696174696f6e5f726566223a6e756c6c2c227061636b65745f76657273696f6e223a22312e30222c22707265696d616765223a7b22616374696f6e5f74797065223a226f617369732e656e746572222c226167656e745f6964223a2270696f6e6565722d6167656e742d303031222c2273636f7065223a226d7963656c69756d3a6f61736973222c2274696d657374616d70223a22323032362d30382d31365430393a30303a30302e3030305a227d2c22707265696d6167655f666f726d6174223a226a63732d726663383738352d7631222c22747261696c5f737461747573223a22434f4d4d4954544544222c2274785f68617368223a22307837666430613865646564643166656236356162333762333332343231386130333836646266313234313734636631323262666663343037313763303537623834227d",
+      "envelope_canonical_sha256": "e7dfba5aaf81efa6dd170437ec4ca8f66872516e8b94efe94434102af4eb1233",
+      "expected_negotiation_linkage": "absent",
+      "invariants": {
+        "negotiation_ref_optional": "negotiation_ref is null when not supplied — its absence makes no claim about whether an upstream agreement exists or not (invariant 4)",
+        "linkage_must_be_explicit": "a conformant verifier MUST expose negotiation_linkage: \"absent\" as its own explicit output field for this envelope — reporting the trail as valid with no mention of negotiation_ref, or simply omitting the key, is non-conformant (invariant 5)"
+      },
+      "notes": {
+        "credit": "Gap and the absent/present distinction motivated by Henri Sirkkavaara (draft-sirkkavaara-vaara-receipt, scitt@ietf.org thread on draft-fassbender-scitt-time-anchor-03, 2026-08-14) — argued for time-anchor receipts, applied to negotiation_ref in negotiation-ref.md invariant 5 the same day. Henri requested this exact case (absent vs. claimed-unresolved) as a standalone recomputable fixture, scitt@ietf.org, 2026-08-16, for cross-checking against his own conformance checker.",
+        "why_this_matters": "before invariant 5 was written, the reference implementation could report a trail as valid without any signal that no negotiation artifact backs it — indistinguishable from a verifier that simply forgot to check. This vector is the exchange-format proof that the distinction is real and reproducible outside our own code."
+      }
+    },
+    {
+      "id": "negotiation-004-present-unverified",
+      "description": "Same shape as negotiation-001-capability-grant, but negotiation_ref is set to a string that is not the hash of any known real artifact — no negotiation_artifact backs it, it was never derived via JCS+SHA-256 from anything. Exercises invariant 3: Mycelium is opaque to the referenced artifact and never fetches, parses, or validates it. A conformant verifier reading this envelope MUST still report negotiation_linkage: \"present\" — \"present\" means the field was supplied, not that the referenced artifact was verified. Reference: tests/test_negotiation_linkage_status.py::test_negotiation_linkage_present_but_unverified_by_construction, same nonsense string.",
+      "negotiation_artifact": null,
+      "negotiation_ref": "not-a-real-hash-just-a-string",
+      "action_preimage": {
+        "action_type": "delegation.execute",
+        "agent_id": "pioneer-agent-001",
+        "scope": "mycelium:delegation",
+        "timestamp": "2026-08-16T09:05:00.000Z"
+      },
+      "action_preimage_jcs_payload": "{\"action_type\":\"delegation.execute\",\"agent_id\":\"pioneer-agent-001\",\"scope\":\"mycelium:delegation\",\"timestamp\":\"2026-08-16T09:05:00.000Z\"}",
+      "action_preimage_canonical_bytes_hex": "7b22616374696f6e5f74797065223a2264656c65676174696f6e2e65786563757465222c226167656e745f6964223a2270696f6e6565722d6167656e742d303031222c2273636f7065223a226d7963656c69756d3a64656c65676174696f6e222c2274696d657374616d70223a22323032362d30382d31365430393a30353a30302e3030305a227d",
+      "action_ref": "bedfe38cdbd4f95386c751dea1d6a22928d873d8d6ee9cb308a58c32dffd261f",
+      "envelope": {
+        "action_ref": "bedfe38cdbd4f95386c751dea1d6a22928d873d8d6ee9cb308a58c32dffd261f",
+        "hash_algo": "sha256",
+        "negotiation_ref": "not-a-real-hash-just-a-string",
+        "packet_version": "1.0",
+        "preimage": {
+          "action_type": "delegation.execute",
+          "agent_id": "pioneer-agent-001",
+          "scope": "mycelium:delegation",
+          "timestamp": "2026-08-16T09:05:00.000Z"
+        },
+        "preimage_format": "jcs-rfc8785-v1",
+        "trail_status": "COMMITTED",
+        "tx_hash": "0x7fd0a8ededd1feb65ab37b3324218a0386dbf124174cf122bffc40717c057b84"
+      },
+      "envelope_canonical_bytes_hex": "7b22616374696f6e5f726566223a2262656466653338636462643466393533383663373531646561316436613232393238643837336438643665653963623330386135386333326466666432363166222c22686173685f616c676f223a22736861323536222c226e65676f74696174696f6e5f726566223a226e6f742d612d7265616c2d686173682d6a7573742d612d737472696e67222c227061636b65745f76657273696f6e223a22312e30222c22707265696d616765223a7b22616374696f6e5f74797065223a2264656c65676174696f6e2e65786563757465222c226167656e745f6964223a2270696f6e6565722d6167656e742d303031222c2273636f7065223a226d7963656c69756d3a64656c65676174696f6e222c2274696d657374616d70223a22323032362d30382d31365430393a30353a30302e3030305a227d2c22707265696d6167655f666f726d6174223a226a63732d726663383738352d7631222c22747261696c5f737461747573223a22434f4d4d4954544544222c2274785f68617368223a22307837666430613865646564643166656236356162333762333332343231386130333836646266313234313734636631323262666663343037313763303537623834227d",
+      "envelope_canonical_sha256": "896dd42911eefe916645e01ce1edc62954c63920afd918c859ed07075b535262",
+      "expected_negotiation_linkage": "present",
+      "invariants": {
+        "opaque_to_mycelium": "Mycelium stores negotiation_ref verbatim as a TEXT field, with no schema validation, no fetch, and no cross-reference check against any artifact (invariant 3)",
+        "present_not_verified": "\"present\" means the field was supplied, not that the referenced artifact was verified — a nonsense negotiation_ref produces the exact same negotiation_linkage: \"present\" as a real one (invariant 3, surfaced via invariant 5's reporting requirement)"
+      },
+      "notes": {
+        "credit": "Same distinction motivated by Henri Sirkkavaara (scitt@ietf.org, 2026-08-14/16) as negotiation-003-absent above — this vector is the present-but-unverified half of the pair he asked for, proving 'present' is not a verification claim.",
+        "why_this_field": "no negotiation_artifact is given for this vector deliberately — the point is that negotiation_ref does not need one to be accepted and reported as \"present\"; supplying a real artifact here would undercut the vector's purpose."
       }
     }
   ]
