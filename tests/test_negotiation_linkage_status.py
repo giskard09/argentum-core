@@ -65,9 +65,38 @@ def test_negotiation_linkage_present_but_unverified_by_construction(db):
 
 
 def test_negotiation_linkage_present_on_broken_chain(db):
-    """La distinción sobrevive incluso cuando la cadena falla por otra razón --
-    negotiation_linkage no depende del resultado de valid."""
+    """La distinción sobrevive cuando la cadena falla por otra razón sobre un
+    registro que sí se pudo leer -- negotiation_linkage no depende de valid."""
+    trail_id = mycelium_trails.record_trail(
+        db, "agent-linkage-test", "oasis", "enter", uuid.uuid4().hex, karma_at_time=10,
+        negotiation_ref="a0e8bc2658eee9266d87d56b205a5f01e5b1ecc445f0693b3bba46cb8764ad52",
+        parent_trail_id="parent-que-no-existe",
+    )
+    result = mycelium_trails.verify_chain(db, trail_id)
+    assert result["valid"] is False
+    assert result["reason"] == "trail_not_found"
+    assert result["broken_at"] == "parent-que-no-existe"
+    assert result["negotiation_linkage"] == "present"
+
+
+def test_negotiation_linkage_none_when_trail_id_unreached(db):
+    """Reportado por Aleksei Chirkunov (scitt@ietf.org, 2026-08-16): si trail_id
+    nunca se pudo leer, negotiation_linkage debe ser None, no "absent" -- "absent"
+    afirma que se leyó el registro y el campo faltaba, cosa que acá nunca pasó."""
     result = mycelium_trails.verify_chain(db, "trail-id-que-no-existe")
     assert result["valid"] is False
     assert result["reason"] == "trail_not_found"
-    assert result["negotiation_linkage"] == "absent"
+    assert result["negotiation_linkage"] is None
+
+
+def test_negotiation_linkage_malformed_when_empty_string_supplied(db):
+    """Reportado por Aleksei Chirkunov (scitt@ietf.org, 2026-08-16): negotiation_ref=""
+    es un campo suministrado pero vacío/malformado -- distinto de no haberlo puesto
+    (None/"absent"). El check anterior (truthiness) colapsaba ambos en "absent"."""
+    trail_id = mycelium_trails.record_trail(
+        db, "agent-linkage-test", "oasis", "enter", uuid.uuid4().hex, karma_at_time=10,
+        negotiation_ref="",
+    )
+    result = mycelium_trails.verify_chain(db, trail_id)
+    assert result["valid"] is True
+    assert result["negotiation_linkage"] == "malformed"
