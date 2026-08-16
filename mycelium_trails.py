@@ -525,6 +525,28 @@ def verify_chain(db_path: str, trail_id: str) -> dict:
 
     Retorna: { valid: bool, broken_at: trail_id | None, reason: str | None,
                negotiation_linkage: "absent" | "present" | None }
+
+    reason particiona en dos categorías (aditivo, no cambia el contrato de
+    retorno -- propuesto por Henri Sirkkavaara, scitt@ietf.org, 2026-08-16, en
+    vez de un tercer estado breaking sobre `valid`). get_trail_by_id() es
+    binario (SQLite no tiene lectura parcial de columnas): devuelve None o un
+    dict completo. "unreached" es el único caso donde el registro nunca se
+    obtuvo; todos los demás corren sobre un registro ya leído completo:
+
+      - trail_not_found   -> unreached: el chequeo nunca pudo obtener el
+                             registro (get_trail_by_id devolvió None), no hay
+                             nada sobre lo que evaluar signature_ref/
+                             delegation_ref/ciclo.
+      - missing_signature_ref        -> ran-and-failed: registro leído
+                             completo, campo vacío, respuesta negativa
+                             definitiva.
+      - delegation_ref_parent_mismatch -> ran-and-failed: dos registros
+                             leídos y comparados, no coinciden.
+      - cycle_detected     -> ran-and-failed: hallazgo estructural definitivo
+                             sobre registros ya leídos (el id repetido ya
+                             fue visitado y por lo tanto ya leído antes).
+
+    Detalle y tabla completa: docs/spec/negotiation-ref.md.
     """
     target = get_trail_by_id(db_path, trail_id)
     negotiation_linkage = "present" if (target and target.get("negotiation_ref")) else "absent"
