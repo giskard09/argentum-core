@@ -162,6 +162,25 @@
         "credit": "Same distinction motivated by Henri Sirkkavaara (scitt@ietf.org, 2026-08-14/16) as negotiation-003-absent above — this vector is the present-but-unverified half of the pair he asked for, proving 'present' is not a verification claim.",
         "why_this_field": "no negotiation_artifact is given for this vector deliberately — the point is that negotiation_ref does not need one to be accepted and reported as \"present\"; supplying a real artifact here would undercut the vector's purpose."
       }
+    },
+    {
+      "id": "negotiation-005-linkage-unreached",
+      "description": "A trail_id that was never resolvable — the underlying record could not be read at all, as distinct from negotiation-003-absent where the record IS read and negotiation_ref is found missing. There is no negotiation_artifact, no action_preimage, no envelope: nothing was ever committed to read. Exercises the third state Aleksei Chirkunov (scitt@ietf.org, 2026-08-16) pointed out was collapsing into negotiation-003's 'absent' output: verify_chain() must distinguish 'record read, field missing' (absent) from 'record never reached' (unreached), reported as negotiation_linkage: null. Reference implementation: mycelium_trails.verify_chain(), exercised in tests/test_negotiation_linkage_status.py::test_negotiation_linkage_none_when_trail_id_unreached.",
+      "trail_id": "negotiation-005-unreached-example",
+      "verify_chain_result": {
+        "valid": false,
+        "reason": "trail_not_found",
+        "negotiation_linkage": null
+      },
+      "expected_negotiation_linkage": null,
+      "invariants": {
+        "unreached_distinct_from_absent": "negotiation_linkage: null (unreached) MUST NOT be reported as \"absent\" — \"absent\" (negotiation-003) asserts the record was read and the field was missing; null asserts the record itself was never reached, a strictly weaker claim.",
+        "no_envelope_when_unreached": "there is no action_ref, preimage, or envelope for this vector — an unreached trail has nothing to hash, unlike negotiation-003-absent and negotiation-004-present-unverified, which both have a real committed envelope."
+      },
+      "notes": {
+        "credit": "Reported by Aleksei Chirkunov (scitt@ietf.org, 2026-08-16) — the fixture had vectors for negotiation_artifact present (negotiation-001) and absent-but-read (negotiation-003), but none for a trail_id that could never be read at all. Same report also caught the empty-string-vs-missing distinction (negotiation_linkage: \"malformed\"), fixed in PR#55 but not carried into this fixture as a separate vector — malformed still requires a readable record with negotiation_ref=\"\", which negotiation-003's shape already implies; unreached does not.",
+        "vocabulary": "using None (Python)/null (JSON) rather than a string literal \"unreached\", matching mycelium_trails.verify_chain()'s actual return value and tests/test_negotiation_linkage_status.py — not copying Chirkunov's record_supplied: false shape verbatim."
+      }
     }
   ]
 }
