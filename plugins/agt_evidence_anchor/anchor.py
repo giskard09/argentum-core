@@ -181,16 +181,22 @@ class MyceliumAnchor(EvidenceAnchor):
                 error_detail=str(exc),
             )
 
-        if not data.get("verified", False) and "trail_id" not in data:
+        # Real response shapes (verified 2026-08-20 against argentum.py):
+        #   GET /trails/verify   -> {"verified": true, "trail": {...delegation_ref, tx_hash, ...}}
+        #   GET /trails/{id}     -> {"source": "mycelium", ...delegation_ref, tx_hash, ...} (flat)
+        # Neither ever has top-level "claims" or "payment_hash" — reading those always
+        # returned None, making HASH_MISMATCH unreachable dead code. Fix reads the
+        # actual field (delegation_ref is where an external payment_hash/evidence_hash
+        # lands, per mycelium_trails.get_trail_by_payment_hash).
+        trail = data["trail"] if isinstance(data.get("trail"), dict) else data
+
+        if not data.get("verified", False) and not trail.get("trail_id"):
             return AnchorVerifyResult(
                 status=AnchorVerifyStatus.NOT_FOUND,
                 evidence_hash=evidence_hash,
             )
 
-        stored_hash = (
-            data.get("claims", {}).get("evidence_hash")
-            or data.get("payment_hash")
-        )
+        stored_hash = trail.get("delegation_ref") or trail.get("payment_hash")
         if stored_hash and stored_hash != evidence_hash:
             return AnchorVerifyResult(
                 status=AnchorVerifyStatus.HASH_MISMATCH,
@@ -198,7 +204,7 @@ class MyceliumAnchor(EvidenceAnchor):
                 error_detail=f"stored: {stored_hash}",
             )
 
-        tx_hash = data.get("tx_hash") or receipt.metadata.get("tx_hash", "")
+        tx_hash = trail.get("tx_hash") or receipt.metadata.get("tx_hash", "")
         proof = InclusionProof(
             proof_type="tx_receipt",
             proof_data={
