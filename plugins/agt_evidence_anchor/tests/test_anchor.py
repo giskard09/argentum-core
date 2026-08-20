@@ -91,13 +91,18 @@ class TestAnchor:
 
 class TestVerify:
     def _verify_response(self, verified=True, stored_hash=EVIDENCE_HASH, tx_hash=TX_HASH):
+        # Real shape of GET /trails/verify (argentum.py:2015): {"verified": bool, "trail": {...}}.
+        # delegation_ref is where an external payment_hash/evidence_hash is stored
+        # (see mycelium_trails.get_trail_by_payment_hash) — not top-level "claims"/"payment_hash".
         resp = MagicMock()
         resp.status_code = 200
         resp.json.return_value = {
             "verified": verified,
-            "trail_id": TRAIL_ID,
-            "claims": {"evidence_hash": stored_hash},
-            "tx_hash": tx_hash,
+            "trail": {
+                "trail_id": TRAIL_ID,
+                "delegation_ref": stored_hash,
+                "tx_hash": tx_hash,
+            },
         }
         resp.raise_for_status = MagicMock()
         return resp
