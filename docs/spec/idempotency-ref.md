@@ -54,7 +54,18 @@ An action with `idempotency_ref` follows the same three-state lifecycle as any t
 | `COMMITTED` | Execution completed, anchor confirmed | non-null |
 | `FAILED` | TTL expired, no anchor | `null` |
 
-**Sweeper rule for orphaned PENDING records:** a PENDING trail record with `idempotency_ref` that has not transitioned to COMMITTED or FAILED within `window_ms` milliseconds of its `timestamp` is an orphaned PENDING. A conformant implementation SHOULD treat it as equivalent to FAILED for deduplication purposes — but MUST NOT mutate the original record. The sweep is a read-side decision, not a write-side state change.
+**Orphaned PENDING records:** a PENDING trail record with `idempotency_ref` that has not transitioned to COMMITTED or FAILED within `window_ms` milliseconds of its `timestamp` is an orphaned PENDING.
+
+`window_ms` elapsing is not evidence of outcome — only the downstream provider knows whether the underlying effect actually landed. A conformant implementation MUST NOT treat an orphaned PENDING as equivalent to FAILED on the basis of `window_ms` alone: doing so authorizes exactly the duplicate the idempotency artifact exists to prevent, and the failure is asymmetric — a stalled action costs a manual reconciliation, a wrongly-cleared PENDING costs a duplicate side effect.
+
+An orphaned PENDING resolves in one of two ways:
+
+- **Provider-confirmed resolution** (default): the integrator queries the underlying provider by the effect's own identifier and transitions the record to COMMITTED or FAILED based on what it finds. This is the only source of evidence; `window_ms` elapsing is not a substitute for it.
+- **Declared provider-side idempotency** (explicit opt-in): an implementation MAY treat an orphaned PENDING as safely retryable on `window_ms` alone *only if* the underlying provider call itself carries a provider-enforced idempotency key (e.g. Stripe's `Idempotency-Key` header), so a retry is absorbed upstream rather than producing a duplicate. This is a property of the integration, not of the trail lifecycle — a conformant implementation MUST declare it explicitly (e.g. `provider_idempotent: true` on the `idempotency_artifact`) rather than assume it as a default.
+
+Any resolution remains a read-side decision — it MUST NOT mutate the original record.
+
+*(Correction 2026-08-23: the earlier text of this section stated an unconditional `SHOULD` treating orphaned PENDING as equivalent to FAILED after `window_ms` — unsafe for any provider call without its own idempotency key, e.g. `send_email` or `place_trade`. Gap identified by impartshadow/agent-contracts, [crewAIInc/crewAI#5802](https://github.com/crewAIInc/crewAI/issues/5802).)*
 
 ---
 
