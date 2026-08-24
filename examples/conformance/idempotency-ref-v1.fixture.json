@@ -35,7 +35,7 @@
       "invariants": {
         "idempotency_ref_not_in_preimage": "idempotency_ref does not appear in action_preimage — action_ref determined solely by action_type, agent_id, scope, timestamp",
         "independent_hashes": "idempotency_ref = SHA-256(JCS(idempotency_artifact)); action_ref = SHA-256(JCS(action_preimage)); neither derived from the other",
-        "window_semantics": "A PENDING record with this idempotency_ref older than window_ms (300000ms) from its timestamp SHOULD be treated as orphaned-PENDING (equivalent to FAILED for deduplication) — but the original record MUST NOT be mutated"
+        "window_semantics": "A PENDING record with this idempotency_ref older than window_ms (300000ms) from its timestamp is an orphaned-PENDING. window_ms elapsing is NOT evidence of outcome — orphaned-PENDING MUST NOT be treated as equivalent to FAILED unless the provider call itself carries a provider-enforced idempotency key (declared explicit, not assumed); default resolution is a provider-confirmed query, not a timer. The original record MUST NOT be mutated. (Corrected 2026-08-23, gap identified by impartshadow/agent-contracts, crewAIInc/crewAI#5802.)"
       },
       "notes": {
         "idempotency_key": "Client-generated opaque string. Format is implementer-defined; only uniqueness within the deduplication window is required.",

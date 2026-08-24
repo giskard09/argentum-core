@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Fixed — idempotency-ref-v1 orphaned-PENDING sweeper unsafe on unconditional timer (2026-08-23)
+
+- `docs/spec/idempotency-ref.md`: the orphaned-PENDING rule stated an unconditional `SHOULD` treating a PENDING record older than `window_ms` as equivalent to FAILED. That inference is unsound whenever the provider call has no idempotency key of its own (`send_email`, `place_trade`) — a crash between the provider call succeeding and the anchor write is indistinguishable from a call that never landed, so sweeping to FAILED on a timer authorizes the exact duplicate the artifact exists to prevent. Corrected: default resolution is now a provider-confirmed query (no timer-based clearing); treating `window_ms` alone as sufficient requires an explicit `provider_idempotent: true` declaration, not an assumed default. `examples/conformance/idempotency-ref-v1.fixture.json`'s `window_semantics` invariant updated to match. Reported by impartshadow/agent-contracts, [crewAIInc/crewAI#5802](https://github.com/crewAIInc/crewAI/issues/5802).
+
 ### Fixed — strict RFC 8785 canonicalization in agenttrust-v1 conformance suite (2026-07-08)
 
 - `examples/conformance/agenttrust-v1/verify.mjs` replaced its hand-rolled `jcs()` helper (sort keys + `JSON.stringify`, self-consistent with the fixtures but not spec-compliant) with the `canonicalize` npm package (strict RFC 8785). Reported by TKCollective, [#32](https://github.com/giskard09/argentum-core/issues/32).
