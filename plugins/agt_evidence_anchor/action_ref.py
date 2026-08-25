@@ -13,9 +13,13 @@ json.dumps with sorted keys, no spaces, and UTF-8 encoding. We implement
 it inline to avoid adding an external dependency for this simple case.
 
 timestamp format: RFC 3339 UTC, "2026-05-15T10:00:00.123Z" (3-digit ms,
-mandatory Z) -- OR an all-digit epoch-ms string within a plausible range
-(NEXUS packet_version 1.0 wire format). See _validate_domain for the exact
-domain rule; compute_action_ref hashes whichever string form was given.
+mandatory Z). compute_action_ref/compute_action_ref_v2 reject any other
+form -- including an epoch-ms integer string -- with OUT_OF_PROFILE_DOMAIN;
+convert it to RFC 3339 before calling. The single exception is NEXUS's own
+documented wire format (packet_version 1.0), handled separately at
+/nexus/trail via _validate_domain(..., allow_epoch_ms=True) -- not part of
+this canonical action_ref derivation. See _validate_domain for the exact
+domain rule.
 """
 
 from __future__ import annotations
@@ -56,7 +60,9 @@ _EPOCH_MS_MIN = int(datetime.datetime(2020, 1, 1, tzinfo=datetime.timezone.utc).
 _EPOCH_MS_MAX = int(datetime.datetime(2100, 1, 1, tzinfo=datetime.timezone.utc).timestamp() * 1000)
 
 
-def _validate_domain(agent_id: str, action_type: str, scope: str, timestamp: str) -> None:
+def _validate_domain(
+    agent_id: str, action_type: str, scope: str, timestamp: str, *, allow_epoch_ms: bool = False
+) -> None:
     """Enforce action-ref.md's Domain paragraph. Raises OutOfProfileDomainError.
 
     - agent_id, action_type, scope: ASCII-only, no surrogate-pair / astral-plane
@@ -69,17 +75,29 @@ def _validate_domain(agent_id: str, action_type: str, scope: str, timestamp: str
       local spec was wrong and is now aligned to it. See av-007 in
       examples/conformance/action-ref-v1-domain-negative/ for the reversed
       conformance vector (previously expect_valid: true).
-    - timestamp: EITHER exactly `YYYY-MM-DDTHH:MM:SS.mmmZ` (RFC 3339, uppercase
-      `T`/`Z`, no numeric offset, exactly 3 fractional digits) OR an all-digit
-      string denoting epoch-milliseconds within a plausible range. The
-      epoch-ms form was NEXUS's documented wire format (packet_version 1.0)
-      from day one, but /nexus/trail validated it with its own separate,
-      ad-hoc logic instead of this function -- unified 2026-08-15 so there is
-      one real reference validator, not one "reference" validator plus one
-      the only production caller actually used. Neither format is derivable
-      from a single JCS preimage byte-for-byte differently -- this function
-      just decides ACCEPT/REJECT before hashing; the caller still hashes
-      whatever string was actually provided.
+    - timestamp: exactly `YYYY-MM-DDTHH:MM:SS.mmmZ` (RFC 3339, uppercase
+      `T`/`Z`, no numeric offset, exactly 3 fractional digits) -- this is the
+      ONLY form the canonical action_ref profile hashes; action-ref.md's
+      Conversion note requires converting an epoch-ms integer to this form
+      BEFORE hashing, precisely so two representations of the same instant
+      never produce two different digests. `allow_epoch_ms=True` widens this
+      to also accept an all-digit epoch-millisecond string, for the single
+      legitimate exception: NEXUS's documented wire format (packet_version
+      1.0), which is a separate, non-canonical derivation path -- see
+      argentum.py's /nexus/trail. compute_action_ref/compute_action_ref_v2
+      (the canonical action_ref v1/v2 functions this spec governs) call this
+      with the default False and reject epoch-ms as OUT_OF_PROFILE_DOMAIN.
+
+      FIX 2026-08-25 (aeoess/Pidlisnyi, draft-etcheverry-action-ref#6): a
+      2026-08-15 "unification" of this validator (see git history) made
+      `allow_epoch_ms` the unconditional default, so compute_action_ref
+      itself hashed a raw epoch-ms string unconverted -- reproduced by hand:
+      compute_action_ref(..., "1778839200123") and
+      compute_action_ref(..., "2026-05-15T10:00:00.123Z") for the exact same
+      instant returned two different digests, exactly the non-conformance
+      the Conversion note exists to prevent. Restored strict-by-default here;
+      NEXUS's /nexus/trail call site now passes allow_epoch_ms=True
+      explicitly instead of relying on a shared default.
     """
     for field_name, value in (("agent_id", agent_id), ("action_type", action_type), ("scope", scope)):
         if not value.isascii():
@@ -87,7 +105,7 @@ def _validate_domain(agent_id: str, action_type: str, scope: str, timestamp: str
     if not scope:
         raise OutOfProfileDomainError("scope", "must be a non-empty string -- no \"not applicable\" exception")
 
-    if _EPOCH_MS_RE.match(timestamp):
+    if allow_epoch_ms and _EPOCH_MS_RE.match(timestamp):
         ms = int(timestamp)
         if not (_EPOCH_MS_MIN <= ms <= _EPOCH_MS_MAX):
             # ms itself can be large enough that reconstructing a datetime for
@@ -106,10 +124,15 @@ def _validate_domain(agent_id: str, action_type: str, scope: str, timestamp: str
         return
 
     if not _TIMESTAMP_RE.match(timestamp):
+        accepted = (
+            "RFC 3339 (YYYY-MM-DDTHH:MM:SS.mmmZ) or all-digit epoch-ms"
+            if allow_epoch_ms
+            else "RFC 3339 (YYYY-MM-DDTHH:MM:SS.mmmZ) -- epoch-ms integers must be converted "
+                 "to this form before hashing, per the Conversion note in action-ref.md"
+        )
         raise OutOfProfileDomainError(
             "timestamp",
-            f"does not match either accepted grammar -- RFC 3339 "
-            f"(YYYY-MM-DDTHH:MM:SS.mmmZ) or all-digit epoch-ms: {timestamp!r}",
+            f"does not match the accepted grammar -- {accepted}: {timestamp!r}",
         )
     # The regex above checks grammar only -- "2026-02-30T25:99:99.000Z" matches
     # it byte-for-byte while denoting no real instant (day 30 doesn't exist in
@@ -131,9 +154,13 @@ def _validate_domain(agent_id: str, action_type: str, scope: str, timestamp: str
 def _jcs_encode(d: dict[str, str]) -> bytes:
     """RFC 8785 JCS encoding for a flat dict of string values.
 
-    Key ordering is lexicographic Unicode code point order, which for
-    ASCII-only keys matches alphabetical order. Values are JSON strings
-    with no Unicode escaping for codepoints above U+001F (RFC 8785 §3.2.3).
+    RFC 8785 §3.2.3 orders keys by UTF-16 code unit, not Unicode code point --
+    they only diverge for astral-plane keys. `sorted()` below uses Python's
+    code-point comparison, which for the four ASCII-only keys this profile
+    uses (action_type, agent_id, scope, timestamp) coincides with UTF-16
+    order, so no divergence in practice today; not a general-purpose JCS
+    key sort. Values are JSON strings with no Unicode escaping for
+    codepoints above U+001F (RFC 8785 §3.2.3).
     """
     return json.dumps(
         dict(sorted(d.items())),
@@ -160,10 +187,13 @@ def compute_action_ref(
 ) -> str:
     """Derive action_ref from the four canonical fields.
 
-    timestamp must already be a string, either RFC 3339 UTC with 3-digit ms
+    timestamp must already be a string, RFC 3339 UTC with 3-digit ms
     precision (e.g. "2026-05-15T10:00:00.123Z" -- use format_timestamp() to
-    produce it from a datetime object) or all-digit epoch-ms within a
-    plausible range (NEXUS packet_version 1.0 wire format).
+    produce it from a datetime object). An epoch-ms integer string is
+    rejected with OUT_OF_PROFILE_DOMAIN -- convert it to RFC 3339 first, per
+    action-ref.md's Conversion note. (NEXUS's own epoch-ms wire format is a
+    separate, non-canonical derivation path handled at /nexus/trail, not
+    here -- see _validate_domain's allow_epoch_ms.)
 
     Returns the SHA-256 hex digest (64 lowercase hex characters).
 

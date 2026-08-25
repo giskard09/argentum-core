@@ -94,6 +94,18 @@
       }
     },
     {
+      "id": "epoch-ms-001",
+      "description": "FIX 2026-08-25 (aeoess/Pidlisnyi, draft-etcheverry-action-ref#6): a 2026-08-15 unification of _validate_domain (originally to let /nexus/trail accept NEXUS's documented epoch-ms wire format) made epoch-ms acceptance the unconditional default, so compute_action_ref itself hashed a raw all-digit epoch-ms string instead of requiring the RFC 3339 conversion action-ref.md's Conversion note mandates. Reproduced by hand before the fix: compute_action_ref(..., \"1778839200123\") and compute_action_ref(..., \"2026-05-15T10:00:00.123Z\") -- the exact same instant -- returned two different digests. _validate_domain now takes allow_epoch_ms (default False); compute_action_ref/compute_action_ref_v2 use the default and reject epoch-ms here. Only /nexus/trail passes allow_epoch_ms=True.",
+      "expect_valid": false,
+      "expect_error_field": "timestamp",
+      "preimage": {
+        "agent_id": "did:aeoess:example",
+        "action_type": "trail.anchor",
+        "scope": "mycelium:av-neg",
+        "timestamp": "1778839200123"
+      }
+    },
+    {
       "id": "nfc-001",
       "description": "Unicode normalization symmetry check, prompted by Henri Sirkkavaara (SCITT list, 2026-08-16) raising NFC-vs-NFD-before-JCS ambiguity in an unrelated ARP/Certisyn thread. agent_id in NFC form: 'agent-café', precomposed U+00E9 (LATIN SMALL LETTER E WITH ACUTE). Non-ASCII, so the Domain paragraph rejects it -- same as its NFD twin below, confirming the ASCII-only profile closes NFC/NFD divergence by rejecting both forms identically rather than accepting one and not the other.",
       "expect_valid": false,

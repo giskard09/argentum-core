@@ -10,6 +10,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../../.."))
 
 from plugins.agt_evidence_anchor.action_ref import (
     compute_action_ref,
+    compute_action_ref_v2,
     format_timestamp,
     OutOfProfileDomainError,
     _validate_domain,
@@ -155,20 +156,38 @@ def test_non_empty_scope_still_accepted():
 
 
 # Unified validator, self-audit 2026-08-15: /nexus/trail is the only real
-# production caller of this validation logic and only ever accepted RFC 3339
-# OR epoch-ms strings (NEXUS packet_version 1.0). _validate_domain now
-# supports both, so /nexus/trail can call the shared validator instead of
-# reimplementing timestamp checking on its own -- the same "reimplements
-# apart and drifts" pattern that caused FINDING-001 and the earlier
-# timestamp-grammar MEDIUM.
+# production caller that needs epoch-ms acceptance (NEXUS packet_version 1.0
+# wire format). _validate_domain supports both grammars via allow_epoch_ms,
+# so /nexus/trail can call the shared validator instead of reimplementing
+# timestamp checking on its own -- the same "reimplements apart and drifts"
+# pattern that caused FINDING-001 and the earlier timestamp-grammar MEDIUM.
+#
+# FIX 2026-08-25 (aeoess/Pidlisnyi, draft-etcheverry-action-ref#6):
+# allow_epoch_ms defaulted to accepting epoch-ms unconditionally until this
+# fix, which also made compute_action_ref/compute_action_ref_v2 -- the
+# canonical action_ref functions, called with the default -- silently hash a
+# raw epoch-ms string. That is exactly what action-ref.md's Conversion note
+# says a conformant implementation must never do (it must convert to RFC
+# 3339 first), and it produced two different digests for the same instant
+# depending on representation. The epoch-ms tests below now pass
+# allow_epoch_ms=True explicitly, mirroring /nexus/trail's real call site
+# (argentum.py) rather than relying on a shared default that also leaked
+# into the canonical derivation path.
 
 @pytest.mark.parametrize("epoch_ms", [
     "1785179401774",  # real production value (nandana-design-partner-test)
     "1577836800000",  # exactly _EPOCH_MS_MIN (2020-01-01T00:00:00Z)
     "4102444799999",  # just inside _EPOCH_MS_MAX (2099-12-31T23:59:59.999Z)
 ])
-def test_epoch_ms_within_range_accepted(epoch_ms):
-    _validate_domain("agent", "action", "scope", epoch_ms)  # must not raise
+def test_epoch_ms_within_range_accepted_with_allow_epoch_ms(epoch_ms):
+    _validate_domain("agent", "action", "scope", epoch_ms, allow_epoch_ms=True)  # must not raise
+
+
+def test_epoch_ms_rejected_by_default():
+    """compute_action_ref/compute_action_ref_v2 use this default -- no opt-in, no epoch-ms."""
+    with pytest.raises(OutOfProfileDomainError) as exc_info:
+        _validate_domain("agent", "action", "scope", "1785179401774")
+    assert exc_info.value.field == "timestamp"
 
 
 @pytest.mark.parametrize("bad_epoch_ms,why", [
@@ -180,14 +199,26 @@ def test_epoch_ms_within_range_accepted(epoch_ms):
 ])
 def test_epoch_ms_outside_range_rejected(bad_epoch_ms, why):
     with pytest.raises(OutOfProfileDomainError) as exc_info:
-        _validate_domain("agent", "action", "scope", bad_epoch_ms)
+        _validate_domain("agent", "action", "scope", bad_epoch_ms, allow_epoch_ms=True)
     assert exc_info.value.field == "timestamp"
 
 
-def test_epoch_ms_and_rfc3339_both_accepted_for_compute_action_ref():
-    """Control inverse -- neither format broke the other when both were added."""
-    ref_rfc3339 = compute_action_ref("agent-x", "action", "scope", "2026-05-15T10:00:00.000Z")
-    ref_epoch = compute_action_ref("agent-x", "action", "scope", "1747303200000")
+def test_epoch_ms_rejected_for_compute_action_ref():
+    """Regression test for the aeoess/Pidlisnyi finding (draft-etcheverry-action-ref#6):
+    compute_action_ref must reject a raw epoch-ms string, not hash it -- hashing it produced
+    a different digest than the RFC 3339 form of the exact same instant, violating
+    action-ref.md's Conversion note and the profile's determinism guarantee.
+    """
+    dt = datetime.datetime(2026, 5, 15, 10, 0, 0, 0, tzinfo=datetime.timezone.utc)
+    rfc3339 = format_timestamp(dt)
+    epoch_ms = str(int(dt.timestamp() * 1000))
+
+    ref_rfc3339 = compute_action_ref("agent-x", "action", "scope", rfc3339)
     assert len(ref_rfc3339) == 64
-    assert len(ref_epoch) == 64
-    assert ref_rfc3339 != ref_epoch  # different preimage strings, different digests, as expected
+
+    with pytest.raises(OutOfProfileDomainError) as exc_info:
+        compute_action_ref("agent-x", "action", "scope", epoch_ms)
+    assert exc_info.value.field == "timestamp"
+
+    with pytest.raises(OutOfProfileDomainError):
+        compute_action_ref_v2("agent-x", "action", "scope", epoch_ms)
