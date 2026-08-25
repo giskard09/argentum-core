@@ -2,6 +2,23 @@
 
 **Version:** 1.2 | **Published:** 2026-05-23 | **Updated:** 2026-06-03 (×2), 2026-07-29 (version negotiation, Domain enforcement) | **Stable ref (v1):** [`action-ref-v1.0`](https://github.com/giskard09/argentum-core/blob/action-ref-v1.0/docs/spec/action-ref.md) | **Stable ref (v2, domain separation):** [`action-ref-v2.0`](https://github.com/giskard09/argentum-core/blob/action-ref-v2.0/docs/spec/action-ref.md) | **Latest commit:** [96931c9](https://github.com/giskard09/argentum-core/commit/96931c9)
 
+**ERRATUM (2026-08-25), tag `action-ref-v1.0` only:** the `scope` field-table row
+in that immutable tag reads, in the same sentence, "Free-form non-empty
+string... Pass `""` if not applicable" — directly self-contradictory. Found by
+the cross-surface checker added in #63 while institutionalizing the aeoess
+(Pidlisnyi) fixes from #62 (same underlying wording conflict, older instance,
+never previously reported). Per [RFC 002](../rfcs/002-action-ref-v2-domain-separation.md)
+the git tag `action-ref-v1.0` stays exactly as published and is not edited to
+fix this — this note is the correction. Effective reading for any consumer of
+that tag: `scope` non-empty, no `""` exception, same resolution `main` and
+`action-ref-v2.0` already carry (see 2026-08-15 and 2026-08-25 entries below).
+No external citation of this specific tag has been confirmed as of this note;
+`draft-vauban-x402-stark-receipts-01` was checked directly against
+datatracker.ietf.org and cites a different artifact (`andysalvo
+action-ref-verify v0.3.0`, X402-2398), not this repository or this tag. If a
+real citation of `action-ref-v1.0` surfaces later, notify the citing party of
+this erratum then.
+
 **2026-08-16:** ASCII-only Domain enforcement (2026-07-29, above) closes Unicode
 normalization ambiguity (NFC vs. NFD) by design for this canonical profile — NFC and
 NFD only diverge on non-ASCII code points, and any non-ASCII value in `agent_id`,
