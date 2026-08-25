@@ -185,10 +185,20 @@ def test_non_ascii_field_rejected_end_to_end(tmp_path):
     "2026-05-15T10:00:00.123Z",   # RFC 3339
 ])
 def test_endpoint_and_shared_validator_agree_on_valid_input(tmp_path, ts):
-    """Same verdict, both layers -- the whole point of unifying them."""
+    """Same verdict, both layers -- the whole point of unifying them.
+
+    allow_epoch_ms=True mirrors /nexus/trail's actual call site (argentum.py):
+    NEXUS's documented wire format (packet_version 1.0) accepts epoch-ms, unlike
+    compute_action_ref/compute_action_ref_v2, which reject it by default since
+    the 2026-08-25 fix (aeoess/Pidlisnyi, draft-etcheverry-action-ref#6) -- see
+    action_ref.py::_validate_domain.
+    """
     from plugins.agt_evidence_anchor.action_ref import _validate_domain
     fields = dict(_FIELDS, timestamp=ts)
-    _validate_domain(fields["agent_id"], fields["action_type"], fields["scope"], fields["timestamp"])  # must not raise
+    _validate_domain(
+        fields["agent_id"], fields["action_type"], fields["scope"], fields["timestamp"],
+        allow_epoch_ms=True,
+    )  # must not raise
 
     _, client = _client(tmp_path)
     r = _post(client, _jcs_ref(fields), preimage=fields)

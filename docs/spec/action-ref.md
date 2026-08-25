@@ -23,7 +23,21 @@ adopters (SafeAgent/azender1, CTEF/kenneives) were briefed on the domain-separat
 gap by email the same day. v1 (bare 64-hex) is untouched and permanently valid; v2 is
 strictly additive per [RFC 002](../rfcs/002-action-ref-v2-domain-separation.md).
 
-**2026-07-29:** `compute_action_ref`/`compute_action_ref_v2` in the reference implementation now enforce the Domain paragraph below before hashing (previously they hashed any input). Also fixed a wording conflict in the `scope` field table ("non-empty" vs. "pass `\"\"` if not applicable"). Both reported by aeoess (Pidlisnyi) in [#35](https://github.com/giskard09/argentum-core/issues/35). See [`examples/conformance/action-ref-v1-domain-negative/`](../../examples/conformance/action-ref-v1-domain-negative/) for the rejection vectors.
+**2026-08-15:** `scope` empty-string exception removed (issue #48) — **reverses** the
+2026-07-29 wording fix below, it does not merely restate it. Field table and
+`plugins/agt_evidence_anchor/action_ref.py::_validate_domain` changed so an empty
+`scope` is rejected with `OUT_OF_PROFILE_DOMAIN` before hashing, aligning the local
+spec with the published I-D `draft-etcheverry-action-ref-02` §6 ("free-form non-empty
+string... no exception") — the externally-committed document, so the local spec was
+corrected to match it rather than the reverse. Retroactive check against production
+`trails.db`: 3881 total trails, 4 with empty/null scope, none via `/nexus/trail` (the
+endpoint that validates this rule) — zero existing data affected. The "Scope
+conventions" section further down still referenced the removed `""` exception until
+2026-08-25 (found by aeoess/Pidlisnyi in
+[`draft-etcheverry-action-ref#6`](https://github.com/giskard09/draft-etcheverry-action-ref/issues/6),
+corrected the same day — see next entry).
+
+**2026-07-29:** `compute_action_ref`/`compute_action_ref_v2` in the reference implementation now enforce the Domain paragraph below before hashing (previously they hashed any input). Also fixed a wording conflict in the `scope` field table ("non-empty" vs. "pass `\"\"` if not applicable") — resolved at the time in favor of **allowing** `""`; that resolution was itself reversed on 2026-08-15, above. Both issues reported by aeoess (Pidlisnyi) in [#35](https://github.com/giskard09/argentum-core/issues/35). See [`examples/conformance/action-ref-v1-domain-negative/`](../../examples/conformance/action-ref-v1-domain-negative/) for the rejection vectors.
 
 `action_ref` is a deterministic, content-addressed identifier for an agent action. Any party with the four preimage fields can independently compute it — no trust in the emitting system required.
 
@@ -199,7 +213,7 @@ stated for `decision_binding_ref` ("proves content without proving intent").
 
 ## Scope conventions
 
-`scope` is a free-form string with no closed enum. Any value is valid as long as it is consistent across all parties deriving the same `action_ref` — see the field table above for the `""` (not applicable) exception.
+`scope` is a free-form non-empty string with no closed enum. Any value is valid as long as it is non-empty and consistent across all parties deriving the same `action_ref`. There is no `""` (not applicable) exception — an empty `scope` is rejected with `OUT_OF_PROFILE_DOMAIN` before any digest comparison, same as the other domain checks (see [`plugins/agt_evidence_anchor/action_ref.py`](../../plugins/agt_evidence_anchor/action_ref.py)).
 
 **Recommended convention (non-normative):** namespace-prefix with the emitter identifier using `<emitter>:<scope>`.
 
@@ -233,7 +247,7 @@ Two implementations that produce the same entity set in different detection orde
 
 The four fields are serialized as a JSON object using RFC 8785 JSON Canonicalization Scheme before hashing:
 
-- Keys in lexicographic Unicode code point order: `action_type`, `agent_id`, `scope`, `timestamp`
+- Keys in lexicographic UTF-16 code unit order (RFC 8785 §3.2.3, equivalent to `Array.prototype.sort()` in JS — not Unicode code point order, which only diverges for astral-plane keys; the four keys here are ASCII so both orderings coincide): `action_type`, `agent_id`, `scope`, `timestamp`
 - No whitespace between tokens
 - UTF-8 encoded
 - Values are JSON strings (no additional escaping beyond standard JSON)

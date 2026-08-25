@@ -3144,11 +3144,18 @@ async def nexus_trail(request: Request):
     # siguió solo protegían plugins/agt_evidence_anchor (usado por los worked
     # examples propios), no este endpoint -- el mismo patrón "reimplementa
     # aparte y se atrasa" se repitió dos veces la misma noche con el mismo
-    # endpoint. _validate_domain ahora acepta RFC 3339 O epoch-ms (extendido
-    # para esto, ver action_ref.py) -- ya no hace falta una excepción puntual
-    # para el formato NEXUS.
+    # endpoint. _validate_domain acepta RFC 3339 O epoch-ms vía
+    # allow_epoch_ms=True -- este es el único caller que debe pasarlo,
+    # porque /nexus/trail es el único endpoint cuyo contrato documentado
+    # (NEXUS packet_version 1.0) admite el wire format epoch-ms. FIX
+    # 2026-08-25 (aeoess/Pidlisnyi): allow_epoch_ms pasó a ser un parametro
+    # explicito en vez de comportamiento por default de _validate_domain --
+    # el default anterior filtraba tambien a compute_action_ref/v2 (el
+    # action_ref canonico que este spec gobierna), permitiendoles hashear un
+    # epoch-ms crudo y violar la nota de Conversion del spec. Ver
+    # action_ref.py::_validate_domain para el detalle completo.
     try:
-        _validate_domain(agent_id, action_type, scope, str(ts))
+        _validate_domain(agent_id, action_type, scope, str(ts), allow_epoch_ms=True)
     except OutOfProfileDomainError as e:
         return JSONResponse(
             {
