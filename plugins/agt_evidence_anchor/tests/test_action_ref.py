@@ -222,3 +222,30 @@ def test_epoch_ms_rejected_for_compute_action_ref():
 
     with pytest.raises(OutOfProfileDomainError):
         compute_action_ref_v2("agent-x", "action", "scope", epoch_ms)
+
+
+def test_spec_scope_policy_self_consistent_on_main():
+    """Preventive control, PR#62 follow-up (aeoess/Pidlisnyi, draft-etcheverry-action-ref#6):
+    docs/spec/action-ref.md's field table and its "Scope conventions" section stated
+    CONTRADICTORY scope policies for 10 days (2026-08-15 to 2026-08-25) before anyone noticed,
+    because nothing checked the two locations against each other. This test runs that check on
+    every test run against the current working tree, so a future edit to only one side of this
+    duplicated statement fails CI immediately instead of sitting silent for days.
+
+    Does not check historical git tags (action-ref-v1.0, action-ref-v2.0) -- see
+    examples/conformance/action-ref-v1-cross-surface/check_scope_policy.py for that, run
+    on demand rather than in CI since tags are immutable and a failure there needs a
+    documentation/errata decision, not a code fix.
+    """
+    import importlib.util
+
+    checker_path = os.path.join(
+        os.path.dirname(__file__), "..", "..", "..",
+        "examples", "conformance", "action-ref-v1-cross-surface", "check_scope_policy.py",
+    )
+    spec = importlib.util.spec_from_file_location("check_scope_policy", checker_path)
+    checker = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(checker)
+
+    ok, report = checker.check_ref("HEAD", use_worktree=True)
+    assert ok, report
