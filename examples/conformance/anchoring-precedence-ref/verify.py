@@ -8,6 +8,13 @@ Five invariants checked per spec:
   4. anchoring_precedence    — anchor_block_time * 1000 < outcome_ts_ms (strict)
   5. chain_invariant         — checks[chain_invariant] declared true in vector
                                (external resolution; verifier trusts vector declaration)
+
+KNOWN LIMITATION (documented, not a bug — see docs/spec/anchoring-precedence-ref-v1.md
+§anchoring_precedence normative caveat): anchor_block_time is a miner-claimed value within
+consensus bounds, not independently proven. A backdated-but-consensus-valid value passes
+this check even when the anchor did not truly precede the outcome in wall-clock time. There
+is no fix within this profile — see vector `known-limitation-miner-claimed-backdated` in
+vectors.json, expected PASS by design, documenting the gap rather than concealing it.
 """
 
 import hashlib

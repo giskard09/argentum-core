@@ -154,6 +154,34 @@
       },
       "admission_hash": "95f75353cb06f58e393dbea5d98e052e6dc28f6ad25d46a9e24ca58795b039e0",
       "admission_hash_note": "SHA-256(JCS(envelope + {extra_field: 'injected'})) — signer signed a mutated envelope"
+    },
+    {
+      "id": "known-limitation-miner-claimed-backdated",
+      "description": "KNOWN LIMITATION, not a bug (see docs/spec/anchoring-precedence-ref-v1.md, anchoring_precedence normative caveat, credit Jonna Fassbender/draft-fassbender-scitt-time-anchor-05, scitt@ietf.org 2026-08-26). anchor_block_time is a miner-declared value within consensus-valid bounds (Bitcoin: Median Time Past lower bound, ~2h network-adjusted upper bound — asymmetric), not independently proven. A miner can declare a backdated timestamp that stays consensus-valid while not reflecting true chronological order — real precedent: Bitcoin block 156114 timestamped ~2h before its own parent, block 790402 timestamped 2min before its parent, both consensus-valid. This synthetic vector reproduces that shape: anchor_block_time is declared just inside the valid window, ahead of outcome_ts_ms, so anchoring_precedence PASSES per the literal check — the profile has no independent time source to detect that the declared value may be backdated. Expected PASS is the documented behavior, not an oversight; there is no fix available within this profile (would require an external time source, or the block-height reframing noted non-normatively in the spec).",
+      "expected": "PASS",
+      "envelope": {
+        "anchor_block_time": 1782677900,
+        "mechanism": "bitcoin-ots",
+        "outcome_ts_ms": 1782677980000,
+        "trail_id": "neg-006-miner-claimed-backdated",
+        "version": "anchoring-precedence-ref-v1"
+      },
+      "anchoring_precedence_ref": "a88dc242f02e1b850a682cb1c281ea6d5d6e0ca2c1c2b3b210dbae62fbd985aa",
+      "checks": {
+        "canonical_envelope": true,
+        "admission_invariant": true,
+        "anchoring_existence": true,
+        "anchoring_precedence": true,
+        "chain_invariant": true
+      },
+      "admission_hash": "a88dc242f02e1b850a682cb1c281ea6d5d6e0ca2c1c2b3b210dbae62fbd985aa",
+      "mechanism_detail": {
+        "tier": "bitcoin-ots",
+        "anchor_ms": 1782677900000,
+        "precedence": true,
+        "margin_s": 80,
+        "note": "margin is small and positive by construction — the check cannot distinguish a genuinely-early anchor from a backdated-but-consensus-valid one; this vector documents that blind spot, it is not evidence the check is broken"
+      }
     }
   ]
 }
