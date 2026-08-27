@@ -1,0 +1,80 @@
+{
+  "spec_version": "scitt-card-trust-root-ref-v1",
+  "description": "Adversarial conformance fixtures for SCITT-style envelope verification, built against Cedulon/emiliaprotocol thread (scitt@ietf.org, Nicholas/Dogru). Both vectors are 'self-consistent' claims that a lenient verifier can pass by checking only internal consistency, without checking against an independent ground truth (a trust root registry, or the actual preimage bytes). Both MUST fail closed with a named failure_mode field distinct from the other's boundary, not a shared boolean.",
+  "reference_spec": "docs/spec/action-ref.md#Domain (line 88, OUT_OF_PROFILE_DOMAIN pattern)",
+  "related_bugs_shape": [
+    "Vernon boolean collapse — signature-valid treated as authenticity-proven",
+    "Joel ABSENT collapse — three distinct 'no linkage' states folded into one value",
+    "Emek tailPinned — pinned/anchored state not independently distinguished from claimed state"
+  ],
+  "trust_registry": {
+    "known_trust_anchors": [
+      "scitt-root-emiliaprotocol-2026",
+      "scitt-root-giskard-argentum-2026"
+    ],
+    "note": "Simulates an independent, out-of-band trust anchor registry. A verifier MUST check membership here, not just that a signature verifies against SOME embedded key."
+  },
+  "vectors": [
+    {
+      "id": "self-issued-card-fresh-key",
+      "class": "card_authenticity",
+      "description": "Card is internally self-consistent: the signature verifies correctly against the embedded issuer public key, and that key was freshly generated for this card (key_created_at == card_issued_at, key_source='embedded_self_generated'). Nothing about the card's internal structure is malformed. But the embedded key does not chain to any entry in the independent trust anchor registry — the card proves only that its own claimed issuer signed it, not that the issuer is a party anyone should trust.",
+      "expected": "FAIL",
+      "failure_mode": "TRUST_ANCHOR_UNRESOLVED",
+      "failure_detail": "card.issuer_key_id='self-forged-9f21a' resolves to a key present in the card itself (self_generated), but is absent from trust_registry.known_trust_anchors. self_consistency=true, authenticity=false. A verifier that stops at signature verification (self-consistency) without a second, independent check against the trust root MUST NOT be considered conformant.",
+      "card": {
+        "card_id": "card-emilia-forged-001",
+        "issuer_key_id": "self-forged-9f21a",
+        "key_source": "embedded_self_generated",
+        "key_created_at": "2026-08-27T09:00:00.000Z",
+        "card_issued_at": "2026-08-27T09:00:00.000Z",
+        "signature": "3045022100c9...ed_over_card_bytes",
+        "self_consistency": true,
+        "trust_anchor_ref": null
+      }
+    },
+    {
+      "id": "legitimate-card-known-root",
+      "class": "card_authenticity",
+      "description": "Control vector — same shape as above, but issuer_key_id resolves to a key chained under a registry-known trust anchor. Must PASS to prove the check isn't rejecting everything.",
+      "expected": "PASS",
+      "card": {
+        "card_id": "card-emilia-legit-001",
+        "issuer_key_id": "scitt-root-emiliaprotocol-2026",
+        "key_source": "trust_anchor_chained",
+        "key_created_at": "2026-01-10T09:00:00.000Z",
+        "card_issued_at": "2026-08-27T09:00:00.000Z",
+        "signature": "3045022100aa...ed_over_card_bytes",
+        "self_consistency": true,
+        "trust_anchor_ref": "scitt-root-emiliaprotocol-2026"
+      }
+    },
+    {
+      "id": "preimage-field-holds-rule-text",
+      "class": "envelope_preimage",
+      "description": "The envelope's preimage field, instead of containing the actual preimage object that SHA-256(JCS(preimage)) reduces to canonical_envelope_ref, contains the literal text of the canonicalization rule ('JCS RFC 8785 over {agent_id,action_type,scope,timestamp}') as a string. A verifier that does not attempt real recomputation — e.g. one that just checks 'preimage field is non-empty' — silently accepts this. A conformant verifier MUST attempt SHA-256(JCS(preimage)) and, on type/shape mismatch (preimage is not the expected object), reject named-boundary — not coerce to a boolean pass/fail without saying which boundary broke.",
+      "expected": "FAIL",
+      "failure_mode": "PREIMAGE_NOT_RECOMPUTABLE",
+      "failure_detail": "envelope.preimage is a str, not the 4-field preimage object {agent_id,action_type,scope,timestamp} required by action-ref.md#Derivation. SHA-256(JCS(preimage)) cannot be computed against the declared shape. This is a named-boundary rejection distinct from TRUST_ANCHOR_UNRESOLVED above — the two MUST NOT share a failure code or collapse into one boolean 'invalid':true.",
+      "envelope": {
+        "canonical_envelope_ref": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+        "preimage": "JCS RFC 8785 over {agent_id,action_type,scope,timestamp}"
+      }
+    },
+    {
+      "id": "preimage-field-recomputes-correctly",
+      "class": "envelope_preimage",
+      "description": "Control vector — preimage is the real object, recomputes byte-identical to canonical_envelope_ref. Must PASS.",
+      "expected": "PASS",
+      "envelope": {
+        "canonical_envelope_ref": "f7e651d0e3287943a6a2e695ccb6d9b23f2ef2511cfc75e519c1d35c08d6b2ec",
+        "preimage": {
+          "agent_id": "giskard-self",
+          "action_type": "behavioral_eval",
+          "scope": "read",
+          "timestamp": "2026-08-27T09:00:00.000Z"
+        }
+      }
+    }
+  ]
+}
