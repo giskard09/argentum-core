@@ -70,7 +70,7 @@ delegation_chain_ref = hashlib.sha256(jcs(chain_artifact).encode()).hexdigest()
 | `delegator` | string | Agent that granted this delegation. Must equal `hops[i-1].delegatee` for all non-root hops. |
 | `delegation_ref` | SHA-256 hex | Hash of the delegation artifact for this hop, derived per [`delegation-ref.md`](./delegation-ref.md). |
 | `scope` | string | Scope of this hop. Implementers SHOULD verify it is equal to or a subset of the parent hop's scope. |
-| `hop_signature` | base64 (optional) | Ed25519 signature by `delegator` over the UTF-8 bytes of this hop's `delegation_ref`. Additive field — omitting it does not change conformance of a chain that predates it (see "Cross-org attenuation" below). |
+| `hop_signature` | base64 (optional) | Ed25519 signature by `delegator` over the UTF-8 bytes of `JCS({chain_id, delegator, delegatee, scope, delegation_ref})` for this hop (erratum 2026-08-27, see below — an earlier revision signed `delegation_ref` alone). Additive field — omitting it does not change conformance of a chain that predates it (see "Cross-org attenuation" below). |
 
 ---
 
@@ -141,9 +141,26 @@ differs).
 `chain_continuity` (invariant 1) only proves that the claimed `delegatee`/`delegator`
 strings line up — it says nothing about who actually authorized a hop when the parties
 are independent organizations with no shared authority. `hop_signature` closes that gap:
-each hop's `delegator` signs the UTF-8 bytes of that hop's `delegation_ref` with an
-Ed25519 keypair, and a verifier checks the signature against the delegator's known
-public key before treating the hop as attenuated rather than merely claimed.
+each hop's `delegator` signs `JCS({chain_id, delegator, delegatee, scope,
+delegation_ref})` for that hop with an Ed25519 keypair, and a verifier checks the
+signature against the delegator's known public key before treating the hop as
+attenuated rather than merely claimed.
+
+> **Erratum (2026-08-27).** The revision that introduced this field (commit `f1259d7`,
+> 2026-07-30) signed `delegation_ref` alone, not the hop's other fields. `delegation_ref`
+> is an opaque pointer — nothing in the base invariants ties it to the `scope` or
+> `delegatee` actually printed in the chain artifact for that hop. A verifier following
+> that revision literally accepts a chain where a hop's `scope` (and, transitively via
+> `leaf_preimage`, the leaf's `action_type`) has been edited to something narrower after
+> signing, with the original signature carried forward unchanged — narrowing still
+> satisfies invariant 4, and a signature that only ever covered `delegation_ref` has
+> nothing to say about the edit. Found by imran-siddique/agentrust-io
+> (a2aproject/A2A#2079) cross-checking this fixture against cA2A's own verifier;
+> reproduced locally against `f1259d7` before this fix (`cross-org-neg-leaf-scope-
+> substitution` in `examples/conformance/delegation-chain-ref/cross-org-vectors.json`
+> FAILs correctly only from this commit onward). Fixed by binding the signature to
+> `chain_id`/`delegator`/`delegatee`/`scope`/`delegation_ref` jointly, so editing any of
+> those fields invalidates a signature that was not recomputed against the edit.
 
 - **Optional and additive.** A hop without `hop_signature` conforms exactly as before —
   this field was not part of `delegation-chain-ref-v1.0` (tag, 2026-05-26) and every
@@ -177,13 +194,28 @@ public key before treating the hop as attenuated rather than merely claimed.
 single-use tokens by themselves — nothing in the base invariants stops a chain that was
 already accepted from being resubmitted to claim the same authorization a second time.
 A conformant verifier SHOULD track `chain_id` and every hop's `delegation_ref` it has
-already accepted, and reject a resubmission of either as `replay_detected`, even when
-the resubmitted artifact is byte-identical and would otherwise pass every other
-invariant. See `examples/conformance/delegation-chain-ref/replay-vectors.json`
-(`replay-001-first-submission` PASS, `replay-002-resubmission-same-chain-id` FAIL —
-vectors run in order, registry state carries across the file). Same additive pattern as
-`hop_signature`: a verifier without replay tracking is not non-conformant for chains it
-has never seen before, but MUST NOT claim replay protection unless it holds this state.
+already **accepted** — recorded only once every other invariant has passed, not on
+receipt of the submission — and reject a resubmission of either as `replay_detected`,
+even when the resubmitted artifact is byte-identical and would otherwise pass every
+other invariant. See `examples/conformance/delegation-chain-ref/replay-vectors.json`
+(`replay-001-first-submission` PASS, `replay-002-resubmission-same-chain-id` FAIL,
+`replay-003-invalid-signature-first-attempt` FAIL, `replay-004-valid-retry-after-
+invalid-attempt` PASS — vectors run in order, registry state carries across the file).
+Same additive pattern as `hop_signature`: a verifier without replay tracking is not
+non-conformant for chains it has never seen before, but MUST NOT claim replay
+protection unless it holds this state.
+
+> **Erratum (2026-08-27).** The reference verifier (commit `f1259d7`, 2026-07-30)
+> recorded `chain_id`/`delegation_ref` unconditionally on every submission, before
+> knowing whether the submission would otherwise pass. A submission rejected for an
+> unrelated reason (bad `hop_signature`, scope widening, ...) still consumed the
+> `chain_id`, so a later, genuinely valid, resubmission of that same chain was
+> misreported as `replay_detected` instead of accepted — a self-inflicted denial of
+> service on a legitimate retry after any transient failure. Found in the same pass as
+> the `hop_signature` erratum above (a2aproject/A2A#2079,
+> "Recording should happen only after all checks succeed"). Fixed by recording only
+> when the submission has zero other failures; a check for an already-recorded chain
+> still runs unconditionally, so an actual replay is still caught.
 
 ---
 

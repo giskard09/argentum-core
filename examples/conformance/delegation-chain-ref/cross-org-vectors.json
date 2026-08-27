@@ -1,13 +1,13 @@
 {
   "pubkeys": {
-    "test-cross-org-a": "YkoGsWsHtv8M1jJlkzf4eHN+2Ot5IhfxX7T+r9n90oQ=",
-    "test-cross-org-b": "ZGskR4ValAEIejE8vbDRi9Afu5a2Zbm3MIiJHFmzyiY=",
-    "test-cross-org-c": "Y7k4zLK0NanEbxuA0fX8ZEnqT8L72sHinxc8QVHp804="
+    "test-cross-org-a": "cM2fzXznjkKrREvc+Vq0A89IODqDnFP5l8knecbgoHQ=",
+    "test-cross-org-b": "v0aL312hS/F5IdbeN5+1cktH7XytX/u7qSUFfmV2zG8=",
+    "test-cross-org-c": "TzBj6JCweJqiDXBFSYI4GxafubML//Gvp9THE9sxZyQ="
   },
   "vectors": [
     {
       "id": "cross-org-001-independent-signers",
-      "description": "3-party cross-org chain (test-cross-org-a -> b -> c), no shared authority. Each hop's delegator signs its own delegation_ref with an independently generated Ed25519 keypair, verified against the pubkeys map (self-contained conformance fixture, no live Marks registration — keeps test material fully isolated from production pubkey/billing data).",
+      "description": "3-party cross-org chain (test-cross-org-a -> b -> c), no shared authority. Each hop's delegator signs {chain_id, delegator, delegatee, scope, delegation_ref} with an independently generated Ed25519 keypair, verified against the pubkeys map (self-contained conformance fixture, no live Marks registration \u2014 keeps test material fully isolated from production pubkey/billing data).",
       "expected": "PASS",
       "chain_artifact": {
         "chain_id": "chain-cross-org-001",
@@ -15,16 +15,16 @@
           {
             "delegatee": "test-cross-org-b",
             "delegator": "test-cross-org-a",
-            "delegation_ref": "1ba2a745ae11667c79fef32ddb1b3d7ad2213de7a8311dbc58a4f071670e426e",
+            "delegation_ref": "4fbe4e4552899fae28ee307c44da01e8537a6dba8044a6bc3259ba6ea0c9878a",
             "scope": "mycelium:payment",
-            "hop_signature": "2r0LLk0J14+uO3HISubqWnY0firMIhwpBooI5XbJ2bq/aKLj/ja0ZOaDG3PQi9KdlyppFBAPOGr6UytnPpXlCw=="
+            "hop_signature": "+h7dNbL0gG1mBl/kS1llXTEuqgzttroQvFAlbuYZVZeQ4scrnDCmCcRufzhYmocE/fGTwsKQmDz8cyNm3XR3Dg=="
           },
           {
             "delegatee": "test-cross-org-c",
             "delegator": "test-cross-org-b",
-            "delegation_ref": "020d42b8ce674bdbb2d425992f5b1351edb999d10c830785b883b204155bda95",
+            "delegation_ref": "f13451b02b6e78cf2b6c08f6f4c30bc504bd4508ccf6847935c1a7c19ff22aca",
             "scope": "mycelium:payment",
-            "hop_signature": "LDsgvC90WBm74cf6QfZXdKuPjnFiiDwSDrV7jwFVCVteHDN8t+cCpuIqFkg6rVro1LWsS7tNODeWuKuEL+GLDw=="
+            "hop_signature": "4o1ctYiTufW8ABZPjFBGslrDqCSbv544gEz/3Y5QM2vmIeOA4u+TKE3Y6Z7vMVgdkNru15kYPSMAsC01RKlmCg=="
           }
         ],
         "leaf_action_ref": "9e727d4eb437fd2c78c138430a2a26f252f5d6363d940c1e627eb11deffa695b",
@@ -32,7 +32,7 @@
         "scope": "mycelium:payment",
         "version": "delegation-chain-ref-v1"
       },
-      "delegation_chain_ref": "4f7d0eb38ccb6a018f8f77600250f4dc27697aeaf9f2790f7c58d9dd71cf80d0",
+      "delegation_chain_ref": "14421b11d1ebf062e0f3f43f8845b8e3dd691901593f29d0da2eab2d1ad749b4",
       "leaf_preimage": {
         "agent_id": "test-cross-org-c",
         "action_type": "payment.route",
@@ -42,7 +42,7 @@
     },
     {
       "id": "cross-org-neg-signature-substitution",
-      "description": "hop 1 (b->c) carries hop 0's valid signature (a's signature over ref0) instead of b's own signature over ref1. Chain continuity, scope narrowing and leaf_action_ref all still pass — only the per-hop signature check catches this. Demonstrates that continuity/hash checks alone are insufficient for cross-org authority narrowing without cryptographic signer verification.",
+      "description": "hop 1 (b->c) carries hop 0's valid signature (a's signature over hop 0's preimage) instead of b's own signature over hop 1's preimage. Chain continuity, scope narrowing and leaf_action_ref all still pass \u2014 only the per-hop signature check catches this. Demonstrates that continuity/hash checks alone are insufficient for cross-org authority narrowing without cryptographic signer verification.",
       "expected": "FAIL",
       "failure_mode": "hop_signature_invalid",
       "chain_artifact": {
@@ -51,16 +51,16 @@
           {
             "delegatee": "test-cross-org-b",
             "delegator": "test-cross-org-a",
-            "delegation_ref": "1ba2a745ae11667c79fef32ddb1b3d7ad2213de7a8311dbc58a4f071670e426e",
+            "delegation_ref": "703ab3778fdb37f720f85fed61346d900811a9bfdaca52097462d66b5cf75d7a",
             "scope": "mycelium:payment",
-            "hop_signature": "2r0LLk0J14+uO3HISubqWnY0firMIhwpBooI5XbJ2bq/aKLj/ja0ZOaDG3PQi9KdlyppFBAPOGr6UytnPpXlCw=="
+            "hop_signature": "QRFytm0jFU+L+Yimte84TS+ufPXh8ByVbb7PoNi31bomAX2UNRCYOuaoI34pWCYnEVyznD7e0rOnrjqO1CgdDw=="
           },
           {
             "delegatee": "test-cross-org-c",
             "delegator": "test-cross-org-b",
-            "delegation_ref": "020d42b8ce674bdbb2d425992f5b1351edb999d10c830785b883b204155bda95",
+            "delegation_ref": "38afc580de21fd9612653bb8964e3fc93e9f158dd841db8358da3833ac3be5e7",
             "scope": "mycelium:payment",
-            "hop_signature": "2r0LLk0J14+uO3HISubqWnY0firMIhwpBooI5XbJ2bq/aKLj/ja0ZOaDG3PQi9KdlyppFBAPOGr6UytnPpXlCw=="
+            "hop_signature": "QRFytm0jFU+L+Yimte84TS+ufPXh8ByVbb7PoNi31bomAX2UNRCYOuaoI34pWCYnEVyznD7e0rOnrjqO1CgdDw=="
           }
         ],
         "leaf_action_ref": "9e727d4eb437fd2c78c138430a2a26f252f5d6363d940c1e627eb11deffa695b",
@@ -68,11 +68,47 @@
         "scope": "mycelium:payment",
         "version": "delegation-chain-ref-v1"
       },
-      "delegation_chain_ref": "98a14b73586dd2f87add6e5dc84d32a17ceae6123c84a2d48ebd0975bec54f43",
+      "delegation_chain_ref": "d0f53a4086a3472e63bcc10075738c49c4d3fd4c66a0acc1e1bf6fc52232a225",
       "leaf_preimage": {
         "agent_id": "test-cross-org-c",
         "action_type": "payment.route",
         "scope": "mycelium:payment",
+        "timestamp": "2026-08-01T10:00:00.000Z"
+      }
+    },
+    {
+      "id": "cross-org-neg-leaf-scope-substitution",
+      "description": "A2A#2079 finding (imran-siddique, cA2A cross-check against f1259d7): leaf hop's scope and leaf_preimage.action_type are edited to a narrower scope (still passes monotonic_scope_narrowing) and the chain digest is recomputed, but hop_signature is left byte-for-byte unchanged. Under the pre-erratum preimage (signature over delegation_ref alone) this PASSED \u2014 signature was never bound to scope/delegatee content. Under the fixed preimage it correctly FAILs: the untouched signature no longer verifies against the edited hop.",
+      "expected": "FAIL",
+      "failure_mode": "hop_signature_invalid",
+      "chain_artifact": {
+        "chain_id": "chain-cross-org-neg-leaf-scope-substitution",
+        "hops": [
+          {
+            "delegatee": "test-cross-org-b",
+            "delegator": "test-cross-org-a",
+            "delegation_ref": "a582839f59091b0570dce517bda104e9e46db95eb6b7d32e06dbeb639507951e",
+            "scope": "mycelium:payment",
+            "hop_signature": "BSM1EbF5belVXs/vxpnbjLl6rhluQBxbbeCrhJUI3vJOUuD6ldS6kvQD96n/Oks3KoCfrdS/3kKPnGBWxpcuAg=="
+          },
+          {
+            "delegatee": "test-cross-org-c",
+            "delegator": "test-cross-org-b",
+            "delegation_ref": "29591a3584e085fa25cf4190a09673c7164ea6b0b3c30ce7ab3a988344d9d2e5",
+            "scope": "mycelium:payment:refund",
+            "hop_signature": "I/MQPSZiXI6vpLk497TCLhD2EUgvfCpQIA4q8jiLRLxulxHNonLHwy+Lzw8deEIhcyBuQlKbqdSrjoZ7fImpCQ=="
+          }
+        ],
+        "leaf_action_ref": "05feef81c442fd4bf58299e3b56df187e67d911814deb46d32df20ca2ba5e133",
+        "root_delegator": "test-cross-org-a",
+        "scope": "mycelium:payment",
+        "version": "delegation-chain-ref-v1"
+      },
+      "delegation_chain_ref": "5844ca98a2ac814518abdfc8e4add1efe64d3b6d090332897484f63c5f0b65ca",
+      "leaf_preimage": {
+        "agent_id": "test-cross-org-c",
+        "action_type": "payment.refund",
+        "scope": "mycelium:payment:refund",
         "timestamp": "2026-08-01T10:00:00.000Z"
       }
     }

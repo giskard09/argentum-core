@@ -1,10 +1,10 @@
 {
   "spec_version": "delegation-chain-ref-v1",
-  "description": "Replay guard conformance vectors. A chain_id (and each hop's delegation_ref) MUST NOT be accepted twice by the same verifier instance -- resubmitting an already-seen chain_id is a replay, even if the resubmitted artifact is byte-identical and would otherwise verify. Vectors MUST be run in order (registry state carries across vectors within this file).",
+  "description": "Replay guard conformance vectors. A chain_id (and each hop's delegation_ref) MUST NOT be accepted twice by the same verifier instance -- resubmitting an already-seen chain_id is a replay, even if the resubmitted artifact is byte-identical and would otherwise verify. An artifact that fails for any other reason MUST NOT be recorded, so a later, genuinely valid, submission of that same chain_id is not misreported as a replay (see replay-003/004). Vectors MUST be run in order (registry state carries across vectors within this file).",
   "vectors": [
     {
       "id": "replay-001-first-submission",
-      "description": "First submission of chain-cross-org-001. Accepted -- registry has not seen this chain_id or any of its hop delegation_ref values before.",
+      "description": "First submission of chain-cross-org-001. Accepted \u2014 registry has not seen this chain_id or any of its hop delegation_ref values before.",
       "expected": "PASS",
       "chain_artifact": {
         "chain_id": "chain-cross-org-001",
@@ -12,16 +12,16 @@
           {
             "delegatee": "test-cross-org-b",
             "delegator": "test-cross-org-a",
-            "delegation_ref": "1ba2a745ae11667c79fef32ddb1b3d7ad2213de7a8311dbc58a4f071670e426e",
+            "delegation_ref": "4fbe4e4552899fae28ee307c44da01e8537a6dba8044a6bc3259ba6ea0c9878a",
             "scope": "mycelium:payment",
-            "hop_signature": "2r0LLk0J14+uO3HISubqWnY0firMIhwpBooI5XbJ2bq/aKLj/ja0ZOaDG3PQi9KdlyppFBAPOGr6UytnPpXlCw=="
+            "hop_signature": "+h7dNbL0gG1mBl/kS1llXTEuqgzttroQvFAlbuYZVZeQ4scrnDCmCcRufzhYmocE/fGTwsKQmDz8cyNm3XR3Dg=="
           },
           {
             "delegatee": "test-cross-org-c",
             "delegator": "test-cross-org-b",
-            "delegation_ref": "020d42b8ce674bdbb2d425992f5b1351edb999d10c830785b883b204155bda95",
+            "delegation_ref": "f13451b02b6e78cf2b6c08f6f4c30bc504bd4508ccf6847935c1a7c19ff22aca",
             "scope": "mycelium:payment",
-            "hop_signature": "LDsgvC90WBm74cf6QfZXdKuPjnFiiDwSDrV7jwFVCVteHDN8t+cCpuIqFkg6rVro1LWsS7tNODeWuKuEL+GLDw=="
+            "hop_signature": "4o1ctYiTufW8ABZPjFBGslrDqCSbv544gEz/3Y5QM2vmIeOA4u+TKE3Y6Z7vMVgdkNru15kYPSMAsC01RKlmCg=="
           }
         ],
         "leaf_action_ref": "9e727d4eb437fd2c78c138430a2a26f252f5d6363d940c1e627eb11deffa695b",
@@ -29,7 +29,7 @@
         "scope": "mycelium:payment",
         "version": "delegation-chain-ref-v1"
       },
-      "delegation_chain_ref": "4f7d0eb38ccb6a018f8f77600250f4dc27697aeaf9f2790f7c58d9dd71cf80d0",
+      "delegation_chain_ref": "14421b11d1ebf062e0f3f43f8845b8e3dd691901593f29d0da2eab2d1ad749b4",
       "leaf_preimage": {
         "agent_id": "test-cross-org-c",
         "action_type": "payment.route",
@@ -39,7 +39,7 @@
     },
     {
       "id": "replay-002-resubmission-same-chain-id",
-      "description": "Byte-identical resubmission of the exact same chain_artifact (same chain_id, same hops, same delegation_ref values) already accepted in replay-001. Every per-vector invariant (continuity/anchoring/scope/signature) still passes in isolation -- only the replay guard, which tracks state across submissions, catches this.",
+      "description": "Byte-identical resubmission of the exact same chain_artifact (same chain_id, same hops, same delegation_ref values) already accepted in replay-001. Every per-vector invariant (continuity/anchoring/scope/signature) still passes in isolation \u2014 only the replay guard, which tracks state across submissions, catches this.",
       "expected": "FAIL",
       "failure_mode": "replay_detected",
       "chain_artifact": {
@@ -48,16 +48,16 @@
           {
             "delegatee": "test-cross-org-b",
             "delegator": "test-cross-org-a",
-            "delegation_ref": "1ba2a745ae11667c79fef32ddb1b3d7ad2213de7a8311dbc58a4f071670e426e",
+            "delegation_ref": "4fbe4e4552899fae28ee307c44da01e8537a6dba8044a6bc3259ba6ea0c9878a",
             "scope": "mycelium:payment",
-            "hop_signature": "2r0LLk0J14+uO3HISubqWnY0firMIhwpBooI5XbJ2bq/aKLj/ja0ZOaDG3PQi9KdlyppFBAPOGr6UytnPpXlCw=="
+            "hop_signature": "+h7dNbL0gG1mBl/kS1llXTEuqgzttroQvFAlbuYZVZeQ4scrnDCmCcRufzhYmocE/fGTwsKQmDz8cyNm3XR3Dg=="
           },
           {
             "delegatee": "test-cross-org-c",
             "delegator": "test-cross-org-b",
-            "delegation_ref": "020d42b8ce674bdbb2d425992f5b1351edb999d10c830785b883b204155bda95",
+            "delegation_ref": "f13451b02b6e78cf2b6c08f6f4c30bc504bd4508ccf6847935c1a7c19ff22aca",
             "scope": "mycelium:payment",
-            "hop_signature": "LDsgvC90WBm74cf6QfZXdKuPjnFiiDwSDrV7jwFVCVteHDN8t+cCpuIqFkg6rVro1LWsS7tNODeWuKuEL+GLDw=="
+            "hop_signature": "4o1ctYiTufW8ABZPjFBGslrDqCSbv544gEz/3Y5QM2vmIeOA4u+TKE3Y6Z7vMVgdkNru15kYPSMAsC01RKlmCg=="
           }
         ],
         "leaf_action_ref": "9e727d4eb437fd2c78c138430a2a26f252f5d6363d940c1e627eb11deffa695b",
@@ -65,7 +65,78 @@
         "scope": "mycelium:payment",
         "version": "delegation-chain-ref-v1"
       },
-      "delegation_chain_ref": "4f7d0eb38ccb6a018f8f77600250f4dc27697aeaf9f2790f7c58d9dd71cf80d0",
+      "delegation_chain_ref": "14421b11d1ebf062e0f3f43f8845b8e3dd691901593f29d0da2eab2d1ad749b4",
+      "leaf_preimage": {
+        "agent_id": "test-cross-org-c",
+        "action_type": "payment.route",
+        "scope": "mycelium:payment",
+        "timestamp": "2026-08-01T10:00:00.000Z"
+      }
+    },
+    {
+      "id": "replay-003-invalid-signature-first-attempt",
+      "description": "A2A#2079 finding (imran-siddique): an invalid-signature submission of chain-cross-org-003 is rejected (bad signature) but MUST NOT be recorded in the replay registry, or the correct resubmission below would be misreported as a replay instead of accepted.",
+      "expected": "FAIL",
+      "failure_mode": "hop_signature_invalid",
+      "chain_artifact": {
+        "chain_id": "chain-cross-org-003",
+        "hops": [
+          {
+            "delegatee": "test-cross-org-b",
+            "delegator": "test-cross-org-a",
+            "delegation_ref": "a6c7a05ed5fe6dfac98e52dbe8de27251b46c806714ca10b8ef9ec486a6b3c29",
+            "scope": "mycelium:payment",
+            "hop_signature": "AAAAsz6h7sxkzQpJqQJSR9v09DMaQ36kAZL/qZNSvdr/j/17gFAO+P4BfDcNlrMpwUeD9FjmgpR8wUG9eiF5CA=="
+          },
+          {
+            "delegatee": "test-cross-org-c",
+            "delegator": "test-cross-org-b",
+            "delegation_ref": "d71f031afdf59db31afa99d80a3dc74b2002c0f08db76cf68241100fec06a6f5",
+            "scope": "mycelium:payment",
+            "hop_signature": "s+1sUI7uhA4nISQdE12aePPIwyp82a0lqQQUoyuVg4+7vKVx/9u7e9X7pYMDEQVNkDgaytv7hMPowj5P1JfGDw=="
+          }
+        ],
+        "leaf_action_ref": "9e727d4eb437fd2c78c138430a2a26f252f5d6363d940c1e627eb11deffa695b",
+        "root_delegator": "test-cross-org-a",
+        "scope": "mycelium:payment",
+        "version": "delegation-chain-ref-v1"
+      },
+      "delegation_chain_ref": "48afc8cee518d69ca986de429f671386ef88a598a28754aa7336f79b10514db2",
+      "leaf_preimage": {
+        "agent_id": "test-cross-org-c",
+        "action_type": "payment.route",
+        "scope": "mycelium:payment",
+        "timestamp": "2026-08-01T10:00:00.000Z"
+      }
+    },
+    {
+      "id": "replay-004-valid-retry-after-invalid-attempt",
+      "description": "The genuinely valid chain-cross-org-003, submitted immediately after the invalid attempt above. MUST pass \u2014 the invalid attempt must not have poisoned the registry (pre-erratum behavior: this FAILed as replay_detected because check_and_record() recorded chain_id/delegation_ref unconditionally, before the signature check outcome was known).",
+      "expected": "PASS",
+      "chain_artifact": {
+        "chain_id": "chain-cross-org-003",
+        "hops": [
+          {
+            "delegatee": "test-cross-org-b",
+            "delegator": "test-cross-org-a",
+            "delegation_ref": "a6c7a05ed5fe6dfac98e52dbe8de27251b46c806714ca10b8ef9ec486a6b3c29",
+            "scope": "mycelium:payment",
+            "hop_signature": "PLpYsz6h7sxkzQpJqQJSR9v09DMaQ36kAZL/qZNSvdr/j/17gFAO+P4BfDcNlrMpwUeD9FjmgpR8wUG9eiF5CA=="
+          },
+          {
+            "delegatee": "test-cross-org-c",
+            "delegator": "test-cross-org-b",
+            "delegation_ref": "d71f031afdf59db31afa99d80a3dc74b2002c0f08db76cf68241100fec06a6f5",
+            "scope": "mycelium:payment",
+            "hop_signature": "s+1sUI7uhA4nISQdE12aePPIwyp82a0lqQQUoyuVg4+7vKVx/9u7e9X7pYMDEQVNkDgaytv7hMPowj5P1JfGDw=="
+          }
+        ],
+        "leaf_action_ref": "9e727d4eb437fd2c78c138430a2a26f252f5d6363d940c1e627eb11deffa695b",
+        "root_delegator": "test-cross-org-a",
+        "scope": "mycelium:payment",
+        "version": "delegation-chain-ref-v1"
+      },
+      "delegation_chain_ref": "f575a4370e235eda96c35e2263d1a65c673aea9c1534073b72b1c6ab9b8540ef",
       "leaf_preimage": {
         "agent_id": "test-cross-org-c",
         "action_type": "payment.route",
@@ -75,8 +146,8 @@
     }
   ],
   "pubkeys": {
-    "test-cross-org-a": "YkoGsWsHtv8M1jJlkzf4eHN+2Ot5IhfxX7T+r9n90oQ=",
-    "test-cross-org-b": "ZGskR4ValAEIejE8vbDRi9Afu5a2Zbm3MIiJHFmzyiY=",
-    "test-cross-org-c": "Y7k4zLK0NanEbxuA0fX8ZEnqT8L72sHinxc8QVHp804="
+    "test-cross-org-a": "cM2fzXznjkKrREvc+Vq0A89IODqDnFP5l8knecbgoHQ=",
+    "test-cross-org-b": "v0aL312hS/F5IdbeN5+1cktH7XytX/u7qSUFfmV2zG8=",
+    "test-cross-org-c": "TzBj6JCweJqiDXBFSYI4GxafubML//Gvp9THE9sxZyQ="
   }
 }

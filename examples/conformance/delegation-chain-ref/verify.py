@@ -7,10 +7,12 @@ Checks five invariants per spec (delegation-chain-ref-v1):
   3. leaf_anchoring      — leaf_action_ref matches recomputed action_ref from leaf_preimage
   4. monotonic_scope_narrowing — hops[i].scope is equal to or a strict sub-namespace of hops[i-1].scope
   5. hop_signature_valid — if hops[i].hop_signature is present, it must be a valid Ed25519
-     signature by hops[i].delegator over hops[i].delegation_ref (cross-org attenuation:
-     without this, chain_continuity alone proves nothing about who actually authorized
-     each hop — signatures are what turn a claimed chain into a verified one when hops
-     are independent parties with no shared authority).
+     signature by hops[i].delegator over JCS({chain_id, delegator, delegatee, scope,
+     delegation_ref}) for that hop (cross-org attenuation: without this, chain_continuity
+     alone proves nothing about who actually authorized each hop — signatures are what
+     turn a claimed chain into a verified one when hops are independent parties with no
+     shared authority). The preimage binds delegator/delegatee/scope/chain_id, not just
+     delegation_ref alone — see "hop_signature preimage" erratum below for why.
 
 delegation_chain_ref byte-match is also verified against SHA-256(JCS(chain_artifact)).
 
@@ -65,36 +67,52 @@ def scope_is_narrower_or_equal(parent_scope: str, child_scope: str) -> bool:
 
 
 class SeenRegistry:
-    """Tracks chain_id and per-hop delegation_ref values already submitted.
+    """Tracks chain_id and per-hop delegation_ref values already accepted.
 
     Mirrors the NonceCache pattern in agent_signing.py: a resubmission of a chain_id
     (or reuse of a delegation_ref across a different chain) is a replay regardless of
     whether the underlying artifact would otherwise verify -- an accepted chain must
     not be presentable a second time to claim the same authorization again.
+
+    Recording happens only on `record()`, called by the caller only after every other
+    check has passed (see erratum below) -- `contains()` alone never mutates state, so
+    a submission that fails for an unrelated reason (bad signature, scope widening,
+    ...) cannot poison the registry and cause a later, genuinely valid, resubmission
+    to be misreported as a replay.
     """
 
     def __init__(self):
         self.chain_ids: set[str] = set()
         self.delegation_refs: set[str] = set()
 
-    def check_and_record(self, chain_id: str, hop_delegation_refs: list[str]) -> bool:
-        """Returns True if fresh (not a replay). Records regardless, so a second
-        identical submission is caught even if the first one failed for other reasons."""
-        replay = chain_id in self.chain_ids or any(r in self.delegation_refs for r in hop_delegation_refs)
+    def contains(self, chain_id: str, hop_delegation_refs: list[str]) -> bool:
+        return chain_id in self.chain_ids or any(r in self.delegation_refs for r in hop_delegation_refs)
+
+    def record(self, chain_id: str, hop_delegation_refs: list[str]) -> None:
         self.chain_ids.add(chain_id)
         self.delegation_refs.update(hop_delegation_refs)
-        return not replay
 
 
-def verify_hop_signature(delegator: str, delegation_ref: str, hop_signature_b64: str, pubkeys: dict) -> bool:
-    pub_b64 = pubkeys.get(delegator)
+def hop_signing_preimage(chain_id: str, hop: dict) -> str:
+    return jcs({
+        "chain_id": chain_id,
+        "delegator": hop["delegator"],
+        "delegatee": hop["delegatee"],
+        "scope": hop["scope"],
+        "delegation_ref": hop["delegation_ref"],
+    })
+
+
+def verify_hop_signature(chain_id: str, hop: dict, hop_signature_b64: str, pubkeys: dict) -> bool:
+    pub_b64 = pubkeys.get(hop["delegator"])
     if not pub_b64:
         return False
     try:
         vk = VerifyKey(base64.b64decode(pub_b64))
-        vk.verify(delegation_ref.encode("utf-8"), base64.b64decode(hop_signature_b64))
+        preimage = hop_signing_preimage(chain_id, hop)
+        vk.verify(preimage.encode("utf-8"), base64.b64decode(hop_signature_b64))
         return True
-    except (BadSignatureError, ValueError, TypeError):
+    except (BadSignatureError, ValueError, TypeError, KeyError):
         return False
 
 
@@ -156,24 +174,36 @@ def verify_vector(vector: dict, pubkeys: dict | None = None, seen_registry: "See
 
     # 5. hop_signature_valid — only enforced when hop_signature is present (additive,
     # optional field — hops without it are unaffected, per delegation-ref.md invariant 5
-    # pattern of opaque/additional fields entering the hash but not required by the base schema)
+    # pattern of opaque/additional fields entering the hash but not required by the base schema).
+    # The signature covers {chain_id, delegator, delegatee, scope, delegation_ref} for the hop,
+    # not delegation_ref alone — see "hop_signature preimage" erratum in delegation-chain-ref.md:
+    # a bare signature over delegation_ref proves the delegator signed *some* opaque pointer, not
+    # that the delegator authorized *this* hop's delegatee/scope, so a chain could be edited to
+    # swap in a different scope/delegatee while carrying forward an untouched, still-"valid" signature.
     for i, hop in enumerate(hops):
         if "hop_signature" in hop:
-            ok = verify_hop_signature(hop["delegator"], hop["delegation_ref"], hop["hop_signature"], pubkeys)
+            ok = verify_hop_signature(chain["chain_id"], hop, hop["hop_signature"], pubkeys)
             if not ok:
                 failures.append(
                     f"hop_signature_invalid at hop {i}: signature does not verify against "
-                    f"delegator={hop['delegator']!r}'s registered pubkey for delegation_ref={hop['delegation_ref']}"
+                    f"delegator={hop['delegator']!r}'s registered pubkey over "
+                    f"{{chain_id, delegator, delegatee, scope, delegation_ref}} for this hop"
                 )
 
-    # 6. replay_detected — chain_id or any hop delegation_ref already accepted before
+    # 6. replay_detected — chain_id or any hop delegation_ref already accepted before.
+    # Recording happens only after every other check has passed: a submission recorded before
+    # all checks were known-good would let a rejected (e.g. bad-signature) attempt consume the
+    # chain_id/delegation_ref, so a later, genuinely valid, resubmission of the same chain would
+    # be misreported as a replay instead of accepted (erratum in delegation-chain-ref.md).
     if seen_registry is not None:
         hop_refs = [h["delegation_ref"] for h in hops]
-        if not seen_registry.check_and_record(chain["chain_id"], hop_refs):
+        if seen_registry.contains(chain["chain_id"], hop_refs):
             failures.append(
                 f"replay_detected: chain_id={chain['chain_id']!r} (or one of its hop "
                 f"delegation_ref values) was already submitted"
             )
+        elif len(failures) == 0:
+            seen_registry.record(chain["chain_id"], hop_refs)
 
     return len(failures) == 0, failures
 
