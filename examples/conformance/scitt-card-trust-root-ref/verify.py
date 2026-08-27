@@ -5,10 +5,10 @@ Two independent boundaries, each with its own named failure_mode — a
 conformant verifier MUST NOT collapse them into a single boolean:
 
   class "card_authenticity":
-    self_consistency (signature verifies against the embedded key) is NOT
-    the same claim as authenticity (the key chains to a registry-known
-    trust anchor). A card can be self_consistency=true and still be a
-    forgery signed with a key generated for the occasion.
+    self_consistency (the signature cryptographically verifies against the
+    embedded key) is NOT the same claim as authenticity (the key chains to a
+    registry-known trust anchor). A card can be self_consistency=true and
+    still be a forgery signed with a key generated for the occasion.
     -> failure_mode: TRUST_ANCHOR_UNRESOLVED
 
   class "envelope_preimage":
@@ -20,12 +20,25 @@ conformant verifier MUST NOT collapse them into a single boolean:
 
 Both are named-boundary rejections: the field that failed is named in the
 result, never swallowed into a single valid:true/false.
+
+Erratum (2026-08-27, self-audit before external use): the first revision of
+this verifier read `card.self_consistency` as a boolean supplied by the
+fixture instead of computing it — the exact class of bug (asserted, not
+verified) that this vector exists to catch in others. `verify_card` now
+performs a real Ed25519 signature check over the card bytes.
+
+Dependency: PyNaCl. Install with `pip install -r requirements.txt`
+(shared with delegation-chain-ref, same dependency).
 """
 
+import base64
 import hashlib
 import json
 import sys
 from pathlib import Path
+
+from nacl.exceptions import BadSignatureError
+from nacl.signing import VerifyKey
 
 REQUIRED_PREIMAGE_KEYS = {"agent_id", "action_type", "scope", "timestamp"}
 
@@ -36,19 +49,29 @@ def jcs(obj: dict) -> bytes:
     ).encode("utf-8")
 
 
+def card_signing_bytes(card: dict) -> bytes:
+    """The bytes the issuer actually signs: everything except the signature itself."""
+    signable = {k: v for k, v in card.items() if k not in ("signature", "self_consistency")}
+    return jcs(signable)
+
+
 def verify_card(card: dict, known_trust_anchors: set[str]) -> tuple[bool, str | None, str | None]:
-    """Returns (ok, failure_mode, failure_detail)."""
-    if not card.get("self_consistency"):
-        return False, "SIGNATURE_INVALID", "card.self_consistency is false — signature does not verify against embedded key."
+    """Returns (ok, failure_mode, failure_detail). Computes self-consistency, never trusts it."""
+    try:
+        vk = VerifyKey(base64.b64decode(card["issuer_pubkey"]))
+        vk.verify(card_signing_bytes(card), base64.b64decode(card["signature"]))
+    except (BadSignatureError, ValueError, TypeError, KeyError) as e:
+        return False, "SIGNATURE_INVALID", f"signature does not verify against embedded issuer_pubkey: {e}"
 
     anchor = card.get("trust_anchor_ref")
     if anchor not in known_trust_anchors:
         return (
             False,
             "TRUST_ANCHOR_UNRESOLVED",
-            f"card.issuer_key_id={card.get('issuer_key_id')!r} is self_consistency=true but "
-            f"trust_anchor_ref={anchor!r} is not in the known trust anchor registry. "
-            "Signature validity proves the issuer signed its own claim, not that the issuer is trusted.",
+            f"card.issuer_key_id={card.get('issuer_key_id')!r} has a cryptographically valid "
+            f"signature (self_consistency=true) but trust_anchor_ref={anchor!r} is not in the "
+            "known trust anchor registry. Signature validity proves the issuer signed its own "
+            "claim, not that the issuer is trusted.",
         )
 
     return True, None, None

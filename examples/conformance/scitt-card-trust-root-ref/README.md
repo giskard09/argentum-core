@@ -11,8 +11,9 @@ shared boolean.
 
 | Vector | Class | Failure mode | What it tests |
 |--------|-------|--------------|----------------|
-| `self-issued-card-fresh-key` | `card_authenticity` | `TRUST_ANCHOR_UNRESOLVED` | Card signature verifies against its own embedded key (self-consistent), but that key was generated for the occasion and does not chain to any registry-known trust anchor. Distinguishes **self-consistency** from **authenticity**. |
+| `self-issued-card-fresh-key` | `card_authenticity` | `TRUST_ANCHOR_UNRESOLVED` | Card signature cryptographically verifies against its own embedded key (self-consistent), but that key was generated for the occasion and does not chain to any registry-known trust anchor. Distinguishes **self-consistency** from **authenticity**. |
 | `legitimate-card-known-root` | `card_authenticity` | — (`PASS`) | Control — same shape, key chains to a known trust anchor. |
+| `tampered-card-known-root` | `card_authenticity` | `SIGNATURE_INVALID` | Card claims a trust-anchor-chained issuer and even asserts `self_consistency: true` in the artifact itself, but a field was mutated after signing — signature no longer verifies. Proves the verifier *computes* self-consistency instead of trusting the artifact's claim about itself. |
 | `preimage-field-holds-rule-text` | `envelope_preimage` | `PREIMAGE_NOT_RECOMPUTABLE` | Envelope's `preimage` field holds the literal text of the canonicalization rule instead of the `{agent_id,action_type,scope,timestamp}` object it's supposed to reduce to `canonical_envelope_ref` under SHA-256(JCS(·)). |
 | `preimage-field-recomputes-correctly` | `envelope_preimage` | — (`PASS`) | Control — real preimage object, recomputes byte-identical. |
 
@@ -39,19 +40,33 @@ boundary — never coerce it into a permissive default or a single collapsed boo
 ## Verification
 
 ```bash
+pip install -r requirements.txt   # PyNaCl, shared with delegation-chain-ref
 python3 verify.py
 ```
 
 A conformant verifier MUST:
-1. For `card_authenticity`: check `self_consistency` (signature validity) AND
-   `trust_anchor_ref` membership in an independent trust anchor registry, as two
-   separate checks — never accept on signature validity alone.
+1. For `card_authenticity`: **cryptographically verify** the signature over the card
+   bytes against the embedded `issuer_pubkey` (Ed25519) — never read a `self_consistency`
+   field as if it were the result of that check — AND separately check `trust_anchor_ref`
+   membership in an independent trust anchor registry. Two independent checks; signature
+   validity alone is never sufficient.
 2. For `envelope_preimage`: attempt real `SHA-256(JCS(preimage))` recomputation; if
    `preimage` is not the required 4-field object, reject `PREIMAGE_NOT_RECOMPUTABLE`
    before any digest comparison — do not attempt to coerce or partially hash it.
 3. Never emit the same `failure_mode` for both classes — a caller must be able to tell
    *which* boundary failed from the result alone (the `MUST-surface` clause agreed with
    Nicholas/Doğru: rejection exposed in a named field, not swallowed).
+
+## Erratum (2026-08-27, self-audit before external use)
+
+The first revision of `verify_card()` read `card.self_consistency` as a boolean supplied
+by the fixture instead of computing it — the exact class of bug (asserted, not verified)
+this vector exists to catch in others. Caught in self-audit before showing anyone, not by
+an external reviewer. Fixed to perform a real Ed25519 signature check over the card bytes;
+added `tampered-card-known-root`, a card that asserts `self_consistency: true` in the
+artifact itself while carrying a signature that no longer verifies, to cover the
+previously-untested `SIGNATURE_INVALID` path. Test keypairs generated fresh for this
+fixture (no private keys committed), same pattern as `delegation-chain-ref`.
 
 Status: built for dept-estrategia (2026-08-27), not yet shown to Nicholas — pending
 estrategia sign-off before it's run as second-verifier material.
