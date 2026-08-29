@@ -253,14 +253,20 @@ def compute_action_ref_v2(
     return f"v2:{digest}"
 
 
+_V1_RE = re.compile(r"^[0-9a-f]{64}$")
+_V2_RE = re.compile(r"^v2:[0-9a-f]{64}$")
+
+
 def action_ref_version(action_ref: str) -> str:
     """Return 'v1' or 'v2' based on the string's own syntax — never a guess.
 
-    v1: bare 64-hex-char string. v2: 'v2:' prefix followed by 64 hex chars.
-    Raises ValueError for anything matching neither shape.
+    v1: 64 lowercase hex chars. v2: 'v2:' prefix followed by 64 lowercase hex
+    chars. Grammar is enforced, not just length/prefix -- a same-length string
+    with uppercase hex or non-hex characters is not a valid action_ref of
+    either version and raises ValueError, same as a wrong-length string.
     """
-    if action_ref.startswith("v2:") and len(action_ref) == 67:
+    if _V2_RE.match(action_ref):
         return "v2"
-    if len(action_ref) == 64:
+    if _V1_RE.match(action_ref):
         return "v1"
     raise ValueError(f"unrecognized action_ref format: {action_ref!r}")

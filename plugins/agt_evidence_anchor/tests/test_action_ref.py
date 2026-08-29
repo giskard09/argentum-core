@@ -14,6 +14,7 @@ from plugins.agt_evidence_anchor.action_ref import (
     format_timestamp,
     OutOfProfileDomainError,
     _validate_domain,
+    action_ref_version,
 )
 import datetime
 
@@ -249,3 +250,38 @@ def test_spec_scope_policy_self_consistent_on_main():
 
     ok, report = checker.check_ref("HEAD", use_worktree=True)
     assert ok, report
+
+
+def test_action_ref_version_accepts_valid_v1_and_v2():
+    v1 = "a" * 64
+    v2 = "v2:" + "b" * 64
+    assert action_ref_version(v1) == "v1"
+    assert action_ref_version(v2) == "v2"
+
+
+def test_action_ref_version_rejects_uppercase_hex():
+    """Found by aeoess in PR review (Agent-Authority-Conformance/aps-conformance-suite#42):
+    the original implementation checked only length and prefix, so a 64-char uppercase-hex
+    string was misread as a valid v1 action_ref instead of being rejected. Grammar (lowercase
+    hex only, per docs/spec/action-ref.md) is now enforced with a regex, not just shape."""
+    with pytest.raises(ValueError):
+        action_ref_version("A" * 64)
+
+
+def test_action_ref_version_rejects_non_hex_same_length():
+    """Same finding as above: a 64-char non-hex string ('g' is outside [0-9a-f]) was also
+    previously misread as v1 because only len() was checked."""
+    with pytest.raises(ValueError):
+        action_ref_version("g" * 64)
+
+
+def test_action_ref_version_rejects_v2_with_uppercase_hex():
+    with pytest.raises(ValueError):
+        action_ref_version("v2:" + "A" * 64)
+
+
+def test_action_ref_version_rejects_wrong_length():
+    with pytest.raises(ValueError):
+        action_ref_version("a" * 63)
+    with pytest.raises(ValueError):
+        action_ref_version("v2:" + "b" * 63)

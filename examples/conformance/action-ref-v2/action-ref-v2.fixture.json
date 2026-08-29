@@ -6,7 +6,7 @@
   "preimage_format": "jcs-rfc8785-v1",
   "domain_tag": "mycelium.action-ref:v2:",
   "generated_at": "2026-07-29",
-  "purpose": "ADDITIVE conformance vectors for action_ref v2 (domain-separated derivation). Does NOT replace or narrow the existing v1 fixture set — a v2-conformant verifier MUST still pass all v1 vectors. Each vector pairs the v1 hash (unchanged derivation) with the v2 hash (same four fields, domain tag prepended before hashing, 'v2:' prefix on the result) for the identical preimage, to demonstrate the two never collide.",
+  "purpose": "ADDITIVE conformance vectors for action_ref v2 (domain-separated derivation). Does NOT replace or narrow the existing v1 fixture set — a v2-conformant verifier MUST still pass all v1 vectors. Each vector pairs the v1 hash (unchanged derivation) with the v2 hash (same four fields, domain tag prepended before hashing, 'v2:' prefix on the result) for the identical preimage, showing the two derivations differ for these three pinned preimages. validate.py additionally carries a defensive digest-equality assertion for the general case, which is a property no vector in this file (or any normally-constructed vector) can actually exercise -- see validate.py's module docstring.",
   "reproduce_in_python": "import hashlib, json\nV2_DOMAIN_TAG = 'mycelium.action-ref:v2:'\ndef jcs(obj): return json.dumps(dict(sorted(obj.items())), separators=(',',':'), ensure_ascii=False).encode('utf-8')\ndef compute_action_ref_v1(payload): return hashlib.sha256(jcs(payload)).hexdigest()\ndef compute_action_ref_v2(payload): return 'v2:' + hashlib.sha256(V2_DOMAIN_TAG.encode('utf-8') + jcs(payload)).hexdigest()",
   "vectors": [
     {
@@ -50,8 +50,20 @@
     }
   ],
   "version_marker_conformance": {
-    "note": "A conformant verifier determines the derivation from the action_ref string's own syntax, never from context or assumption.",
-    "rule": "action_ref_version(s): 'v1' if len(s) == 64 (bare hex); 'v2' if s.startswith('v2:') and len(s) == 67; ValueError otherwise.",
+    "note": "A conformant verifier determines the derivation from the action_ref string's own grammar, never from context, assumption, or length/prefix alone.",
+    "rule": "action_ref_version(s): 'v1' if s matches ^[0-9a-f]{64}$ (64 lowercase hex chars); 'v2' if s matches ^v2:[0-9a-f]{64}$; ValueError otherwise. A same-length string with uppercase hex or non-hex characters matches neither and must raise, not be misread by length/prefix alone.",
     "checked_in": "validate.py"
-  }
+  },
+  "version_marker_negative_vectors": [
+    {
+      "id": "vm-neg-001",
+      "description": "uppercase hex, 64 chars — same length as a valid v1 digest but not lowercase, must raise ValueError, not be misread as v1",
+      "input": "FDD7F810499F06BE24355CA8E2BFB8C4B965CC80C838F41FA074683443D89F5A"
+    },
+    {
+      "id": "vm-neg-002",
+      "description": "non-hex characters, 64 chars — same length as a valid v1 digest but not hex, must raise ValueError, not be misread as v1",
+      "input": "gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg"
+    }
+  ]
 }
