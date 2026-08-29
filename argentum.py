@@ -730,6 +730,20 @@ def well_known_mcp_manifest():
     }
     return _jcs_response(manifest)
 
+@app.get("/.well-known/conformance-vectors.json")
+def well_known_conformance_vectors():
+    """Public conformance vector export — 61 sets + contract + recomputation_procedure.
+
+    Built by examples/conformance/build_conformance_vectors.py (wraps
+    build_export.py's aggregation with the discovery convention from
+    A2A#1628 — Douglas Borthwick / Kenneives-CTEF). Served JCS-canonical
+    so raw bytes == canonicalized bytes, same pattern as the other
+    /.well-known/ routes.
+    """
+    path = Path(__file__).parent / "examples" / "conformance" / "conformance-vectors.json"
+    data = json.loads(path.read_text())
+    return _jcs_response(data)
+
 @app.get("/docs/integration", response_class=HTMLResponse)
 def integration_guide():
     """Guía de integración genérica — pública, sin auth."""
