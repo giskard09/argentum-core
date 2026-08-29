@@ -64,6 +64,16 @@
       "id": "vm-neg-002",
       "description": "non-hex characters, 64 chars — same length as a valid v1 digest but not hex, must raise ValueError, not be misread as v1",
       "input": "gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg"
+    },
+    {
+      "id": "vm-neg-003",
+      "description": "bare 64-hex v1 digest with a trailing newline — fullmatch must reject it (a regex using match/search would accept it, treating the newline as trailing garbage after a valid match), so it must raise ValueError, not be misread as v1",
+      "input": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+    },
+    {
+      "id": "vm-neg-004",
+      "description": "v2-prefixed digest with a trailing newline — same fullmatch-vs-match distinction as vm-neg-003, applied to the v2: prefix form, must raise ValueError, not be misread as v2",
+      "input": "v2:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
     }
   ]
 }
