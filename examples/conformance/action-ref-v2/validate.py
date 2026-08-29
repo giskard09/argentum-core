@@ -50,18 +50,55 @@ def compute_v2(preimage: dict) -> str:
 
 
 def action_ref_version(action_ref: str) -> str:
-    if _V2_RE.match(action_ref):
+    """fullmatch, not match: '$' in the pattern matches end-of-string OR
+    immediately before a trailing newline, so re.match alone would accept a
+    valid digest with a trailing '\\n' appended. fullmatch requires the whole
+    string to match."""
+    if _V2_RE.fullmatch(action_ref):
         return "v2"
-    if _V1_RE.match(action_ref):
+    if _V1_RE.fullmatch(action_ref):
         return "v1"
     raise ValueError(f"unrecognized action_ref format: {action_ref!r}")
 
 
+_EXPECTED_PREIMAGE_KEYS = {"agent_id", "action_type", "scope", "timestamp"}
+
+
 def main() -> int:
     fixture = json.loads((HERE / "action-ref-v2.fixture.json").read_text())
+
+    # Profile metadata: this validator hardcodes hash_algo=sha256,
+    # preimage_format=jcs-rfc8785-v1, and domain_tag=V2_DOMAIN_TAG rather than
+    # reading them from the fixture -- assert the fixture actually declares
+    # what this code implements, so a fixture edited to a different tag or
+    # algorithm fails loudly instead of silently being validated against the
+    # wrong profile.
+    if fixture.get("hash_algo") != "sha256":
+        print(f"FIXTURE PROFILE MISMATCH: hash_algo={fixture.get('hash_algo')!r}, validator implements sha256")
+        return 1
+    if fixture.get("preimage_format") != "jcs-rfc8785-v1":
+        print(
+            f"FIXTURE PROFILE MISMATCH: preimage_format={fixture.get('preimage_format')!r}, "
+            f"validator implements jcs-rfc8785-v1"
+        )
+        return 1
+    if fixture.get("domain_tag") != V2_DOMAIN_TAG:
+        print(f"FIXTURE PROFILE MISMATCH: domain_tag={fixture.get('domain_tag')!r}, validator implements {V2_DOMAIN_TAG!r}")
+        return 1
+
     failures = 0
     for vec in fixture["vectors"]:
         errors = []
+
+        preimage_keys = set(vec["preimage"].keys())
+        if preimage_keys != _EXPECTED_PREIMAGE_KEYS:
+            errors.append(
+                f"preimage key set mismatch: got {sorted(preimage_keys)}, "
+                f"expected exactly {sorted(_EXPECTED_PREIMAGE_KEYS)}"
+            )
+        if not all(isinstance(v, str) for v in vec["preimage"].values()):
+            errors.append("preimage has a non-string value -- all four fields must be strings")
+
         payload = jcs(vec["preimage"]).decode("utf-8")
         if payload != vec["jcs_payload"]:
             errors.append(f"canonical bytes mismatch: computed {payload!r} != expected {vec['jcs_payload']!r}")
