@@ -305,6 +305,16 @@ Table of Contents
       Proves: this action was claimed before execution; a duplicate
       retry with the same key returned SKIP.
       Does not prove: the outcome is tamper-evident after the fact.
+      Does not prove: that a retry which re-enters the agent and lets
+      the model decide again (e.g. a guardrail retry with a rewritten
+      prompt) produces the same key.  Such a retry computes a new
+      claim -- new timestamp, and new argument content if the tool
+      call itself changed -- so "the same key" does not apply; two
+      claims with different keys are two different actions under this
+      model, not a caught duplicate.  Gap identified by
+      vasilisnasopoulos (crewAIInc/crewAI#5802) and independently in
+      [LANGGRAPH-8039]; see Section 5.2 for the derivation-level note
+      on the same finding.
 
    Layer 4 — Tamper-evident audit trail (e.g., Mycelium TrailRecord):
       Proves: this action occurred, with this hash, anchored at this
@@ -331,7 +341,14 @@ Table of Contents
 
    o  CrewAI idempotency key: key derivation converges on the same
       primitive from the retry-deduplication direction.
-      [CREWAI-PR5822]
+      [CREWAI-PR5822]  This convergence is on the derivation
+      mechanism only -- a key built from tool/task/argument content
+      -- not on retry-safety under model-regenerated content.
+      vasilisnasopoulos showed the same PR/issue thread that when a
+      retry re-invokes the model and it produces different argument
+      values, the resulting key differs and the duplicate check does
+      not fire; see Section 5.1's Layer 2 boundary note and
+      [CRASHPOINT-DIVERGED].
 
    o  Nobulex covenant receipts: action_type as semantic label +
       timestamp + agent_id + scope.
@@ -448,9 +465,22 @@ Table of Contents
               <https://github.com/agentgraph-co/agentgraph/pull/20>.
 
    [CREWAI-PR5822]
-              crewAIInc, "feat: action idempotency key derivation",
-              Pull Request #5822, 2026,
+              crewAIInc, "fix: add idempotency guard for tool
+              re-execution on task retry", Pull Request #5822, 2026,
               <https://github.com/crewAIInc/crewAI/pull/5822>.
+
+   [LANGGRAPH-8039]
+              sajjadanwar0, "durability='sync': put_writes/put
+              persistence order is unenforced, so post-crash recovery
+              (replay vs re-execute) is host-dependent", Issue #8039,
+              2026,
+              <https://github.com/langchain-ai/langgraph/issues/8039>.
+
+   [CRASHPOINT-DIVERGED]
+              mstevens843, "06 - the nondeterminism conditional, and a
+              fifth outcome", crashpoint results, 2026,
+              <https://github.com/mstevens843/crashpoint/blob/main/
+              results/06-nondeterminism.md>.
 
    [ZENODO-KET]
               Giskard, R., "Karma Economy Triad (KET) v1.0.0",

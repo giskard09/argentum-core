@@ -10,10 +10,34 @@ misreading orthogonal properties as stacked dependencies.
 - A duplicate retry with the same `request_id` would have returned `SKIP`
 - The exactly-once property held at the execution boundary
 
+**Boundary on the second bullet:** "the same `request_id`" assumes the caller reuses one
+claim — one `request_id` / `action_ref` / `timestamp` — across every retry of that attempt.
+A transport-level retry (network timeout, 5xx) that resends the identical, already-computed
+request body keeps that assumption, because nothing about the claim was recomputed. A retry
+that re-enters the agent and lets the model decide again — a guardrail retry with a
+rewritten prompt, for instance — does not: it produces a new claim with a new `timestamp`
+(and, if the tool's own arguments changed, new argument content) rather than a resend of the
+old one. Two claims with different `request_id`s are, by this guarantee's own definition,
+two different actions, not a duplicate of one — the SKIP guard has nothing to match against
+for the second claim, so it does not block that second execution the way it would a true
+resend. If both executions otherwise succeed, the result is two distinct effects (e.g. two
+charges for different amounts), not one effect duplicated — a `DIVERGED` outcome, not a
+caught retry. Identified by vasilisnasopoulos
+(crewAIInc/crewAI#5802, comment
+[5462928784](https://github.com/crewAIInc/crewAI/issues/5802#issuecomment-5462928784)) and
+[langchain-ai/langgraph#8039](https://github.com/langchain-ai/langgraph/issues/8039); the
+`DIVERGED` outcome name is mstevens843's, measured across LangGraph 1.2.11, Temporal, and
+DBOS over 2,490 crash-and-recover trials
+([crashpoint/results/06-nondeterminism.md](https://github.com/mstevens843/crashpoint/blob/main/results/06-nondeterminism.md)).
+This repo did not identify the gap; it is recorded here because the guarantee above is
+silent about which retries it covers.
+
 ## What a COMMITTED SafeAgent claim does not prove
 
 - That the action was recorded externally
 - That the outcome is tamper-evident after the fact
+- That a retry which re-invoked the agent (rather than resending the same claim) produced
+  the same `request_id` — see the boundary note above
 
 ## What a Mycelium TrailRecord proves
 
@@ -217,6 +241,13 @@ All four fields are required. `timestamp_ms` is millisecond-precision Unix time 
 
 Callers compute `action_ref` externally and pass it as `idempotency_key`. DashClaw consumes
 it opaquely; SafeAgent and Mycelium standardize the key. No runtime coupling required.
+
+**Same boundary applies here:** DashClaw's dedup only fires if the same `action_ref` arrives
+twice. If the caller recomputes `action_ref` per retry attempt (new `timestamp_ms` each
+time, per the derivation above) rather than fixing it once before the first attempt, no two
+attempts ever share a key and DashClaw never sees a duplicate to dedup — see the "What a
+COMMITTED SafeAgent claim proves" boundary note above for the retry scenario where this
+matters.
 
 ## References
 
