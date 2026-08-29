@@ -264,9 +264,16 @@ def action_ref_version(action_ref: str) -> str:
     chars. Grammar is enforced, not just length/prefix -- a same-length string
     with uppercase hex or non-hex characters is not a valid action_ref of
     either version and raises ValueError, same as a wrong-length string.
+
+    Uses fullmatch, not match: re.match anchors only the start, and `$` in a
+    pattern matches at the end of the string OR immediately before a trailing
+    newline, so `re.match` alone would accept a value with a trailing '\n'
+    appended (e.g. 64 hex chars + '\n') as a clean v1/v2 string. fullmatch
+    requires the entire string to match, with no exception for a trailing
+    newline.
     """
-    if _V2_RE.match(action_ref):
+    if _V2_RE.fullmatch(action_ref):
         return "v2"
-    if _V1_RE.match(action_ref):
+    if _V1_RE.fullmatch(action_ref):
         return "v1"
     raise ValueError(f"unrecognized action_ref format: {action_ref!r}")

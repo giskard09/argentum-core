@@ -285,3 +285,17 @@ def test_action_ref_version_rejects_wrong_length():
         action_ref_version("a" * 63)
     with pytest.raises(ValueError):
         action_ref_version("v2:" + "b" * 63)
+
+
+def test_action_ref_version_rejects_trailing_newline_v1():
+    """Found by aeoess in round-2 review follow-up on
+    Agent-Authority-Conformance/aps-conformance-suite#42: re.match anchors only the start,
+    and '$' matches at end-of-string OR immediately before a trailing newline, so a valid
+    v1 digest with a trailing '\\n' appended slipped through as v1. fullmatch closes this."""
+    with pytest.raises(ValueError):
+        action_ref_version("a" * 64 + "\n")
+
+
+def test_action_ref_version_rejects_trailing_newline_v2():
+    with pytest.raises(ValueError):
+        action_ref_version("v2:" + "a" * 64 + "\n")
