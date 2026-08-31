@@ -1,17 +1,31 @@
 """
 Verifier for peer-reconciliation-ref-v1 conformance vectors.
 
-Four invariants checked per spec (docs/spec/peer-reconciliation-ref-v1.md):
-  1. canonical_envelope   — SHA-256(JCS(envelope)) matches declared peer_reconciliation_ref
-  2. structural_validity  — observed=true implies non-null action_ref + complete co_signer;
-                             observed=false implies both are null
-  3. signature_validity   — checks.signature_valid_a / checks.signature_valid_b declared in
-                             vector (external resolution; verifier trusts vector declaration,
-                             same pattern as chain_invariant in anchoring-precedence-ref-v1 —
-                             this is a stdlib-only profile, no live Ed25519/JWS verification)
-  4. comparator_state     — AGREED / DISAGREED / UNRESOLVED, computed from the three checks
-                             above plus the two action_ref values. UNRESOLVED must never be
-                             collapsed into AGREED or DISAGREED.
+Five invariants checked per spec (docs/spec/peer-reconciliation-ref-v1.md):
+  1. canonical_envelope        — SHA-256(JCS(envelope)) matches declared peer_reconciliation_ref
+  2. structural_validity       — observed=true implies non-null action_ref + complete co_signer;
+                                  observed=false implies both are null
+  3. signature_validity        — checks.signature_valid_a / checks.signature_valid_b declared in
+                                  vector (external resolution; verifier trusts vector declaration,
+                                  same pattern as chain_invariant in anchoring-precedence-ref-v1 —
+                                  this is a stdlib-only profile, no live Ed25519/JWS verification)
+  4. comparator_state          — AGREED / DISAGREED / UNRESOLVED, computed from the three checks
+                                  above plus the two action_ref values. UNRESOLVED must never be
+                                  collapsed into AGREED or DISAGREED.
+  5. supersedes_chain_integrity (v1.1) — present only when the envelope carries a `supersedes`
+                                  field. The referenced peer_reconciliation_ref must resolve to a
+                                  known prior envelope with the same interaction_id (declared via
+                                  vector["known_envelopes"], external resolution not performed
+                                  live — same treatment chain_invariant gets in
+                                  anchoring-precedence-ref-v1). Absent `supersedes` = exempt.
+
+v1.1 additive fields (docs/spec/peer-reconciliation-ref-v1.md, "v1.1" sections):
+  - envelope.supersedes            (optional) — correction pointer, never a rewrite
+  - observation.requested_at       (optional, recommended when observed=false)
+  - observation.as_of              (optional, informational, not used by the comparator)
+None of the three affect canonical_envelope/structural_validity/signature_validity/
+comparator_state for an envelope that omits them — the five v1.0 fixtures remain valid
+v1.1 vectors unmodified.
 """
 
 import hashlib
@@ -47,6 +61,27 @@ def check_structural_validity(party: dict) -> bool:
         return action_ref is None and co_signer is None
 
     return False
+
+
+def check_supersedes_chain_integrity(vector: dict) -> tuple[bool, str]:
+    """v1.1. Returns (ok, detail). Exempt (ok=True) when `supersedes` is absent."""
+    envelope = vector["envelope"]
+    supersedes = envelope.get("supersedes")
+    if supersedes is None:
+        return True, "exempt (no supersedes field)"
+
+    known = vector.get("known_envelopes", {})
+    prior = known.get(supersedes)
+    if prior is None:
+        return False, f"supersedes {supersedes[:16]}… does not resolve to a known prior envelope"
+
+    if prior.get("interaction_id") != envelope.get("interaction_id"):
+        return False, (
+            f"supersedes resolves to interaction_id {prior.get('interaction_id')!r} "
+            f"but this envelope's interaction_id is {envelope.get('interaction_id')!r}"
+        )
+
+    return True, f"resolves to known prior envelope, same interaction_id"
 
 
 def compute_comparator_state(vector: dict, struct_a: bool, struct_b: bool) -> str:
@@ -108,6 +143,11 @@ def verify_vector(vector: dict) -> tuple[bool, list[str]]:
         failures.append(
             f"comparator_state: computed {computed_state} != declared {declared_state}"
         )
+
+    # 5. supersedes_chain_integrity (v1.1, exempt when supersedes is absent)
+    chain_ok, chain_detail = check_supersedes_chain_integrity(vector)
+    if not chain_ok:
+        failures.append(f"supersedes_chain_integrity: {chain_detail}")
 
     return len(failures) == 0, failures
 
