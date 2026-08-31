@@ -1,6 +1,6 @@
 {
-  "spec_version": "peer-reconciliation-ref-v1",
-  "description": "Conformance vectors for peer-reconciliation-ref-v1. Four invariants are separately recomputable: canonical_envelope, structural_validity, signature_validity, comparator_state. A verifier that treats any pair of present observations as AGREED without checking action_ref equality will silently pass disagreed-001. A verifier that defaults a missing half to AGREED will silently pass unresolved-001.",
+  "spec_version": "peer-reconciliation-ref-v1.1",
+  "description": "Conformance vectors for peer-reconciliation-ref-v1. Four invariants are separately recomputable: canonical_envelope, structural_validity, signature_validity, comparator_state. A verifier that treats any pair of present observations as AGREED without checking action_ref equality will silently pass disagreed-001. A verifier that defaults a missing half to AGREED will silently pass unresolved-001. v1.1 adds three optional additive checks: supersedes_chain_integrity (correction pointers), requested_at (recommended non-suppression timestamp), as_of (informational per-observation time) — none change how the five v1.0 vectors evaluate.",
   "comparator_rule": "AGREED requires both observed=true, both signatures valid, and matching action_ref. DISAGREED requires both observed=true, both signatures valid, and differing action_ref. Anything else (missing observation, invalid signature on an observed=true party) is UNRESOLVED — never defaulted to AGREED or DISAGREED.",
   "vectors": [
     {
@@ -194,6 +194,172 @@
         "structural_validity": true,
         "signature_valid_a": true,
         "signature_valid_b": true
+      },
+      "comparator_state": "AGREED"
+    },
+    {
+      "id": "correction-supersedes-001",
+      "description": "v1.1. safeagent-guardian corrects a previously signed action_ref (the one from agreed-001) via a new envelope with supersedes pointing at agreed-001's peer_reconciliation_ref. The original envelope (known_envelopes entry) is never mutated — only referenced. Both parties now agree on the corrected value. comparator_state=AGREED, supersedes_chain_integrity resolves against known_envelopes.",
+      "expected": "PASS",
+      "envelope": {
+        "interaction_id": "3f9c9e2e-6b5a-4b7e-8f3e-1a2b3c4d5e6f",
+        "party_a": {
+          "party_id": "safeagent-guardian",
+          "observed": true,
+          "action_ref": "f00dbabe1234c9e0b8e93d4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5",
+          "co_signer": {
+            "issuer": "safeagent-guardian",
+            "kid": "sg-key-02",
+            "pubkey": "MCowBQYDK2VwAyEAqQm7VZ0X8tGxJm6QwYh3fN4dL9pRk2vC5eA1sT7uHzM=",
+            "jws_signature": "eyJhbGciOiJFZERTQSJ9.c2FmZWFnZW50LWd1YXJkaWFuLWNvcnJlY3Rpb24.Rk3Wm7xNp2QbYd9Vt1cH"
+          }
+        },
+        "party_b": {
+          "party_id": "counterparty-guardian",
+          "observed": true,
+          "action_ref": "f00dbabe1234c9e0b8e93d4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5",
+          "co_signer": {
+            "issuer": "counterparty-guardian",
+            "kid": "cg-key-01",
+            "pubkey": "MCowBQYDK2VwAyEAnR3xW9vL2sKfQd6BhTz1oYc8gEj4pXm0aVn5rUw7iCk=",
+            "jws_signature": "eyJhbGciOiJFZERTQSJ9.Y291bnRlcnBhcnR5LWd1YXJkaWFuLWNvcnJlY3Rpb24.Nt4Rd2mLx8VpBc6Wq3fT"
+          }
+        },
+        "version": "peer-reconciliation-ref-v1",
+        "supersedes": "8555d6a080388ecc6a5d562becb01dda3c75243b9598200f9b1616e2655cf67c"
+      },
+      "peer_reconciliation_ref": "a1ad58d955709c2994661c7983b4aeb66d93df53789bd50dbaa34f9f1fcb3848",
+      "known_envelopes": {
+        "8555d6a080388ecc6a5d562becb01dda3c75243b9598200f9b1616e2655cf67c": {
+          "interaction_id": "3f9c9e2e-6b5a-4b7e-8f3e-1a2b3c4d5e6f"
+        }
+      },
+      "checks": {
+        "canonical_envelope": true,
+        "structural_validity": true,
+        "signature_valid_a": true,
+        "signature_valid_b": true,
+        "supersedes_chain_integrity": true
+      },
+      "comparator_state": "AGREED"
+    },
+    {
+      "id": "unresolved-requested-at-001",
+      "description": "v1.1. Same UNRESOLVED shape as unresolved-001, but party_b's missing observation now carries requested_at — proving the request was made and timestamped rather than silently absent, per CELL-v1.md's non-suppression principle. Still UNRESOLVED: a declared request timestamp does not manufacture a missing observation.",
+      "expected": "PASS",
+      "envelope": {
+        "interaction_id": "6c5b4a39-2e1f-4d0c-9b8a-7e6f5d4c3b2a",
+        "party_a": {
+          "party_id": "empire-labs-guardian",
+          "observed": true,
+          "action_ref": "e1d2c3b4a5968778695a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3",
+          "co_signer": {
+            "issuer": "empire-labs-guardian",
+            "kid": "el-key-06",
+            "pubkey": "MCowBQYDK2VwAyEAqL8nT2mR9xVcK4eW7oYs1bGd6pFj0aHi3uEk5rTz8qW=",
+            "jws_signature": "eyJhbGciOiJFZERTQSJ9.ZW1waXJlLWxhYnMtZ3VhcmRpYW4tdHM.Xy8Zn4vMq2WbTd7Rt5cJ"
+          }
+        },
+        "party_b": {
+          "party_id": "tenant-guardian",
+          "observed": false,
+          "action_ref": null,
+          "co_signer": null,
+          "requested_at": 1787654321000
+        },
+        "version": "peer-reconciliation-ref-v1"
+      },
+      "peer_reconciliation_ref": "628e55e89ad3abc9bafde196aece903e915b25775c190a0df0b6b8800e0e318c",
+      "checks": {
+        "canonical_envelope": true,
+        "structural_validity": true,
+        "signature_valid_a": true,
+        "signature_valid_b": false
+      },
+      "comparator_state": "UNRESOLVED"
+    },
+    {
+      "id": "agreed-with-as-of-001",
+      "description": "v1.1. Both parties observed=true, matching action_ref, each declares its own as_of (300s apart, no shared clock required). as_of is transported for audit legibility only — the comparator still evaluates to AGREED purely from action_ref equality + signature validity, exactly as it would without as_of.",
+      "expected": "PASS",
+      "envelope": {
+        "interaction_id": "9a8b7c6d-5e4f-4a3b-2c1d-0e9f8a7b6c5d",
+        "party_a": {
+          "party_id": "narko4u-guardian",
+          "observed": true,
+          "action_ref": "c1b2a3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2",
+          "co_signer": {
+            "issuer": "narko4u-guardian",
+            "kid": "ng-key-03",
+            "pubkey": "MCowBQYDK2VwAyEAeK7pQ2mN9xVfR4tLc0bYs8gHj3oDw6zA1uEi5rTn2qC=",
+            "jws_signature": "eyJhbGciOiJFZERTQSJ9.bmFya280dS1ndWFyZGlhbi1hc29m.Pq5Tz8wKm6HbXd1Vt4cJ"
+          },
+          "as_of": 1787650000000
+        },
+        "party_b": {
+          "party_id": "scopeblind-guardian",
+          "observed": true,
+          "action_ref": "c1b2a3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2",
+          "co_signer": {
+            "issuer": "scopeblind-guardian",
+            "kid": "sb-key-04",
+            "pubkey": "MCowBQYDK2VwAyEAsY4mB1nQ7xLwK3eV9tRc2oFj6pDz0aGh8uEi5wTn4qX=",
+            "jws_signature": "eyJhbGciOiJFZERTQSJ9.c2NvcGVibGluZC1ndWFyZGlhbi1hc29m.Wn5Tx2vLp8QwRc7Yd3bK"
+          },
+          "as_of": 1787650300000
+        },
+        "version": "peer-reconciliation-ref-v1"
+      },
+      "peer_reconciliation_ref": "9de456bbc7526d6fe368e268367e33e284e92dcab9d690c51575566a81f3b793",
+      "checks": {
+        "canonical_envelope": true,
+        "structural_validity": true,
+        "signature_valid_a": true,
+        "signature_valid_b": true
+      },
+      "comparator_state": "AGREED"
+    },
+    {
+      "id": "malformed-supersedes-unresolved-001",
+      "description": "v1.1 CRITICAL negative: same envelope shape as correction-supersedes-001, but supersedes points at a hash (all-f) that resolves to nothing in known_envelopes. canonical_envelope, structural_validity, signature_validity, and comparator_state all still compute cleanly (this is not a hash-tampering or structural bug) — only supersedes_chain_integrity catches the dangling correction pointer, which is the point of checking it as a fifth, independent invariant.",
+      "expected": "FAIL",
+      "failure_mode": "supersedes_chain_integrity",
+      "failure_detail": "supersedes references a peer_reconciliation_ref not present in known_envelopes — dangling correction pointer",
+      "envelope": {
+        "interaction_id": "3f9c9e2e-6b5a-4b7e-8f3e-1a2b3c4d5e6f",
+        "party_a": {
+          "party_id": "safeagent-guardian",
+          "observed": true,
+          "action_ref": "f00dbabe1234c9e0b8e93d4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5",
+          "co_signer": {
+            "issuer": "safeagent-guardian",
+            "kid": "sg-key-02",
+            "pubkey": "MCowBQYDK2VwAyEAqQm7VZ0X8tGxJm6QwYh3fN4dL9pRk2vC5eA1sT7uHzM=",
+            "jws_signature": "eyJhbGciOiJFZERTQSJ9.c2FmZWFnZW50LWd1YXJkaWFuLWNvcnJlY3Rpb24.Rk3Wm7xNp2QbYd9Vt1cH"
+          }
+        },
+        "party_b": {
+          "party_id": "counterparty-guardian",
+          "observed": true,
+          "action_ref": "f00dbabe1234c9e0b8e93d4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5",
+          "co_signer": {
+            "issuer": "counterparty-guardian",
+            "kid": "cg-key-01",
+            "pubkey": "MCowBQYDK2VwAyEAnR3xW9vL2sKfQd6BhTz1oYc8gEj4pXm0aVn5rUw7iCk=",
+            "jws_signature": "eyJhbGciOiJFZERTQSJ9.Y291bnRlcnBhcnR5LWd1YXJkaWFuLWNvcnJlY3Rpb24.Nt4Rd2mLx8VpBc6Wq3fT"
+          }
+        },
+        "version": "peer-reconciliation-ref-v1",
+        "supersedes": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+      },
+      "peer_reconciliation_ref": "461961d7e5582fd0a50143b4e9ff8a7b0ce2ebf230ea752bd685fbcd1b812ab1",
+      "known_envelopes": {},
+      "checks": {
+        "canonical_envelope": true,
+        "structural_validity": true,
+        "signature_valid_a": true,
+        "signature_valid_b": true,
+        "supersedes_chain_integrity": false
       },
       "comparator_state": "AGREED"
     }
