@@ -1,0 +1,201 @@
+{
+  "spec_version": "peer-reconciliation-ref-v1",
+  "description": "Conformance vectors for peer-reconciliation-ref-v1. Four invariants are separately recomputable: canonical_envelope, structural_validity, signature_validity, comparator_state. A verifier that treats any pair of present observations as AGREED without checking action_ref equality will silently pass disagreed-001. A verifier that defaults a missing half to AGREED will silently pass unresolved-001.",
+  "comparator_rule": "AGREED requires both observed=true, both signatures valid, and matching action_ref. DISAGREED requires both observed=true, both signatures valid, and differing action_ref. Anything else (missing observation, invalid signature on an observed=true party) is UNRESOLVED — never defaulted to AGREED or DISAGREED.",
+  "vectors": [
+    {
+      "id": "agreed-001",
+      "description": "Two independently controlled Guardians (SafeAgent's own + a counterparty's) derive the same action_ref for the same interaction. Both signatures declared valid. comparator_state=AGREED.",
+      "expected": "PASS",
+      "envelope": {
+        "interaction_id": "3f9c9e2e-6b5a-4b7e-8f3e-1a2b3c4d5e6f",
+        "party_a": {
+          "party_id": "safeagent-guardian",
+          "observed": true,
+          "action_ref": "a2f1c9e0b8e93d4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f",
+          "co_signer": {
+            "issuer": "safeagent-guardian",
+            "kid": "sg-key-01",
+            "pubkey": "MCowBQYDK2VwAyEAqQm7VZ0X8tGxJm6QwYh3fN4dL9pRk2vC5eA1sT7uHzM=",
+            "jws_signature": "eyJhbGciOiJFZERTQSJ9.c2FmZWFnZW50LWd1YXJkaWFu.QVKz8n2Lp9wXbYr4Ht7c"
+          }
+        },
+        "party_b": {
+          "party_id": "counterparty-guardian",
+          "observed": true,
+          "action_ref": "a2f1c9e0b8e93d4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f",
+          "co_signer": {
+            "issuer": "counterparty-guardian",
+            "kid": "cg-key-01",
+            "pubkey": "MCowBQYDK2VwAyEAnR3xW9vL2sKfQd6BhTz1oYc8gEj4pXm0aVn5rUw7iCk=",
+            "jws_signature": "eyJhbGciOiJFZERTQSJ9.Y291bnRlcnBhcnR5LWd1YXJkaWFu.Bt6Jd0mQx3Ny8VpFcW2r"
+          }
+        },
+        "version": "peer-reconciliation-ref-v1"
+      },
+      "peer_reconciliation_ref": "8555d6a080388ecc6a5d562becb01dda3c75243b9598200f9b1616e2655cf67c",
+      "checks": {
+        "canonical_envelope": true,
+        "structural_validity": true,
+        "signature_valid_a": true,
+        "signature_valid_b": true
+      },
+      "comparator_state": "AGREED"
+    },
+    {
+      "id": "disagreed-001",
+      "description": "CRITICAL: both Guardians observed and both signatures declared valid, but the two action_ref values genuinely differ (modeled on the narko4u/ScopeBlind cross-engine correlation gap that motivated this spec). comparator_state=DISAGREED — the mismatch is named, not resolved. A verifier that treats any two present observations as AGREED will silently accept this.",
+      "expected": "PASS",
+      "envelope": {
+        "interaction_id": "8b2e5d1a-4c3f-4e7a-9d6b-2f1e0c9a8b7d",
+        "party_a": {
+          "party_id": "narko4u-guardian",
+          "observed": true,
+          "action_ref": "b1a2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2",
+          "co_signer": {
+            "issuer": "narko4u-guardian",
+            "kid": "ng-key-02",
+            "pubkey": "MCowBQYDK2VwAyEAeK7pQ2mN9xVfR4tLc0bYs8gHj3oDw6zA1uEi5rTn2qC=",
+            "jws_signature": "eyJhbGciOiJFZERTQSJ9.bmFya280dS1ndWFyZGlhbg.Fp3Rz9wKm6HbXd1Vt4cJ"
+          }
+        },
+        "party_b": {
+          "party_id": "scopeblind-guardian",
+          "observed": true,
+          "action_ref": "c9d8e7f6a5b4c3d2e1f0a9b8c7d6e5f4a3b2c1d0e9f8a7b6c5d4e3f2a1b0c9d8",
+          "co_signer": {
+            "issuer": "scopeblind-guardian",
+            "kid": "sb-key-03",
+            "pubkey": "MCowBQYDK2VwAyEAsY4mB1nQ7xLwK3eV9tRc2oFj6pDz0aGh8uEi5wTn4qX=",
+            "jws_signature": "eyJhbGciOiJFZERTQSJ9.c2NvcGVibGluZC1ndWFyZGlhbg.Hn5Tx2vLp8QwYc7Rd3bK"
+          }
+        },
+        "version": "peer-reconciliation-ref-v1"
+      },
+      "peer_reconciliation_ref": "063ca9d07aff8a11d0312a36c0cbfda3ff207ce26ca8062fa0944efbafce6c03",
+      "checks": {
+        "canonical_envelope": true,
+        "structural_validity": true,
+        "signature_valid_a": true,
+        "signature_valid_b": true
+      },
+      "comparator_state": "DISAGREED"
+    },
+    {
+      "id": "unresolved-001",
+      "description": "party_a (astrogilda-guardian) observed and signed; party_b (tenant-guardian) has not produced its half yet (observed=false, action_ref/co_signer both null). comparator_state=UNRESOLVED — MUST NOT default to AGREED just because the present half looks fine, and MUST NOT be reported as DISAGREED (no second value exists to disagree with).",
+      "expected": "PASS",
+      "envelope": {
+        "interaction_id": "5d4c3b2a-1e0f-4a9b-8c7d-6e5f4a3b2c1d",
+        "party_a": {
+          "party_id": "astrogilda-guardian",
+          "observed": true,
+          "action_ref": "d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1",
+          "co_signer": {
+            "issuer": "astrogilda-guardian",
+            "kid": "ag-key-04",
+            "pubkey": "MCowBQYDK2VwAyEAxJ2nR8mQ4vLcK1eT7oWs9bYd3pGh0aFi6uEj5rTx8qZ=",
+            "jws_signature": "eyJhbGciOiJFZERTQSJ9.YXN0cm9naWxkYS1ndWFyZGlhbg.Kq7Wm4xPn9RbYd2Vt6cH"
+          }
+        },
+        "party_b": {
+          "party_id": "tenant-guardian",
+          "observed": false,
+          "action_ref": null,
+          "co_signer": null
+        },
+        "version": "peer-reconciliation-ref-v1"
+      },
+      "peer_reconciliation_ref": "b709073411cedb50e4ccde67a634b1190c2a05162579800b14487d235c5e723b",
+      "checks": {
+        "canonical_envelope": true,
+        "structural_validity": true,
+        "signature_valid_a": true,
+        "signature_valid_b": false
+      },
+      "comparator_state": "UNRESOLVED"
+    },
+    {
+      "id": "malformed-structural-001",
+      "description": "party_a claims observed=true but action_ref is null while co_signer is fully populated — decouples the signed claim from the thing it claims to attest, structurally invalid by construction (not a normal UNRESOLVED, since the party asserted it DID observe). Envelope hash itself is internally consistent (recomputes correctly) — only the structural_validity invariant catches this, which is the point of checking it independently of the hash.",
+      "expected": "FAIL",
+      "failure_mode": "structural_validity",
+      "failure_detail": "party_a: observed=true but action_ref=null (must be non-null when observed=true)",
+      "envelope": {
+        "interaction_id": "1a0b9c8d-7e6f-4a5b-3c2d-1e0f9a8b7c6d",
+        "party_a": {
+          "party_id": "empire-labs-guardian",
+          "observed": true,
+          "action_ref": null,
+          "co_signer": {
+            "issuer": "empire-labs-guardian",
+            "kid": "el-key-05",
+            "pubkey": "MCowBQYDK2VwAyEAqL8nT2mR9xVcK4eW7oYs1bGd6pFj0aHi3uEk5rTz8qW=",
+            "jws_signature": "eyJhbGciOiJFZERTQSJ9.ZW1waXJlLWxhYnMtZ3VhcmRpYW4.Mn8Yz4vLq2WbXd7Rt5cJ"
+          }
+        },
+        "party_b": {
+          "party_id": "counterparty-guardian",
+          "observed": true,
+          "action_ref": "e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3",
+          "co_signer": {
+            "issuer": "counterparty-guardian",
+            "kid": "cg-key-01",
+            "pubkey": "MCowBQYDK2VwAyEAnR3xW9vL2sKfQd6BhTz1oYc8gEj4pXm0aVn5rUw7iCk=",
+            "jws_signature": "eyJhbGciOiJFZERTQSJ9.Y291bnRlcnBhcnR5LWd1YXJkaWFu.Bt6Jd0mQx3Ny8VpFcW2r"
+          }
+        },
+        "version": "peer-reconciliation-ref-v1"
+      },
+      "peer_reconciliation_ref": "04119149929a39545628b4f98b8dd0967c71d0fa02fe140c04b80d69b8cf7333",
+      "checks": {
+        "canonical_envelope": true,
+        "structural_validity": false,
+        "signature_valid_a": true,
+        "signature_valid_b": true
+      },
+      "comparator_state": "UNRESOLVED"
+    },
+    {
+      "id": "malformed-hash-mismatch-001",
+      "description": "Same envelope as agreed-001, but the declared peer_reconciliation_ref does not match SHA-256(JCS(envelope)) — simulates a party or relay mutating a field after the hash was computed and signed. canonical_envelope invariant catches this before any comparator logic runs.",
+      "expected": "FAIL",
+      "failure_mode": "canonical_envelope",
+      "failure_detail": "declared peer_reconciliation_ref does not match recomputed SHA-256(JCS(envelope))",
+      "envelope": {
+        "interaction_id": "3f9c9e2e-6b5a-4b7e-8f3e-1a2b3c4d5e6f",
+        "party_a": {
+          "party_id": "safeagent-guardian",
+          "observed": true,
+          "action_ref": "a2f1c9e0b8e93d4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f",
+          "co_signer": {
+            "issuer": "safeagent-guardian",
+            "kid": "sg-key-01",
+            "pubkey": "MCowBQYDK2VwAyEAqQm7VZ0X8tGxJm6QwYh3fN4dL9pRk2vC5eA1sT7uHzM=",
+            "jws_signature": "eyJhbGciOiJFZERTQSJ9.c2FmZWFnZW50LWd1YXJkaWFu.QVKz8n2Lp9wXbYr4Ht7c"
+          }
+        },
+        "party_b": {
+          "party_id": "counterparty-guardian",
+          "observed": true,
+          "action_ref": "a2f1c9e0b8e93d4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f",
+          "co_signer": {
+            "issuer": "counterparty-guardian",
+            "kid": "cg-key-01",
+            "pubkey": "MCowBQYDK2VwAyEAnR3xW9vL2sKfQd6BhTz1oYc8gEj4pXm0aVn5rUw7iCk=",
+            "jws_signature": "eyJhbGciOiJFZERTQSJ9.Y291bnRlcnBhcnR5LWd1YXJkaWFu.Bt6Jd0mQx3Ny8VpFcW2r"
+          }
+        },
+        "version": "peer-reconciliation-ref-v1"
+      },
+      "peer_reconciliation_ref": "0000000000000000000000000000000000000000000000000000000000000000",
+      "checks": {
+        "canonical_envelope": false,
+        "structural_validity": true,
+        "signature_valid_a": true,
+        "signature_valid_b": true
+      },
+      "comparator_state": "AGREED"
+    }
+  ]
+}
