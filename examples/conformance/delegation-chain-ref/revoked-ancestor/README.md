@@ -66,6 +66,28 @@ already given to `OUT_OF_PROFILE_DOMAIN` elsewhere in the spec suite — a
 declared limit, not a fix, since fixing would require the chain verifier to
 grow a real revocation-checking invariant, which is out of scope here.
 
+## Scope: this vector is preimage-level, not shape-level
+
+This vector proves the divergence described above (`delegation_chain_ref`
+PASS vs a cascading verifier's FAIL) on the one constructed preimage tested
+here — it does not prove that AAE-vs-`delegation_chain_ref` diverge on
+*every* input matching the abstract shape "ancestor revoked, verdict
+unchanged." That stronger, shape-level claim needs either a preimage set
+spanning the shape's variation space, or a from-construction argument.
+
+On our side, the from-construction argument already holds:
+`delegation-chain-ref.md`'s default model (see the "What changed in the
+spec" section above) states the future-only, non-cascading behavior as a
+declared default, not as a property observed only on this one preimage —
+any preimage matching this shape diverges from a cascading scheme by
+definition. Whether AAE's cascading behavior is similarly definitional
+(rather than a property of this specific constructed case) has not been
+confirmed and is not claimed here.
+
+Distinction and terminology (preimage-level DISTINCT vs shape-level
+generalization) credited to babyblueviper1
+(x402-foundation/x402#2332, comment 5493831377).
+
 ## Run
 
 ```
