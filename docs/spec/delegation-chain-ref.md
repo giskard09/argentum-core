@@ -14,6 +14,8 @@
 
 **What it does not do:** `delegation_chain_ref` does not validate that individual delegation artifacts are still in force (see [`revocation-ref.md`](./revocation-ref.md) for invalidation). It does not constrain scope narrowing between hops — that is the implementer's policy. It does not replace the individual `delegation_ref` fields carried in each hop's trail record.
 
+**Default model when the implementer defines no revocation policy:** if a chain's ancestor hop is revoked, records already committed at hops downstream of that ancestor — actions already executed under the chain before the revocation — remain valid historical records. Revocation of an ancestor reaches only future use of the chain from that point forward; it does not retroactively invalidate hops that already closed. This mirrors the same principle stated for individual delegations in [`revocation-ref.md`](./revocation-ref.md#what-is-revocation-ref) ("does not retroactively invalidate COMMITTED trail records"), named here explicitly for chains because the base invariants above are silent on it. An implementer with a stricter policy (e.g. treating any downstream hop as tainted once an ancestor is revoked) MAY apply it — this is the default in the absence of one, not a requirement. See `examples/conformance/delegation-chain-ref/revoked-ancestor/` for a worked differential vector.
+
 ---
 
 ## Derivation
