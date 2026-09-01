@@ -1,0 +1,157 @@
+{
+  "spec_version": "delegation-chain-ref-v1",
+  "description": "Differential vector requested by MoltyCel (x402#2332): the same chain_artifact/leaf_preimage verified twice — once alone, once alongside a revocation_artifact that revokes the mid-chain ancestor hop (hops[1], pioneer-agent-001 -> lightning) before the leaf action's timestamp. delegation-chain-ref-v1's structural invariants (continuity, root/leaf anchoring, scope narrowing, hop_signature, replay) do not reference revocation_ref or revocation-ref.md at all, so both runs verify identically and both PASS. This is the gap MoltyCel's differential test surfaces: an ancestor revoked mid-chain does not change the chain verifier's verdict, because the chain verifier never looks at revocation state.",
+  "revocation_artifact": {
+    "reason": "credential_expired",
+    "revocation_key": "rev_ancestor_hop1_001",
+    "revoked_action_ref": "0ad117af7a77317fdf0d35886fc1ca945bda074a5609c1477d640e4d9015b73d",
+    "revoked_at": "2026-08-15T09:00:00.000Z",
+    "revoker": "pioneer-agent-001",
+    "scope": "mycelium:payment",
+    "version": "revocation-ref-v1"
+  },
+  "revocation_ref": "8ad9f9a33fce4a15306bba9c14d0b0277f7bc1c0383f56df42a392a38a1ee0ca",
+  "revocation_note": "revoked_action_ref points at hops[1].delegation_ref (the ancestor grant being invalidated), not at a trail action_ref. revocation-ref.md's schema anchors revoked_action_ref to an action's action_ref; delegation-chain-ref.md does not yet define what an ancestor-in-a-chain revocation event should reference. This vector uses the delegation_ref directly as a pragmatic stand-in -- the exact target field is a separate, still-open question from the one this vector demonstrates (that the chain verifier ignores revocation state regardless of what it targets).",
+  "vectors": [
+    {
+      "id": "chain-revoked-ancestor-001-baseline",
+      "description": "3-hop chain (giskard-self -> pioneer-agent-001 -> lightning -> soma-agent), no revocation considered. Baseline: verifier PASSes on structural invariants alone.",
+      "expected": "PASS",
+      "chain_artifact": {
+        "chain_id": "chain-revoked-ancestor-001",
+        "hops": [
+          {
+            "delegatee": "pioneer-agent-001",
+            "delegator": "giskard-self",
+            "delegation_ref": "e7a936ee9b30fceae7239df32ecb593b60b109f05463f3048740c8bc45f9824a",
+            "scope": "mycelium:payment"
+          },
+          {
+            "delegatee": "lightning",
+            "delegator": "pioneer-agent-001",
+            "delegation_ref": "0ad117af7a77317fdf0d35886fc1ca945bda074a5609c1477d640e4d9015b73d",
+            "scope": "mycelium:payment"
+          },
+          {
+            "delegatee": "soma-agent",
+            "delegator": "lightning",
+            "delegation_ref": "6a09fa302daa05f875aeee1f54463a1e6eae5c3d2ceb1075ae8c66043ba2f8a2",
+            "scope": "mycelium:payment"
+          }
+        ],
+        "leaf_action_ref": "29e7c1a981d7e902cf94164f18bdfad2e7858621937dce143a51e9bc34db23f8",
+        "root_delegator": "giskard-self",
+        "scope": "mycelium:payment",
+        "version": "delegation-chain-ref-v1"
+      },
+      "delegation_artifacts": [
+        {
+          "capability": "delegate",
+          "delegatee": "pioneer-agent-001",
+          "delegator": "giskard-self",
+          "expires_at": "2026-12-31T00:00:00.000Z",
+          "policy_version": "2026-06-01",
+          "scope": "mycelium:payment",
+          "version": "delegation-ref-v1"
+        },
+        {
+          "capability": "delegate",
+          "delegatee": "lightning",
+          "delegator": "pioneer-agent-001",
+          "expires_at": "2026-12-31T00:00:00.000Z",
+          "parent_delegation_ref": "e7a936ee9b30fceae7239df32ecb593b60b109f05463f3048740c8bc45f9824a",
+          "policy_version": "2026-06-01",
+          "scope": "mycelium:payment",
+          "version": "delegation-ref-v1"
+        },
+        {
+          "capability": "payment.route",
+          "delegatee": "soma-agent",
+          "delegator": "lightning",
+          "expires_at": "2026-12-31T00:00:00.000Z",
+          "parent_delegation_ref": "0ad117af7a77317fdf0d35886fc1ca945bda074a5609c1477d640e4d9015b73d",
+          "policy_version": "2026-06-01",
+          "scope": "mycelium:payment",
+          "version": "delegation-ref-v1"
+        }
+      ],
+      "leaf_preimage": {
+        "agent_id": "soma-agent",
+        "action_type": "payment.route",
+        "scope": "mycelium:payment",
+        "timestamp": "2026-09-01T12:00:00.000Z"
+      },
+      "delegation_chain_ref": "02aa006af1b093370f5baa0ada9e33f7591a04911a6d5cc837e0de399efd9e55"
+    },
+    {
+      "id": "chain-revoked-ancestor-001-with-revocation",
+      "description": "Byte-identical chain_artifact and leaf_preimage to the baseline above. The only difference is the presence of revocation_artifact (top-level, sibling of this file) revoking hops[1].delegation_ref at 2026-08-15T09:00:00.000Z, before the leaf action's timestamp (2026-09-01T12:00:00.000Z). Documented current behavior (not a bug): delegation_chain_ref's derivation and the reference verifier's six invariants (chain_continuity, root_anchoring, leaf_anchoring, monotonic_scope_narrowing, hop_signature_valid, replay_detected) make no reference to revocation_ref, revoked_action_ref, or any external revocation state. Running verify_vector() on this vector reproduces the exact same PASS as the baseline -- delegation_chain_ref is computed purely from chain_artifact, which does not embed or reference the revocation artifact at all. See docs/spec/delegation-chain-ref.md 'What it does not do' for the explicit disclaimer, and the new 'Revocation and already-committed hops (default model)' section for what a verifier without its own policy should assume when it encounters this case.",
+      "expected": "PASS",
+      "chain_artifact": {
+        "chain_id": "chain-revoked-ancestor-001",
+        "hops": [
+          {
+            "delegatee": "pioneer-agent-001",
+            "delegator": "giskard-self",
+            "delegation_ref": "e7a936ee9b30fceae7239df32ecb593b60b109f05463f3048740c8bc45f9824a",
+            "scope": "mycelium:payment"
+          },
+          {
+            "delegatee": "lightning",
+            "delegator": "pioneer-agent-001",
+            "delegation_ref": "0ad117af7a77317fdf0d35886fc1ca945bda074a5609c1477d640e4d9015b73d",
+            "scope": "mycelium:payment"
+          },
+          {
+            "delegatee": "soma-agent",
+            "delegator": "lightning",
+            "delegation_ref": "6a09fa302daa05f875aeee1f54463a1e6eae5c3d2ceb1075ae8c66043ba2f8a2",
+            "scope": "mycelium:payment"
+          }
+        ],
+        "leaf_action_ref": "29e7c1a981d7e902cf94164f18bdfad2e7858621937dce143a51e9bc34db23f8",
+        "root_delegator": "giskard-self",
+        "scope": "mycelium:payment",
+        "version": "delegation-chain-ref-v1"
+      },
+      "delegation_artifacts": [
+        {
+          "capability": "delegate",
+          "delegatee": "pioneer-agent-001",
+          "delegator": "giskard-self",
+          "expires_at": "2026-12-31T00:00:00.000Z",
+          "policy_version": "2026-06-01",
+          "scope": "mycelium:payment",
+          "version": "delegation-ref-v1"
+        },
+        {
+          "capability": "delegate",
+          "delegatee": "lightning",
+          "delegator": "pioneer-agent-001",
+          "expires_at": "2026-12-31T00:00:00.000Z",
+          "parent_delegation_ref": "e7a936ee9b30fceae7239df32ecb593b60b109f05463f3048740c8bc45f9824a",
+          "policy_version": "2026-06-01",
+          "scope": "mycelium:payment",
+          "version": "delegation-ref-v1"
+        },
+        {
+          "capability": "payment.route",
+          "delegatee": "soma-agent",
+          "delegator": "lightning",
+          "expires_at": "2026-12-31T00:00:00.000Z",
+          "parent_delegation_ref": "0ad117af7a77317fdf0d35886fc1ca945bda074a5609c1477d640e4d9015b73d",
+          "policy_version": "2026-06-01",
+          "scope": "mycelium:payment",
+          "version": "delegation-ref-v1"
+        }
+      ],
+      "leaf_preimage": {
+        "agent_id": "soma-agent",
+        "action_type": "payment.route",
+        "scope": "mycelium:payment",
+        "timestamp": "2026-09-01T12:00:00.000Z"
+      },
+      "delegation_chain_ref": "02aa006af1b093370f5baa0ada9e33f7591a04911a6d5cc837e0de399efd9e55"
+    }
+  ]
+}
