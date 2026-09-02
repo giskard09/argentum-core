@@ -1,0 +1,59 @@
+{
+  "spec_version": "settlement-evidence-ref-v1",
+  "description": "Conformance vectors for settlement-evidence-ref-v1 (docs/spec/settlement-evidence-ref.md). Three checks: ledger_recomputed (payer_debit/payee_credit read from the rail's own transaction data, never accepted as a bare facilitator success flag), debit_credit_paired (both sides present, not just one), matches_offer (when offer_identity_ref is present, the settled amount/asset/payee match what the offer required). A verifier that accepts a facilitator's success:true alone, without independently recomputed debit/credit, silently passes facilitator-assertion-only-001 — this is R5's central prohibition.",
+  "comparator_rule": "PASS requires SHA-256(JCS(settlement_artifact)) == declared settlement_evidence_ref AND checks.ledger_recomputed==true AND checks.debit_credit_paired==true AND checks.matches_offer==true (when offer_identity_ref is present and a referenced_offer is supplied for comparison).",
+  "vectors": [
+    {
+      "id": "settlement-matched-001",
+      "description": "Baseline: payer_debit and payee_credit both independently recomputed from the rail's transaction receipt (ledger_recomputed=true), both present, amount/asset/payee match the referenced offer exactly.",
+      "expected": "PASS",
+      "settlement_artifact": {
+        "network": "base-sepolia",
+        "transaction": "0x7c8692c003b80a48bb8123ae6965e26464d271ee2041404cc025e0f15e5fcaba",
+        "offer_identity_ref": "0df1f6792f5aa482568ff3b6cb39568d5fe0b5f29b7dc7148b5dba400451d4c4",
+        "payer_debit":  {"address": "0xA11ce00000000000000000000000000000000001", "amount": "10000", "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e"},
+        "payee_credit": {"address": "0x209693Bc6afc0C5328bA36FaF03C514EF312287C", "amount": "10000", "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e"},
+        "version": "settlement-evidence-ref-v1"
+      },
+      "settlement_evidence_ref": "e061c6a77d1a3d7ae934b0869592b1b9dd518583f357763b76f73007f865f0c0",
+      "referenced_offer": {"maxAmountRequired": "10000", "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e", "payTo": "0x209693Bc6afc0C5328bA36FaF03C514EF312287C"},
+      "checks": {"ledger_recomputed": true, "debit_credit_paired": true, "matches_offer": true}
+    },
+    {
+      "id": "facilitator-assertion-only-001",
+      "description": "R5 CRITICAL negative: settlement_artifact declares ledger_recomputed=false — payer_debit/payee_credit are both null, meaning the only thing behind this settlement claim is a facilitator's bare success:true (per x402's own SettleResponse schema, which carries no amount or payee at all). A verifier that accepts this as 'settled' without independent ledger recomputation is exactly the failure R5 prohibits.",
+      "expected": "FAIL",
+      "failure_mode": "facilitator_assertion_only",
+      "failure_detail": "ledger_recomputed=false — payer_debit/payee_credit were never independently confirmed against the rail, only asserted by the facilitator's SettleResponse.success",
+      "settlement_artifact": {
+        "network": "base-sepolia",
+        "transaction": "0x9d4e2f1a8c7b6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f1a0b9c8d7e6f5a4b3c2d1e",
+        "offer_identity_ref": "0df1f6792f5aa482568ff3b6cb39568d5fe0b5f29b7dc7148b5dba400451d4c4",
+        "payer_debit":  {"address": null, "amount": null, "asset": null},
+        "payee_credit": {"address": null, "amount": null, "asset": null},
+        "version": "settlement-evidence-ref-v1"
+      },
+      "settlement_evidence_ref": "b468ad1891785b7166926af959ce80807f8982085574bb8f20f4e1b5ea776dde",
+      "referenced_offer": {"maxAmountRequired": "10000", "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e", "payTo": "0x209693Bc6afc0C5328bA36FaF03C514EF312287C"},
+      "checks": {"ledger_recomputed": false, "debit_credit_paired": false, "matches_offer": false}
+    },
+    {
+      "id": "settlement-amount-mismatch-vs-offer-001",
+      "description": "T2 negative: payer_debit and payee_credit ARE independently recomputed from a real transaction (ledger_recomputed=true, both sides present and internally consistent with each other — 5000 debited, 5000 credited, same asset) but the amount settled (5000) does not match what the referenced offer required (10000). Invariant 5: this is a distinguishable failure state, not a hash-tamper and not a missing-side failure — the settlement is real, just for the wrong amount.",
+      "expected": "FAIL",
+      "failure_mode": "amount_mismatch_vs_offer",
+      "failure_detail": "payer_debit.amount=5000 does not match referenced_offer.maxAmountRequired=10000",
+      "settlement_artifact": {
+        "network": "base-sepolia",
+        "transaction": "0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b",
+        "offer_identity_ref": "0df1f6792f5aa482568ff3b6cb39568d5fe0b5f29b7dc7148b5dba400451d4c4",
+        "payer_debit":  {"address": "0xA11ce00000000000000000000000000000000001", "amount": "5000", "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e"},
+        "payee_credit": {"address": "0x209693Bc6afc0C5328bA36FaF03C514EF312287C", "amount": "5000", "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e"},
+        "version": "settlement-evidence-ref-v1"
+      },
+      "settlement_evidence_ref": "0e412c3d5c1e3404f0678e1b19acbe869594bc29cadfbf0e413a673c2c7f6782",
+      "referenced_offer": {"maxAmountRequired": "10000", "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e", "payTo": "0x209693Bc6afc0C5328bA36FaF03C514EF312287C"},
+      "checks": {"ledger_recomputed": true, "debit_credit_paired": true, "matches_offer": false}
+    }
+  ]
+}
