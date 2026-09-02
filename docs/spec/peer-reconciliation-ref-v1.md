@@ -173,9 +173,23 @@ same "declared in vector, external resolution not performed live" treatment
 `chain_invariant` receives in [`anchoring-precedence-ref-v1.md`](./anchoring-precedence-ref-v1.md#5-chain_invariant).
 A vector without `supersedes` is exempt from this check (it is a root record).
 
+Each `known_envelopes` entry MUST also declare `resolved_by`: the identifier of
+the source that supplied this record. `resolved_by` MUST NOT equal either
+`party_a.party_id` or `party_b.party_id` of the envelope carrying the
+`supersedes` pointer. Without this, the same party that emits a correction
+could also fabricate the "prior" envelope it claims to correct — the two
+values being compared (the pointer and what it resolves to) could never
+diverge, because one party controls both sides. `resolved_by` names an
+independent source (an index, an auditor, the counterparty's own Guardian —
+anything other than the party doing the pointing); it is not itself
+cryptographically verified by this reference verifier, the same "declared,
+externally-audited fact" treatment `signature_valid_*` receives above.
+
 **Fails when:** `supersedes` is present but does not resolve to a known prior
-envelope, or resolves to an envelope whose own `interaction_id` differs (a
-correction MUST correct the same interaction, not a different one).
+envelope, resolves to an envelope whose own `interaction_id` differs (a
+correction MUST correct the same interaction, not a different one), the
+`known_envelopes` entry has no `resolved_by`, or `resolved_by` is one of the
+current envelope's own two parties.
 
 ---
 
