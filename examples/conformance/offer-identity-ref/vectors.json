@@ -1,0 +1,110 @@
+{
+  "spec_version": "offer-identity-ref-v1",
+  "description": "Conformance vectors for offer-identity-ref-v1 (docs/spec/offer-identity-ref.md). offer_identity_ref = SHA-256(JCS(x402_response)), where x402_response is the exact x402Response object (x402Version + accepts[] of PaymentRequirements) served at S1. A verifier recomputes the hash from an independently held copy of the advertised offer and compares it against the reference a later artifact cites — any divergence, whether from tampering or from a Seller substituting a different offer after the fact (T1), surfaces as the same recompute mismatch.",
+  "comparator_rule": "PASS requires SHA-256(JCS(x402_response)) == declared offer_identity_ref, byte-exact. Any difference in accepts[] (amount, payee, asset, resource, or any other PaymentRequirements field) produces a different hash by construction — there is no separate 'was this offer substituted' check beyond the recompute comparison.",
+  "vectors": [
+    {
+      "id": "offer-identity-001",
+      "description": "Baseline: single-mechanism offer (one PaymentRequirements entry in accepts). Verifier holds an independent copy of the exact x402Response served and recomputes the same hash.",
+      "expected": "PASS",
+      "x402_response": {
+        "x402Version": 1,
+        "accepts": [
+          {
+            "scheme": "exact",
+            "network": "base-sepolia",
+            "maxAmountRequired": "10000",
+            "resource": "https://api.example.com/weather",
+            "description": "Current weather data for a given location",
+            "mimeType": "application/json",
+            "payTo": "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+            "maxTimeoutSeconds": 60,
+            "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e"
+          }
+        ]
+      },
+      "offer_identity_ref": "0df1f6792f5aa482568ff3b6cb39568d5fe0b5f29b7dc7148b5dba400451d4c4"
+    },
+    {
+      "id": "offer-identity-multi-accepts-001",
+      "description": "v1 invariant 1: offer advertises two accepted mechanisms (exact/base-sepolia and exact/eth-sepolia) for the same resource. offer_identity_ref commits to the complete accepts array, not to whichever single entry a Buyer later selects at S3.",
+      "expected": "PASS",
+      "x402_response": {
+        "x402Version": 1,
+        "accepts": [
+          {
+            "scheme": "exact",
+            "network": "base-sepolia",
+            "maxAmountRequired": "25000",
+            "resource": "https://api.example.com/tokenize",
+            "description": "Tokenize a real-world asset record",
+            "mimeType": "application/json",
+            "payTo": "0x4f2A91827C6F3E0b1D5a8C4e9F7b2D6a1C8E5F3B9",
+            "maxTimeoutSeconds": 120,
+            "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
+          },
+          {
+            "scheme": "exact",
+            "network": "eth-sepolia",
+            "maxAmountRequired": "25000",
+            "resource": "https://api.example.com/tokenize",
+            "description": "Tokenize a real-world asset record",
+            "mimeType": "application/json",
+            "payTo": "0x4f2A91827C6F3E0b1D5a8C4e9F7b2D6a1C8E5F3B9",
+            "maxTimeoutSeconds": 120,
+            "asset": "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14"
+          }
+        ]
+      },
+      "offer_identity_ref": "284fe4bb0d5c4792d78c069df60402b27498c13364cf94a0c202045676de72df"
+    },
+    {
+      "id": "offer-substitution-mismatch-001",
+      "description": "T1 CRITICAL negative: a later artifact cites offer_identity_ref for the CHEAP offer (maxAmountRequired=10000), but the x402_response the verifier independently holds — the one actually served at S1 — is the EXPENSIVE offer for the same resource (maxAmountRequired=50000, otherwise identical). This is the exact shape of offer substitution the RFP names for T1: a Seller pairing a cheap-offer transaction with the expensive offer after the fact. The recompute mismatch catches it directly, with no separate substitution-detection step.",
+      "expected": "FAIL",
+      "failure_mode": "hash_mismatch",
+      "failure_detail": "declared offer_identity_ref resolves to a different (cheaper) offer than the x402_response actually held by the verifier",
+      "x402_response": {
+        "x402Version": 1,
+        "accepts": [
+          {
+            "scheme": "exact",
+            "network": "base-sepolia",
+            "maxAmountRequired": "50000",
+            "resource": "https://api.example.com/weather",
+            "description": "Current weather data for a given location",
+            "mimeType": "application/json",
+            "payTo": "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+            "maxTimeoutSeconds": 60,
+            "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e"
+          }
+        ]
+      },
+      "offer_identity_ref": "0df1f6792f5aa482568ff3b6cb39568d5fe0b5f29b7dc7148b5dba400451d4c4"
+    },
+    {
+      "id": "malformed-hash-mismatch-001",
+      "description": "Generic negative: declared offer_identity_ref is a zero digest, unrelated to any real offer. Same check path as the substitution vector — this profile does not distinguish 'corrupted reference' from 'substituted offer' at the invariant level, both are a recompute mismatch.",
+      "expected": "FAIL",
+      "failure_mode": "hash_mismatch",
+      "failure_detail": "declared offer_identity_ref does not match SHA-256(JCS(x402_response))",
+      "x402_response": {
+        "x402Version": 1,
+        "accepts": [
+          {
+            "scheme": "exact",
+            "network": "base-sepolia",
+            "maxAmountRequired": "10000",
+            "resource": "https://api.example.com/weather",
+            "description": "Current weather data for a given location",
+            "mimeType": "application/json",
+            "payTo": "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+            "maxTimeoutSeconds": 60,
+            "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e"
+          }
+        ]
+      },
+      "offer_identity_ref": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  ]
+}
