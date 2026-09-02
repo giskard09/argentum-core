@@ -231,7 +231,8 @@
       "peer_reconciliation_ref": "a1ad58d955709c2994661c7983b4aeb66d93df53789bd50dbaa34f9f1fcb3848",
       "known_envelopes": {
         "8555d6a080388ecc6a5d562becb01dda3c75243b9598200f9b1616e2655cf67c": {
-          "interaction_id": "3f9c9e2e-6b5a-4b7e-8f3e-1a2b3c4d5e6f"
+          "interaction_id": "3f9c9e2e-6b5a-4b7e-8f3e-1a2b3c4d5e6f",
+          "resolved_by": "mycelium-trail-index"
         }
       },
       "checks": {
@@ -362,6 +363,55 @@
         "supersedes_chain_integrity": false
       },
       "comparator_state": "AGREED"
+    },
+    {
+      "id": "malformed-supersedes-self-attested-001",
+      "description": "v1.1 CRITICAL negative: same envelope as correction-supersedes-001 (safeagent-guardian corrects agreed-001 via supersedes), but the known_envelopes entry it resolves against is resolved_by=safeagent-guardian — the same party that emits the supersedes pointer also attests the prior envelope it claims to resolve to. interaction_id matches, the pointer resolves, nothing about canonical_envelope/structural_validity/signature_validity/comparator_state is broken — this is the could-not-check shape Certisyn flagged for a SCITT clause: a check that runs, terminates, takes no fallback, but compares two values that cannot diverge because the same party supplies both sides. Only the resolved_by independence requirement catches it.",
+      "expected": "FAIL",
+      "envelope": {
+        "interaction_id": "3f9c9e2e-6b5a-4b7e-8f3e-1a2b3c4d5e6f",
+        "party_a": {
+          "party_id": "safeagent-guardian",
+          "observed": true,
+          "action_ref": "f00dbabe1234c9e0b8e93d4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5",
+          "co_signer": {
+            "issuer": "safeagent-guardian",
+            "kid": "sg-key-02",
+            "pubkey": "MCowBQYDK2VwAyEAqQm7VZ0X8tGxJm6QwYh3fN4dL9pRk2vC5eA1sT7uHzM=",
+            "jws_signature": "eyJhbGciOiJFZERTQSJ9.c2FmZWFnZW50LWd1YXJkaWFuLWNvcnJlY3Rpb24.Rk3Wm7xNp2QbYd9Vt1cH"
+          }
+        },
+        "party_b": {
+          "party_id": "counterparty-guardian",
+          "observed": true,
+          "action_ref": "f00dbabe1234c9e0b8e93d4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5",
+          "co_signer": {
+            "issuer": "counterparty-guardian",
+            "kid": "cg-key-01",
+            "pubkey": "MCowBQYDK2VwAyEAnR3xW9vL2sKfQd6BhTz1oYc8gEj4pXm0aVn5rUw7iCk=",
+            "jws_signature": "eyJhbGciOiJFZERTQSJ9.Y291bnRlcnBhcnR5LWd1YXJkaWFuLWNvcnJlY3Rpb24.Nt4Rd2mLx8VpBc6Wq3fT"
+          }
+        },
+        "version": "peer-reconciliation-ref-v1",
+        "supersedes": "8555d6a080388ecc6a5d562becb01dda3c75243b9598200f9b1616e2655cf67c"
+      },
+      "peer_reconciliation_ref": "a1ad58d955709c2994661c7983b4aeb66d93df53789bd50dbaa34f9f1fcb3848",
+      "known_envelopes": {
+        "8555d6a080388ecc6a5d562becb01dda3c75243b9598200f9b1616e2655cf67c": {
+          "interaction_id": "3f9c9e2e-6b5a-4b7e-8f3e-1a2b3c4d5e6f",
+          "resolved_by": "safeagent-guardian"
+        }
+      },
+      "checks": {
+        "canonical_envelope": true,
+        "structural_validity": true,
+        "signature_valid_a": true,
+        "signature_valid_b": true,
+        "supersedes_chain_integrity": false
+      },
+      "comparator_state": "AGREED",
+      "failure_mode": "supersedes_chain_integrity",
+      "failure_detail": "known_envelopes entry resolved_by=safeagent-guardian is one of this envelope's own parties — not an independent source"
     }
   ]
 }

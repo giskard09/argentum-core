@@ -17,7 +17,13 @@ Five invariants checked per spec (docs/spec/peer-reconciliation-ref-v1.md):
                                   known prior envelope with the same interaction_id (declared via
                                   vector["known_envelopes"], external resolution not performed
                                   live — same treatment chain_invariant gets in
-                                  anchoring-precedence-ref-v1). Absent `supersedes` = exempt.
+                                  anchoring-precedence-ref-v1). Each known_envelopes entry must
+                                  also declare `resolved_by`, naming the source that supplied it,
+                                  and that source must NOT be either party_id of the current
+                                  envelope — otherwise the same party that emits `supersedes`
+                                  could also fabricate the "prior" envelope it claims to correct,
+                                  making the check structurally unable to fail. Absent
+                                  `supersedes` = exempt.
 
 v1.1 additive fields (docs/spec/peer-reconciliation-ref-v1.md, "v1.1" sections):
   - envelope.supersedes            (optional) — correction pointer, never a rewrite
@@ -81,7 +87,21 @@ def check_supersedes_chain_integrity(vector: dict) -> tuple[bool, str]:
             f"but this envelope's interaction_id is {envelope.get('interaction_id')!r}"
         )
 
-    return True, f"resolves to known prior envelope, same interaction_id"
+    resolved_by = prior.get("resolved_by")
+    current_parties = {
+        envelope["party_a"].get("party_id"),
+        envelope["party_b"].get("party_id"),
+    }
+    if not resolved_by:
+        return False, "known_envelopes entry has no resolved_by — provenance not declared"
+    if resolved_by in current_parties:
+        return False, (
+            f"known_envelopes entry resolved_by={resolved_by!r} is one of this envelope's own "
+            f"parties — a party cannot independently resolve the prior envelope it also emits "
+            f"the supersedes pointer for"
+        )
+
+    return True, "resolves to known prior envelope, same interaction_id, independent resolved_by"
 
 
 def compute_comparator_state(vector: dict, struct_a: bool, struct_b: bool) -> str:
