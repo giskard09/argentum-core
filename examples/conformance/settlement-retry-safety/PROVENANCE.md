@@ -89,10 +89,40 @@ contract used across this repo's other worked examples.
 existence of this artifact (commit `9cfbf67`) on Base mainnet at block
 50824409 — a public, permissionless proof-of-existence, the same pattern
 used for `negotiation_ref`/content-address anchors elsewhere in this repo.
-It is **not** a conformance claim against aurumflux20's exact battery (she
-has not published a runnable reference vector set as of this anchor), and
-it is **not** a public "safe" claim — both of those remain separate,
-un-taken decisions per the limits section below.
+It is **not** a public "safe" claim — that remains a separate, un-taken
+decision per the limits section below.
+
+**Correction (post-anchor):** an earlier draft of this document said
+aurumflux20 "has not published a runnable reference vector set." That was
+wrong — checked directly against her repo, not from memory. She publishes
+`aurumflux20/hostile-facilitator` (MIT-adjacent, no LICENSE file present at
+time of check), `pip install`-able, with a `test` subcommand that runs a
+caller's own client through the battery. Two things are true about it that
+matter here:
+
+- The tagged release `v0.1.0` (commit `9b115ea`) ships only 5 modes —
+  `accept_then_timeout`, `5xx_after_settle`, `double_402`, `slow_answer`,
+  `clean` — and no `proof` (on-chain) mode.
+- The `declared_safe`, `reconcile_unavailable` modes and the `proof`
+  on-chain mode (local anvil + a real EIP-3009 token, counting from
+  `Transfer` logs) exist only on `main` (commits `e5c3ba8` and `aa7a5d7`),
+  **not in the tagged release her own README's `pip install ...@v0.1.0`
+  command points at** — `pyproject.toml` on `main` still reads
+  `version = "0.1.0"`, unbumped, and no newer tag exists. Her README
+  describes `main`'s feature set while wiring the literal install command
+  to the older tag — a real inconsistency in her repo, not ours, worth
+  naming if we end up in contact with her about this.
+
+**Not yet run: her battery against our client.** This session's
+sandboxing blocked `pip install` of her package on the host (a real
+policy, not worked around — the host carries giskard-signer/vault
+material) and no container runtime was available as the isolated
+alternative. What's above is a manual source read (both `v0.1.0` and
+`main`, cloned but never executed) confirming her `hostile.py` model
+matches what her README describes conceptually — not an actual run of her
+instrument against `execute_payment.py`. That run is deferred until
+sandboxed execution is available; until then, this artifact's 8/8 remains
+self-graded, against our own mock, not hers.
 
 ## Honest limits — what this does NOT establish
 
@@ -107,17 +137,18 @@ Same disclosure standard as this series' other worked examples
 - **No real payment rail.** `MockFacilitator` is a hand-written model of
   the fault surface aurumflux20's battery names, not a wrapper around a
   real x402 facilitator or a real blockchain RPC. `0xATT`, `0xD402`, etc.
-  are placeholder transaction references, not real transactions — unlike
-  the anchored worked examples in this repo (Keycard, Binance, …), nothing
-  here has been anchored on-chain yet.
-- **The seven fault shapes are our own modeling of the battery's
-  descriptions**, not vectors contributed directly by aurumflux20. The
-  issue states the battery modes and the settle-exactly-once rule; it does
-  not (as of this writing) publish a runnable reference harness we
-  reproduced byte-for-byte. If aurumflux20 publishes concrete vectors
-  later, this directory's modeling should be checked against them before
-  any claim of conformance to *her* battery specifically, as opposed to
-  conformance to the rule she described.
+  are placeholder transaction references, not real transactions. The
+  on-chain anchor above timestamps this artifact's existence — it does not
+  make `0xATT` a real transaction, and it is a different thing from
+  `aurumflux20/hostile-facilitator`'s `proof` mode, which settles real
+  EIP-3009 transfers on a local anvil node and counts from `Transfer` logs.
+- **The seven fault shapes are our own modeling, verified only by manual
+  source read against `aurumflux20/hostile-facilitator`, not by running
+  her instrument.** See the correction above: she does publish a runnable
+  battery, but this artifact has not yet been checked against it —
+  conformance is claimed to *the rule she described* (settle exactly once,
+  never re-challenge on indeterminate), not yet to *her* specific
+  instrument's verdict.
 - **No claim of "safe" has been made publicly.** This PROVENANCE.md and the
   code it describes are not, by themselves, a citation-worthy artifact —
   per the session's operating rule, any public mention crediting
