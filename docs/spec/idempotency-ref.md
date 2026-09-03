@@ -87,6 +87,16 @@ A record outside its `window_ms` window is not eligible for deduplication even i
 
 The idempotency artifact schema is implementer-defined. Only the JCS+SHA-256 derivation is normative. Additional fields (e.g. `request_id`, `correlation_id`) are permitted.
 
+**5. idempotency_key MUST derive from durable inputs, never from model-regenerated content**
+
+`idempotency_key` MUST be recomputable by a process that did not itself execute the step — from inputs that existed *before* the step ran and are stable across retries of it (e.g. the originating request id, a caller-assigned operation id, or a hash of the caller's own pre-execution request). It MUST NOT be derived from, or include, any value the model generated *during* the step being retried — most commonly tool-call arguments that an LLM re-emits when a guardrail or validation failure triggers a retry loop.
+
+When a retry re-enters through the model (not through the original caller), the regenerated arguments are not guaranteed byte-identical to the first attempt even when the *intent* is identical — different token sampling, a rephrased justification field, reordered list items. A key derived from `SHA(args)` then changes between attempts, so equality-based deduplication never fires: the two attempts don't collide as a detected duplicate, they land as **two distinct committed effects** (e.g. two charges for different amounts) — the failure mode isn't a missed dedup, it's a false negative that idempotency-ref exists to prevent, and the artifact schema's silence on this today permits it.
+
+A conformant `idempotency_artifact` derives `idempotency_key` from data the *caller* fixed before invoking the model for that attempt — never from the model's output for that attempt. If a runtime cannot supply such a durable input at the point of retry, the correct action is to widen `window_ms` and rely on provider-side reconciliation (see [Trail lifecycle](#trail-lifecycle-with-idempotency_ref)), not to hash whatever arguments the model happens to produce.
+
+*(Added 2026-09-03: gap identified by vasilisnasopoulos ([crewAIInc/crewAI#5802](https://github.com/crewAIInc/crewAI/issues/5802), comment [5462928784](https://github.com/crewAIInc/crewAI/issues/5802#issuecomment-5462928784)), cross-verified against mstevens843/crashpoint's independent finding that LangGraph/Temporal/DBOS all had to add a fifth outcome — DIVERGED — because EXACTLY_ONCE dedup assumes the retried step is reproducible from durable inputs, which a model-regenerated tool call is not.)*
+
 ---
 
 ## Position in the envelope
