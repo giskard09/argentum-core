@@ -1,0 +1,71 @@
+{
+  "spec_version": "settlement-retry-safety-v1",
+  "description": "Behavioral conformance vectors for the seven-mode retry-safety battery named in x402-foundation/x402#3208 (aurumflux20, https://aurumflux.co/retry-safety/): accept_then_timeout, 5xx_after_settle, double_402, slow_answer, reconcile_unavailable, declared_safe, clean. Unlike the hash-derivation vectors elsewhere in this directory (offer-identity-ref, settlement-evidence-ref), these are behavioral: each vector names a mode and the expected outcome of actually running execute_payment() against MockFacilitator in that mode, not a static artifact hash. A conformant implementation reproduces the same terminal verdict and the same ledger_len==1 for every positive vector, by running the code, not by reading the spec.",
+  "comparator_rule": "PASS requires: running execute_payment() in a caller retry loop (bounded, MAX_ROUNDS=5) against MockFacilitator(mode) reaches final_verdict=='settled' with the facilitator's ledger holding exactly one entry (ledger_len==1) for that authorization. mutation-broken-client-001 is a negative control: it is expected to FAIL (ledger_len>1) precisely because it violates the rule under test (it mints a new authorization on every retry instead of re-presenting the same one) — its purpose is to prove the comparator discriminates, not to pass.",
+  "source": {
+    "issue": "https://github.com/x402-foundation/x402/issues/3208",
+    "cited_comment_author": "aurumflux20",
+    "cited_comment_at": "2026-09-03T09:52:07Z",
+    "receiver_obligation_author": "whawk46",
+    "receiver_obligation_comment_at": "2026-09-03T04:17:08Z",
+    "receiver_obligation_text": "an indeterminate state explicitly locks the invoice and preserves the broadcast hash until deterministic reconciliation completes. A normative clause stating that receivers MUST NOT re-challenge a pending authorization is essential to make third-party implementations safe by default."
+  },
+  "vectors": [
+    {
+      "id": "retry-safety-clean-001",
+      "mode": "clean",
+      "description": "Baseline: single settle() call succeeds on the first attempt, no fault.",
+      "expected": "PASS",
+      "expected_outcome": {"final_verdict": "settled", "ledger_len": 1, "settle_calls": 1, "reconcile_calls": 0}
+    },
+    {
+      "id": "retry-safety-declared-safe-001",
+      "mode": "declared_safe",
+      "description": "Facilitator settles on first attempt AND a duplicate client-side submission of the same idempotency_key (simulating an accidental double-send, not a fault-triggered retry) must still settle exactly once — the 'exactly once there too' clause aurumflux20's proposal names for this mode specifically.",
+      "expected": "PASS",
+      "expected_outcome": {"final_verdict": "settled", "ledger_len": 1, "settle_calls": 1, "reconcile_calls": 0}
+    },
+    {
+      "id": "retry-safety-accept-then-timeout-001",
+      "mode": "accept_then_timeout",
+      "description": "First settle() call broadcasts (facilitator ledger written) but the receipt-wait times out before the client sees it — the #3083 pattern: broadcast ref IS surfaced in the exception. Client reconciles by that ref on the next round instead of re-settling blind.",
+      "expected": "PASS",
+      "expected_outcome": {"final_verdict": "settled", "ledger_len": 1, "settle_calls": 1, "reconcile_calls": 1}
+    },
+    {
+      "id": "retry-safety-5xx-after-settle-001",
+      "mode": "5xx_after_settle",
+      "description": "First settle() call broadcasts, then the facilitator 500s with no broadcast ref in the body (the ref-based reconcile path is unavailable to the client). Client re-presents the SAME authorization on retry; facilitator-side signature dedup returns the already-settled transaction instead of writing a second entry.",
+      "expected": "PASS",
+      "expected_outcome": {"final_verdict": "settled", "ledger_len": 1, "settle_calls": 2, "reconcile_calls": 0}
+    },
+    {
+      "id": "retry-safety-slow-answer-001",
+      "mode": "slow_answer",
+      "description": "First settle() call broadcasts, but the client's own timeout fires before any response (server-side success, client-side loss) — no ref available to the client, same re-presentation path as 5xx_after_settle.",
+      "expected": "PASS",
+      "expected_outcome": {"final_verdict": "settled", "ledger_len": 1, "settle_calls": 2, "reconcile_calls": 0}
+    },
+    {
+      "id": "retry-safety-reconcile-unavailable-001",
+      "mode": "reconcile_unavailable",
+      "description": "First settle() call broadcasts and times out with a ref surfaced, but the reconcile query against that ref itself fails on the first attempt. Client falls back to re-presenting the same authorization; facilitator-side dedup (not reconcile) is what actually closes it.",
+      "expected": "PASS",
+      "expected_outcome": {"final_verdict": "settled", "ledger_len": 1, "settle_calls": 2, "reconcile_calls": 1}
+    },
+    {
+      "id": "retry-safety-double-402-001",
+      "mode": "double_402",
+      "description": "First settle() call times out with no broadcast yet. Second call: the facilitator re-challenges with a fresh 402 instead of resuming the pending authorization — the exact hazard whawk46's MUST-NOT-re-challenge clause targets. Client MUST NOT sign a new authorization to satisfy the new challenge; it re-presents the original signed authorization directly, which the facilitator then settles.",
+      "expected": "PASS",
+      "expected_outcome": {"final_verdict": "settled", "ledger_len": 1, "settle_calls": 3, "reconcile_calls": 0}
+    },
+    {
+      "id": "mutation-broken-client-001",
+      "mode": "double_402",
+      "description": "Negative control, not a mode from the battery. A deliberately broken client that mints a NEW authorization signature on every retry (violating the re-presentation rule) run against the same double_402 facilitator. Must produce a real double charge (ledger_len==2) to prove the PASS vectors above are discriminating and not a facilitator mock that always settles once regardless of client behavior. Reproducible: see verify.py's run_mutation_control().",
+      "expected": "FAIL",
+      "expected_outcome": {"ledger_len_gt": 1}
+    }
+  ]
+}
