@@ -71,6 +71,29 @@ during construction that all five fault-injecting modes (not just
 `execute_payment()` client was finished — see session bitácora
 `~/Downloads/BITACORA CODIGO 2026-09-03 settlement-retry-safety-v1.txt`.
 
+## On-chain anchor
+
+`ref = keccak256("settlement-retry-safety-v1:argentum-core@9cfbf67")` =
+`0xd2d342d8221ac56cca286173b875d08a4723b8467565adc43ef76f149120a1dc`
+
+Anchored via `anchor(bytes32)` on AnchorRegistry (Base mainnet,
+`0x49fEcA52bC634a9Ab773226D16619deC547794aa`), permissionless — same
+contract used across this repo's other worked examples.
+
+- tx: `0x9caa800651433db570a8ac58085b834107640d1df6088386f9086ecbdb78a86f`
+- block: `50824409`
+- status: `0x1` (confirmed via direct `eth_getTransactionReceipt` against
+  `mainnet.base.org`, not read back from the sender's own response)
+
+**What this anchor claims and what it does not:** it timestamps the
+existence of this artifact (commit `9cfbf67`) on Base mainnet at block
+50824409 — a public, permissionless proof-of-existence, the same pattern
+used for `negotiation_ref`/content-address anchors elsewhere in this repo.
+It is **not** a conformance claim against aurumflux20's exact battery (she
+has not published a runnable reference vector set as of this anchor), and
+it is **not** a public "safe" claim — both of those remain separate,
+un-taken decisions per the limits section below.
+
 ## Honest limits — what this does NOT establish
 
 Same disclosure standard as this series' other worked examples
