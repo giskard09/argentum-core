@@ -41,6 +41,53 @@
         "idempotency_key": "Client-generated opaque string. Format is implementer-defined; only uniqueness within the deduplication window is required.",
         "window_ms": "300000ms = 5 minutes. Represents the deduplication window — not a TTL on the trail record itself."
       }
+    },
+    {
+      "id": "idem-002-negative-model-regenerated-args",
+      "description": "NEGATIVE VECTOR (Invariant 5). crew-runtime-agent-042 attempts payment.send for the same intended refund twice: attempt 1 fails a guardrail and re-enters via the model, which regenerates the tool-call arguments (memo field reworded, amount unchanged) before retry. A non-conformant implementation derives idempotency_key as sha256(JCS(regenerated_args)) — because the two attempts' arguments differ in wording, the two idempotency_ref values do NOT collide, so equality-based deduplication never fires and both attempts commit as distinct effects (two refunds for the same order). This is the class of gap named by vasilisnasopoulos (crewAIInc/crewAI#5802, comment 5462928784) and independently cross-verified by mstevens843/crashpoint (2490 crash+recover trials against LangGraph/Temporal/DBOS, all three needed a fifth DIVERGED outcome for exactly this non-reproducibility). A conformant implementation instead derives idempotency_key from a durable, caller-assigned identifier fixed BEFORE the model runs (here, the order id) — see attempt_conformant.",
+      "attempt_1_non_conformant": {
+        "idempotency_artifact": {
+          "action_type": "payment.send",
+          "agent_id": "crew-runtime-agent-042",
+          "idempotency_key": "sha256:a666384cc74a83d4d67257247740592e6a2f1a96f8228684b6b08f1b35da6ff8",
+          "scope": "mycelium:payment",
+          "version": "idempotency-ref-v1",
+          "window_ms": 300000
+        },
+        "artifact_jcs_payload": "{\"action_type\":\"payment.send\",\"agent_id\":\"crew-runtime-agent-042\",\"idempotency_key\":\"sha256:a666384cc74a83d4d67257247740592e6a2f1a96f8228684b6b08f1b35da6ff8\",\"scope\":\"mycelium:payment\",\"version\":\"idempotency-ref-v1\",\"window_ms\":300000}",
+        "idempotency_ref": "c6c0cc20f7b7e719f4209d61d164bb6fa35a981a020955793fbd89aafe853496",
+        "regenerated_args_hashed": "sha256(JCS({\"amount\":4999,\"memo\":\"refund for order 88213\"}))"
+      },
+      "attempt_2_non_conformant": {
+        "idempotency_artifact": {
+          "action_type": "payment.send",
+          "agent_id": "crew-runtime-agent-042",
+          "idempotency_key": "sha256:8045c3c9f8344b1578eee416888a7be5bc8b18592145e9c6261a18b49b90e6f3",
+          "scope": "mycelium:payment",
+          "version": "idempotency-ref-v1",
+          "window_ms": 300000
+        },
+        "artifact_jcs_payload": "{\"action_type\":\"payment.send\",\"agent_id\":\"crew-runtime-agent-042\",\"idempotency_key\":\"sha256:8045c3c9f8344b1578eee416888a7be5bc8b18592145e9c6261a18b49b90e6f3\",\"scope\":\"mycelium:payment\",\"version\":\"idempotency-ref-v1\",\"window_ms\":300000}",
+        "idempotency_ref": "9b92a2dde16eefd9f68ae2a286b55d8e33596f1795dd184bd1d7b28affffa148",
+        "regenerated_args_hashed": "sha256(JCS({\"amount\":4999,\"memo\":\"issuing refund for order #88213\"}))",
+        "vs_attempt_1": "idempotency_ref DIFFERS from attempt_1 despite identical intent (same order, same amount) — memo wording changed on regeneration. Dedup by equality never fires; both attempts commit as separate effects. This is the bug the negative vector demonstrates."
+      },
+      "attempt_conformant": {
+        "idempotency_artifact": {
+          "action_type": "payment.send",
+          "agent_id": "crew-runtime-agent-042",
+          "idempotency_key": "req_9c2f7e10-order-88213",
+          "scope": "mycelium:payment",
+          "version": "idempotency-ref-v1",
+          "window_ms": 300000
+        },
+        "artifact_jcs_payload": "{\"action_type\":\"payment.send\",\"agent_id\":\"crew-runtime-agent-042\",\"idempotency_key\":\"req_9c2f7e10-order-88213\",\"scope\":\"mycelium:payment\",\"version\":\"idempotency-ref-v1\",\"window_ms\":300000}",
+        "idempotency_ref": "e0e86e129f5e32f95bd62f2619aa0b64fee81512574f335fe9ab978d38f24f3d",
+        "derivation_note": "idempotency_key = 'req_' + the caller's own pre-execution request id + order id — fixed before either model attempt ran, identical for both attempt_1 and attempt_2's underlying intent, so a retry with regenerated arguments produces the SAME idempotency_ref both times and dedup fires correctly."
+      },
+      "invariants": {
+        "invariant_5_durable_derivation": "idempotency_key MUST derive from inputs fixed before the model runs for that attempt, never from the model's regenerated output for that attempt. Hashing tool-call arguments that a guardrail retry can reword is non-conformant even though the derivation mechanics (JCS+SHA-256) are followed correctly — Invariant 5 constrains what may feed the hash, not how the hash is computed."
+      }
     }
   ]
 }
