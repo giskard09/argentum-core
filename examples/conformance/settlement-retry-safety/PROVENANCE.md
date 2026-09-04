@@ -155,6 +155,49 @@ Same disclosure standard as this series' other worked examples
   aurumflux20's work or claiming this repo is retry-safe requires a
   separate decision after this artifact is reviewed.
 
+## Interface extraction (2026-09-04, not covered by the anchor above)
+
+Following a mapping request from Fase 2 outreach (three independent
+findings of the same lock+read-back retry pattern: Nano/glennquinting,
+crewAI/vasilisnasopoulos, LangGraph-Temporal-DBOS/mstevens843's
+crashpoint), the x402-specific surface of this directory was separated
+from the rail-agnostic core:
+
+- `retry_safety_backend.py` — the shared exception vocabulary
+  (`TimeoutError_`, `ServerError`, `ReconcileUnavailable`, `Challenge402`)
+  and the `SettlementBackend` ABC (`settle()`/`reconcile()`), extracted
+  unchanged from `facilitator_harness.py`.
+- `facilitator_harness.py` — now imports and re-exports those names from
+  `retry_safety_backend.py`; `MockFacilitator` is declared as one
+  `SettlementBackend` implementation (x402) among possible others. No
+  behavioral change — `verify.py`'s 8/8 vectors still pass identically.
+- `generic_backend.py` — a second, non-payment `SettlementBackend`
+  implementation (`GenericBackend`): no signatures, no broadcast hashes,
+  no HTTP 402 semantics, modeling a generic idempotent write (e.g. a
+  workflow task result store) instead. `verify_generic.py` runs the same
+  seven-mode-plus-mutation-control battery (`vectors_generic.json`)
+  against it.
+- **`execute_payment.py` and `pending_settlement_store.py` were not
+  touched** — both files' only dependency on the backend is duck typing
+  against the two-method shape and the four exception names, so the same
+  client code drives `MockFacilitator` and `GenericBackend` unmodified.
+  `git diff --stat` on both files against the pre-extraction commit is
+  empty; this is the empirical proof, not an assertion.
+
+Verified: `python3 verify.py` → `ALL CHECKS PASS` (8/8, x402 backend).
+`python3 verify_generic.py` → `ALL CHECKS PASS` (8/8, generic backend).
+Full repo suite `pytest tests/` → 79/79 passed, no regression.
+
+Full generic-vs-x402 mapping (what's shared, what's rail-specific, and
+why the surface is thin): `~/Downloads/MAPEO_GENERICO_VS_X402.md`
+(internal reference, not published).
+
+**What this does not claim:** `GenericBackend` is a stub proving the
+interface generalizes, not a second production integration — it has no
+real destination behind it, same status as `MockFacilitator`. Showing
+this to glennquinting/vasilisnasopoulos/mstevens843 as evidence of
+generality is a decision for dept-estrategia, not made here.
+
 ## Source
 
 - Issue: <https://github.com/x402-foundation/x402/issues/3208>
