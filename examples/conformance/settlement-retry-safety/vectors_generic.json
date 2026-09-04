@@ -1,0 +1,56 @@
+{
+  "spec_version": "settlement-retry-safety-v1-generic",
+  "description": "Same seven-mode retry-safety battery as vectors.json, run against GenericBackend (a non-payment implementation of SettlementBackend) instead of MockFacilitator (x402). Proves execute_payment.py's exactly-once guarantee holds for the interface, not for the x402 transport specifically — no code in execute_payment.py or pending_settlement_store.py changes between the two runs, only the backend object passed in.",
+  "comparator_rule": "Same as vectors.json: PASS requires execute_payment() in a bounded caller retry loop (MAX_ROUNDS=5) against GenericBackend(mode) to reach final_verdict=='settled' with ledger_len==1. mutation-broken-client-001-generic is the same negative control, expected to FAIL.",
+  "vectors": [
+    {
+      "id": "retry-safety-clean-001-generic",
+      "mode": "clean",
+      "expected": "PASS",
+      "expected_outcome": {"final_verdict": "settled", "ledger_len": 1, "settle_calls": 1, "reconcile_calls": 0}
+    },
+    {
+      "id": "retry-safety-declared-idempotent-001-generic",
+      "mode": "declared_idempotent",
+      "expected": "PASS",
+      "expected_outcome": {"final_verdict": "settled", "ledger_len": 1, "settle_calls": 1, "reconcile_calls": 0}
+    },
+    {
+      "id": "retry-safety-write-then-timeout-001-generic",
+      "mode": "write_then_timeout",
+      "expected": "PASS",
+      "expected_outcome": {"final_verdict": "settled", "ledger_len": 1, "settle_calls": 1, "reconcile_calls": 1}
+    },
+    {
+      "id": "retry-safety-error-after-write-001-generic",
+      "mode": "error_after_write",
+      "expected": "PASS",
+      "expected_outcome": {"final_verdict": "settled", "ledger_len": 1, "settle_calls": 2, "reconcile_calls": 0}
+    },
+    {
+      "id": "retry-safety-client-timeout-001-generic",
+      "mode": "client_timeout",
+      "expected": "PASS",
+      "expected_outcome": {"final_verdict": "settled", "ledger_len": 1, "settle_calls": 2, "reconcile_calls": 0}
+    },
+    {
+      "id": "retry-safety-reconcile-unavailable-001-generic",
+      "mode": "reconcile_unavailable",
+      "expected": "PASS",
+      "expected_outcome": {"final_verdict": "settled", "ledger_len": 1, "settle_calls": 2, "reconcile_calls": 1}
+    },
+    {
+      "id": "retry-safety-reissue-instead-of-resume-001-generic",
+      "mode": "reissue_instead_of_resume",
+      "expected": "PASS",
+      "expected_outcome": {"final_verdict": "settled", "ledger_len": 1, "settle_calls": 3, "reconcile_calls": 0}
+    },
+    {
+      "id": "mutation-broken-client-001-generic",
+      "mode": "reissue_instead_of_resume",
+      "description": "Negative control: a client that mints a new key on every retry against GenericBackend. Must NOT settle exactly once.",
+      "expected": "FAIL",
+      "expected_outcome": {"ledger_len_gt": 1}
+    }
+  ]
+}

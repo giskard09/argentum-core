@@ -14,30 +14,33 @@ keyed off call_count, so a mode that "settles on retry" only does so
 because the harness models the underlying broadcast as having actually
 landed on the first call — the same asymmetry idempotency-ref.md names for
 orphaned PENDING: a lost response is not evidence the effect didn't happen.
+
+2026-09-04: exceptions and the settle()/reconcile() shape now live in
+retry_safety_backend.py (rail-agnostic) and are re-exported here unchanged
+— execute_payment.py's `from facilitator_harness import ...` keeps working
+with no edit. MockFacilitator is the x402 implementation of
+SettlementBackend; generic_backend.GenericBackend is a second, non-payment
+implementation of the same interface (see retry_safety_backend.py).
 """
 
+from retry_safety_backend import (
+    Challenge402,
+    ReconcileUnavailable,
+    ServerError,
+    SettlementBackend,
+    TimeoutError_,
+)
 
-class TimeoutError_(Exception):
-    def __init__(self, message, broadcast_ref=None):
-        super().__init__(message)
-        self.broadcast_ref = broadcast_ref
-
-
-class ServerError(Exception):
-    def __init__(self, message, broadcast_ref=None):
-        super().__init__(message)
-        self.broadcast_ref = broadcast_ref
-
-
-class ReconcileUnavailable(Exception):
-    pass
-
-
-class Challenge402(Exception):
-    """Facilitator issuing a fresh 402 instead of resuming a pending settle."""
+__all__ = [
+    "Challenge402",
+    "ReconcileUnavailable",
+    "ServerError",
+    "TimeoutError_",
+    "MockFacilitator",
+]
 
 
-class MockFacilitator:
+class MockFacilitator(SettlementBackend):
     def __init__(self, mode):
         self.mode = mode
         self.ledger = []  # [{"signature": ..., "tx": ...}]
