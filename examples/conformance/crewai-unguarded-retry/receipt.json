@@ -7,6 +7,17 @@
     "crewai_version": "1.15.21",
     "retry_entrypoint": "crewai.tools.tool_usage.ToolUsage.use/_use (outer _run_attempts/_max_parsing_attempts loop) and its inner schema-args-filter except/retry fallback around tool.invoke() -- both confirmed by direct source read of the installed package, not mocked or simulated."
   },
+  "on_chain_anchor": {
+    "ref": "0xf28ee32220242db2d66dee7207a6b0e42869685b5b47f5ef10d3903deb22ac40",
+    "ref_preimage": "crewai-unguarded-retry-v1:argentum-core@4613c83",
+    "registry_contract": "0x49fEcA52bC634a9Ab773226D16619deC547794aa",
+    "chain": "Base mainnet",
+    "chain_id": 8453,
+    "tx_hash": "0xd5ff5b661424f27963643c9ef208b38e04196ff33808974d22e820efaa151733",
+    "block": 51285043,
+    "status": "0x1",
+    "verified_via": "eth_getTransactionReceipt against mainnet.base.org, independent of sender's own response"
+  },
   "cases": [
     {
       "case_id": "UNGUARDED_RETRY",
@@ -30,12 +41,12 @@
         "complete": true,
         "effect_count": 6,
         "effect_ids": [
-          "29bf2568-6ba3-45a3-9af2-83a8362dffa8",
-          "20cfc48d-21d2-4f8c-9e49-0514ed244683",
-          "a8611df3-8ba6-47ca-b028-2d613c620e0b",
-          "4df59a3f-dc5a-4c89-b28f-d27553ecc78a",
-          "a4ed1531-b528-4436-88d7-fff9db102181",
-          "fe63731f-f1c3-44b1-b937-cba4dca7e9e5"
+          "d1d0d4fb-6d4c-4701-a66c-8f5d3683f4f7",
+          "200d69d9-2250-4088-a71d-95315d4927e6",
+          "050c33fc-c4dc-4aea-8cfd-cd6ea4837c2b",
+          "edcf0fce-1eca-4db0-b4c1-2cc660fb5749",
+          "c50026fe-306e-4e91-955f-38e9a0bbdc7a",
+          "adc70ba9-0748-48f0-a59f-84ea840cdf75"
         ]
       },
       "bug_confirmed": true
@@ -65,14 +76,14 @@
           "attempt_no": null,
           "guard_outcome": "RECONCILED_GUARD",
           "idempotency_ref": "fd48b62da84aa728e65898b12eb118595c737a382cc06c65e6eae801d84a6b37",
-          "effect_id": "a2524dc0-d1c6-4c21-89ff-204182cebaae"
+          "effect_id": "a52812f8-c312-4bf3-b01d-b4e7fe04fccc"
         }
       ],
       "observation": {
         "complete": true,
         "effect_count": 1,
         "effect_ids": [
-          "a2524dc0-d1c6-4c21-89ff-204182cebaae"
+          "a52812f8-c312-4bf3-b01d-b4e7fe04fccc"
         ]
       },
       "duplicate_prevented": true

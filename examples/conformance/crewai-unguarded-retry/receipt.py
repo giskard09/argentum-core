@@ -47,6 +47,17 @@ def build_receipt() -> dict:
             "-- both confirmed by direct source read of the installed "
             "package, not mocked or simulated.",
         },
+        "on_chain_anchor": {
+            "ref": "0xf28ee32220242db2d66dee7207a6b0e42869685b5b47f5ef10d3903deb22ac40",
+            "ref_preimage": "crewai-unguarded-retry-v1:argentum-core@4613c83",
+            "registry_contract": "0x49fEcA52bC634a9Ab773226D16619deC547794aa",
+            "chain": "Base mainnet",
+            "chain_id": 8453,
+            "tx_hash": "0xd5ff5b661424f27963643c9ef208b38e04196ff33808974d22e820efaa151733",
+            "block": 51285043,
+            "status": "0x1",
+            "verified_via": "eth_getTransactionReceipt against mainnet.base.org, independent of sender's own response",
+        },
         "cases": [
             {
                 "case_id": "UNGUARDED_RETRY",

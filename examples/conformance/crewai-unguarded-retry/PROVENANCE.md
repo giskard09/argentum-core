@@ -109,6 +109,27 @@ resolution" requires, never on `window_ms` alone — finds the one real
 effect and transitions the record to `RECONCILED_GUARD` with the true
 `effect_id`.
 
+## On-chain anchor
+
+`ref = keccak256("crewai-unguarded-retry-v1:argentum-core@4613c83")` =
+`0xf28ee32220242db2d66dee7207a6b0e42869685b5b47f5ef10d3903deb22ac40`
+
+Anchored via `anchor(bytes32)` on AnchorRegistry (Base mainnet,
+`0x49fEcA52bC634a9Ab773226D16619deC547794aa`), permissionless — same
+contract used across this repo's other worked examples.
+
+- tx: `0xd5ff5b661424f27963643c9ef208b38e04196ff33808974d22e820efaa151733`
+- block: `51285043`
+- status: `0x1` (confirmed via direct `eth_getTransactionReceipt` against
+  `mainnet.base.org`, not read back from the sender's own response)
+
+**What this anchor claims and what it does not:** it timestamps the
+existence of this artifact (commit `4613c83`) on Base mainnet at block
+51285043 — a public, permissionless proof-of-existence. It is **not** a
+public "safe" or "bug confirmed" claim on CrewAI's behalf — that
+determination lives in this document's own findings above, not in the
+anchor.
+
 ## What was not built
 
 - No LLM was called at any point — see harness rationale above. This is a
@@ -123,10 +144,6 @@ effect and transitions the record to `RECONCILED_GUARD` with the true
   our own repo, not a proposed fix. Whether the inner double-invoke
   fallback (see finding above) is itself a bug worth reporting separately
   is a judgment call left to dept-estrategia before any posting.
-- No on-chain anchor yet. Anchoring is a real-funds action (previous
-  worked examples in this series used `AnchorRegistry` on Base mainnet,
-  `0x49fEcA52bC634a9Ab773226D16619deC547794aa`) and is left pending
-  explicit go-ahead rather than executed autonomously.
 
 ## Reproducing
 
