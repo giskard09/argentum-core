@@ -66,3 +66,50 @@ def run_tool_under_real_crewai_retry(func, logical_action_id: str, max_attempts:
         "run_attempts": usage._run_attempts,
         "last_failure": str(usage.last_failure) if usage.last_failure else None,
     }
+
+
+def run_single_tool_call(func, tool_name: str, arguments: dict) -> dict:
+    """Dispatches ONE real crewAI ToolUsage.use() call with the given
+    `arguments` -- no outer retry loop.
+
+    This is deliberately NOT `run_tool_under_real_crewai_retry`: that
+    function exercises crewAI's own re-dispatch, which always resends the
+    identical `ToolCalling` (same arguments) it was built with -- crewAI's
+    engine has no code path that changes arguments between attempts.
+
+    A model-regenerated retry (nsolland, crewAIInc/crewAI#7449, gap #4) is a
+    *different* event: the outer agent loop sees a perceived failure, the
+    LLM re-proposes the tool call, and the arguments it emits the second
+    time are not guaranteed to match the first -- same `logical_action_id`
+    (the caller-fixed field), different payload. That re-proposal happens
+    above `ToolUsage`, so it is reproduced here as two independent calls to
+    this function against the real `ToolUsage.use()` dispatcher, each with
+    its own `arguments` dict -- not as two iterations of the retry loop
+    above."""
+    structured_tool = CrewStructuredTool.from_function(
+        func=func,
+        name=tool_name,
+        description="Applies a local effect keyed by logical_action_id, "
+        "with additional argument fields that may vary between calls.",
+    )
+
+    calling = ToolCalling(tool_name=structured_tool.name, arguments=arguments)
+
+    usage = ToolUsage(
+        tools_handler=None,
+        tools=[structured_tool],
+        task=None,
+        function_calling_llm=None,
+        agent=None,
+        action=_Action(tool=structured_tool.name, tool_input=arguments),
+    )
+    usage._max_parsing_attempts = 1
+
+    tool_string = f"{tool_name}({arguments})"
+    result = usage.use(calling=calling, tool_string=tool_string)
+
+    return {
+        "outcome": result,
+        "run_attempts": usage._run_attempts,
+        "last_failure": str(usage.last_failure) if usage.last_failure else None,
+    }
