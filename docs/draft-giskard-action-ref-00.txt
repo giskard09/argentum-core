@@ -312,9 +312,10 @@ Table of Contents
       call itself changed -- so "the same key" does not apply; two
       claims with different keys are two different actions under this
       model, not a caught duplicate.  Gap identified by
-      vasilisnasopoulos (crewAIInc/crewAI#5802) and independently in
-      [LANGGRAPH-8039]; see Section 5.2 for the derivation-level note
-      on the same finding.
+      vasilisnasopoulos, first in [LANGGRAPH-8039] (comment 5456984626,
+      2026-08-28) and then in crewAIInc/crewAI#5802 (comment
+      5462928784, 2026-08-29); see Section 5.2 for the derivation-level
+      note on the same finding.
 
    Layer 4 — Tamper-evident audit trail (e.g., Mycelium TrailRecord):
       Proves: this action occurred, with this hash, anchored at this
@@ -344,7 +345,7 @@ Table of Contents
       [CREWAI-PR5822]  This convergence is on the derivation
       mechanism only -- a key built from tool/task/argument content
       -- not on retry-safety under model-regenerated content.
-      vasilisnasopoulos showed the same PR/issue thread that when a
+      vasilisnasopoulos showed in the same PR/issue thread that when a
       retry re-invokes the model and it produces different argument
       values, the resulting key differs and the duplicate check does
       not fire; see Section 5.1's Layer 2 boundary note and

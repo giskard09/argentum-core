@@ -24,8 +24,10 @@ resend. If both executions otherwise succeed, the result is two distinct effects
 charges for different amounts), not one effect duplicated — a `DIVERGED` outcome, not a
 caught retry. Identified by vasilisnasopoulos
 (crewAIInc/crewAI#5802, comment
-[5462928784](https://github.com/crewAIInc/crewAI/issues/5802#issuecomment-5462928784)) and
-[langchain-ai/langgraph#8039](https://github.com/langchain-ai/langgraph/issues/8039); the
+[5462928784](https://github.com/crewAIInc/crewAI/issues/5802#issuecomment-5462928784)),
+first raised by the same author the previous day in
+[langchain-ai/langgraph#8039](https://github.com/langchain-ai/langgraph/issues/8039)
+comment 5456984626; the
 `DIVERGED` outcome name is mstevens843's, measured across LangGraph 1.2.11, Temporal, and
 DBOS over 2,490 crash-and-recover trials
 ([crashpoint/results/06-nondeterminism.md](https://github.com/mstevens843/crashpoint/blob/main/results/06-nondeterminism.md)).
