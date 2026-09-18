@@ -101,5 +101,5 @@ decision is required instead of believing the wrong request succeeded.
 
 ## Not yet built
 
-Gap #3 (resume-after-restart loses state) — mapped 2026-09-14, still
-open, no fixture yet.
+(none — gap #3, resume-after-restart, was closed 2026-09-18: see
+`GAP3_RESUME_AFTER_RESTART.md`.)
