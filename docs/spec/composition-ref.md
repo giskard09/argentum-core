@@ -20,7 +20,7 @@
 
 `composition_ref` is `SHA-256(JCS(composition_artifact))` where:
 
-- **JCS** is RFC 8785 canonical JSON: `json.dumps(obj, separators=(',',':'), sort_keys=True, ensure_ascii=False)`
+- **JCS** is RFC 8785 canonical JSON: object keys sorted recursively by UTF-16 code units (§3.2.3), no whitespace, literal UTF-8 — **not** `json.dumps(sort_keys=True)`, which sorts by code point and diverges for keys outside the BMP. Reference implementation: [`jcs.py`](../../jcs.py)
 - **SHA-256** lowercase hex
 - `composition_artifact` must contain at minimum: `action_ref`, `authority_verified_at_ms`, `composition_key`, `delegation_ref`, `revocation_check_at_ms`, `revocation_ref`, `scope`, `version`
 
@@ -28,7 +28,17 @@
 import hashlib, json
 
 def jcs(obj):
-    return json.dumps(obj, separators=(',', ':'), sort_keys=True, ensure_ascii=False)
+    # RFC 8785 §3.2.3: object keys sorted recursively by UTF-16 code units.
+    # Not json.dumps(sort_keys=True): that sorts by code point and diverges
+    # from RFC 8785 for keys outside the BMP. Floats additionally need
+    # ECMA-262 Number::toString formatting -- see jcs.py.
+    def canon(o):
+        if isinstance(o, dict):
+            return {k: canon(o[k]) for k in sorted(o, key=lambda k: k.encode("utf-16-be", "surrogatepass"))}
+        if isinstance(o, list):
+            return [canon(v) for v in o]
+        return o
+    return json.dumps(canon(obj), separators=(',', ':'), ensure_ascii=False)
 
 composition_artifact = {
     "action_ref":               "584bc79bb11ce3af5058b3da84d03f85e4aa464a175bd4f913aeb82a22cef60f",

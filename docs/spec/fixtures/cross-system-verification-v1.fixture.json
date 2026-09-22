@@ -7,7 +7,7 @@
   "artifact_format": "jcs-rfc8785-v1",
   "generated_at": "2026-05-26",
   "purpose": "Formal conformance substrate for cross-system-verification-v1. An external implementer who executes the four canonical verification steps and reproduces verification_ref byte-identical has a conformant implementation. No Giskard endpoint is required. The verifier needs only: the trail record, the four preimage fields, and a public RPC endpoint for the anchoring chain.",
-  "reproduce_in_python": "import hashlib, json\ndef jcs(obj): return json.dumps(obj, separators=(',',':'), sort_keys=True, ensure_ascii=False)\nverification_ref = hashlib.sha256(jcs(verification_artifact).encode()).hexdigest()",
+  "reproduce_in_python": "import hashlib, json\ndef jcs(obj):\n    c = lambda o: {k: c(o[k]) for k in sorted(o, key=lambda k: k.encode('utf-16-be', 'surrogatepass'))} if isinstance(o, dict) else [c(v) for v in o] if isinstance(o, list) else o\n    return json.dumps(c(obj), separators=(',',':'), ensure_ascii=False)  # RFC 8785: UTF-16 key order\nverification_ref = hashlib.sha256(jcs(verification_artifact).encode()).hexdigest()",
   "vectors": [
     {
       "id": "verify-001-trustless-payment-trail",
