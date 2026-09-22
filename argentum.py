@@ -3134,6 +3134,11 @@ async def nexus_trail(request: Request):
     payment_hash = body.get("payment_hash", "") or ""
     negotiation_ref = body.get("negotiation_ref") or None
     negotiation_ref_status = body.get("negotiation_ref_status")
+    # negotiation_ref="" suministrado: se sigue guardando None (compatibilidad con
+    # integradores), pero se registra malformed_empty para que no quede igual que
+    # "no hubo negociación" -- salvo que el caller ya haya declarado su propio estado.
+    if body.get("negotiation_ref") == "" and negotiation_ref_status is None:
+        negotiation_ref_status = "malformed_empty"
     preimage = body.get("preimage") or {}
     _origin_raw = body.get("origin", "nexus")
     origin_val = _origin_raw if _origin_raw in ("nexus", "pioneer") else "nexus"
