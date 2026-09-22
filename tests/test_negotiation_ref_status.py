@@ -232,3 +232,33 @@ def test_nexus_trail_rejects_bad_status(tmp_path, extra):
     argentum = _load_argentum(tmp_path)
     r = _nexus_post(TestClient(argentum.app), **extra)
     assert r.status_code == 400
+
+
+# ── negotiation_ref="" suministrado (aditivo: se guarda None + malformed_empty) ─
+
+def test_nexus_trail_empty_negotiation_ref_records_malformed_empty(tmp_path):
+    argentum = _load_argentum(tmp_path)
+    r = _nexus_post(TestClient(argentum.app), negotiation_ref="")
+    assert r.status_code == 201
+    body = r.json()
+    assert body["negotiation_ref"] is None  # sin cambio de semántica para integradores
+    assert body["negotiation_ref_status"] == "malformed_empty"
+    result = mycelium_trails.verify_chain(argentum.TRAILS_DB, body["trail_id"])
+    assert result["negotiation_linkage"] == "absent"  # sin cambio
+    assert result["negotiation_ref_status"] == "malformed_empty"
+
+
+def test_nexus_trail_omitted_negotiation_ref_stays_unreported(tmp_path):
+    """No mandar el campo != mandarlo vacío."""
+    argentum = _load_argentum(tmp_path)
+    r = _nexus_post(TestClient(argentum.app))
+    assert r.json()["negotiation_ref_status"] is None
+    r = _nexus_post(TestClient(argentum.app), negotiation_ref=None)
+    assert r.json()["negotiation_ref_status"] is None
+
+
+def test_nexus_trail_empty_negotiation_ref_keeps_caller_status(tmp_path):
+    argentum = _load_argentum(tmp_path)
+    r = _nexus_post(TestClient(argentum.app), negotiation_ref="", negotiation_ref_status="unreachable")
+    assert r.status_code == 201
+    assert r.json()["negotiation_ref_status"] == "unreachable"
