@@ -130,7 +130,18 @@ _DDL_MIGRATIONS = [
     "ALTER TABLE trails ADD COLUMN preimage_json TEXT",
     "ALTER TABLE trails ADD COLUMN anchor_submitted_at INTEGER",
     "ALTER TABLE trails ADD COLUMN anchor_fail_reason TEXT",
+    "ALTER TABLE trails ADD COLUMN negotiation_ref_status TEXT",
 ]
+
+# Estado de la obtención del artefacto de negociación (p.ej. PDF firmado del RSA).
+# negotiation_ref=None solo no distingue "no hubo negociación" de "hubo, pero no
+# se pudo leer el artefacto" -- mismo colapso que prohíbe verify-failure-mode-ref
+# invariante 1. Permanentes: no_document, not_allowlisted, empty_body. Transitorios
+# (reintentar infra, no afirman nada sobre el artefacto): unreachable, http_error.
+# Solo "ok" lleva negotiation_ref; cualquier otro estado lo deja en None.
+NEGOTIATION_REF_STATUSES = frozenset({
+    "ok", "no_document", "not_allowlisted", "unreachable", "http_error", "empty_body",
+})
 
 
 def init_db(db_path: str) -> None:
@@ -194,6 +205,7 @@ def record_trail(
     parent_trail_id: Optional[str] = None,
     root_trail_id: Optional[str] = None,
     negotiation_ref: Optional[str] = None,
+    negotiation_ref_status: Optional[str] = None,
     skip_monthly_limit: bool = False,
     origin: str = "internal",
 ) -> Optional[str]:
@@ -204,9 +216,12 @@ def record_trail(
     parent_trail_id: ID del trail que generó éste (None si es raíz).
     root_trail_id:   ID del trail origen de la cadena (None si es raíz).
     negotiation_ref: SHA-256 hex del artefacto de negociación previo (opcional). No entra en el preimage de action_ref.
+    negotiation_ref_status: cómo se obtuvo (o por qué no) negotiation_ref — ver NEGOTIATION_REF_STATUSES. None = el caller no lo reporta.
     origin: "nexus" para trails de clientes externos via /nexus/trail, "internal" para trails del sistema.
     """
     if not (agent_id and service and operation and nonce):
+        return None
+    if negotiation_ref_status is not None and negotiation_ref_status not in NEGOTIATION_REF_STATUSES:
         return None
 
     genesis = frozenset(genesis_agents)
@@ -228,8 +243,9 @@ def record_trail(
             INSERT INTO trails
               (trail_id, agent_id, service, operation, timestamp,
                karma_at_time, success, signature_ref, scope, delegation_ref,
-               parent_trail_id, root_trail_id, negotiation_ref, origin)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+               parent_trail_id, root_trail_id, negotiation_ref, negotiation_ref_status,
+               origin)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 trail_id,
@@ -245,6 +261,7 @@ def record_trail(
                 parent_trail_id,
                 root_trail_id,
                 negotiation_ref,
+                negotiation_ref_status,
                 origin,
             ),
         )
@@ -269,6 +286,7 @@ def _row_to_dict(row: sqlite3.Row) -> dict:
         "parent_trail_id": row["parent_trail_id"] if "parent_trail_id" in keys else None,
         "root_trail_id": row["root_trail_id"] if "root_trail_id" in keys else None,
         "negotiation_ref": row["negotiation_ref"] if "negotiation_ref" in keys else None,
+        "negotiation_ref_status": row["negotiation_ref_status"] if "negotiation_ref_status" in keys else None,
         "action_ref": row["action_ref"] if "action_ref" in keys else None,
         "tx_hash": row["tx_hash"] if "tx_hash" in keys else None,
         "origin": row["origin"] if "origin" in keys else None,
@@ -376,7 +394,7 @@ def list_trails_by_agent(
             """
             SELECT trail_id, agent_id, service, operation, timestamp,
                    karma_at_time, success, signature_ref, scope, delegation_ref,
-                   parent_trail_id, root_trail_id, negotiation_ref
+                   parent_trail_id, root_trail_id, negotiation_ref, negotiation_ref_status
             FROM trails
             WHERE agent_id=?
             ORDER BY timestamp DESC
@@ -396,7 +414,7 @@ def get_trail_by_id(db_path: str, trail_id: str) -> Optional[dict]:
             """
             SELECT trail_id, agent_id, service, operation, timestamp,
                    karma_at_time, success, signature_ref, scope, delegation_ref,
-                   parent_trail_id, root_trail_id, negotiation_ref, action_ref,
+                   parent_trail_id, root_trail_id, negotiation_ref, negotiation_ref_status, action_ref,
                    tx_hash, origin, anchor_status, anchor_block, anchor_fail_reason,
                    preimage_json
             FROM trails WHERE trail_id=?
@@ -435,7 +453,7 @@ def get_trail_by_action_ref(db_path: str, agent_id: str, action_ref: str) -> Opt
             """
             SELECT trail_id, agent_id, service, operation, timestamp,
                    karma_at_time, success, signature_ref, scope, delegation_ref,
-                   parent_trail_id, root_trail_id, negotiation_ref, action_ref,
+                   parent_trail_id, root_trail_id, negotiation_ref, negotiation_ref_status, action_ref,
                    tx_hash, origin, anchor_status, anchor_block, preimage_json
             FROM trails WHERE agent_id=? AND action_ref=?
             """,
@@ -454,7 +472,7 @@ def get_trail_by_payment_hash(db_path: str, payment_hash: str) -> Optional[dict]
             """
             SELECT trail_id, agent_id, service, operation, timestamp,
                    karma_at_time, success, signature_ref, scope, delegation_ref,
-                   parent_trail_id, root_trail_id, negotiation_ref, action_ref,
+                   parent_trail_id, root_trail_id, negotiation_ref, negotiation_ref_status, action_ref,
                    tx_hash, origin, anchor_status, anchor_block, preimage_json
             FROM trails WHERE delegation_ref=?
             """,
@@ -532,7 +550,15 @@ def verify_chain(db_path: str, trail_id: str) -> dict:
     mismo "absent" que "campo realmente ausente", perdiendo ambas distinciones.
 
     Retorna: { valid: bool, broken_at: trail_id | None, reason: str | None,
-               negotiation_linkage: "absent" | "present" | "malformed" | None }
+               negotiation_linkage: "absent" | "present" | "malformed" | None,
+               negotiation_ref_status: str | None }
+
+    negotiation_ref_status (aditivo, 2026-09-22): cómo registró el emisor la
+    obtención del artefacto -- ver NEGOTIATION_REF_STATUSES. Separa un "absent"
+    donde el artefacto nunca existió (no_document) de uno donde existió pero no
+    se pudo leer (unreachable/http_error, transitorio) o se rechazó por
+    política (not_allowlisted). None = el emisor no lo reportó (trails previos
+    a este campo, o callers que no lo envían) -- no se infiere nada.
 
     reason particiona en dos categorías (aditivo, no cambia el contrato de
     retorno -- propuesto por Henri Sirkkavaara, scitt@ietf.org, 2026-08-16, en
@@ -557,6 +583,7 @@ def verify_chain(db_path: str, trail_id: str) -> dict:
     Detalle y tabla completa: docs/spec/negotiation-ref.md.
     """
     target = get_trail_by_id(db_path, trail_id)
+    negotiation_ref_status = target.get("negotiation_ref_status") if target else None
     if target is None:
         negotiation_linkage = None
     else:
@@ -577,6 +604,7 @@ def verify_chain(db_path: str, trail_id: str) -> dict:
                 "broken_at": current_id,
                 "reason": "cycle_detected",
                 "negotiation_linkage": negotiation_linkage,
+                "negotiation_ref_status": negotiation_ref_status,
             }
         visited.add(current_id)
         trail = get_trail_by_id(db_path, current_id)
@@ -586,6 +614,7 @@ def verify_chain(db_path: str, trail_id: str) -> dict:
                 "broken_at": current_id,
                 "reason": "trail_not_found",
                 "negotiation_linkage": negotiation_linkage,
+                "negotiation_ref_status": negotiation_ref_status,
             }
         if not trail.get("signature_ref"):
             return {
@@ -593,6 +622,7 @@ def verify_chain(db_path: str, trail_id: str) -> dict:
                 "broken_at": current_id,
                 "reason": "missing_signature_ref",
                 "negotiation_linkage": negotiation_linkage,
+                "negotiation_ref_status": negotiation_ref_status,
             }
         # si tiene parent_trail_id y delegation_ref, delegation_ref debe referenciar al parent
         if trail.get("parent_trail_id") and trail.get("delegation_ref"):
@@ -602,6 +632,7 @@ def verify_chain(db_path: str, trail_id: str) -> dict:
                     "broken_at": current_id,
                     "reason": "delegation_ref_parent_mismatch",
                     "negotiation_linkage": negotiation_linkage,
+                    "negotiation_ref_status": negotiation_ref_status,
                 }
         current_id = trail.get("parent_trail_id")
     return {
@@ -609,6 +640,7 @@ def verify_chain(db_path: str, trail_id: str) -> dict:
         "broken_at": None,
         "reason": None,
         "negotiation_linkage": negotiation_linkage,
+        "negotiation_ref_status": negotiation_ref_status,
     }
 
 

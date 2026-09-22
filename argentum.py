@@ -3133,6 +3133,7 @@ async def nexus_trail(request: Request):
     service = body.get("service", "")
     payment_hash = body.get("payment_hash", "") or ""
     negotiation_ref = body.get("negotiation_ref") or None
+    negotiation_ref_status = body.get("negotiation_ref_status")
     preimage = body.get("preimage") or {}
     _origin_raw = body.get("origin", "nexus")
     origin_val = _origin_raw if _origin_raw in ("nexus", "pioneer") else "nexus"
@@ -3213,6 +3214,22 @@ async def nexus_trail(request: Request):
             status_code=422,
         )
 
+    # negotiation_ref_status (opcional): validar vocabulario y coherencia con
+    # negotiation_ref -- "ok" exige el hash, cualquier otro estado lo excluye.
+    if negotiation_ref_status is not None:
+        if negotiation_ref_status not in mycelium_trails.NEGOTIATION_REF_STATUSES:
+            return JSONResponse(
+                {"error": "invalid negotiation_ref_status",
+                 "allowed": sorted(mycelium_trails.NEGOTIATION_REF_STATUSES)},
+                status_code=400,
+            )
+        if (negotiation_ref_status == "ok") != (negotiation_ref is not None):
+            return JSONResponse(
+                {"error": "negotiation_ref_status inconsistent with negotiation_ref",
+                 "detail": "status 'ok' requires negotiation_ref; any other status requires it absent"},
+                status_code=400,
+            )
+
     # Consume PAYG credit before hitting Free monthly limit
     payg_account = mycelium_trails.get_payg_account_by_agent(TRAILS_DB, agent_id)
     payg_consumed = False
@@ -3230,6 +3247,7 @@ async def nexus_trail(request: Request):
         scope=scope or None,
         delegation_ref=payment_hash or None,  # payment_hash externo NEXUS
         negotiation_ref=negotiation_ref,
+        negotiation_ref_status=negotiation_ref_status,
         skip_monthly_limit=payg_consumed,
         origin=origin_val,
     )
@@ -3308,6 +3326,7 @@ async def nexus_trail(request: Request):
         "operation": action_type,
         "action_ref": action_ref,
         "negotiation_ref": negotiation_ref,
+        "negotiation_ref_status": negotiation_ref_status,
         "payment_hash": payment_hash or None,
         "trail_status": "committed",
         "anchor": "pending" if _ARB_PAY_OK else "disabled",
@@ -3350,6 +3369,36 @@ def _safe_docuseal_url(url: str) -> bool:
         return True
     except Exception:
         return False
+
+
+async def _fetch_negotiation_ref(document_url: str) -> tuple:
+    """Descarga el PDF firmado y devuelve (negotiation_ref, negotiation_ref_status).
+
+    Solo si la URL pasa la allowlist SSRF; el token DocuSeal NO se reenvía a la
+    URL externa. Antes de 2026-09-22 cualquier falla dejaba negotiation_ref=None
+    en silencio (`except: pass`) -- "no se pudo leer el artefacto" quedaba
+    indistinguible de "no hubo negociación", el colapso que prohíbe
+    verify-failure-mode-ref invariante 1. Cada causa tiene ahora su estado
+    (mycelium_trails.NEGOTIATION_REF_STATUSES); negotiation_ref solo se setea
+    con status "ok". No toca el preimage de action_ref.
+    """
+    import logging as _log
+    if not document_url:
+        return None, "no_document"
+    if not _safe_docuseal_url(document_url):
+        return None, "not_allowlisted"
+    try:
+        async with httpx.AsyncClient(timeout=30, follow_redirects=False) as client:
+            pdf_resp = await client.get(document_url)
+    except Exception as e:
+        _log.warning("negotiation_ref fetch unreachable: %s", type(e).__name__)
+        return None, "unreachable"
+    if pdf_resp.status_code != 200:
+        _log.warning("negotiation_ref fetch http_error: status=%s", pdf_resp.status_code)
+        return None, "http_error"
+    if not pdf_resp.content:
+        return None, "empty_body"
+    return hashlib.sha256(pdf_resp.content).hexdigest(), "ok"
 
 
 @app.post("/webhook/docuseal")
@@ -3398,17 +3447,7 @@ async def docuseal_webhook(request: Request):
     documents = data.get("documents", [])
     document_url = (documents[0].get("url") if documents else None) or data.get("audit_log_url", "")
 
-    # Descargar PDF para computar SHA-256
-    # — solo si la URL pasa la allowlist SSRF; token NO se reenvía a URL externa
-    negotiation_ref = None
-    if document_url and _safe_docuseal_url(document_url):
-        try:
-            async with httpx.AsyncClient(timeout=30, follow_redirects=False) as client:
-                pdf_resp = await client.get(document_url)
-                if pdf_resp.status_code == 200:
-                    negotiation_ref = hashlib.sha256(pdf_resp.content).hexdigest()
-        except Exception:
-            pass
+    negotiation_ref, negotiation_ref_status = await _fetch_negotiation_ref(document_url)
 
     # Delegar trail a Pioneer via endpoint interno
     try:
@@ -3419,6 +3458,7 @@ async def docuseal_webhook(request: Request):
                     "submission_id": str(submission_id),
                     "signer_email":  signer_email,
                     "negotiation_ref": negotiation_ref,
+                    "negotiation_ref_status": negotiation_ref_status,
                     "scope": "mycelium.safeagent",
                 },
             )
@@ -3445,6 +3485,7 @@ async def docuseal_webhook(request: Request):
             success=True,
             scope="mycelium.safeagent",
             negotiation_ref=negotiation_ref,
+            negotiation_ref_status=negotiation_ref_status,
         )
     else:
         trail_id = None
@@ -3462,6 +3503,7 @@ async def docuseal_webhook(request: Request):
         "submission_id":   str(submission_id),
         "signer_email":    signer_email,
         "negotiation_ref": negotiation_ref,
+        "negotiation_ref_status": negotiation_ref_status,
         "via_pioneer":     pioneer_ok,
         "trail_id":        trail_id,
     })
