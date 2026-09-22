@@ -29,13 +29,23 @@ primitive.
 signing_trust_ref = SHA-256(JCS(preimage))
 ```
 
-JCS: RFC 8785 canonical JSON (keys sorted, no extra whitespace).
+JCS: RFC 8785 canonical JSON: object keys sorted recursively by UTF-16 code units (§3.2.3), no whitespace, literal UTF-8 — **not** `json.dumps(sort_keys=True)`, which sorts by code point and diverges for keys outside the BMP. Reference implementation: [`jcs.py`](../../jcs.py).
 
 ```python
 import hashlib, json
 
 def jcs(obj):
-    return json.dumps(dict(sorted(obj.items())), separators=(',',':'), ensure_ascii=False)
+    # RFC 8785 §3.2.3: object keys sorted recursively by UTF-16 code units.
+    # Not json.dumps(sort_keys=True): that sorts by code point and diverges
+    # from RFC 8785 for keys outside the BMP. Floats additionally need
+    # ECMA-262 Number::toString formatting -- see jcs.py.
+    def canon(o):
+        if isinstance(o, dict):
+            return {k: canon(o[k]) for k in sorted(o, key=lambda k: k.encode("utf-16-be", "surrogatepass"))}
+        if isinstance(o, list):
+            return [canon(v) for v in o]
+        return o
+    return json.dumps(canon(obj), separators=(',', ':'), ensure_ascii=False)
 
 signing_trust_ref = hashlib.sha256(jcs(preimage).encode()).hexdigest()
 ```

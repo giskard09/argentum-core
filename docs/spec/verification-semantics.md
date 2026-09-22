@@ -26,7 +26,7 @@ The property is **structurally decidable** from the vector fields alone.
 A verifier:
 
 1. Reads the `preimage` fields from the vector.
-2. Applies JCS canonicalization (RFC 8785): `json.dumps(obj, separators=(',',':'), sort_keys=True, ensure_ascii=False)`.
+2. Applies JCS canonicalization: RFC 8785 canonical JSON: object keys sorted recursively by UTF-16 code units (§3.2.3), no whitespace, literal UTF-8 — **not** `json.dumps(sort_keys=True)`, which sorts by code point and diverges for keys outside the BMP. Reference implementation: [`jcs.py`](../../jcs.py).
 3. Computes `SHA-256` over the canonical bytes.
 4. Compares the digest byte-exact against the declared reference field (`action_ref`, `counterparty_ref`, etc.).
 
