@@ -138,9 +138,12 @@ _DDL_MIGRATIONS = [
 # se pudo leer el artefacto" -- mismo colapso que prohíbe verify-failure-mode-ref
 # invariante 1. Permanentes: no_document, not_allowlisted, empty_body. Transitorios
 # (reintentar infra, no afirman nada sobre el artefacto): unreachable, http_error.
+# malformed_empty: el caller suministró negotiation_ref="" -- se guarda None (sin
+# cambio de semántica para integradores) pero la señal no se pierde.
 # Solo "ok" lleva negotiation_ref; cualquier otro estado lo deja en None.
 NEGOTIATION_REF_STATUSES = frozenset({
     "ok", "no_document", "not_allowlisted", "unreachable", "http_error", "empty_body",
+    "malformed_empty",
 })
 
 
