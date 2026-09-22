@@ -14,14 +14,17 @@ sides of a payment's value movement — payer debit and payee credit — as inde
 recomputed from the payment rail's own ledger, not as declared by the facilitator that
 brokered the payment.
 
-**Why this exists:** x402's `SettleResponse` (S5, per the x402 wire schema —
-`typescript/packages/legacy/x402/src/types/verify/x402Specs.ts`,
-`SettleResponseSchema`) carries `{success, errorReason?, payer?, transaction, network}` — a
-boolean success flag, an optional payer, a transaction reference, and a network. It names
-**no amount and no payee**, and `success: true` is the facilitator's own assertion about its
-own settlement, not a fact a third party has confirmed against the ledger. An Evaluator
-reviewing the transaction without the Buyer present (UC3) holds exactly this response and
-cannot confirm from it alone that anything settled for the amount or party the offer named.
+**Why this exists:** x402's `SettleResponse` (S5) is the facilitator's own report of its
+own settlement: a success flag, a transaction reference and a network, plus optional fields
+whose presence depends on schema version and scheme (e.g. `payer`; a settled `amount` for
+schemes such as `upto`, where the settled value may differ from the authorized maximum). It
+names **no payee**, and every field it does carry — `success: true`, and `amount` where
+present — is the facilitator's assertion, not a fact a third party has confirmed against the
+ledger. An Evaluator reviewing the transaction without the Buyer present (UC3) holds exactly
+this response and cannot confirm from it alone that anything settled for the amount or party
+the offer named. This profile does not depend on which optional fields a given x402 version
+includes: whatever `SettleResponse` says, it is never the source of `payer_debit` /
+`payee_credit`.
 
 **What it points to:** a settlement artifact that separately names `payer_debit` and
 `payee_credit` — each an `{address, amount, asset}` triple — recomputed from the rail's own
@@ -88,8 +91,9 @@ not satisfy this profile — see `checks.debit_credit_paired` in the reference v
 Every settlement artifact carries `checks.ledger_recomputed: true | false` in the vector,
 naming whether `payer_debit`/`payee_credit` were read from an independent verifier's own
 lookup against the rail (`true`) or merely copied from the facilitator's `SettleResponse`
-(`false` — which, per x402's own schema, could not even supply these fields, since
-`SettleResponse` carries no amount or payee). **A vector with `ledger_recomputed: false` MUST
+(`false`). Copying is not recomputing: `SettleResponse` carries no payee at all, and an
+`amount` it may carry is the facilitator's own declaration, whatever the schema version.
+**A vector with `ledger_recomputed: false` MUST
 be rejected by a conformant verifier** — `success: true` from a facilitator is not, by
 itself, ledger proof. This is R5's central prohibition, enforced structurally rather than
 left as a caveat in prose.
@@ -157,7 +161,8 @@ Per the x402 Evidence Chain RFP (R5; UC3, UC6; T2, T4):
 - **T4 (unanchored settlement):** `network` + `transaction` are required fields, not optional
   ones — a settlement artifact with no transaction reference cannot be constructed under this
   profile, closing the gap left by x402's own `SettleResponse.transaction` being present but
-  the wire response otherwise carrying no amount to match it against.
+  the wire response carrying no ledger-derived amount (at most a facilitator-declared one) and
+  no payee to match it against.
 
 ---
 
