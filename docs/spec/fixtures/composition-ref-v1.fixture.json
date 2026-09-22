@@ -7,7 +7,7 @@
   "artifact_format": "jcs-rfc8785-v1",
   "generated_at": "2026-05-26",
   "purpose": "Formal conformance substrate for composition-ref-v1. An external implementer who reproduces composition_ref byte-identical from the stated composition_artifact has a conformant implementation. composition_ref commits to the complete authorization lifecycle: delegation_ref (who authorized), dual-timestamps (authority_verified_at_ms + revocation_check_at_ms), revocation_ref (subsequent invalidation), and the action_ref that ties all four to a specific agent action.",
-  "reproduce_in_python": "import hashlib, json\ndef jcs(obj): return json.dumps(obj, separators=(',',':'), sort_keys=True, ensure_ascii=False)\ncomposition_ref = hashlib.sha256(jcs(composition_artifact).encode()).hexdigest()",
+  "reproduce_in_python": "import hashlib, json\ndef jcs(obj):\n    c = lambda o: {k: c(o[k]) for k in sorted(o, key=lambda k: k.encode('utf-16-be', 'surrogatepass'))} if isinstance(o, dict) else [c(v) for v in o] if isinstance(o, list) else o\n    return json.dumps(c(obj), separators=(',',':'), ensure_ascii=False)  # RFC 8785: UTF-16 key order\ncomposition_ref = hashlib.sha256(jcs(composition_artifact).encode()).hexdigest()",
   "vectors": [
     {
       "id": "composition-001-full-lifecycle",

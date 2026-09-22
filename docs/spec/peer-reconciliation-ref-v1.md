@@ -49,7 +49,7 @@ adjudicate *why*.
 
 `peer_reconciliation_ref` is `SHA-256(JCS(envelope))` where:
 
-- **JCS** is RFC 8785 canonical JSON: `json.dumps(obj, separators=(',',':'), sort_keys=True, ensure_ascii=False)`
+- **JCS** is RFC 8785 canonical JSON: object keys sorted recursively by UTF-16 code units (§3.2.3), no whitespace, literal UTF-8 — **not** `json.dumps(sort_keys=True)`, which sorts by code point and diverges for keys outside the BMP. Reference implementation: [`jcs.py`](../../jcs.py)
 - **SHA-256** lowercase hex
 - `envelope` must contain at minimum: `interaction_id`, `party_a`, `party_b`, `version`
 
@@ -57,7 +57,17 @@ adjudicate *why*.
 import hashlib, json
 
 def jcs(obj):
-    return json.dumps(obj, separators=(',', ':'), sort_keys=True, ensure_ascii=False)
+    # RFC 8785 §3.2.3: object keys sorted recursively by UTF-16 code units.
+    # Not json.dumps(sort_keys=True): that sorts by code point and diverges
+    # from RFC 8785 for keys outside the BMP. Floats additionally need
+    # ECMA-262 Number::toString formatting -- see jcs.py.
+    def canon(o):
+        if isinstance(o, dict):
+            return {k: canon(o[k]) for k in sorted(o, key=lambda k: k.encode("utf-16-be", "surrogatepass"))}
+        if isinstance(o, list):
+            return [canon(v) for v in o]
+        return o
+    return json.dumps(canon(obj), separators=(',', ':'), ensure_ascii=False)
 
 envelope = {
     "interaction_id": "3f9c9e2e-6b5a-4b7e-8f3e-1a2b3c4d5e6f",
