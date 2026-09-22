@@ -413,7 +413,17 @@ Does not enter the `action_ref` preimage — same invariant as `negotiation_ref`
 import hashlib, json
 
 def jcs(obj):
-    return json.dumps(obj, separators=(',', ':'), sort_keys=True, ensure_ascii=False)
+    # RFC 8785 §3.2.3: object keys sorted recursively by UTF-16 code units.
+    # Not json.dumps(sort_keys=True): that sorts by code point and diverges
+    # from RFC 8785 for keys outside the BMP. Floats additionally need
+    # ECMA-262 Number::toString formatting -- see jcs.py.
+    def canon(o):
+        if isinstance(o, dict):
+            return {k: canon(o[k]) for k in sorted(o, key=lambda k: k.encode("utf-16-be", "surrogatepass"))}
+        if isinstance(o, list):
+            return [canon(v) for v in o]
+        return o
+    return json.dumps(canon(obj), separators=(',', ':'), ensure_ascii=False)
 
 authority_descriptor = {
     "authority_type": "permissionless-registry",

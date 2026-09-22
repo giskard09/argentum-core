@@ -7,7 +7,7 @@
   "artifact_format": "jcs-rfc8785-v1",
   "generated_at": "2026-05-26",
   "purpose": "Formal conformance substrate for delegation-chain-ref-v1. An external implementer who reproduces delegation_chain_ref byte-identical from the stated chain_artifact has a conformant implementation. The fixture demonstrates a 3-hop chain (giskard-self → pioneer-agent-001 → lightning → soma-agent) with independent per-hop delegation_ref values and backward-traversable parent_delegation_ref linkage.",
-  "reproduce_in_python": "import hashlib, json\ndef jcs(obj): return json.dumps(obj, separators=(',',':'), sort_keys=True, ensure_ascii=False)\ndelegation_chain_ref = hashlib.sha256(jcs(chain_artifact).encode()).hexdigest()",
+  "reproduce_in_python": "import hashlib, json\ndef jcs(obj):\n    c = lambda o: {k: c(o[k]) for k in sorted(o, key=lambda k: k.encode('utf-16-be', 'surrogatepass'))} if isinstance(o, dict) else [c(v) for v in o] if isinstance(o, list) else o\n    return json.dumps(c(obj), separators=(',',':'), ensure_ascii=False)  # RFC 8785: UTF-16 key order\ndelegation_chain_ref = hashlib.sha256(jcs(chain_artifact).encode()).hexdigest()",
   "vectors": [
     {
       "id": "chain-001-three-hop-payment-route",

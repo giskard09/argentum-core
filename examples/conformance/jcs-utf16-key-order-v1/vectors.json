@@ -1,0 +1,101 @@
+{
+  "set": "jcs-utf16-key-order-v1",
+  "spec": "RFC 8785 \u00a73.2.3 (object property sorting by UTF-16 code units)",
+  "purpose": "Pins the one place Python's json.dumps(sort_keys=True) diverges from RFC 8785: keys outside the Basic Multilingual Plane sort by UTF-16 code unit (surrogate pairs D800-DBFF sort before U+E000-FFFF), not by code point. Every docs/spec/*.md jcs() snippet in this repo is tested against these vectors (tests/test_jcs_docs_snippets.py). Negatives fail by two distinct checks: key order and string escaping.",
+  "reference_implementation": "jcs.py",
+  "precedent": "action-state-group/scitt-payload-binding lib/cpb/canonicalize.py (\"RFC 8785 \u00a73.2.3: sort by UTF-16 code units\")",
+  "vectors": [
+    {
+      "id": "jcs-utf16-001-flat",
+      "kind": "positive",
+      "note": "U+1F600 is the surrogate pair D83D DE00; D83D < E000, so it sorts first. Code-point order puts U+E000 first.",
+      "input": {
+        "\ue000": 1,
+        "\ud83d\ude00": 2
+      },
+      "expected_canonical": "{\"\ud83d\ude00\":2,\"\ue000\":1}",
+      "expected_sha256": "28c95d1bbb2209223307e62f489020e8f9e0cfa16adf2daf6d88127a1e8dd22a",
+      "code_point_order_agrees": false
+    },
+    {
+      "id": "jcs-utf16-002-nested",
+      "kind": "positive",
+      "note": "Same rule applied recursively: nested object keys and objects inside arrays.",
+      "input": {
+        "a": 0,
+        "\uffff": {
+          "\ud800\udc00": "x",
+          "\ue000": "y"
+        },
+        "\ud83d\ude00": [
+          {
+            "\ufb01": 1,
+            "\ud834\udd1e": 2
+          }
+        ]
+      },
+      "expected_canonical": "{\"a\":0,\"\ud83d\ude00\":[{\"\ud834\udd1e\":2,\"\ufb01\":1}],\"\uffff\":{\"\ud800\udc00\":\"x\",\"\ue000\":\"y\"}}",
+      "expected_sha256": "610a17c896db515941c6cbf65c83fec77de155d3ae6823d021411763922b08d7",
+      "code_point_order_agrees": false
+    },
+    {
+      "id": "jcs-utf16-003-ascii-control",
+      "kind": "positive",
+      "note": "All-ASCII keys: UTF-16 order and code-point order agree. Shows why ASCII-only test data never catches the bug.",
+      "input": {
+        "scope": "s",
+        "agent_id": "a",
+        "timestamp": "2026-09-22T00:00:00.000Z",
+        "action_type": "t"
+      },
+      "expected_canonical": "{\"action_type\":\"t\",\"agent_id\":\"a\",\"scope\":\"s\",\"timestamp\":\"2026-09-22T00:00:00.000Z\"}",
+      "expected_sha256": "9127fa99db1aafeacaa7a766b33be8773734c0df88793a9a551cc11dd9384219",
+      "code_point_order_agrees": true
+    },
+    {
+      "id": "jcs-utf16-neg-001-code-point-order",
+      "kind": "negative",
+      "note": "json.dumps(sort_keys=True) output: keys in code-point order. MUST NOT verify as the RFC 8785 canonical form.",
+      "input": {
+        "\ue000": 1,
+        "\ud83d\ude00": 2
+      },
+      "declared_canonical": "{\"\ue000\":1,\"\ud83d\ude00\":2}",
+      "declared_sha256": "871954531859c7572c6279f90eb83a594ddc3a289e8bdc28d2a84ffb8c1a1703",
+      "expected_failure": "key_order"
+    },
+    {
+      "id": "jcs-utf16-neg-002-code-point-order-nested",
+      "kind": "negative",
+      "note": "Code-point order applied recursively (top level, nested object, object inside array).",
+      "input": {
+        "a": 0,
+        "\uffff": {
+          "\ud800\udc00": "x",
+          "\ue000": "y"
+        },
+        "\ud83d\ude00": [
+          {
+            "\ufb01": 1,
+            "\ud834\udd1e": 2
+          }
+        ]
+      },
+      "declared_canonical": "{\"a\":0,\"\uffff\":{\"\ue000\":\"y\",\"\ud800\udc00\":\"x\"},\"\ud83d\ude00\":[{\"\ufb01\":1,\"\ud834\udd1e\":2}]}",
+      "declared_sha256": "fbd6f70a7f885f1e0ccc997481e895dd8e398c9038ebcc221748caa546f4ef43",
+      "expected_failure": "key_order"
+    },
+    {
+      "id": "jcs-utf16-neg-003-escaped-non-ascii",
+      "kind": "negative",
+      "note": "Correct UTF-16 key order but non-ASCII emitted as \\uXXXX escapes (ensure_ascii=True). Fails on escaping, not ordering -- a different check.",
+      "input": {
+        "\ue000": 1,
+        "\ud83d\ude00": 2
+      },
+      "declared_canonical": "{\"\\ud83d\\ude00\":2,\"\\ue000\":1}",
+      "declared_sha256": "cb9ffd9ff6ff82b282ec9529d79f40a66e0df21bbf69a4e662adc6a96649fd2a",
+      "expected_failure": "string_escaping"
+    }
+  ]
+}

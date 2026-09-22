@@ -56,9 +56,11 @@ field_digest(field_name, value, salt) = SHA256(JCS({
   make each field's digest independently hard to invert.
 - **`value` is the field's native JSON value** (string, number, boolean, or null) —
   no pre-hashing, no truncation.
-- **JCS** is RFC 8785 canonical JSON (`json.dumps(obj, separators=(',',':'),
-  sort_keys=True, ensure_ascii=False)` in Python; the minimal recursive sorted-key
-  serializer in JS — see the reference verifiers).
+- **JCS** is RFC 8785 canonical JSON: object keys sorted recursively by UTF-16 code
+  units (§3.2.3), no whitespace, literal UTF-8. In Python that is **not**
+  `json.dumps(sort_keys=True)` (code-point order, diverges for keys outside the BMP) —
+  use [`jcs.py`](../../jcs.py); in JS, the minimal recursive sorted-key serializer
+  (`Array.prototype.sort` already compares UTF-16 code units) — see the reference verifiers).
 
 ### Commitment vector and root
 
