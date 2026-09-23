@@ -1,0 +1,72 @@
+"""CI gate for examples/conformance/farley-receipt-signature
+(draft-farley-acta-signed-receipts-03, envelope shape).
+
+1. Every vector matches the outcome declared in index.json.
+2. build.py regenerates the committed files byte for byte.
+3. Mutations of a conformant receipt are refused by the reference
+   verifier, so the checks it claims are actually exercised.
+"""
+import copy
+import importlib.util
+import json
+import os
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+VEC = os.path.join(ROOT, "examples", "conformance", "farley-receipt-signature")
+
+
+def _load(name):
+    spec = importlib.util.spec_from_file_location("farley_" + name, os.path.join(VEC, name + ".py"))
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+verify = _load("verify")
+build = _load("build")
+
+
+def _conformant():
+    with open(os.path.join(VEC, "signature-input-drift.conformant.json")) as f:
+        return json.load(f)
+
+
+def test_all_vectors_match_index():
+    results = verify.run()
+    assert len(results) == 4
+    assert all(ok for _, _, ok in results), results
+
+
+def test_build_is_deterministic(tmp_path):
+    build.write(str(tmp_path))
+    for name in os.listdir(tmp_path):
+        with open(os.path.join(VEC, name), "rb") as a, open(os.path.join(tmp_path, name), "rb") as b:
+            assert a.read() == b.read(), name
+
+
+def test_superseded_pair_is_minimal():
+    with open(os.path.join(VEC, "superseded-key.reject.json")) as f:
+        rej = json.load(f)["payload"]
+    with open(os.path.join(VEC, "superseded-key.conformant.json")) as f:
+        ok = json.load(f)["payload"]
+    assert [k for k in rej if rej[k] != ok[k]] == ["issued_at"]
+    assert set(rej) == set(ok)
+
+
+def test_mutations_are_refused():
+    jwks = verify.load_jwks()
+    base = _conformant()
+    assert verify.verify(base, jwks) == "ACCEPT"
+
+    def mut(fn):
+        r = copy.deepcopy(base)
+        fn(r)
+        return verify.verify(r, jwks)
+
+    assert mut(lambda r: r.__setitem__("extra", 1)) == "REJECT not_envelope_shape"
+    assert mut(lambda r: r["signature"].__setitem__("alg", "ES256")) == "REJECT unsupported_alg"
+    assert mut(lambda r: r["payload"].__setitem__("signature", "x")) == "REJECT signature_in_signing_input"
+    assert mut(lambda r: r["payload"].__setitem__("decision", "deny")) == "REJECT signature_invalid"
+    assert mut(lambda r: r["payload"].pop("issued_at")) == "REJECT missing_required_field"
+    assert mut(lambda r: r["signature"].__setitem__("sig", "zz")) == "REJECT bad_signature_encoding"
+    assert mut(lambda r: r["signature"].__setitem__("kid", "sb:issuer:unknown")) == "REJECT issuer_kid_mismatch"

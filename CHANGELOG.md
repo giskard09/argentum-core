@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added — farley-receipt-signature conformance vectors (2026-09-23)
+
+- `examples/conformance/farley-receipt-signature/`: 4 vectors, each a reject with a conformant twin, for [draft-farley-acta-signed-receipts-03](https://datatracker.ietf.org/doc/draft-farley-acta-signed-receipts/03/), envelope shape, archival mode. The first case, `signature-input-drift` (MUST), signs pretty-printed bytes instead of `JCS(payload)`. The second, `superseded-key` (SHOULD, §9.2), uses a key after its `valid_until`. It is a minimal pair: only `issued_at` differs. The key comes from an external `jwks.json` (§9.5), and the keys are TEST ONLY, with public seeds. Includes a reference `verify.py` (pynacl), a deterministic `build.py`, and the observed result for `@veritasacta/verify` 0.10.19, which accepts the superseded-key reject because its receipt JWKS path does not read validity windows.
+- `tests/test_farley_receipt_vectors.py`: the vectors match `index.json`, the build is byte-deterministic, the pair is minimal, and mutated receipts are refused.
+
 ### Fixed — idempotency-ref-v1 orphaned-PENDING sweeper unsafe on unconditional timer (2026-08-23)
 
 - `docs/spec/idempotency-ref.md`: the orphaned-PENDING rule stated an unconditional `SHOULD` treating a PENDING record older than `window_ms` as equivalent to FAILED. That inference is unsound whenever the provider call has no idempotency key of its own (`send_email`, `place_trade`) — a crash between the provider call succeeding and the anchor write is indistinguishable from a call that never landed, so sweeping to FAILED on a timer authorizes the exact duplicate the artifact exists to prevent. Corrected: default resolution is now a provider-confirmed query (no timer-based clearing); treating `window_ms` alone as sufficient requires an explicit `provider_idempotent: true` declaration, not an assumed default. `examples/conformance/idempotency-ref-v1.fixture.json`'s `window_semantics` invariant updated to match. Reported by impartshadow/agent-contracts, [crewAIInc/crewAI#5802](https://github.com/crewAIInc/crewAI/issues/5802).

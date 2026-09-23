@@ -1,0 +1,21 @@
+{
+  "keys": [
+    {
+      "kty": "OKP",
+      "crv": "Ed25519",
+      "kid": "sb:issuer:6XRv8ZfPuxt1",
+      "x": "UhYIFG8QFIVT9nNeKL1fcXp5akfQa3DkjOtjsN-w1Uo",
+      "use": "sig",
+      "valid_from": "2026-01-01T00:00:00Z",
+      "valid_until": "2026-06-01T00:00:00Z"
+    },
+    {
+      "kty": "OKP",
+      "crv": "Ed25519",
+      "kid": "sb:issuer:3z2uVgw6LZYr",
+      "x": "LFOiUSPIwhEYKf2eeA2naJTjVzErz9LBpMG3DmmZwAA",
+      "use": "sig",
+      "valid_from": "2026-06-01T00:00:00Z"
+    }
+  ]
+}
