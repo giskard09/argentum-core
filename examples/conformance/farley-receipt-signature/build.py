@@ -51,7 +51,7 @@ def sign(sk, msg):
 
 def payload(k, issued_at="2026-07-15T12:00:00Z"):
     return {"type": "protectmcp:decision", "issued_at": issued_at,
-            "issuer_id": k, "tool": "payments.transfer", "decision": "allow",
+            "issuer_id": k, "tool_name": "payments.transfer", "decision": "allow",
             "policy_digest": "sha256:" + hashlib.sha256(b"test-policy-v1").hexdigest()}
 
 
