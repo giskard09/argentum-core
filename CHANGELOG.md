@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Added — idempotency-ref-v1.1: logical identity vs payload identity (2026-09-23)
+
+- `docs/spec/idempotency-ref.md` failed two of the four cases of the logical-identity test: (3) a second intentional payment with a byte-identical payload was deduplicated as a retry, because Invariant 5 accepted "a hash of the caller's own pre-execution request" as a key source; (4) a drifted retry ($100 → $125) under the same key passed silently as a duplicate, because nothing bound the key to the admitted payload. v1.1, additive: the key is the logical action id minted at admission (Invariant 6: distinct intentional actions MUST carry distinct keys; content-derived keys only under a declared domain invariant); new `admitted_payload_digest` carried next to `idempotency_ref`, outside the artifact (Invariant 7: same key + different digest → CONFLICT, fail closed). Every v1.0 artifact and `idempotency_ref` is unchanged.
+- `examples/conformance/idempotency-ref-v1.1/`: the four cases plus three negatives, each failing on a different check (content-derived key, no digest check, digest inside the artifact); `tests/test_idempotency_ref_v1_1.py`. `idempotency-ref-v1.fixture.json` `idem-002` gains a `v1_1_note` (hashed fields untouched).
+- Four-case test defined by impartshadow/agent-contracts, [crewAIInc/crewAI#5802](https://github.com/crewAIInc/crewAI/issues/5802) (comment [5790417981](https://github.com/crewAIInc/crewAI/issues/5802#issuecomment-5790417981)); pinned as a regression by stringsofthemind-oss, [stringsofthemind-oss/once#45](https://github.com/stringsofthemind-oss/once/pull/45).
+
 ### Added — farley-receipt-signature conformance vectors (2026-09-23)
 
 - `examples/conformance/farley-receipt-signature/`: 4 vectors, each a reject with a conformant twin, for [draft-farley-acta-signed-receipts-03](https://datatracker.ietf.org/doc/draft-farley-acta-signed-receipts/03/), envelope shape, archival mode. The first case, `signature-input-drift` (MUST), signs pretty-printed bytes instead of `JCS(payload)`. The second, `superseded-key` (SHOULD, §9.2), uses a key after its `valid_until`. It is a minimal pair: only `issued_at` differs. The key comes from an external `jwks.json` (§9.5), and the keys are TEST ONLY, with public seeds. Includes a reference `verify.py` (pynacl), a deterministic `build.py`, and the observed result for `@veritasacta/verify` 0.10.19, which accepts the superseded-key reject because its receipt JWKS path does not read validity windows.
