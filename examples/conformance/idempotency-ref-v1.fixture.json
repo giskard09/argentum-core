@@ -83,7 +83,8 @@
         },
         "artifact_jcs_payload": "{\"action_type\":\"payment.send\",\"agent_id\":\"crew-runtime-agent-042\",\"idempotency_key\":\"req_9c2f7e10-order-88213\",\"scope\":\"mycelium:payment\",\"version\":\"idempotency-ref-v1\",\"window_ms\":300000}",
         "idempotency_ref": "e0e86e129f5e32f95bd62f2619aa0b64fee81512574f335fe9ab978d38f24f3d",
-        "derivation_note": "idempotency_key = 'req_' + the caller's own pre-execution request id + order id — fixed before either model attempt ran, identical for both attempt_1 and attempt_2's underlying intent, so a retry with regenerated arguments produces the SAME idempotency_ref both times and dedup fires correctly."
+        "derivation_note": "idempotency_key = 'req_' + the caller's own pre-execution request id + order id — fixed before either model attempt ran, identical for both attempt_1 and attempt_2's underlying intent, so a retry with regenerated arguments produces the SAME idempotency_ref both times and dedup fires correctly.",
+        "v1_1_note": "v1.1 (Invariant 7): the same idempotency_ref only makes attempt_2 a duplicate if it dispatches the payload admitted before attempt_1. If it dispatches the regenerated arguments (memo reworded), its admitted_payload_digest differs and the dispatch is a CONFLICT, fail closed, not a silent duplicate. See examples/conformance/idempotency-ref-v1.1/ (four-case test, impartshadow crewAIInc/crewAI#5802; stringsofthemind-oss/once#45)."
       },
       "invariants": {
         "invariant_5_durable_derivation": "idempotency_key MUST derive from inputs fixed before the model runs for that attempt, never from the model's regenerated output for that attempt. Hashing tool-call arguments that a guardrail retry can reword is non-conformant even though the derivation mechanics (JCS+SHA-256) are followed correctly — Invariant 5 constrains what may feed the hash, not how the hash is computed."

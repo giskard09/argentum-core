@@ -1,8 +1,10 @@
 # idempotency-ref-v1 — Specification
 
 **Stable tag:** `idempotency-ref-v1.0`  
+**Current revision:** v1.1 (additive — every v1.0 artifact and `idempotency_ref` is unchanged)  
 **Status:** stable  
-**Canonical fixture:** [`examples/conformance/idempotency-ref-v1.fixture.json`](../../examples/conformance/idempotency-ref-v1.fixture.json)
+**Canonical fixture:** [`examples/conformance/idempotency-ref-v1.fixture.json`](../../examples/conformance/idempotency-ref-v1.fixture.json)  
+**v1.1 vectors:** [`examples/conformance/idempotency-ref-v1.1/`](../../examples/conformance/idempotency-ref-v1.1/)
 
 ---
 
@@ -54,6 +56,37 @@ idempotency_ref = hashlib.sha256(jcs(idempotency_artifact).encode()).hexdigest()
 
 ---
 
+## Logical identity and admitted payload (v1.1)
+
+`idempotency_ref` identifies a **logical action**, not a payload. The `idempotency_key` is the logical action id, minted at admission — before any model or tool execution — and carried unchanged through every attempt and re-dispatch. Attempt ids MAY be fresh per dispatch; they remain children of the logical action.
+
+v1.1 adds `admitted_payload_digest`: `SHA-256(JCS(admitted_payload))`, lowercase hex, where `admitted_payload` is the effect-bearing payload committed durably at admission (what will be sent to the provider). It is carried in the envelope next to `idempotency_ref` and recorded with the admission. An artifact whose integration applies the v1.1 rules sets `version` to `idempotency-ref-v1.1`; v1.0 artifacts keep `idempotency-ref-v1`. It MUST NOT be placed inside `idempotency_artifact`: the ref would then change with the payload, and a drifted retry would present a fresh `idempotency_ref` and execute as a new action.
+
+Decision rule, for a dispatch presenting (`idempotency_ref`, `admitted_payload_digest`) within `window_ms` of a prior admission:
+
+| Prior admission under this `idempotency_ref` | Outcome |
+|---|---|
+| none | **EXECUTE** — record the admission |
+| same `admitted_payload_digest` | **DUPLICATE** — reconcile against the prior outcome; MUST NOT create a second effect |
+| different `admitted_payload_digest` | **CONFLICT** — fail closed; MUST NOT execute, and MUST NOT treat it as a duplicate of the prior action or as a new action |
+
+A changed payload is a new logical action and MUST be admitted under a new `idempotency_key`. This spec does not define supersession or cancellation of the original action; an integration that needs it declares it explicitly.
+
+The four-case test this rule satisfies:
+
+| Event | `idempotency_key` | payload | Outcome |
+|---|---|---|---|
+| first intentional payment | A | $100 → X | EXECUTE |
+| retry after lost acknowledgement | A | $100 → X | DUPLICATE |
+| second intentional payment | B | $100 → X | EXECUTE, despite the identical payload |
+| drifted retry | A | $125 → X | CONFLICT |
+
+A record without `admitted_payload_digest` (v1.0) can still be deduplicated by `idempotency_ref`, but drift against it cannot be detected; an implementation MUST NOT claim drift detection for such records.
+
+*(Added 2026-09-23: four-case test defined by impartshadow/agent-contracts ([crewAIInc/crewAI#5802](https://github.com/crewAIInc/crewAI/issues/5802), comment [5790417981](https://github.com/crewAIInc/crewAI/issues/5802#issuecomment-5790417981)) and pinned as a regression by stringsofthemind-oss ([stringsofthemind-oss/once#45](https://github.com/stringsofthemind-oss/once/pull/45)). v1.0 failed cases 3 and 4.)*
+
+---
+
 ## Trail lifecycle with idempotency_ref
 
 An action with `idempotency_ref` follows the same three-state lifecycle as any trail record:
@@ -95,17 +128,27 @@ A record outside its `window_ms` window is not eligible for deduplication even i
 
 **4. opaque artifact format**
 
-The idempotency artifact schema is implementer-defined. Only the JCS+SHA-256 derivation is normative. Additional fields (e.g. `request_id`, `correlation_id`) are permitted.
+The idempotency artifact schema is implementer-defined. Only the JCS+SHA-256 derivation is normative. Additional fields (e.g. `request_id`, `correlation_id`) are permitted, as long as they are fixed at admission and identical across every attempt of the action — any field that can change between attempts (including `admitted_payload_digest`) changes the ref and breaks deduplication.
 
 **5. idempotency_key MUST derive from durable inputs, never from model-regenerated content**
 
-`idempotency_key` MUST be recomputable by a process that did not itself execute the step — from inputs that existed *before* the step ran and are stable across retries of it (e.g. the originating request id, a caller-assigned operation id, or a hash of the caller's own pre-execution request). It MUST NOT be derived from, or include, any value the model generated *during* the step being retried — most commonly tool-call arguments that an LLM re-emits when a guardrail or validation failure triggers a retry loop.
+`idempotency_key` MUST be recomputable by a process that did not itself execute the step — from inputs that existed *before* the step ran and are stable across retries of it (e.g. the originating request id, or a caller-assigned operation id minted at admission). Deriving it from the content of the request is conformant only under Invariant 6. It MUST NOT be derived from, or include, any value the model generated *during* the step being retried — most commonly tool-call arguments that an LLM re-emits when a guardrail or validation failure triggers a retry loop.
 
 When a retry re-enters through the model (not through the original caller), the regenerated arguments are not guaranteed byte-identical to the first attempt even when the *intent* is identical — different token sampling, a rephrased justification field, reordered list items. A key derived from `SHA(args)` then changes between attempts, so equality-based deduplication never fires: the two attempts don't collide as a detected duplicate, they land as **two distinct committed effects** (e.g. two charges for different amounts) — the failure mode isn't a missed dedup, it's a false negative that idempotency-ref exists to prevent, and the artifact schema's silence on this today permits it.
 
 A conformant `idempotency_artifact` derives `idempotency_key` from data the *caller* fixed before invoking the model for that attempt — never from the model's output for that attempt. If a runtime cannot supply such a durable input at the point of retry, the correct action is to widen `window_ms` and rely on provider-side reconciliation (see [Trail lifecycle](#trail-lifecycle-with-idempotency_ref)), not to hash whatever arguments the model happens to produce.
 
 *(Added 2026-09-03: gap identified by vasilisnasopoulos ([crewAIInc/crewAI#5802](https://github.com/crewAIInc/crewAI/issues/5802), comment [5462928784](https://github.com/crewAIInc/crewAI/issues/5802#issuecomment-5462928784)), cross-verified against mstevens843/crashpoint's independent finding that LangGraph/Temporal/DBOS all had to add a fifth outcome — DIVERGED — because EXACTLY_ONCE dedup assumes the retried step is reproducible from durable inputs, which a model-regenerated tool call is not.)*
+
+*(Amended 2026-09-23, v1.1: the v1.0 text listed "a hash of the caller's own pre-execution request" as a durable source without qualification. Two intentional actions with identical requests then share one key, and the second is deduplicated as a retry — see Invariant 6.)*
+
+**6. distinct intentional actions MUST carry distinct keys (v1.1)**
+
+Two intentional actions MUST carry different `idempotency_key` values, even when their payloads are byte-identical. A key derived from request content (e.g. `charge:{order_id}`, or a hash of the request) is conformant only under a domain invariant the integration declares explicitly — for example, "at most one charge is admitted per order". Without such an invariant, a content-derived key collapses the second action into the first.
+
+**7. same key, different admitted payload → conflict (v1.1)**
+
+A dispatch whose `idempotency_ref` matches a prior admission within `window_ms` but whose `admitted_payload_digest` differs MUST fail closed as a conflict (see [Logical identity and admitted payload](#logical-identity-and-admitted-payload-v11)). A retry that re-enters through the model dispatches the admitted payload from the durable record; if it dispatches regenerated arguments that differ in any effect-bearing field, the digest differs and the dispatch is a conflict, not a duplicate.
 
 ---
 
@@ -116,6 +159,7 @@ A conformant `idempotency_artifact` derives `idempotency_key` from data the *cal
   "packet_version": "1.0",
   "action_ref":       "<sha256 hex — derived from preimage>",
   "idempotency_ref":  "<sha256 hex — derived from idempotency_artifact>",
+  "admitted_payload_digest": "<sha256 hex — JCS(admitted_payload), v1.1, optional>",
   "hash_algo":        "sha256",
   "preimage_format":  "jcs-rfc8785-v1",
   "preimage": {

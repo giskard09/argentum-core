@@ -1,0 +1,234 @@
+{
+  "spec_version": "idempotency-ref-v1.1",
+  "spec": "docs/spec/idempotency-ref.md",
+  "description": "Four-case logical-identity test (impartshadow, crewAIInc/crewAI#5802 comment 5790417981; regression in stringsofthemind-oss/once#45, 9ca1eb3). Events are replayed in order against one ledger, all within window_ms. idempotency_ref = SHA-256(JCS(idempotency_artifact)); admitted_payload_digest = SHA-256(JCS(admitted_payload)), carried next to idempotency_ref in the envelope and never inside the artifact.",
+  "decision_rule": {
+    "EXECUTE": "no prior admission under this idempotency_ref within window_ms",
+    "DUPLICATE": "prior admission under this idempotency_ref with the same admitted_payload_digest: reconcile, no new effect",
+    "CONFLICT": "prior admission under this idempotency_ref with a different admitted_payload_digest: fail closed, no new effect"
+  },
+  "events": [
+    {
+      "id": "case-1-first-intentional",
+      "description": "First intentional payment A, $100 -> merchant_x. No prior admission under this idempotency_ref: execute once.",
+      "idempotency_artifact": {
+        "action_type": "payment.send",
+        "agent_id": "crew-runtime-agent-042",
+        "idempotency_key": "adm_4f1c9e2a",
+        "scope": "mycelium:payment",
+        "version": "idempotency-ref-v1.1",
+        "window_ms": 300000
+      },
+      "idempotency_ref": "b612c3039ad6b3337041b62258e580d65fe7856b4dbcb67ed7545c4cb494d629",
+      "admitted_payload": {
+        "amount_cents": 10000,
+        "currency": "USD",
+        "recipient": "merchant_x"
+      },
+      "admitted_payload_digest": "35dd375e2dc7d8f0c771b8868c335a859c15a23025d1afa41c7c9cdd05fdeab2",
+      "expected": "EXECUTE",
+      "effects_after": 1
+    },
+    {
+      "id": "case-2-retry-same-payload",
+      "description": "Retry of A after a lost acknowledgement. Same idempotency_ref, same admitted_payload_digest: reconcile against the prior outcome, no second effect.",
+      "idempotency_artifact": {
+        "action_type": "payment.send",
+        "agent_id": "crew-runtime-agent-042",
+        "idempotency_key": "adm_4f1c9e2a",
+        "scope": "mycelium:payment",
+        "version": "idempotency-ref-v1.1",
+        "window_ms": 300000
+      },
+      "idempotency_ref": "b612c3039ad6b3337041b62258e580d65fe7856b4dbcb67ed7545c4cb494d629",
+      "admitted_payload": {
+        "amount_cents": 10000,
+        "currency": "USD",
+        "recipient": "merchant_x"
+      },
+      "admitted_payload_digest": "35dd375e2dc7d8f0c771b8868c335a859c15a23025d1afa41c7c9cdd05fdeab2",
+      "expected": "DUPLICATE",
+      "effects_after": 1
+    },
+    {
+      "id": "case-3-second-intentional-same-payload",
+      "description": "Second intentional payment B with a payload byte-identical to A. B was admitted under its own logical id, so its idempotency_ref differs from A's: execute once. A key derived from payload content would collide here and wrongly deduplicate B (see negative-content-derived-key).",
+      "idempotency_artifact": {
+        "action_type": "payment.send",
+        "agent_id": "crew-runtime-agent-042",
+        "idempotency_key": "adm_b7d03e55",
+        "scope": "mycelium:payment",
+        "version": "idempotency-ref-v1.1",
+        "window_ms": 300000
+      },
+      "idempotency_ref": "ad5c912526127b429ea46e958e0f87080815fde8c8e55ac14ac12d007585dd4d",
+      "admitted_payload": {
+        "amount_cents": 10000,
+        "currency": "USD",
+        "recipient": "merchant_x"
+      },
+      "admitted_payload_digest": "35dd375e2dc7d8f0c771b8868c335a859c15a23025d1afa41c7c9cdd05fdeab2",
+      "expected": "EXECUTE",
+      "effects_after": 2
+    },
+    {
+      "id": "case-4-drifted-retry",
+      "description": "Retry of A whose payload drifted to $125. Same idempotency_ref as A (the ref carries logical identity, not payload), different admitted_payload_digest: conflict, fail closed. Neither a duplicate of A nor a new action; a changed payload needs a new idempotency_key.",
+      "idempotency_artifact": {
+        "action_type": "payment.send",
+        "agent_id": "crew-runtime-agent-042",
+        "idempotency_key": "adm_4f1c9e2a",
+        "scope": "mycelium:payment",
+        "version": "idempotency-ref-v1.1",
+        "window_ms": 300000
+      },
+      "idempotency_ref": "b612c3039ad6b3337041b62258e580d65fe7856b4dbcb67ed7545c4cb494d629",
+      "admitted_payload": {
+        "amount_cents": 12500,
+        "currency": "USD",
+        "recipient": "merchant_x"
+      },
+      "admitted_payload_digest": "5cd9ef51eebab17d494da8b25447d4c3c826678c032246543f0f64e0d20bce5f",
+      "expected": "CONFLICT",
+      "effects_after": 2
+    }
+  ],
+  "negative_vectors": [
+    {
+      "id": "negative-content-derived-key",
+      "violates": "Invariant 6 (distinct intentional actions MUST carry distinct keys)",
+      "description": "idempotency_key = sha256 of the admitted payload. v1.0 Invariant 5 allowed 'a hash of the caller's own pre-execution request'. A and B collide on one idempotency_ref, so case 3 is deduplicated as a retry and payment B never happens.",
+      "events": [
+        {
+          "id": "case-1-first-intentional",
+          "idempotency_artifact": {
+            "action_type": "payment.send",
+            "agent_id": "crew-runtime-agent-042",
+            "idempotency_key": "sha256:35dd375e2dc7d8f0c771b8868c335a859c15a23025d1afa41c7c9cdd05fdeab2",
+            "scope": "mycelium:payment",
+            "version": "idempotency-ref-v1.1",
+            "window_ms": 300000
+          },
+          "idempotency_ref": "c77753885559b33c9c62d35df302e80a158ae5294e844855f5773b12330afb37"
+        },
+        {
+          "id": "case-2-retry-same-payload",
+          "idempotency_artifact": {
+            "action_type": "payment.send",
+            "agent_id": "crew-runtime-agent-042",
+            "idempotency_key": "sha256:35dd375e2dc7d8f0c771b8868c335a859c15a23025d1afa41c7c9cdd05fdeab2",
+            "scope": "mycelium:payment",
+            "version": "idempotency-ref-v1.1",
+            "window_ms": 300000
+          },
+          "idempotency_ref": "c77753885559b33c9c62d35df302e80a158ae5294e844855f5773b12330afb37"
+        },
+        {
+          "id": "case-3-second-intentional-same-payload",
+          "idempotency_artifact": {
+            "action_type": "payment.send",
+            "agent_id": "crew-runtime-agent-042",
+            "idempotency_key": "sha256:35dd375e2dc7d8f0c771b8868c335a859c15a23025d1afa41c7c9cdd05fdeab2",
+            "scope": "mycelium:payment",
+            "version": "idempotency-ref-v1.1",
+            "window_ms": 300000
+          },
+          "idempotency_ref": "c77753885559b33c9c62d35df302e80a158ae5294e844855f5773b12330afb37"
+        },
+        {
+          "id": "case-4-drifted-retry",
+          "idempotency_artifact": {
+            "action_type": "payment.send",
+            "agent_id": "crew-runtime-agent-042",
+            "idempotency_key": "sha256:5cd9ef51eebab17d494da8b25447d4c3c826678c032246543f0f64e0d20bce5f",
+            "scope": "mycelium:payment",
+            "version": "idempotency-ref-v1.1",
+            "window_ms": 300000
+          },
+          "idempotency_ref": "dbe84ff39376f21add973cc23ae9661764bd12e0781925db11f18426a15be438"
+        }
+      ],
+      "expected_divergence": {
+        "event": "case-3-second-intentional-same-payload",
+        "outcome": "DUPLICATE",
+        "effects_after": 1
+      }
+    },
+    {
+      "id": "negative-no-digest-check",
+      "violates": "Invariant 7 (same key + different admitted_payload_digest MUST be a conflict)",
+      "description": "v1.0 ledger: dedup on idempotency_ref alone, no admitted_payload_digest. The drifted $125 retry has the same idempotency_ref as A and passes silently as a duplicate of A.",
+      "events": "same as events, admitted_payload_digest ignored",
+      "expected_divergence": {
+        "event": "case-4-drifted-retry",
+        "outcome": "DUPLICATE",
+        "effects_after": 2
+      }
+    },
+    {
+      "id": "negative-digest-inside-artifact",
+      "violates": "Derivation (admitted_payload_digest MUST NOT enter the idempotency_ref preimage)",
+      "description": "admitted_payload_digest placed inside idempotency_artifact. The ref now changes with the payload, so the drifted retry gets a fresh idempotency_ref and executes as a new action: a third effect for two intended payments.",
+      "events": [
+        {
+          "id": "case-1-first-intentional",
+          "idempotency_artifact": {
+            "action_type": "payment.send",
+            "agent_id": "crew-runtime-agent-042",
+            "idempotency_key": "adm_4f1c9e2a",
+            "scope": "mycelium:payment",
+            "version": "idempotency-ref-v1.1",
+            "window_ms": 300000,
+            "admitted_payload_digest": "35dd375e2dc7d8f0c771b8868c335a859c15a23025d1afa41c7c9cdd05fdeab2"
+          },
+          "idempotency_ref": "28d7c28745f9e39d0a8dbb1a753887b21c9502ac78cf4062e0104db3a11d5256"
+        },
+        {
+          "id": "case-2-retry-same-payload",
+          "idempotency_artifact": {
+            "action_type": "payment.send",
+            "agent_id": "crew-runtime-agent-042",
+            "idempotency_key": "adm_4f1c9e2a",
+            "scope": "mycelium:payment",
+            "version": "idempotency-ref-v1.1",
+            "window_ms": 300000,
+            "admitted_payload_digest": "35dd375e2dc7d8f0c771b8868c335a859c15a23025d1afa41c7c9cdd05fdeab2"
+          },
+          "idempotency_ref": "28d7c28745f9e39d0a8dbb1a753887b21c9502ac78cf4062e0104db3a11d5256"
+        },
+        {
+          "id": "case-3-second-intentional-same-payload",
+          "idempotency_artifact": {
+            "action_type": "payment.send",
+            "agent_id": "crew-runtime-agent-042",
+            "idempotency_key": "adm_b7d03e55",
+            "scope": "mycelium:payment",
+            "version": "idempotency-ref-v1.1",
+            "window_ms": 300000,
+            "admitted_payload_digest": "35dd375e2dc7d8f0c771b8868c335a859c15a23025d1afa41c7c9cdd05fdeab2"
+          },
+          "idempotency_ref": "02f051276a0fb93c755f17acaea961f12441a6a3b25163c965c663660e398250"
+        },
+        {
+          "id": "case-4-drifted-retry",
+          "idempotency_artifact": {
+            "action_type": "payment.send",
+            "agent_id": "crew-runtime-agent-042",
+            "idempotency_key": "adm_4f1c9e2a",
+            "scope": "mycelium:payment",
+            "version": "idempotency-ref-v1.1",
+            "window_ms": 300000,
+            "admitted_payload_digest": "5cd9ef51eebab17d494da8b25447d4c3c826678c032246543f0f64e0d20bce5f"
+          },
+          "idempotency_ref": "17aeaabfb7c62af8cd630b2a55c87990d8b1133c3c9a146adb83a72babf3a2e5"
+        }
+      ],
+      "expected_divergence": {
+        "event": "case-4-drifted-retry",
+        "outcome": "EXECUTE",
+        "effects_after": 3
+      }
+    }
+  ],
+  "credits": "Four-case test: impartshadow/agent-contracts (crewAIInc/crewAI#5802). Regression: stringsofthemind-oss/once#45."
+}
