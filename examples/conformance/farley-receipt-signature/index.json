@@ -3,34 +3,39 @@
   "verification_mode": "archival (Section 9.1). A verifier applying the live-presentation freshness window (24h RECOMMENDED) would reject all four as stale; that is out of scope here.",
   "key_source": "jwks.json (external to the receipts, per Section 9.5)",
   "test_keys": "TEST ONLY. Ed25519 seeds = SHA-256('agent-evidence-vectors/test-only/' + label); see build.py",
+  "signed_input": "signed_input_hex is the exact byte string each signature was made over, so a re-run can check why a reject fails, not only that it does. For signature-input-drift.reject it is Python json.dumps(payload, indent=2), not JCS(payload): the signature verifies over these bytes and fails over JCS(payload).",
   "vectors": [
     {
       "file": "signature-input-drift.reject.json",
       "expected": "REJECT",
       "code": "signature_invalid",
       "requirement": "MUST (Sections 5.1, 5.2, 6.6)",
-      "note": "Signed over the pretty-printed payload bytes, not JCS(payload)."
+      "note": "Signed over the pretty-printed payload bytes, not JCS(payload).",
+      "signed_input_hex": "7b0a20202274797065223a202270726f746563746d63703a6465636973696f6e222c0a2020226973737565645f6174223a2022323032362d30372d31355431323a30303a30305a222c0a2020226973737565725f6964223a202273623a6973737565723a337a3275566777364c5a5972222c0a202022746f6f6c5f6e616d65223a20227061796d656e74732e7472616e73666572222c0a2020226465636973696f6e223a2022616c6c6f77222c0a202022706f6c6963795f646967657374223a20227368613235363a38636139326637646661616636663466656538386633383932636437313232616234383931326330663936363666373064663739623239373336323762383838220a7d"
     },
     {
       "file": "signature-input-drift.conformant.json",
       "expected": "ACCEPT",
       "code": null,
       "requirement": "MUST (Sections 5.1, 5.2, 6.6)",
-      "note": "Same payload, signed over JCS(payload)."
+      "note": "Same payload, signed over JCS(payload).",
+      "signed_input_hex": "7b226465636973696f6e223a22616c6c6f77222c226973737565645f6174223a22323032362d30372d31355431323a30303a30305a222c226973737565725f6964223a2273623a6973737565723a337a3275566777364c5a5972222c22706f6c6963795f646967657374223a227368613235363a38636139326637646661616636663466656538386633383932636437313232616234383931326330663936363666373064663739623239373336323762383838222c22746f6f6c5f6e616d65223a227061796d656e74732e7472616e73666572222c2274797065223a2270726f746563746d63703a6465636973696f6e227d"
     },
     {
       "file": "superseded-key.reject.json",
       "expected": "REJECT",
       "code": "key_outside_validity_window",
       "requirement": "SHOULD (Section 9.2)",
-      "note": "Valid signature under key A; issued_at is after A's valid_until. issued_at is asserted by the signer, so this catches a key used after an honest rotation, not a compromised key backdating within the window."
+      "note": "Valid signature under key A; issued_at is after A's valid_until. issued_at is asserted by the signer, so this catches a key used after an honest rotation, not a compromised key backdating within the window.",
+      "signed_input_hex": "7b226465636973696f6e223a22616c6c6f77222c226973737565645f6174223a22323032362d30372d31355431323a30303a30305a222c226973737565725f6964223a2273623a6973737565723a36585276385a665075787431222c22706f6c6963795f646967657374223a227368613235363a38636139326637646661616636663466656538386633383932636437313232616234383931326330663936363666373064663739623239373336323762383838222c22746f6f6c5f6e616d65223a227061796d656e74732e7472616e73666572222c2274797065223a2270726f746563746d63703a6465636973696f6e227d"
     },
     {
       "file": "superseded-key.conformant.json",
       "expected": "ACCEPT",
       "code": null,
       "requirement": "SHOULD (Section 9.2)",
-      "note": "Minimal pair: same key A, issued_at inside A's window. Only issued_at differs from the reject."
+      "note": "Minimal pair: same key A, issued_at inside A's window. Only issued_at differs from the reject.",
+      "signed_input_hex": "7b226465636973696f6e223a22616c6c6f77222c226973737565645f6174223a22323032362d30332d31355431323a30303a30305a222c226973737565725f6964223a2273623a6973737565723a36585276385a665075787431222c22706f6c6963795f646967657374223a227368613235363a38636139326637646661616636663466656538386633383932636437313232616234383931326330663936363666373064663739623239373336323762383838222c22746f6f6c5f6e616d65223a227061796d656e74732e7472616e73666572222c2274797065223a2270726f746563746d63703a6465636973696f6e227d"
     }
   ]
 }

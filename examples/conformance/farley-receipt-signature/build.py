@@ -79,12 +79,16 @@ def build():
     assert pretty != jcs_bytes(p)
     out["signature-input-drift.reject"] = env(p, kidB, sign(skB, pretty))
     out["signature-input-drift.conformant"] = env(p, kidB, sign(skB, jcs_bytes(p)))
+    signed = {"signature-input-drift.reject": pretty,
+              "signature-input-drift.conformant": jcs_bytes(p)}
     # Case 2: superseded key. Minimal pair: both signed with key A; the only
     # difference is issued_at, inside A's window (twin) or after valid_until (reject).
     pA_out = payload(kidA)
     pA_in = payload(kidA, "2026-03-15T12:00:00Z")
     out["superseded-key.reject"] = env(pA_out, kidA, sign(skA, jcs_bytes(pA_out)))
     out["superseded-key.conformant"] = env(pA_in, kidA, sign(skA, jcs_bytes(pA_in)))
+    signed["superseded-key.reject"] = jcs_bytes(pA_out)
+    signed["superseded-key.conformant"] = jcs_bytes(pA_in)
     out["jwks"] = jwks
 
     out["index"] = {
@@ -92,6 +96,7 @@ def build():
         "verification_mode": "archival (Section 9.1). A verifier applying the live-presentation freshness window (24h RECOMMENDED) would reject all four as stale; that is out of scope here.",
         "key_source": "jwks.json (external to the receipts, per Section 9.5)",
         "test_keys": "TEST ONLY. Ed25519 seeds = SHA-256('agent-evidence-vectors/test-only/' + label); see build.py",
+        "signed_input": "signed_input_hex is the exact byte string each signature was made over, so a re-run can check why a reject fails, not only that it does. For signature-input-drift.reject it is Python json.dumps(payload, indent=2), not JCS(payload): the signature verifies over these bytes and fails over JCS(payload).",
         "vectors": [
             {"file": "signature-input-drift.reject.json", "expected": "REJECT", "code": "signature_invalid",
              "requirement": "MUST (Sections 5.1, 5.2, 6.6)",
@@ -104,6 +109,8 @@ def build():
             {"file": "superseded-key.conformant.json", "expected": "ACCEPT", "code": None,
              "requirement": "SHOULD (Section 9.2)",
              "note": "Minimal pair: same key A, issued_at inside A's window. Only issued_at differs from the reject."}]}
+    for v in out["index"]["vectors"]:
+        v["signed_input_hex"] = signed[v["file"][:-len(".json")]].hex()
     return out
 
 
