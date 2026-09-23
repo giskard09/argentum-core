@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Added — trail-head-ref-v1: completeness of an agent's trail (2026-09-23)
+
+- `docs/spec/trail-head-ref-v1.md` (draft): per-agent hash chain (`seq`, `prev_head`) for continuity, plus a checkpoint per agent per period, sealed under one Merkle root (batch-anchor construction, unchanged) and anchored with `AnchorRegistry.anchor(bytes32)`, for completeness. Empty periods still seal. Optional agent-signed `agent_seq` shows actions dropped at ingest between the first and last presented (a tail drop is visible only against the agent's own last counter). Distinct verdicts per failure; no checkpoint → completeness `not_evaluated`, never a pass. `action_ref` unchanged. Not yet emitted by the production trail pipeline.
+- `plugins/agt_evidence_anchor/trail_head.py` + `tests/test_trail_head.py` (22 tests): removal, reorder, tampered record, renumbered removal, tail truncation (passes continuity alone, caught by the checkpoint), full re-chain after the fact, foreign or unproven checkpoint, stale checkpoint, agent-counter gap — each caught by a different check.
+- Credit: the property split and the attacks come from [microsoft/autogen#7353](https://github.com/microsoft/autogen/issues/7353) — Yarmoluk (records included vs. every action recorded; removal/reorder test), babyblueviper1 (tail truncation against a live chain; a count signed by the log's own key adds no independence), TKCollective (gapless per-session sequence). Empty-period sealing: stillmarcus24, [x402-foundation/x402#2887](https://github.com/x402-foundation/x402/issues/2887).
+
 ### Added — vector key gate in CI (2026-09-23)
 
 - `tools/check_vector_keys.py` + `tools/vector_key_gate.json`: every JSON key in a vector set that declares an external schema must appear in that spec as a field (quoted, `key (REQUIRED|…)`, or identifier-shaped in prose). Runs as its own CI step and as `tests/test_vector_key_gate.py`. Opt-in per set, against a vendored, hash-pinned spec (`docs/spec/vendor/`), so a new draft revision is an explicit commit. First set: `farley-receipt-signature` against draft-farley-acta-signed-receipts-03 (vendored unmodified under BCP 78). It would have stopped the `"tool"` / `tool_name` error that both verifiers passed in #96 (reported by robertolocatelli81-dev, Noûs).
