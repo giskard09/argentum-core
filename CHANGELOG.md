@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added — farley-receipt-signature: signed input published per vector (2026-09-23)
+
+- `examples/conformance/farley-receipt-signature/index.json`: `signed_input_hex` per vector, the exact bytes each signature was made over. Without it, a re-run could confirm that `signature-input-drift.reject` fails, but not that it fails for the stated reason (signed over pretty-printed bytes rather than `JCS(payload)`). The four receipts and `jwks.json` are byte-identical; only `index.json` changes.
+- `tests/test_farley_receipt_vectors.py`: every signature verifies over its published input, and only the drift reject's input differs from `JCS(payload)`.
+
 ### Added — trail-head-ref-v1: completeness of an agent's trail (2026-09-23)
 
 - `docs/spec/trail-head-ref-v1.md` (draft): per-agent hash chain (`seq`, `prev_head`) for continuity, plus a checkpoint per agent per period, sealed under one Merkle root (batch-anchor construction, unchanged) and anchored with `AnchorRegistry.anchor(bytes32)`, for completeness. Empty periods still seal. Optional agent-signed `agent_seq` shows actions dropped at ingest between the first and last presented (a tail drop is visible only against the agent's own last counter). Distinct verdicts per failure; no checkpoint → completeness `not_evaluated`, never a pass. `action_ref` unchanged. Not yet emitted by the production trail pipeline.

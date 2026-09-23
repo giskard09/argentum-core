@@ -70,3 +70,28 @@ def test_mutations_are_refused():
     assert mut(lambda r: r["payload"].pop("issued_at")) == "REJECT missing_required_field"
     assert mut(lambda r: r["signature"].__setitem__("sig", "zz")) == "REJECT bad_signature_encoding"
     assert mut(lambda r: r["signature"].__setitem__("kid", "sb:issuer:unknown")) == "REJECT issuer_kid_mismatch"
+
+
+def test_signed_input_published_and_explains_each_verdict():
+    """index.json carries the exact signed bytes, so a re-run can check the
+    cause of each reject, not only the verdict: every signature verifies over
+    its signed_input_hex, and the drift reject's input is not JCS(payload)."""
+    import base64
+
+    from nacl.signing import VerifyKey
+
+    from jcs import jcs_bytes
+
+    with open(os.path.join(VEC, "index.json")) as f:
+        index = json.load(f)
+    with open(os.path.join(VEC, "jwks.json")) as f:
+        keys = {k["kid"]: k for k in json.load(f)["keys"]}
+    for v in index["vectors"]:
+        with open(os.path.join(VEC, v["file"])) as f:
+            receipt = json.load(f)
+        signed = bytes.fromhex(v["signed_input_hex"])
+        x = keys[receipt["signature"]["kid"]]["x"]
+        vk = VerifyKey(base64.urlsafe_b64decode(x + "=" * (-len(x) % 4)))
+        vk.verify(signed, bytes.fromhex(receipt["signature"]["sig"]))
+        is_jcs = signed == jcs_bytes(receipt["payload"])
+        assert is_jcs == (v["file"] != "signature-input-drift.reject.json"), v["file"]

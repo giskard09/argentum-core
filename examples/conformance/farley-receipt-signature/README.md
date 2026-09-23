@@ -23,9 +23,10 @@ python3 examples/conformance/farley-receipt-signature/verify.py   # exit 0 iff a
 python3 examples/conformance/farley-receipt-signature/build.py    # regenerates the files byte for byte
 ```
 
-CI runs `tests/test_farley_receipt_vectors.py`. It checks four things:
+CI runs `tests/test_farley_receipt_vectors.py`. It checks five things:
 
 - every vector matches `index.json`;
+- every signature verifies over the `signed_input_hex` that `index.json` publishes for it, and only `signature-input-drift.reject` was signed over something other than `JCS(payload)` (Python `json.dumps(payload, indent=2)`), so a re-run can check why a reject fails, not only that it does;
 - `build.py` regenerates the files byte for byte;
 - the superseded-key pair differs only in `issued_at`;
 - `verify.py` refuses mutated receipts: wrong envelope shape, `alg`, a signature inside the signing input, tampering, missing field, bad encoding, and a mismatch between `kid` and `issuer_id`.
