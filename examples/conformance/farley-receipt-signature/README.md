@@ -28,7 +28,7 @@ CI runs `tests/test_farley_receipt_vectors.py`. It checks four things:
 - every vector matches `index.json`;
 - `build.py` regenerates the files byte for byte;
 - the superseded-key pair differs only in `issued_at`;
-- the reference verifier refuses mutated receipts: wrong envelope shape, `alg`, a signature inside the signing input, tampering, missing field, bad encoding, and a mismatch between `kid` and `issuer_id`.
+- `verify.py` refuses mutated receipts: wrong envelope shape, `alg`, a signature inside the signing input, tampering, missing field, bad encoding, and a mismatch between `kid` and `issuer_id`.
 
 ## Observed: @veritasacta/verify 0.10.19
 
