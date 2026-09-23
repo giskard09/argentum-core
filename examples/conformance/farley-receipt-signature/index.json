@@ -1,0 +1,36 @@
+{
+  "profile": "draft-farley-acta-signed-receipts-03, envelope shape",
+  "verification_mode": "archival (Section 9.1). A verifier applying the live-presentation freshness window (24h RECOMMENDED) would reject all four as stale; that is out of scope here.",
+  "key_source": "jwks.json (external to the receipts, per Section 9.5)",
+  "test_keys": "TEST ONLY. Ed25519 seeds = SHA-256('agent-evidence-vectors/test-only/' + label); see build.py",
+  "vectors": [
+    {
+      "file": "signature-input-drift.reject.json",
+      "expected": "REJECT",
+      "code": "signature_invalid",
+      "requirement": "MUST (Sections 5.1, 5.2, 6.6)",
+      "note": "Signed over the pretty-printed payload bytes, not JCS(payload)."
+    },
+    {
+      "file": "signature-input-drift.conformant.json",
+      "expected": "ACCEPT",
+      "code": null,
+      "requirement": "MUST (Sections 5.1, 5.2, 6.6)",
+      "note": "Same payload, signed over JCS(payload)."
+    },
+    {
+      "file": "superseded-key.reject.json",
+      "expected": "REJECT",
+      "code": "key_outside_validity_window",
+      "requirement": "SHOULD (Section 9.2)",
+      "note": "Valid signature under key A; issued_at is after A's valid_until. issued_at is asserted by the signer, so this catches a key used after an honest rotation, not a compromised key backdating within the window."
+    },
+    {
+      "file": "superseded-key.conformant.json",
+      "expected": "ACCEPT",
+      "code": null,
+      "requirement": "SHOULD (Section 9.2)",
+      "note": "Minimal pair: same key A, issued_at inside A's window. Only issued_at differs from the reject."
+    }
+  ]
+}

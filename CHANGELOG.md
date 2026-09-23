@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Added — farley-receipt-signature conformance vectors (2026-09-23)
+
+- `examples/conformance/farley-receipt-signature/`: 4 vectors, each a reject with a conformant twin, for [draft-farley-acta-signed-receipts-03](https://datatracker.ietf.org/doc/draft-farley-acta-signed-receipts/03/), envelope shape, archival mode. The first case, `signature-input-drift` (MUST), signs pretty-printed bytes instead of `JCS(payload)`. The second, `superseded-key` (SHOULD, §9.2), uses a key after its `valid_until`. It is a minimal pair: only `issued_at` differs. The key comes from an external `jwks.json` (§9.5), and the keys are TEST ONLY, with public seeds. Includes a reference `verify.py` (pynacl), a deterministic `build.py`, and the observed result for `@veritasacta/verify` 0.10.19, which accepts the superseded-key reject because its receipt JWKS path does not read validity windows.
+- `tests/test_farley_receipt_vectors.py`: the vectors match `index.json`, the build is byte-deterministic, the pair is minimal, and mutated receipts are refused.
+- Fixed (same day): the payloads carried `"tool"`, which no revision of the draft defines; §3.1.1 makes `tool_name` REQUIRED for `protectmcp:decision`, so the two conformant twins did not conform to the type they declare and could not serve as ACCEPT cases for a verifier that checks §3.1.1. `build.py` now emits `tool_name` and the four receipts are regenerated; `jwks.json`, both kids and every verdict are unchanged. Reported by robertolocatelli81-dev (Noûs) in [#96](https://github.com/giskard09/argentum-core/pull/96).
+
 ### Changed — verifier-key-source-ref-v1.1: recomputable is not anchored (2026-09-23)
 
 - `docs/spec/verifier-key-source-ref-v1.md`: the `key_source` table said `embedded` was "Yes — no external fetch required", and the column-split table gave "one signer, embedded key" ✓/✓. Both are right about recomputability, but the spec did not say that recomputability is not authenticity. An embedded key is chosen by the fixture's producer, so on its own it gives no authenticity guarantee ([draft-farley-acta-signed-receipts-03 §9.5](https://datatracker.ietf.org/doc/draft-farley-acta-signed-receipts/03/)). This change adds an "Anchored by this record?" column, a normative "Recomputable vs anchored" section, invariant 6 (`recomputable_not_anchored`) and a note under the scenario table. Existing rows, columns, fixture and verifier are unchanged. It is additive for boards, which still report the same two columns. Self-audit.
