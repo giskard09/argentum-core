@@ -1,7 +1,7 @@
 # verifier-key-source-ref-v1 — Specification
 
 **Status:** stable  
-**Version:** 1.0  
+**Version:** 1.1 (adds [Recomputable vs anchored](#recomputable-vs-anchored); fixture and verifier unchanged)  
 **Canonical fixture:** [`examples/conformance/verifier-key-source-ref/vectors.json`](../../examples/conformance/verifier-key-source-ref/vectors.json)
 
 ---
@@ -33,12 +33,27 @@ Each signer in a multi-signer admission block MUST include a `signer_record` wit
 
 ## key_source values
 
-| Value | Meaning | Recomputable from fixture? |
-|-------|---------|--------------------------|
-| `embedded` | Public key bytes included directly in the fixture. | Yes — no external fetch required. |
-| `published_jwks` | Key resolved from a live JWKS endpoint at certification time. `key_resolution_evidence_hash` pins the response. | Partially — verifier can check the hash but must trust the fetched response was authentic at that time. |
-| `pinned_registry` | Key resolved from a registry entry whose content is pinned by hash. | Yes — verifier recomputes hash of pinned content. |
-| `cached_prior` | Key reused from a prior resolution, not re-fetched. | Only if the cache hit is pinned by `key_resolution_evidence_hash`. |
+| Value | Meaning | Recomputable from fixture? | Anchored by this record? |
+|-------|---------|--------------------------|--------------------------|
+| `embedded` | Public key bytes included directly in the fixture. | Yes — no external fetch required. | No. The key was chosen by whoever produced the fixture. Anchored only if `public_key_hash` matches a key the verifier obtained independently. |
+| `published_jwks` | Key resolved from a live JWKS endpoint at certification time. `key_resolution_evidence_hash` pins the response. | Partially — verifier can check the hash but must trust the fetched response was authentic at that time. | Only if the JWKS URL is bound to the issuer by an authenticated trust root (e.g. Web PKI, signed DNS). The hash pins what was fetched, not who served it. |
+| `pinned_registry` | Key resolved from a registry entry whose content is pinned by hash. | Yes — verifier recomputes hash of pinned content. | Only if the verifier accepts the registry itself as a trust source. The pin proves content, not authority. |
+| `cached_prior` | Key reused from a prior resolution, not re-fetched. | Only if the cache hit is pinned by `key_resolution_evidence_hash`. | Inherits the anchoring of the original resolution, and nothing more. |
+
+## Recomputable vs anchored
+
+This spec measures two different properties, and they must not be read as one:
+
+- **Recomputable** — a verifier can redo the signature check from the fixture bytes alone.
+- **Anchored** — the verifier obtained the public key through a trust source that is independent of the party that produced the fixture.
+
+Every column and invariant in this spec measures recomputability. None of them measures anchoring. A leg can be fully recomputable and unanchored at the same time: an `embedded` key with a correct `signature_input_hash` verifies, but it verifies under a key the fixture's producer chose. Against that producer it gives no authenticity guarantee. [draft-farley-acta-signed-receipts-03 §9.5](https://datatracker.ietf.org/doc/draft-farley-acta-signed-receipts/03/) calls this false assurance and forbids accepting such a key unless it is independently anchored.
+
+Normative rules:
+
+1. A board or verifier MUST NOT present a pass in `admission_independent` or `admission_multisig_recomputable` as authentication of the signer. Those columns report recomputability only.
+2. A verifier that makes an authenticity claim about a leg MUST establish anchoring separately. For example, it can match `public_key_hash` against a key it pinned out-of-band, or resolve `key_id` through an authenticated trust source (see draft-farley-acta-signed-receipts-03 §9.5 for the list).
+3. A board that reports anchoring MUST do so in its own column, separate from the two columns defined in [Conformance Column Split](#conformance-column-split).
 
 ---
 
@@ -58,6 +73,9 @@ Every `signer_record` MUST declare a `key_source`. A record without `key_source`
 
 **5. multisig_completeness**  
 A multi-signer admission claim requires every signer leg to be independently recomputable. Reporting N signers when fewer than N legs are fully recomputable from the fixture is an overclaim.
+
+**6. recomputable_not_anchored**  
+Passing invariants 1–5 establishes that each leg is recomputable. It does not establish that any key is anchored. Reporting a recomputable leg as an authenticated signer is an overclaim. See [Recomputable vs anchored](#recomputable-vs-anchored).
 
 ---
 
@@ -88,6 +106,8 @@ A row may pass both columns simultaneously if the fixture is sufficiently comple
 | Two signers, primary embedded, co-signer JWKS (no pinned hash) | ✓ | ✗ |
 | Two signers, primary embedded, co-signer key absent | ✓ | ✗ |
 | Two signers, both JWKS without pinned hash | ✗ | ✗ |
+
+A ✓ in these columns means recomputable from the fixture. It does not mean anchored. For example, row 1 (one signer, embedded key) is recomputable. Unless that key matches one the verifier obtained independently, it proves nothing about who signed. See [Recomputable vs anchored](#recomputable-vs-anchored).
 
 ---
 
