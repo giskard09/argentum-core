@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Added — vector key gate in CI (2026-09-23)
+
+- `tools/check_vector_keys.py` + `tools/vector_key_gate.json`: every JSON key in a vector set that declares an external schema must appear in that spec as a field (quoted, `key (REQUIRED|…)`, or identifier-shaped in prose). Runs as its own CI step and as `tests/test_vector_key_gate.py`. Opt-in per set, against a vendored, hash-pinned spec (`docs/spec/vendor/`), so a new draft revision is an explicit commit. First set: `farley-receipt-signature` against draft-farley-acta-signed-receipts-03 (vendored unmodified under BCP 78). It would have stopped the `"tool"` / `tool_name` error that both verifiers passed in #96 (reported by robertolocatelli81-dev, Noûs).
+
 ### Added — idempotency-ref-v1.1: logical identity vs payload identity (2026-09-23)
 
 - `docs/spec/idempotency-ref.md` failed two of the four cases of the logical-identity test: (3) a second intentional payment with a byte-identical payload was deduplicated as a retry, because Invariant 5 accepted "a hash of the caller's own pre-execution request" as a key source; (4) a drifted retry ($100 → $125) under the same key passed silently as a duplicate, because nothing bound the key to the admitted payload. v1.1, additive: the key is the logical action id minted at admission (Invariant 6: distinct intentional actions MUST carry distinct keys; content-derived keys only under a declared domain invariant); new `admitted_payload_digest` carried next to `idempotency_ref`, outside the artifact (Invariant 7: same key + different digest → CONFLICT, fail closed). Every v1.0 artifact and `idempotency_ref` is unchanged.

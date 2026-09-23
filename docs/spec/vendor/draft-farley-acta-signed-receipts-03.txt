@@ -1,0 +1,2408 @@
+
+
+
+
+Independent                                                    T. Farley
+Internet-Draft                                 ScopeBlind (Veritas Acta)
+Intended status: Informational                            29 August 2026
+Expires: 2 March 2027
+
+
+     Signed Decision Receipts for Machine-to-Machine Access Control
+                  draft-farley-acta-signed-receipts-03
+
+Abstract
+
+   This document defines a portable, cryptographically signed receipt
+   format for recording machine-to-machine access control decisions.
+   Each receipt captures the identity of the decision maker, the tool or
+   resource being accessed, the policy evaluation result, and a
+   timestamp.  All of these are signed with Ed25519 [RFC8032] and
+   serialized using deterministic JSON canonicalization [RFC8785].
+
+   The format is designed for environments where AI agents invoke tools
+   on behalf of human operators, particularly the Model Context Protocol
+   (MCP) ecosystem.  Receipts are independently verifiable without
+   contacting the issuer, enabling offline audit, regulatory compliance,
+   and cross-organizational trust federation.
+
+Status of This Memo
+
+   This Internet-Draft is submitted in full conformance with the
+   provisions of BCP 78 and BCP 79.
+
+   Internet-Drafts are working documents of the Internet Engineering
+   Task Force (IETF).  Note that other groups may also distribute
+   working documents as Internet-Drafts.  The list of current Internet-
+   Drafts is at https://datatracker.ietf.org/drafts/current/.
+
+   Internet-Drafts are draft documents valid for a maximum of six months
+   and may be updated, replaced, or obsoleted by other documents at any
+   time.  It is inappropriate to use Internet-Drafts as reference
+   material or to cite them other than as "work in progress."
+
+   This Internet-Draft will expire on 2 March 2027.
+
+Copyright Notice
+
+   Copyright (c) 2026 IETF Trust and the persons identified as the
+   document authors.  All rights reserved.
+
+
+
+
+
+
+Farley                    Expires 2 March 2027                  [Page 1]
+
+Internet-Draft            Acta Signed Receipts               August 2026
+
+
+   This document is subject to BCP 78 and the IETF Trust's Legal
+   Provisions Relating to IETF Documents (https://trustee.ietf.org/
+   license-info) in effect on the date of publication of this document.
+   Please review these documents carefully, as they describe your rights
+   and restrictions with respect to this document.
+
+Table of Contents
+
+   1.  Introduction  . . . . . . . . . . . . . . . . . . . . . . . .   3
+     1.1.  Relationship to MCP . . . . . . . . . . . . . . . . . . .   4
+     1.2.  Terminology . . . . . . . . . . . . . . . . . . . . . . .   4
+   2.  Receipt Structure . . . . . . . . . . . . . . . . . . . . . .   5
+     2.1.  Signed Envelope . . . . . . . . . . . . . . . . . . . . .   5
+       2.1.1.  Signature Object  . . . . . . . . . . . . . . . . . .   5
+     2.2.  Payload . . . . . . . . . . . . . . . . . . . . . . . . .   6
+   3.  Receipt Types . . . . . . . . . . . . . . . . . . . . . . . .   8
+     3.1.  Access Decision Receipt . . . . . . . . . . . . . . . . .   8
+       3.1.1.  Fields  . . . . . . . . . . . . . . . . . . . . . . .   8
+     3.2.  Restraint Receipt . . . . . . . . . . . . . . . . . . . .   9
+       3.2.1.  Fields  . . . . . . . . . . . . . . . . . . . . . . .   9
+     3.3.  Arena Battle Receipt  . . . . . . . . . . . . . . . . . .  10
+       3.3.1.  Fields  . . . . . . . . . . . . . . . . . . . . . . .  10
+     3.4.  Agent Lifecycle Receipt . . . . . . . . . . . . . . . . .  11
+       3.4.1.  Fields  . . . . . . . . . . . . . . . . . . . . . . .  11
+     3.5.  Spending Authority Receipt  . . . . . . . . . . . . . . .  11
+       3.5.1.  Fields  . . . . . . . . . . . . . . . . . . . . . . .  12
+     3.6.  Formal Debate Receipt . . . . . . . . . . . . . . . . . .  12
+   4.  Evidence Predicate  . . . . . . . . . . . . . . . . . . . . .  13
+     4.1.  Fields  . . . . . . . . . . . . . . . . . . . . . . . . .  14
+     4.2.  Properties  . . . . . . . . . . . . . . . . . . . . . . .  14
+     4.3.  Trust Model . . . . . . . . . . . . . . . . . . . . . . .  15
+   5.  Signing and Verification  . . . . . . . . . . . . . . . . . .  16
+     5.1.  Signing Process . . . . . . . . . . . . . . . . . . . . .  16
+     5.2.  Verification Process  . . . . . . . . . . . . . . . . . .  17
+     5.3.  Public Key Distribution . . . . . . . . . . . . . . . . .  17
+   6.  Commitment Mode (Optional Extension)  . . . . . . . . . . . .  18
+     6.1.  Merkle Tree Construction  . . . . . . . . . . . . . . . .  18
+     6.2.  Canonical Leaf Layout . . . . . . . . . . . . . . . . . .  19
+     6.3.  Leaf Sort Order . . . . . . . . . . . . . . . . . . . . .  19
+     6.4.  Salt Construction and Storage . . . . . . . . . . . . . .  19
+     6.5.  Selective Disclosure  . . . . . . . . . . . . . . . . . .  20
+     6.6.  Signature Scope (Normative Clarification) . . . . . . . .  21
+     6.7.  Chain Hash Scope (Normative Clarification)  . . . . . . .  22
+     6.8.  Policy Digest Construction (Normative)  . . . . . . . . .  22
+       6.8.1.  Policy Publication  . . . . . . . . . . . . . . . . .  24
+     6.9.  Signature Algorithm Agility . . . . . . . . . . . . . . .  24
+     6.10. Context Binding for ZK Proofs . . . . . . . . . . . . . .  25
+     6.11. Test Vectors  . . . . . . . . . . . . . . . . . . . . . .  25
+
+
+
+Farley                    Expires 2 March 2027                  [Page 2]
+
+Internet-Draft            Acta Signed Receipts               August 2026
+
+
+   7.  Trust Tiers . . . . . . . . . . . . . . . . . . . . . . . . .  26
+   8.  Agent Identity  . . . . . . . . . . . . . . . . . . . . . . .  26
+     8.1.  Passport Manifest . . . . . . . . . . . . . . . . . . . .  26
+     8.2.  DPoP Binding (Future) . . . . . . . . . . . . . . . . . .  27
+   9.  Security Considerations . . . . . . . . . . . . . . . . . . .  27
+     9.1.  Replay Protection . . . . . . . . . . . . . . . . . . . .  27
+     9.2.  Key Compromise  . . . . . . . . . . . . . . . . . . . . .  27
+     9.3.  Payload Privacy . . . . . . . . . . . . . . . . . . . . .  28
+     9.4.  Canonicalization Attacks  . . . . . . . . . . . . . . . .  28
+     9.5.  Key Distribution and Trust Anchors  . . . . . . . . . . .  28
+     9.6.  Verifier Identity Is Not Receipt Content  . . . . . . . .  29
+     9.7.  Chain Completeness and Truncation . . . . . . . . . . . .  30
+     9.8.  Decisions Are Not Executions  . . . . . . . . . . . . . .  30
+     9.9.  Evidence Predicate: False Assurance . . . . . . . . . . .  31
+   10. IANA Considerations . . . . . . . . . . . . . . . . . . . . .  31
+   11. References  . . . . . . . . . . . . . . . . . . . . . . . . .  31
+     11.1.  Normative References . . . . . . . . . . . . . . . . . .  32
+     11.2.  Informative References . . . . . . . . . . . . . . . . .  33
+   Appendix A.  Implementation Status  . . . . . . . . . . . . . . .  33
+     A.1.  protect-mcp (Reference Implementation)  . . . . . . . . .  34
+     A.2.  @veritasacta/verify (Verifier)  . . . . . . . . . . . . .  34
+     A.3.  @scopeblind/passport (Identity SDK) . . . . . . . . . . .  34
+     A.4.  protect-mcp-adk (Google ADK)  . . . . . . . . . . . . . .  34
+     A.5.  scopeblind-pydantic-ai (Pydantic AI)  . . . . . . . . . .  35
+     A.6.  scopeblind-llamaindex (LlamaIndex)  . . . . . . . . . . .  35
+     A.7.  @scopeblind/vercel-ai (Vercel AI SDK) . . . . . . . . . .  35
+     A.8.  @scopeblind/langchain (LangChain + LangGraph) . . . . . .  36
+     A.9.  Microsoft Agent Governance Toolkit (Enterprise
+            Consumer)  . . . . . . . . . . . . . . . . . . . . . . .  36
+     A.10. AWS Cedar for Agents (WASM Policy Engine) . . . . . . . .  36
+     A.11. Sigstore Rekor (Transparency Log Anchor)  . . . . . . . .  37
+   Appendix B.  Example: Complete Verification Flow  . . . . . . . .  37
+     B.1.  Step 1: Generate Issuer Keys  . . . . . . . . . . . . . .  37
+     B.2.  Step 2: Sign a Receipt  . . . . . . . . . . . . . . . . .  37
+     B.3.  Step 3: Verify (CLI)  . . . . . . . . . . . . . . . . . .  38
+   Appendix C.  Changes from -02 . . . . . . . . . . . . . . . . . .  38
+   Appendix D.  Changes from -01 . . . . . . . . . . . . . . . . . .  41
+   Appendix E.  Acknowledgements . . . . . . . . . . . . . . . . . .  42
+   Author's Address  . . . . . . . . . . . . . . . . . . . . . . . .  43
+
+1.  Introduction
+
+   As AI agents increasingly act autonomously (invoking tools, accessing
+   APIs, and modifying state), there is a growing need for cryptographic
+   evidence of what decisions were made, by whom, and under what policy.
+
+
+
+
+
+
+Farley                    Expires 2 March 2027                  [Page 3]
+
+Internet-Draft            Acta Signed Receipts               August 2026
+
+
+   Current approaches rely on centralized logging (e.g., CloudWatch,
+   SIEM ingestion), which requires trust in the log operator and
+   provides no independent verifiability.  A compromised or malicious
+   operator can silently alter or omit log entries.
+
+   This specification defines a *Signed Decision Receipt* format that
+   provides:
+
+   1.  *Portable evidence*: Receipts are self-contained JSON objects
+       that can be stored, transmitted, and verified independently.
+
+   2.  *Cryptographic integrity*: Each receipt is signed using Ed25519
+       (RFC 8032), ensuring tamper detection without PKI infrastructure.
+
+   3.  *Offline verification*: Any party with the issuer's public key
+       can verify a receipt without network access or API calls.
+
+   4.  *Minimal disclosure*: Receipts capture the decision metadata
+       (tool name, decision, tier, timestamp) without logging raw
+       request payloads, prompts, or sensitive parameters.
+
+1.1.  Relationship to MCP
+
+   The Model Context Protocol [MCP] defines a JSON-RPC transport for AI
+   tool invocation but provides no built-in access control, auditing, or
+   accountability mechanism.  This specification is designed to be
+   deployed at the MCP transport layer (typically as a stdio proxy)
+   without modifications to the MCP protocol itself.
+
+   This specification is complementary to [I-D.serra-mcp-discovery-uri],
+   which defines the mcp:// URI scheme and server discovery mechanism.
+   Discovery (how an agent finds a server) and accountability (what gets
+   recorded after the agent uses it) are independently deployable
+   layers.  A server's discovery manifest MAY declare a trust_class that
+   informs receipt-generating proxies of the server's operating context
+   (e.g., "regulated"), enabling jurisdiction-aware policy evaluation
+   without encoding legal regime information in the receipt itself.
+
+1.2.  Terminology
+
+   The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+   "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
+   "OPTIONAL" in this document are to be interpreted as described in BCP
+   14 [RFC2119] [RFC8174] when, and only when, they appear in all
+   capitals, as shown here.
+
+
+
+
+
+
+Farley                    Expires 2 March 2027                  [Page 4]
+
+Internet-Draft            Acta Signed Receipts               August 2026
+
+
+2.  Receipt Structure
+
+   A Signed Decision Receipt is a JSON object with two top-level fields:
+   payload and signature.
+
+2.1.  Signed Envelope
+
+   {
+     "payload": { ... },
+     "signature": {
+       "alg": "EdDSA",
+       "kid": "<issuer-identifier>",
+       "sig": "<hex-encoded-ed25519-signature>"
+     }
+   }
+
+   This is the envelope shape, and it is the shape new implementations
+   SHOULD emit.  A second, flat shape carries the payload fields at the
+   top level alongside a signature member that is a hexadecimal string.
+   It predates the envelope and remains in use.  The two shapes are
+   signed over different byte strings, and an implementation MUST
+   determine which shape it is handling before computing or checking a
+   signature; see Section 6.6.  Except where a shape is named
+   explicitly, the remainder of this document describes the envelope
+   shape.
+
+2.1.1.  Signature Object
+
+   alg (REQUIRED):  The signature algorithm.  The mandatory-to-implement
+      algorithm is "EdDSA" for Ed25519 as defined in [RFC8032].
+      Implementations MAY additionally support "ES256" (ECDSA with P-256
+      and SHA-256) to accommodate systems that use P-256 keys natively.
+      Verifiers MUST support "EdDSA" and SHOULD support "ES256".  This
+      list is not closed; see Section 6.9 for registered values and for
+      the algorithms recommended for new deployments.
+
+   kid (REQUIRED):  The key identifier of the signing key.  This is an
+      opaque string that SHOULD resolve to a public key via a well-known
+      endpoint or out-of-band distribution.  The RECOMMENDED format is
+      sb:issuer:<base58-fingerprint> where the fingerprint is the first
+      12 characters of the Base58-encoded Ed25519 public key.
+
+   sig (REQUIRED):  The signature over the signing input defined in
+
+
+
+
+
+
+
+
+Farley                    Expires 2 March 2027                  [Page 5]
+
+Internet-Draft            Acta Signed Receipts               August 2026
+
+
+      Section 6.6, encoded as a lowercase hexadecimal string.  The
+      encoded length is determined by the algorithm named in alg and is
+      not fixed by this document: Ed25519 produces 64 bytes and
+      therefore 128 hexadecimal characters, while other registered
+      algorithms produce other lengths.  Verifiers MUST NOT reject a
+      signature on encoded length alone.
+
+2.2.  Payload
+
+   The payload is a JSON object whose schema depends on the receipt
+   type.  This section lists the members common to all payload types.
+   Members specific to one receipt type are defined with that type in
+   Section 3.  A member defined elsewhere in this document that may
+   appear in any payload type is listed here.
+
+   type (REQUIRED):  A namespaced string identifying the receipt type.
+      Examples: "protectmcp:decision", "protectmcp:restraint",
+      "blindllm:arena-battle".
+
+   issued_at (REQUIRED):  ISO 8601 timestamp [RFC3339] of when the
+      receipt was created.  MUST include timezone designator (typically
+      "Z" for UTC).
+
+   issuer_id (REQUIRED):  The identifier of the entity that issued and
+      signed the receipt.  MUST match the kid field in the signature
+      object.
+
+   previousReceiptHash (OPTIONAL):  A link to the immediately preceding
+      receipt in a receipt chain, present at most once.  When present it
+      MUST be a member of the payload object, not of the enclosing
+      receipt object, and its value MUST be computed as specified in
+      Section 6.7.
+
+      The first receipt in a chain MUST omit the member entirely rather
+      than carrying null or an empty string, which would produce
+      different JCS output and therefore a different signature.  A
+      receipt that omits it is either a chain genesis or an unchained
+      receipt; the format does not distinguish these, and a verifier
+      MUST NOT infer chain membership from its absence.
+
+   evidence (OPTIONAL):  The evidentiary basis the decision rested on,
+      as defined in Section 4.  When present it MUST be an array.  A
+      verifier that does not implement the predicate MUST still verify
+      the receipt signature and chain, and MUST ignore this member
+      otherwise.
+
+   committed_fields_root (OPTIONAL):  The Merkle root committing to
+
+
+
+
+Farley                    Expires 2 March 2027                  [Page 6]
+
+Internet-Draft            Acta Signed Receipts               August 2026
+
+
+      selectively disclosable fields, as defined in Section 6.  Present
+      only in commitment mode.  A verifier that does not implement
+      commitment mode MUST ignore this member when verifying the
+      signature, though the member remains covered by that signature.
+
+   payload_digest (OPTIONAL):  A content-addressable hash of associated
+      data (tool input, tool output, or other large payloads) that is
+      too large to embed in the receipt.  Format: an object containing
+      hash (SHA-256 hex string), size (byte count), and optionally
+      preview (first 256 characters).  Enables integrity verification of
+      associated data without embedding it in the receipt.
+
+   hook_latency_ms (OPTIONAL):  The time in milliseconds spent
+      evaluating the policy decision.  Enables operators to verify that
+      security middleware adds negligible overhead (<5ms is RECOMMENDED
+      for synchronous policy checks).
+
+   tool_duration_ms (OPTIONAL):  The time in milliseconds between the
+      initiation and completion of the tool invocation.  Present only in
+      post-execution receipts.
+
+   sandbox_state (OPTIONAL):  Whether the execution environment had OS-
+      level containment active at the time of the decision.  One of:
+      "enabled", "disabled", "unavailable".  Enables auditors to verify
+      that agent actions occurred within a sandboxed environment.
+
+   action_ref (OPTIONAL):  A cross-engine correlation anchor: the
+      SHA-256 hash of the canonical representation of the action being
+      evaluated.  When two or more governance engines evaluate the same
+      action independently, both receipts carry the same action_ref,
+      enabling bilateral verification without either engine needing to
+      trust the other.
+
+      The computation is:
+
+      action_ref = SHA-256(canonicalize({
+        agentId,
+        actionType,
+        scopeRequired,
+        timestamp
+      }))
+
+      where canonicalize follows RFC 8785 (JCS) and scopeRequired is
+      sorted lexicographically before canonicalization.  The resulting
+      hex string is deterministic: same inputs produce the same hash
+      regardless of implementation language.
+
+
+
+
+
+Farley                    Expires 2 March 2027                  [Page 7]
+
+Internet-Draft            Acta Signed Receipts               August 2026
+
+
+      This field is RECOMMENDED when the receipt will be consumed by
+      external governance frameworks or cross-engine audit tools.
+
+   iteration_id (OPTIONAL):  A logical iteration grouping identifier for
+      multi-step agent workflows.  When an agent runs in an optimization
+      loop or a multi-round deliberation, receipts within the same
+      iteration share the same iteration_id.  This enables behavioral
+      analysis tools to group receipts by logical iteration rather than
+      by receipt count.
+
+      The value is an opaque string.  Hierarchy may be encoded by
+      convention using dot-separated segments (e.g., "run_7.sub_3"
+      encodes a nested iteration at depth 2).  The field is agent-
+      declared metadata for grouping purposes, NOT a security boundary:
+      a malicious agent could set misleading values.  Receipt signatures
+      cover this field (tamper-evident) but do not vouch for its
+      semantic accuracy.
+
+3.  Receipt Types
+
+   This specification defines six receipt types.  Implementations MAY
+   define additional types using the namespaced type field.
+
+3.1.  Access Decision Receipt
+
+   Type: protectmcp:decision
+
+   Records the outcome of a policy evaluation for a tool invocation.
+
+   {
+     "type": "protectmcp:decision",
+     "tool_name": "delete_database",
+     "decision": "deny",
+     "reason": "tier_insufficient",
+     "agent_tier": "signed-known",
+     "required_tier": "privileged",
+     "policy_digest": "sha256:a8f3...c91e",
+     "session_id": "ses_7f8a2b",
+     "issued_at": "2026-03-22T14:32:04.102Z",
+     "issuer_id": "sb:issuer:4Kpm7Q3wXx2b"
+   }
+
+3.1.1.  Fields
+
+   tool_name (REQUIRED):  The name of the tool being invoked, as
+      declared in the MCP tools/list response.
+
+   decision (REQUIRED):  The policy evaluation result.  One of: "allow",
+
+
+
+Farley                    Expires 2 March 2027                  [Page 8]
+
+Internet-Draft            Acta Signed Receipts               August 2026
+
+
+      "deny", "rate_limit", "require_approval".  The value
+      "require_approval" records that the action was held pending human
+      approval at decision time; the terminal outcome of the held
+      action, if it executes, is recorded in a subsequent receipt.
+
+   reason (OPTIONAL):  A machine-readable reason code for the decision.
+      Examples: "tier_insufficient", "rate_exceeded", "policy_block",
+      "agent_refusal".
+
+   agent_tier (OPTIONAL):  The trust tier of the requesting agent at the
+      time of the decision.  One of: "unknown", "signed-known",
+      "evidenced", "privileged".
+
+   required_tier (OPTIONAL):  The minimum trust tier required by the
+      policy for this tool.
+
+   policy_digest (OPTIONAL):  A content-addressable hash of the policy
+      in effect at the time of the decision.  Format: "sha256:<hex>",
+      computed per Section 6.8.  A digest whose construction is not
+      published is an opaque label, not a commitment; see Section 6.8.1.
+
+   session_id (OPTIONAL):  An opaque identifier for the MCP session.
+      MUST NOT contain PII or be correlatable across sessions unless the
+      operator explicitly configures session binding.
+
+3.2.  Restraint Receipt
+
+   Type: protectmcp:restraint
+
+   Records an agent's interaction with a policy boundary, specifically
+   whether the agent attempted to use a restricted tool and whether the
+   restriction was enforced by an external policy or self-imposed.
+
+   {
+     "type": "protectmcp:restraint",
+     "agent_id": "sb:agent:8xKm3Qw2Yb1c",
+     "agent_manifest_version": "1.2.0",
+     "tool_name": "rm_rf",
+     "decision": "deny",
+     "denial_type": "policy-block",
+     "issued_at": "2026-03-22T14:35:12.441Z",
+     "issuer_id": "sb:issuer:4Kpm7Q3wXx2b"
+   }
+
+3.2.1.  Fields
+
+   agent_id (REQUIRED):  The identifier of the agent whose tool call was
+      evaluated.
+
+
+
+Farley                    Expires 2 March 2027                  [Page 9]
+
+Internet-Draft            Acta Signed Receipts               August 2026
+
+
+   agent_manifest_version (REQUIRED):  The semantic version of the
+      agent's manifest at the time of the decision.
+
+   tool_name (REQUIRED):  The tool that was called or attempted.
+
+   decision (REQUIRED):  One of: "allow", "deny".
+
+   denial_type (OPTIONAL):  If the decision is "deny", indicates whether
+      the denial was imposed by external policy ("policy-block") or
+      self-imposed by the agent ("agent-refusal").
+
+3.3.  Arena Battle Receipt
+
+   Type: blindllm:arena-battle
+
+   Records the outcome of a competitive evaluation between two AI
+   agents, as conducted by a neutral arena platform.
+
+   {
+     "type": "blindllm:arena-battle",
+     "battle_id": "bat_9x8f7a2b",
+     "lane_id": "lane_creative_writing",
+     "agent_a": {
+       "id": "sb:agent:3mK9pQ7wXx2b",
+       "manifest_version": "2.1.0"
+     },
+     "agent_b": {
+       "id": "sb:agent:8xKm3Qw2Yb1c",
+       "manifest_version": "1.4.0"
+     },
+     "winner": "A",
+     "issued_at": "2026-03-22T15:00:00.000Z",
+     "issuer_id": "sb:issuer:4Kpm7Q3wXx2b"
+   }
+
+3.3.1.  Fields
+
+   battle_id (REQUIRED):  Unique identifier for the battle instance.
+
+   lane_id (REQUIRED):  The evaluation category or "lane" in which the
+      battle occurred.
+
+   agent_a, agent_b (REQUIRED):  Objects identifying each participant,
+      containing: - id: The agent's passport identifier. -
+      manifest_version: The agent's manifest version at battle time.
+
+   winner (REQUIRED):  One of: "A", "B", "tie".
+
+
+
+
+Farley                    Expires 2 March 2027                 [Page 10]
+
+Internet-Draft            Acta Signed Receipts               August 2026
+
+
+3.4.  Agent Lifecycle Receipt
+
+   Type: protectmcp:lifecycle
+
+   Records agent lifecycle events in multi-agent orchestration systems
+   (swarms, coordinator mode, scheduled agents).  Enables reconstruction
+   of the full agent topology from the receipt DAG.
+
+   {
+     "type": "protectmcp:lifecycle",
+     "lifecycle_event": "subagent_start",
+     "agent_id": "worker-a1b",
+     "agent_type": "general-purpose",
+     "parent_session_id": "ses_7f8a2b",
+     "team_name": "backend-ops",
+     "sandbox_state": "enabled",
+     "issued_at": "2026-04-01T10:15:00.000Z",
+     "issuer_id": "sb:issuer:4Kpm7Q3wXx2b"
+   }
+
+3.4.1.  Fields
+
+   lifecycle_event (REQUIRED):  One of: "subagent_start",
+      "subagent_stop", "session_start", "session_end", "task_created",
+      "task_completed", "teammate_idle", "config_change".
+
+   agent_id (OPTIONAL):  The identifier of the agent involved in the
+      lifecycle event.
+
+   agent_type (OPTIONAL):  The type of agent (e.g., "coordinator",
+      "worker", "standalone", "general-purpose").
+
+   parent_session_id (OPTIONAL):  The session identifier of the parent/
+      coordinator agent.  Creates a verifiable parent-child relationship
+      in the DAG.
+
+   team_name (OPTIONAL):  The team or swarm name, if operating in multi-
+      agent mode.
+
+3.5.  Spending Authority Receipt
+
+   Type: scopeblind:spending_authority
+
+   Records the outcome of an issuer-blind spending authorization check.
+   Proves that an agent's purchase is within authorized limits without
+   revealing organizational identity, budget ceiling, or delegation
+   chain.
+
+
+
+
+Farley                    Expires 2 March 2027                 [Page 11]
+
+Internet-Draft            Acta Signed Receipts               August 2026
+
+
+   {
+     "type": "scopeblind:spending_authority",
+     "amount": 99.50,
+     "currency": "USD",
+     "category": "cloud_compute",
+     "utilization_band": "low",
+     "decision": "allow",
+     "policy_digest": "sha256:a8f3...c91e",
+     "issued_at": "2026-04-01T12:00:00.000Z",
+     "issuer_id": "sb:issuer:4Kpm7Q3wXx2b"
+   }
+
+3.5.1.  Fields
+
+   amount (REQUIRED):  The monetary amount of the transaction.
+
+   currency (REQUIRED):  ISO 4217 currency code (e.g., "USD").
+
+   category (OPTIONAL):  A classification of the spending type (e.g.,
+      "cloud_compute", "saas_subscription", "api_usage").
+
+   utilization_band (OPTIONAL):  A coarse indicator of budget
+      utilization.  One of: "low" (<25%), "medium" (25-75%), "high"
+      (75-100%), "exceeded".  The exact budget ceiling is NOT disclosed,
+      only the band.  This prevents price discrimination while proving
+      budget compliance.
+
+   decision (REQUIRED):  One of: "allow", "deny".
+
+   The receipt deliberately EXCLUDES: organization name, total budget
+   ceiling, exact remaining budget, agent identity, and delegation
+   chain.  Verification uses VOPRF ([RFC9497]) to confirm receipt
+   validity without the verifier learning which organization issued it.
+
+3.6.  Formal Debate Receipt
+
+   Type: blindllm:formal-debate
+
+   Records the outcome of a structured debate with audience and judge
+   scoring.  Extends the arena battle format with additional governance
+   fields.
+
+
+
+
+
+
+
+
+
+
+Farley                    Expires 2 March 2027                 [Page 12]
+
+Internet-Draft            Acta Signed Receipts               August 2026
+
+
+   {
+     "type": "blindllm:formal-debate",
+     "debate_id": "dbt_4f2a8c",
+     "spec_id": "spec_ai_safety_v2",
+     "lane_id": "lane_policy",
+     "artifact_hash": "sha256:b3c4d5e6...",
+     "resolution_hash": "sha256:f7a8b9c0...",
+     "pro": {
+       "id": "sb:agent:3mK9pQ7wXx2b",
+       "manifest_version": "2.1.0"
+     },
+     "con": {
+       "id": "sb:agent:8xKm3Qw2Yb1c",
+       "manifest_version": "1.4.0"
+     },
+     "audience_winner": "pro",
+     "judge_winner": "pro",
+     "restraint_result": "clean",
+     "issued_at": "2026-03-22T16:30:00.000Z",
+     "issuer_id": "sb:issuer:4Kpm7Q3wXx2b"
+   }
+
+4.  Evidence Predicate
+
+   An Access Decision Receipt records which decision was made and, via
+   policy_digest, under which policy.  For high-stakes actions the
+   decision's evidentiary basis is itself material: was the action
+   cleared because data-rights were satisfied, provenance verified, and
+   compliance posture fresh, or held because one of those failed?  The
+   OPTIONAL evidence field records that basis.  It is defined here for
+   the Access Decision Receipt; other receipt types MAY carry it with
+   the same semantics.
+
+   "evidence": [
+     { "dimension": "data_rights", "state": "satisfied",
+       "source": {
+         "authority": "Example Fund Administrator",
+         "ref": "sha256:...",
+         "kid": "sb:issuer:9admin7Custo",
+         "alg": "EdDSA",
+       "sig": "<hex signature by the administrator over the claim>" },
+       "as_of": "2026-06-30T21:00:00Z" },
+     { "dimension": "provenance", "state": "failed",
+       "source": { "authority": "runtime:request-origin",
+                   "ref": "request/origin-header" } }
+   ]
+
+
+
+
+
+Farley                    Expires 2 March 2027                 [Page 13]
+
+Internet-Draft            Acta Signed Receipts               August 2026
+
+
+4.1.  Fields
+
+   dimension (REQUIRED):  The class of evidence.  Core values:
+      "data_rights", "provenance", "compliance", "freshness", "consent",
+      "identity", "authorization", "integrity".  Implementations MAY
+      define additional dimensions using a namespaced extension of the
+      form x-<vendor>:<name>, where <vendor> matches [a-z0-9]+ and
+      <name> matches [a-z0-9_.-]+ (both lowercase).
+
+   state (REQUIRED):  The evaluated state of this dimension at decision
+      time.  One of: "satisfied", "unverified", "stale", "failed",
+      "not_applicable".
+
+   source (REQUIRED):  The provenance of the evidence, an object with
+      authority (the attesting party; advisory), ref (a resolvable
+      reference or a "sha256:<hex>" digest of the attested subject), an
+      OPTIONAL kid (the attesting authority's key id), an OPTIONAL alg
+      (the signature algorithm, taking the same values as the alg member
+      of Section 2.1.1, and defaulting to "EdDSA" when absent), and an
+      OPTIONAL sig (the authority's signature over the JCS-canonical
+      claim, encoded as a lowercase hexadecimal string and verifiable
+      under kid).  As in Section 2.1.1, the encoded length of sig is
+      determined by alg and is not fixed by this document; a relying
+      party MUST NOT reject a source signature on encoded length alone.
+      An attesting authority need not use the same algorithm as the
+      receipt signer.  See Section 4.3: a named authority or kid is NOT
+      proof of authorship; only a verified sig is.
+
+   as_of (OPTIONAL):  An RFC 3339 timestamp of when the evidence was
+      current.  RECOMMENDED for freshness-relevant dimensions.
+
+   The signed claim is the JSON object built from the entry's dimension,
+   state, and as_of together with the source's ref: { dimension, ref,
+   state } plus an as_of member when the entry carries one.  When as_of
+   is absent the as_of member is OMITTED from the claim; it MUST NOT be
+   encoded as null.  The producer canonicalizes this object under JCS
+   and signs the resulting bytes; source.sig is that signature.  A
+   relying party reconstructs the same claim from the entry and verifies
+   source.sig over its JCS bytes.
+
+4.2.  Properties
+
+   evidence is OPTIONAL and additive.  A verifier that does not
+   understand it MUST still verify the receipt's signature and chain;
+   the field is covered by the signature (tamper-evident) but requires
+   no verifier action.  It is canonicalized under JCS with the rest of
+   the payload and is therefore signed.  It MUST NOT carry raw evidence
+   content (positions, prompts, tool payloads); it carries states,
+
+
+
+Farley                    Expires 2 March 2027                 [Page 14]
+
+Internet-Draft            Acta Signed Receipts               August 2026
+
+
+   references, digests, and timestamps only.
+
+   Evidence entries MAY be committed and selectively disclosed under
+   Section 6.  When they are, the unit of disclosure MUST be the whole
+   entry.  A producer MUST NOT disclose an entry's dimension and state
+   while withholding its source, because a relying party cannot apply
+   Section 4.3 to an entry whose source it cannot see, and a disclosed
+   "satisfied" with no visible source is precisely the false assurance
+   Section 9.9 warns against.  Withholding an entry in full is
+   permitted; a relying party MUST NOT infer from a disclosed set that
+   no further entries exist.
+
+4.3.  Trust Model
+
+   evidence is a set of claims made by the receipt SIGNER.  Every field
+   of every entry, including source.authority and source.kid, is inside
+   the payload the signer fully controls; the receipt signature proves
+   only that the signer ASSERTED them.  A present or trusted-looking
+   source.kid is therefore NOT proof that the named authority attested
+   anything.  It is exactly the in-payload, signer-controlled value that
+   Section 9.5 warns is "strictly worse than no signature at all,
+   because it provides false assurance."
+
+   A relying party MUST NOT treat any evidence dimension as INDEPENDENT
+   corroboration unless ALL of the following hold: (1) the entry carries
+   a source.sig; (2) the relying party obtains the corresponding public
+   key OUT OF BAND via the mechanisms in Section 9.5 (not from the
+   receipt) and confirms that key's identifier equals source.kid; (3)
+   the relying party's out-of-band trust policy identifies the source
+   key as belonging to a control domain DISTINCT from the receipt
+   signer.  At a minimum, the source public key MUST NOT equal the key
+   that signed the enclosing receipt; and (4) source.sig verifies under
+   that key over the JCS bytes of the claim.
+
+   Condition 3 is load-bearing: every relying party MUST already pin the
+   receipt signer's own key out of band, because that is the only way to
+   verify the receipt at all.  Public-key inequality alone is necessary
+   but not sufficient: the relying party also needs a trust-policy
+   determination that the source key is outside the receipt signer's
+   control.  Without this requirement, a receipt signer could sign an
+   evidence claim with its OWN key, satisfy conditions 1, 2, and 4, and
+   manufacture "independent" corroboration of itself.  An entry whose
+   source.kid resolves to the receipt's signing key, or whose control
+   domain cannot be established independently, is self-attestation and
+   MUST NOT be counted as independent corroboration.
+
+
+
+
+
+
+Farley                    Expires 2 March 2027                 [Page 15]
+
+Internet-Draft            Acta Signed Receipts               August 2026
+
+
+   A dimension without a verifiable, independent source.sig is the
+   receipt signer's own claim and MUST NOT raise the assurance a relying
+   party places in the decision, regardless of the authority or kid it
+   names.  Producers SHOULD mark a self-attested basis with an authority
+   of runtime:<component>, but this labelling is advisory: because the
+   producer controls it, a relying party MUST identify a non-
+   corroborating dimension by the ABSENCE of a verifiable, independent
+   source.sig, not by trusting the label.
+
+   A verified source.sig proves only that the authority attested the
+   claim tuple; it does NOT prove the authority observed or endorsed the
+   enclosing decision.  The claim binds nothing from the receipt (no
+   session_id, policy_digest, tool_name, or decision), so the same
+   signed claim may lawfully appear in many receipts.  A relying party
+   MUST additionally judge whether the claim's ref and as_of pertain to
+   the action being decided, and SHOULD bound acceptance by as_of.
+
+5.  Signing and Verification
+
+5.1.  Signing Process
+
+   1.  Construct the payload object with all required fields.
+
+   2.  Construct the receipt object carrying that payload as its payload
+       member.
+
+   3.  Form the signing input for the envelope shape: canonicalize the
+       payload member using JCS [RFC8785].  The canonical form is a
+       deterministic JSON serialization with sorted keys and no
+       whitespace.  The signing input is the payload member alone; it
+       does not include the enclosing receipt object.  For the flat
+       shape the signing input is the receipt minus its signature
+       member.  See Section 6.6, which an implementation MUST consult
+       before computing either.
+
+   4.  Convert the canonical JSON string to a UTF-8 byte sequence.
+
+   5.  Sign the byte sequence using Ed25519 [RFC8032] with the issuer's
+       secret key.
+
+   6.  Encode the signature as a lowercase hexadecimal string.
+
+   7.  Attach the signature object to the original (non-canonicalized)
+       receipt as its signature member.  The transmitted receipt carries
+       the payload exactly as constructed; canonicalization is performed
+       only to derive the signing input and its output is not
+       transmitted.
+
+
+
+
+Farley                    Expires 2 March 2027                 [Page 16]
+
+Internet-Draft            Acta Signed Receipts               August 2026
+
+
+5.2.  Verification Process
+
+   1.  Determine the receipt shape as defined in Section 6.6 and extract
+       the signature.  In the envelope shape the signature is the
+       signature member, an object.  In the flat shape it is the
+       signature member, a hexadecimal string, and the algorithm and key
+       identifier are carried as separate members of the receipt.
+
+   2.  Reconstruct the signing input for the shape received, as defined
+       in Section 6.6: for the envelope shape, canonicalize the payload
+       member as received; for the flat shape, canonicalize the receipt
+       minus its signature member.  This reproduces the byte string the
+       signer formed in Section 5.1.  Applying the wrong shape's rule
+       produces a different byte string and causes verification of
+       correctly signed receipts to fail.
+
+   3.  Convert the canonical JSON to a UTF-8 byte sequence.
+
+   4.  Resolve the public key using the key identifier carried by the
+       receipt.  The RECOMMENDED resolution mechanism is a JWK Set
+       endpoint [RFC7517] at /.well-known/acta-keys.json.  The key MUST
+       be obtained through that mechanism or another out-of-band trust
+       anchor, never from the receipt itself; see Section 9.5.
+
+   5.  Verify the signature over the canonical bytes using the resolved
+       public key and the algorithm declared by the receipt, not an
+       algorithm assumed by the verifier; see Section 6.9.
+
+   6.  If verification succeeds, the receipt is authentic and has not
+       been tampered with.  If verification fails, the receipt MUST be
+       rejected.
+
+5.3.  Public Key Distribution
+
+   Issuers SHOULD publish their public keys as a JWK Set [RFC7517] at a
+   well-known endpoint:
+
+   GET /.well-known/acta-keys.json
+
+   {
+     "keys": [{
+       "kty": "OKP",
+       "crv": "Ed25519",
+       "kid": "sb:issuer:4Kpm7Q3wXx2b",
+       "x": "<base64url-encoded-public-key>",
+       "use": "sig"
+     }]
+   }
+
+
+
+Farley                    Expires 2 March 2027                 [Page 17]
+
+Internet-Draft            Acta Signed Receipts               August 2026
+
+
+   The x parameter MUST be the base64url-encoded Ed25519 public key as
+   specified in [RFC8037].
+
+   For offline verification, public keys MAY be distributed out-of-band
+   (e.g., embedded in configuration files, published in DNS TXT records,
+   or included in agent manifests).
+
+6.  Commitment Mode (Optional Extension)
+
+   This section defines an OPTIONAL extension that allows a receipt to
+   carry cryptographic commitments to its field values in place of (or
+   alongside) cleartext.  Selective disclosure is performed by revealing
+   inclusion proofs for individual fields.  The commitment construction
+   is SHA-256 over a salt-prefixed canonical leaf, organized into a
+   Merkle tree following [RFC6962] domain-separation conventions.
+
+   A receipt that uses commitment mode includes a single new field,
+   committed_fields_root, in its payload.  Verifiers that do not
+   recognize this field MUST ignore it when performing signature
+   verification, as the field is part of the canonical signed payload
+   but its semantics are scoped to consumers that opt into commitment
+   mode.
+
+   The Merkle tree organization is byte-identical to Certificate
+   Transparency [RFC6962], and implementations SHOULD reuse code from
+   that ecosystem.
+
+   This construction is not SD-JWT.  SD-JWT [RFC9901] achieves selective
+   disclosure with salted hashes placed in an _sd array, with no tree;
+   this extension commits to fields through an RFC 6962 Merkle tree.
+   The two are different constructions and produce different bytes.  A
+   deployment that needs selective disclosure over JWT claims, and does
+   not need a tree, SHOULD use SD-JWT rather than this extension.
+
+6.1.  Merkle Tree Construction
+
+   Implementations MUST use the following RFC 6962-style construction
+   with explicit one-byte domain separation:
+
+   leaf_hash     = SHA-256(0x00 || canonical_leaf_bytes)
+   internal_hash = SHA-256(0x01 || left_child_hash || right_child_hash)
+
+   For a list of leaf hashes D of length n:
+
+   *  If n == 1, the Merkle root is D[0].
+
+
+
+
+
+
+Farley                    Expires 2 March 2027                 [Page 18]
+
+Internet-Draft            Acta Signed Receipts               August 2026
+
+
+   *  Otherwise, let k be the largest power of two strictly less than n.
+      The root is SHA-256(0x01 || MerkleRoot(D[0..k]) ||
+      MerkleRoot(D[k..n])).
+
+   This construction handles non-power-of-two leaf counts without
+   padding by recursively splitting on the largest power of two,
+   matching [RFC6962] Section 2.1.
+
+   The committed_fields_root field MUST be the lowercase hex encoding of
+   the resulting 32-byte Merkle root.
+
+6.2.  Canonical Leaf Layout
+
+   Each leaf encodes a single committed field as a JCS [RFC8785]-
+   canonicalized JSON object:
+
+   canonical_leaf_bytes = JCS({
+     "name":  field_name,
+     "salt":  base64url_unpadded(salt_bytes),
+     "value": field_value
+   })
+
+   The name field MUST be the field's identifier within the receipt
+   payload (e.g., "principal", "action").  Including the field name in
+   the leaf binds the commitment to a specific field and prevents cross-
+   field substitution attacks.  The value field MUST be the cleartext
+   field value, preserving its original JSON type (string, number,
+   boolean, object, or array).  The salt field MUST be the base64url-
+   encoded (without padding, per [RFC4648] Section 5) byte string of the
+   salt.
+
+6.3.  Leaf Sort Order
+
+   Leaves MUST be ordered by the byte-lexicographic order of the UTF-8
+   encoded name field.  Implementations MUST NOT apply locale-aware
+   collation, case folding, or Unicode normalization.  Two
+   implementations that disagree on sort order will produce different
+   roots; this rule eliminates that source of interoperability failure.
+
+6.4.  Salt Construction and Storage
+
+   Each committed field MUST have its own salt.  Salts MUST be at least
+   16 bytes and SHOULD be 32 bytes.  Implementations SHOULD generate
+   salts using a cryptographically secure random number generator (e.g.,
+   crypto.getRandomValues in browsers, or os.urandom on POSIX).
+
+
+
+
+
+
+Farley                    Expires 2 March 2027                 [Page 19]
+
+Internet-Draft            Acta Signed Receipts               August 2026
+
+
+   Implementations MAY derive salts deterministically from a per-subject
+   master secret, but MUST ensure that erasure of one subject's master
+   secret cannot affect commitments belonging to other subjects.  The
+   simplest implementation strategy is to use a fresh random salt per
+   field per receipt; this is the RECOMMENDED default.
+
+   The salt-prefix ordering for the leaf-level hash inside the canonical
+   leaf JSON object is implementation-internal: the leaf hash is SHA-256
+   over the JCS-canonicalized object, not over a raw concatenation.
+   This sidesteps salt-ordering ambiguity entirely.
+
+   For implementations that emit a separate per-field commitment value
+   alongside the Merkle leaf (for example, in earlier draft versions or
+   in a per-field disclosure envelope), the per-field commitment MUST be
+   computed as SHA-256(salt || value_bytes) where value_bytes is the
+   UTF-8 encoding of the JSON-stringified value.  Implementations MUST
+   NOT use the reverse ordering SHA-256(value_bytes || salt); receipts
+   that do so MUST be rejected as malformed.
+
+6.5.  Selective Disclosure
+
+   To disclose a single field to a verifier, the discloser provides:
+
+   1.  The cleartext field name, value, and salt.
+
+   2.  A Merkle inclusion proof, consisting of the leaf's zero-based
+       index within the canonically-sorted leaf list, the total
+       tree_size, and the ordered list of siblings (hex-encoded SHA-256
+       hashes) along the path from the leaf to the root.
+
+   No left/right indicator is carried for each sibling, and none is
+   needed.  Because Section 6.1 fixes the split at the largest power of
+   two strictly less than the node count, the side of every sibling is
+   determined by index and tree_size alone, and a verifier MUST derive
+   it under that rule.  This is deliberate rather than an omission.  A
+   verifier that instead assumes a padded fixed-depth tree, taking the
+   side from the bits of index as is common in implementations that pad
+   the leaf count up to a power of two, agrees with this construction
+   only when the leaf count is already a power of two and diverges at
+   every other size.  For tree_size 5 and index 4 the correct path has
+   one element, while the padded derivation expects three.
+
+   The verifier reconstructs the leaf hash from the disclosed (name,
+   salt, value) tuple, walks the inclusion proof, and compares the
+   resulting root to committed_fields_root in the signed receipt.
+   Mismatch MUST cause the disclosure to be rejected.
+
+
+
+
+
+Farley                    Expires 2 March 2027                 [Page 20]
+
+Internet-Draft            Acta Signed Receipts               August 2026
+
+
+   A formal Disclosure object with recipient binding, expiry, custody
+   chain, and revocation handle is OUT OF SCOPE for this draft and is
+   deferred to a future revision.  Implementations MAY use a minimal
+   disclosure envelope of {name, value, salt, proof} in the interim.
+
+6.6.  Signature Scope (Normative Clarification)
+
+   The signature MUST cover the canonical JCS bytes of the _signing
+   input_ directly: the UTF-8 byte sequence produced by the signing
+   process in Section 5.1, used as the message input to the signature
+   algorithm with no intermediate hash.
+
+   Two receipt shapes are in use, and the signing input differs between
+   them.  An implementation MUST determine the shape before computing
+   the signing input, and MUST NOT apply one shape's rule to the other;
+   the two produce different byte strings, and crossing them causes
+   verification of correctly signed receipts to fail.
+
+   Envelope shape:  The receipt is the object shown in Section 2.1,
+      carrying exactly two members: a payload member and a signature
+      member that is an object with alg, kid, and sig.  The signing
+      input is JCS(payload): the payload member canonicalized on its
+      own, not the enclosing receipt object.
+
+   Flat shape:  The receipt carries its fields at the top level
+      alongside a signature member that is a hexadecimal string.  There
+      is no payload member to canonicalize, so the signing input is the
+      receipt object with the signature member removed, canonicalized.
+      This shape predates the envelope and remains in use; new
+      implementations SHOULD emit the envelope shape.
+
+   In both shapes the signing input excludes the signature, and in
+   neither is the signature computed over a receipt that already
+   contains one.
+
+   In either shape the object canonicalized MUST NOT contain a signature
+   member, and that member MUST NOT be included as null or as the empty
+   string; these produce different JCS output and break
+   interoperability.
+
+   The alg and kid members of the signature object are therefore not
+   covered by the signature.  A verifier resolves the key from kid
+   through the mechanisms in Section 9.5 and verification fails if
+   either member is altered, so this is not a substitution vector, but a
+   verifier MUST NOT treat either member as attested content.
+
+
+
+
+
+
+Farley                    Expires 2 March 2027                 [Page 21]
+
+Internet-Draft            Acta Signed Receipts               August 2026
+
+
+   Standard PureEdDSA [RFC8032] hashes the message internally;
+   implementations MUST NOT pre-hash the canonical bytes (for example
+   with SHA-256) before signing.
+
+6.7.  Chain Hash Scope (Normative Clarification)
+
+   The previousReceiptHash field MUST be the string "sha256:" followed
+   by the lowercase hex encoding of SHA-256(JCS(receipt)), where receipt
+   is the entire signed receipt object including the signature member.
+   For example: "sha256:6699b21fea5819eea4df...".
+
+   Two choices here are deliberate.
+
+   The preimage is the whole receipt, not its payload member.  Including
+   the signature binds the chain to specific signed bytes, so re-signing
+   an identical payload, after a key rotation for instance, produces a
+   distinct chain link and is visible as a chain event.  Hashing the
+   payload alone would make a re-signed receipt indistinguishable from
+   the original, which is the opposite of what a chain is for.
+
+   The algorithm prefix makes the digest self-describing, matching the
+   form used by policy_digest and by source.ref in Section 4.  A
+   verifier MUST reject a previousReceiptHash whose prefix names an
+   algorithm it does not implement, rather than assuming SHA-256 from
+   the length.  A bare hex digest with no prefix is the encoding used by
+   earlier revisions; verifiers MAY accept it for compatibility but MUST
+   NOT emit it.
+
+6.8.  Policy Digest Construction (Normative)
+
+   A policy_digest is only evidence if a verifier who has never
+   communicated with the evaluator can recompute it from public bytes
+   alone.  An identifier whose derivation is private relocates the self-
+   attestation problem from the decision to the policy: the verifier
+   must trust the evaluator's claim about which policy governed the
+   decision.  To close this, the digest construction is normative.
+
+   The policy digest commits to a manifest of the exact policy source
+   files:
+
+
+
+
+
+
+
+
+
+
+
+
+Farley                    Expires 2 March 2027                 [Page 22]
+
+Internet-Draft            Acta Signed Receipts               August 2026
+
+
+   M = {
+     "construction": "acta-policy-digest-v1",
+     "engine": <engine identifier, e.g. "cedar" or "builtin">,
+     "files": [
+       { "name": <file name>,
+         "sha256": <lowercase hex SHA-256 over the file's exact
+                    UTF-8 bytes> },
+       ...
+     ]  // sorted by name, code point order
+   }
+
+   policy_digest = "sha256:" || lowercase_hex(SHA-256(UTF-8(JCS(M))))
+
+   Rules:
+
+   *  Each file is hashed individually over its exact bytes.
+      Implementations MUST NOT concatenate policy sources before
+      hashing: concatenation cannot distinguish the file sets ["ab","c"]
+      and ["a","bc"], and a join delimiter only relocates the ambiguity.
+
+   *  Entries are sorted by name in code point order, so the digest is
+      independent of directory read order.  Names are included in the
+      manifest, so renames produce a distinct digest.
+
+   *  For a policy supplied as a single in-memory source rather than a
+      file, the entry name MUST be "policy.<ext>" for the engine's
+      conventional extension (for Cedar, "policy.cedar").
+
+   *  For policy expressed as structured configuration rather than
+      source files, the file bytes are the UTF-8 encoding of the JCS
+      canonical form of the policy object, under the name "policy.json".
+
+   Signature validity and policy freshness remain distinct checks: a
+   receipt whose policy_digest matches a genuinely published policy can
+   still be stale if that policy is no longer the one in force at
+   verification time.  A conformant verifier that evaluates policy
+   binding MUST compare the receipt's digest against the policy
+   currently in force, in addition to verifying the receipt signature.
+
+   Compatibility note: implementations of earlier revisions of this
+   document (protect-mcp before 0.10.0) emitted engine-specific digest
+   preimages truncated to 16 hexadecimal characters with no algorithm
+   prefix.  Verifiers SHOULD treat such values as opaque labels rather
+   than recomputable commitments.
+
+
+
+
+
+
+
+Farley                    Expires 2 March 2027                 [Page 23]
+
+Internet-Draft            Acta Signed Receipts               August 2026
+
+
+6.8.1.  Policy Publication
+
+   An issuer that wants third parties to verify which policy governed
+   its decisions publishes the policy bytes and the preimage
+   specification together, addressed by the digest itself:
+
+   https://<issuer-domain>/.well-known/acta-policies/<hex>.json
+
+   {
+     "schema": "acta.policy-bundle.v1",
+     "construction": "acta-policy-digest-v1",
+     "engine": "cedar",
+     "policy_digest": "sha256:<hex>",
+     "files": [
+       { "name": <file name>, "sha256": <hex>, "content": <string> },
+       ...
+     ],
+     "generated_at": <RFC 3339 timestamp>
+   }
+
+   where <hex> in the path is the digest value without the "sha256:"
+   prefix.  A verifier recomputes the bundle from its own bytes: hash
+   each content and compare to its sha256, construct the manifest M from
+   the (name, sha256) pairs, and compare "sha256:" || hex(SHA-
+   256(JCS(M))) to policy_digest.  No communication with the issuer
+   beyond fetching the bundle is required, and the bundle MAY equally be
+   delivered out of band.
+
+6.9.  Signature Algorithm Agility
+
+   Receipts MAY be signed with any of the following algorithms,
+   identified by their JOSE/JWS algorithm names [RFC7518]:
+
+   *  EdDSA (Ed25519, [RFC8032]): Mandatory-to-implement (MTI) baseline.
+
+   *  ML-DSA-65 (FIPS 204): RECOMMENDED for new deployments and post-
+      quantum readiness.
+
+   *  ES256 (ECDSA over P-256): Permitted for compatibility with
+      existing credentials, particularly those used in
+      [I-D.google-cfrg-libzk] ZK proof composition.
+
+   The signature object MUST contain an alg field carrying the algorithm
+   name as a string.  Verifiers MUST verify each receipt against the
+   algorithm declared in its own signature.alg field.  Chains MAY
+   contain receipts signed under different algorithms; verifiers MUST
+   handle each receipt independently.
+
+
+
+
+Farley                    Expires 2 March 2027                 [Page 24]
+
+Internet-Draft            Acta Signed Receipts               August 2026
+
+
+   The hash-based constructions in this document degrade gracefully
+   under quantum attack rather than breaking.  Grover's algorithm
+   reduces SHA-256 pre-image resistance to roughly 2^128 work, which
+   remains infeasible.  Collision resistance is already bounded at 2^128
+   classically by the birthday bound, and known quantum collision
+   methods do not improve on that at any practical memory or time cost.
+   These constructions therefore need no change.  The classical-
+   cryptography component is the outer signature, which the algorithm
+   agility above allows to be upgraded in place.
+
+6.10.  Context Binding for ZK Proofs
+
+   When a receipt's principal (or any committed field) references a
+   zero-knowledge proof produced under a separate ZK protocol (e.g.,
+   [I-D.google-cfrg-libzk]), the ZK proof MUST bind to the receipt's
+   committed_fields_root as a public input or context hash.  Without
+   this binding, a valid ZK proof is replayable into a different receipt
+   with a different committed_fields_root.
+
+   The committed-fields root serves double duty: it commits to the
+   selectively-disclosable receipt content, and it provides a
+   deterministic, signature-independent context hash that any external
+   proof system can bind against.
+
+6.11.  Test Vectors
+
+   An interoperability test suite is published alongside this draft.
+   The minimum set is:
+
+   *  A cleartext receipt with no committed_fields_root field (signature
+      and JCS output only).
+
+   *  A receipt with four committed fields: the expected Merkle root and
+      an inclusion proof for each field.
+
+   *  A chain of three receipts: the expected previousReceiptHash
+      values.
+
+   *  A tampered Merkle proof: MUST fail verification.
+
+   *  An algorithm-mixed chain (Ed25519 followed by ML-DSA-65): MUST
+      verify successfully when each receipt is checked against its own
+      algorithm.
+
+   *  A non-power-of-two leaf count (e.g., five committed fields):
+      exercises the recursive split rule.
+
+
+
+
+
+Farley                    Expires 2 March 2027                 [Page 25]
+
+Internet-Draft            Acta Signed Receipts               August 2026
+
+
+   Test vectors use fixed (non-random) salts to remain reproducible
+   across implementations.  Production deployments MUST NOT reuse the
+   test-vector salts and MUST follow the salt construction guidance in
+   Section 6.4.
+
+7.  Trust Tiers
+
+   This specification defines a four-level trust hierarchy for agent
+   identity.  Trust tiers are used by policy engines to gate tool
+   access.
+
+   unknown:  No identity presented.  Default tier for anonymous
+      connections.
+
+   signed-known:  Agent presents a valid signed manifest with a
+      verifiable Ed25519 public key.  Identity is pseudonymous but
+      consistent.
+
+   evidenced:  Agent has accumulated verifiable evidence receipts (e.g.,
+      arena battle outcomes, successful restraint records) that
+      demonstrate a track record of trustworthy behavior.
+
+   privileged:  Operator has explicitly granted elevated access.
+      Typically requires out-of-band verification (e.g., organization
+      membership, contractual agreement).
+
+   Trust tier transitions are unidirectional within a session but MAY be
+   re-evaluated across sessions based on accumulated evidence.
+
+8.  Agent Identity
+
+8.1.  Passport Manifest
+
+   An agent's identity is expressed as a signed manifest:
+
+   {
+     "type": "scopeblind:agent-manifest",
+     "id": "sb:agent:3mK9pQ7wXx2b",
+     "version": "2.1.0",
+     "previous_version": "2.0.0",
+     "created_at": "2026-03-20T10:00:00Z",
+     "public_key": "<base58-ed25519-public-key>"
+   }
+
+   Manifests are IMMUTABLE once signed.  Version changes create new
+   manifests that reference their predecessor via previous_version,
+   forming a verifiable version chain.
+
+
+
+
+Farley                    Expires 2 March 2027                 [Page 26]
+
+Internet-Draft            Acta Signed Receipts               August 2026
+
+
+8.2.  DPoP Binding (Future)
+
+   For remote MCP transports (HTTP/SSE), agent identity MAY be bound to
+   per-request proof-of-possession using DPoP [RFC9449].  The
+   auth_key_bindings field in the manifest links the agent's Ed25519
+   identity key to one or more P-256 DPoP keys.
+
+   This binding creates a verifiable delegation chain:
+
+   Operator -> Agent Identity (Ed25519) -> Request Auth (P-256 DPoP)
+
+9.  Security Considerations
+
+9.1.  Replay Protection
+
+   Receipts include an issued_at timestamp but do not include a nonce or
+   sequence number.
+
+   This guidance applies to _live presentation_: a receipt offered as
+   evidence of a currently effective authorization.  In that case
+   verifiers SHOULD reject receipts whose timestamps are unreasonably
+   old (implementation-defined; 24 hours is RECOMMENDED as a default).
+
+   It does not apply to _archival verification_: examining a receipt as
+   a record of what was authorized at some past time, which is one of
+   the purposes stated in Section 1.  Applying a freshness window there
+   would reject every receipt in an audit older than the window.  A
+   verifier performing archival verification SHOULD NOT apply one, and
+   SHOULD report the receipt's age rather than deciding on the caller's
+   behalf.
+
+   For environments requiring stronger replay protection,
+   implementations MAY add a nonce field to the payload.
+
+9.2.  Key Compromise
+
+   If an issuer's signing key is compromised, all receipts signed with
+   that key become suspect.  Issuers SHOULD implement key rotation by
+   publishing new keys at the well-known endpoint and including a
+   valid_from / valid_until window in the JWK metadata.
+
+   Verifiers SHOULD check key validity windows when available.
+
+
+
+
+
+
+
+
+
+Farley                    Expires 2 March 2027                 [Page 27]
+
+Internet-Draft            Acta Signed Receipts               August 2026
+
+
+9.3.  Payload Privacy
+
+   Receipts are designed to capture decision metadata, NOT request
+   content.  Implementations MUST NOT include raw prompts, tool
+   arguments, API keys, or other sensitive parameters in receipt
+   payloads.
+
+   The tool_name and decision fields are considered non-sensitive.  The
+   session_id field SHOULD be an opaque identifier that is not
+   correlatable across sessions.
+
+9.4.  Canonicalization Attacks
+
+   The signing process relies on JCS [RFC8785] for deterministic
+   serialization.  Implementations MUST use a conformant JCS
+   implementation to prevent canonicalization divergence attacks where
+   the signed bytes differ from the verified bytes.
+
+9.5.  Key Distribution and Trust Anchors
+
+   Receipts are designed to be verified by parties who do not trust the
+   issuer and did not observe the decision being made.  This property
+   (the "issuer-blind" property) is the basis for the third-party
+   auditability claim of this document.  The property holds only if the
+   verification key a verifier uses to check a signature is sourced
+   through a channel outside the signed payload itself.
+
+   Verifiers MUST NOT accept a verification key transported inside the
+   receipt envelope (including but not limited to fields such as
+   public_key, verification_key, verification_jwk, or any equivalent
+   name under the signed payload) unless that key is independently
+   anchored by an authenticated trust source.  An embedded key is
+   strictly controllable by any party able to produce the rest of the
+   payload; a signature that verifies under an attacker-chosen key
+   provides no authenticity guarantee against tampering and is strictly
+   worse than no signature at all, because it provides false assurance.
+
+   Conformant verifiers MUST resolve verification keys through one or
+   more of the following external mechanisms, in order of preference
+   when multiple are available:
+
+   1.  A JWK Set [RFC7517] retrieved from a URL bound to the issuer by
+       an independently authenticated trust root (e.g., a server TLS
+       certificate validated via the Web PKI, or a signed DNS record).
+
+   2.  A DID Document whose authenticity follows from the DID method's
+       own verification procedure.
+
+
+
+
+Farley                    Expires 2 March 2027                 [Page 28]
+
+Internet-Draft            Acta Signed Receipts               August 2026
+
+
+   3.  A trust anchor configured out-of-band by the verifier operator
+       (e.g., a pinned Ed25519 public key loaded from a verifier
+       configuration file).
+
+   4.  A well-known endpoint of the issuer's domain, as described in
+       Section 5.3, provided the domain binding is independently
+       authenticatable.
+
+   Verifiers SHOULD expose the externally sourced key provenance to the
+   caller (e.g., via a keySource field in structured output) so that the
+   caller can distinguish a verification anchored by --jwks from one
+   anchored by a locally configured trust anchor.  This supports defense
+   in depth when an operator layers key provenance constraints above
+   signature verification.
+
+   Implementations MAY provide a deprecated escape hatch (e.g., a
+   command-line flag) that allows acceptance of embedded keys during a
+   migration window.  Such an escape hatch MUST be off by default, MUST
+   emit a visible warning when engaged, and MUST be removed in a
+   subsequent release.  See the reference verifier
+   [I-D.verify-reference] for one such implementation.
+
+   This section was added in draft-02 in response to a public stress-
+   test of draft-01 that identified the embedded-key pattern as a
+   conformance gap.  A negative conformance test vector set
+   ([I-D.agent-governance-testvectors]) exercises the required rejection
+   behavior across representative envelope shapes (flat v1, structured
+   v2, Passport-style, full-JWK-embedded).
+
+9.6.  Verifier Identity Is Not Receipt Content
+
+   A receipt is signed by its issuer at issue time.  Nothing a verifier
+   learns or computes later can be added to it without invalidating that
+   signature.  A field describing which verifier checked a receipt
+   therefore cannot be a member of the signed payload, and a prior
+   revision of this document listed one.
+
+   Where a deployment needs to record which verifier performed a check,
+   that belongs in a separate verification report that references the
+   receipt by its hash and is signed by the verifier.  Such a report is
+   out of scope for this document.  A verifier MUST NOT add members to a
+   receipt it has verified, and a consumer MUST NOT treat any member of
+   a receipt as evidence about the party that verified it.
+
+
+
+
+
+
+
+
+Farley                    Expires 2 March 2027                 [Page 29]
+
+Internet-Draft            Acta Signed Receipts               August 2026
+
+
+9.7.  Chain Completeness and Truncation
+
+   A receipt chain proves that the receipts a verifier holds have not
+   been altered and have not been reordered.  It does not prove that the
+   verifier holds all of them.
+
+   Removing receipts from the end of a chain leaves every remaining link
+   and every remaining signature valid.  A verifier presented with the
+   truncated set cannot distinguish it from a complete one, because
+   nothing in the set commits to how long the set is.  This is the
+   omission most worth guarding against: the receipt an operator would
+   prefer a reviewer not to see is usually the most recent.  Removing
+   receipts from the middle is detectable, since the next receipt's
+   previousReceiptHash will not match, and that difference is easy to
+   mistake for completeness.
+
+   Detecting truncation requires a commitment, external to the chain, to
+   the number of receipts and the terminal hash at a given point, signed
+   by the issuer.  A verifier that checks a chain against such a
+   commitment can detect omission at the end; a verifier given no
+   commitment MUST NOT report the set as complete, and SHOULD report
+   that it verified integrity only.
+
+   The commitment is only worth as much as its location.  Stored
+   alongside the receipts it describes, it is deletable by whoever
+   deletes the receipts, and the truncated set verifies clean again.  It
+   constrains an issuer only once it has reached somewhere that issuer
+   cannot later rewrite.  This document does not specify that
+   destination, which depends on what infrastructure the deployment
+   already has and what an adversary controls within it.
+
+   A further property is out of scope here: these mechanisms let one
+   verifier detect omission from the set it was given, but they do not
+   establish that every verifier was given the same set.  An issuer can
+   maintain divergent histories and show each verifier a self-consistent
+   one.  Detecting that requires verifiers to compare what they were
+   shown, through a mechanism such as a witnessed or gossiped log, and
+   no construction in this document provides it.
+
+9.8.  Decisions Are Not Executions
+
+   An Access Decision Receipt attests that a policy was evaluated and
+   what it returned.  It does not attest that the action then executed,
+   that it succeeded, or what it returned.  An "allow" receipt records
+   permission, not performance, and a verifier MUST NOT read one as
+   evidence that the tool ran.
+
+
+
+
+
+Farley                    Expires 2 March 2027                 [Page 30]
+
+Internet-Draft            Acta Signed Receipts               August 2026
+
+
+   Where a deployment needs the executed fact, that is a separate post-
+   execution receipt issued after the invocation returns, binding the
+   decision it acted on to the observed outcome. tool_duration_ms and
+   sandbox_state (Section 2.2) belong to that second receipt, and their
+   presence in a receipt is what distinguishes it from a decision-time
+   one.  The value "require_approval" makes the same separation explicit
+   for held actions.
+
+   Conflating the two is a common error in receipt formats, and it fails
+   in the direction that matters: a reviewer concludes an action
+   occurred because it was permitted, or that it was blocked because no
+   execution receipt exists, when the receipt set only ever established
+   the decision.
+
+9.9.  Evidence Predicate: False Assurance
+
+   The OPTIONAL evidence field (Section 4) can make a decision LOOK
+   well-founded without being so: source.authority, source.kid, and the
+   dimension states are all under the receipt signer's control.  A
+   relying party MUST derive assurance ONLY from source.sig values it
+   verifies under out-of-band-pinned keys that are DISTINCT from the
+   receipt signer (see Section 4.3), never from the presence of
+   evidence, a plausible authority, or a matching kid.  Two forgeries
+   are defeated by the trust model, each exercised as a negative
+   reference vector ([I-D.agent-governance-testvectors]) that verifies
+   as a receipt yet corroborates nothing: a named-key forgery (a trusted
+   kid copied in with no valid sig) and self-corroboration (the signer
+   signs the claim with its own key).  An implementation that surfaces
+   evidence to a human or a downstream policy MUST visibly distinguish
+   dimensions carrying an independent, verified source.sig from those
+   that do not.
+
+10.  IANA Considerations
+
+   This document has no IANA actions.
+
+   Future versions of this specification MAY request registration of:
+
+   *  A receipt-type registry for namespaced receipt type identifiers.
+
+   *  A well-known URI suffix for /.well-known/acta-keys.json.
+
+   *  A media type for the receipt serialization defined in this
+      document.  Receipts are currently exchanged as application/json,
+      which does not let a recipient distinguish a receipt from
+      arbitrary JSON before parsing it.
+
+11.  References
+
+
+
+Farley                    Expires 2 March 2027                 [Page 31]
+
+Internet-Draft            Acta Signed Receipts               August 2026
+
+
+11.1.  Normative References
+
+   [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
+              Requirement Levels", BCP 14, RFC 2119,
+              DOI 10.17487/RFC2119, March 1997,
+              <https://www.rfc-editor.org/info/rfc2119>.
+
+   [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
+              2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
+              May 2017, <https://www.rfc-editor.org/info/rfc8174>.
+
+   [RFC8032]  Josefsson, S. and I. Liusvaara, "Edwards-Curve Digital
+              Signature Algorithm (EdDSA)", RFC 8032,
+              DOI 10.17487/RFC8032, January 2017,
+              <https://www.rfc-editor.org/info/rfc8032>.
+
+   [RFC8037]  Liusvaara, I., "CFRG Elliptic Curve Diffie-Hellman (ECDH)
+              and Signatures in JSON Object Signing and Encryption
+              (JOSE)", RFC 8037, DOI 10.17487/RFC8037, January 2017,
+              <https://www.rfc-editor.org/info/rfc8037>.
+
+   [RFC8785]  Rundgren, A., Jordan, B., and S. Erdtman, "JSON
+              Canonicalization Scheme (JCS)", RFC 8785,
+              DOI 10.17487/RFC8785, June 2020,
+              <https://www.rfc-editor.org/info/rfc8785>.
+
+   [RFC3339]  Klyne, G. and C. Newman, "Date and Time on the Internet:
+              Timestamps", RFC 3339, DOI 10.17487/RFC3339, July 2002,
+              <https://www.rfc-editor.org/info/rfc3339>.
+
+   [RFC7517]  Jones, M., "JSON Web Key (JWK)", RFC 7517,
+              DOI 10.17487/RFC7517, May 2015,
+              <https://www.rfc-editor.org/info/rfc7517>.
+
+   [RFC9449]  Fett, D., Campbell, B., Bradley, J., Lodderstedt, T.,
+              Jones, M., and D. Waite, "OAuth 2.0 Demonstrating Proof of
+              Possession (DPoP)", RFC 9449, DOI 10.17487/RFC9449,
+              September 2023, <https://www.rfc-editor.org/info/rfc9449>.
+
+   [RFC6962]  Laurie, B., Langley, A., and E. Kasper, "Certificate
+              Transparency", RFC 6962, DOI 10.17487/RFC6962, June 2013,
+              <https://www.rfc-editor.org/info/rfc6962>.
+
+   [RFC7518]  Jones, M., "JSON Web Algorithms (JWA)", RFC 7518,
+              DOI 10.17487/RFC7518, May 2015,
+              <https://www.rfc-editor.org/info/rfc7518>.
+
+
+
+
+
+Farley                    Expires 2 March 2027                 [Page 32]
+
+Internet-Draft            Acta Signed Receipts               August 2026
+
+
+   [RFC4648]  Josefsson, S., "The Base16, Base32, and Base64 Data
+              Encodings", RFC 4648, DOI 10.17487/RFC4648, October 2006,
+              <https://www.rfc-editor.org/info/rfc4648>.
+
+11.2.  Informative References
+
+   [RFC9497]  Davidson, A. and C. A. Wood, "Oblivious Pseudorandom
+              Functions (OPRFs) Using Prime-Order Groups", RFC 9497,
+              DOI 10.17487/RFC9497, December 2023,
+              <https://www.rfc-editor.org/info/rfc9497>.
+
+   [RFC9901]  Fett, D., Yasuda, K., and B. Campbell, "Selective
+              Disclosure for JSON Web Tokens (SD-JWT)", RFC 9901,
+              DOI 10.17487/RFC9901, November 2025,
+              <https://www.rfc-editor.org/info/rfc9901>.
+
+   [MCP]      "Model Context Protocol Specification", 2025,
+              <https://modelcontextprotocol.io/specification>.
+
+   [I-D.serra-mcp-discovery-uri]
+              Serra, M., "The mcp URI Scheme and MCP Server Discovery
+              Mechanism", 2026, <https://datatracker.ietf.org/doc/draft-
+              serra-mcp-discovery-uri/>.
+
+   [I-D.google-cfrg-libzk]
+              Google, "The libzk Library for Zero-Knowledge Proofs of
+              Predicates over Existing Credentials", 2026,
+              <https://datatracker.ietf.org/doc/draft-google-cfrg-
+              libzk/>.
+
+   [I-D.verify-reference]
+              Farley, T., "Veritas Acta Reference Verifier
+              (@veritasacta/verify)", 2026,
+              <https://www.npmjs.com/package/@veritasacta/verify>.
+
+   [I-D.agent-governance-testvectors]
+              Farley, T., "Agent Governance Cross-Implementation Test
+              Vectors", 2026, <https://github.com/ScopeBlind/agent-
+              governance-testvectors>.
+
+Appendix A.  Implementation Status
+
+   This section records the status of known implementations of the
+   protocol defined by this specification at the time of publication.
+
+
+
+
+
+
+
+Farley                    Expires 2 March 2027                 [Page 33]
+
+Internet-Draft            Acta Signed Receipts               August 2026
+
+
+A.1.  protect-mcp (Reference Implementation)
+
+   *  Organization: ScopeBlind
+
+   *  Implementation: https://www.npmjs.com/package/protect-mcp
+
+   *  Description: Security gateway for MCP servers with Cedar WASM
+      policy evaluation, Ed25519-signed decision receipts, and Claude
+      Code hook integration.  Supports stdio proxy mode, HTTP hook
+      server mode, shadow mode (log-only), and enforce mode.
+
+   *  Coverage: Access Decision Receipts, Restraint Receipts, Agent
+      Lifecycle Receipts, Spending Authority Receipts.
+
+   *  Licensing: MIT.
+
+   *  Version: 0.11.1.
+
+A.2.  @veritasacta/verify (Verifier)
+
+   *  Organization: Veritas Acta
+
+   *  Implementation: https://www.npmjs.com/package/@veritasacta/verify
+
+   *  Description: Standalone CLI and library for offline receipt
+      verification.  Zero runtime dependencies on ScopeBlind.
+
+   *  Coverage: All receipt types defined in this specification.
+
+   *  Licensing: Apache-2.0.
+
+A.3.  @scopeblind/passport (Identity SDK)
+
+   *  Organization: ScopeBlind
+
+   *  Implementation: https://www.npmjs.com/package/@scopeblind/passport
+
+   *  Description: Agent identity SDK for generating manifests, signing
+      receipts, and managing trust tier evidence bundles.
+
+   *  Coverage: All receipt types, manifest signing, key management.
+
+   *  Licensing: Apache-2.0.
+
+A.4.  protect-mcp-adk (Google ADK)
+
+   *  Organization: ScopeBlind
+
+
+
+
+Farley                    Expires 2 March 2027                 [Page 34]
+
+Internet-Draft            Acta Signed Receipts               August 2026
+
+
+   *  Implementation: https://pypi.org/project/protect-mcp-adk/
+
+   *  Description: Google Agent Development Kit plugin for Ed25519
+      receipt signing.  BasePlugin subclass, wraps tool calls.
+
+   *  Coverage: Access Decision Receipts.
+
+   *  Licensing: MIT.
+
+A.5.  scopeblind-pydantic-ai (Pydantic AI)
+
+   *  Organization: ScopeBlind
+
+   *  Implementation: https://pypi.org/project/scopeblind-pydantic-ai/
+
+   *  Description: Pydantic AI Capability for Ed25519 receipt signing.
+      Uses wrap_tool_execute hook for policy evaluation and signing.
+
+   *  Coverage: Access Decision Receipts.
+
+   *  Licensing: MIT.
+
+A.6.  scopeblind-llamaindex (LlamaIndex)
+
+   *  Organization: ScopeBlind
+
+   *  Implementation: https://pypi.org/project/scopeblind-llamaindex/
+
+   *  Description: LlamaIndex CallbackHandler for FUNCTION_CALL events.
+      Signs tool calls via BaseCallbackHandler, composes with other
+      handlers (Langfuse, Arize, etc.).
+
+   *  Coverage: Access Decision Receipts.
+
+   *  Licensing: MIT.
+
+A.7.  @scopeblind/vercel-ai (Vercel AI SDK)
+
+   *  Organization: ScopeBlind
+
+   *  Implementation: https://www.npmjs.com/package/@scopeblind/vercel-
+      ai
+
+   *  Description: Hooks into Vercel AI SDK's
+      experimental_onToolCallStart and experimental_onToolCallFinish for
+      per-tool-call receipt signing.
+
+   *  Coverage: Access Decision Receipts.
+
+
+
+Farley                    Expires 2 March 2027                 [Page 35]
+
+Internet-Draft            Acta Signed Receipts               August 2026
+
+
+   *  Licensing: MIT.
+
+A.8.  @scopeblind/langchain (LangChain + LangGraph)
+
+   *  Organization: ScopeBlind
+
+   *  Implementation: https://www.npmjs.com/package/@scopeblind/
+      langchain
+
+   *  Description: Evidence wrapper for LangChain tool calls and
+      LangGraph node transitions.  Produces decision/execution/outcome
+      receipt DAGs.
+
+   *  Coverage: Access Decision Receipts, graph-level receipts.
+
+   *  Licensing: MIT.
+
+   *  Version: 0.2.0.
+
+A.9.  Microsoft Agent Governance Toolkit (Enterprise Consumer)
+
+   *  Organization: Microsoft
+
+   *  Implementation: https://github.com/microsoft/agent-governance-
+      toolkit
+
+   *  Description: Consumes receipts via a Cedar policy bridge (PR
+      #667), governed examples for software tool calls (PR #1159) and
+      physical attestation (PR #1168).  Not a signing implementation;
+      reads and validates receipts produced by other implementations.
+
+   *  Coverage: Access Decision Receipts (consumer-only).
+
+   *  Licensing: MIT.
+
+A.10.  AWS Cedar for Agents (WASM Policy Engine)
+
+   *  Organization: AWS / Cedar Policy
+
+   *  Implementation: https://github.com/cedar-policy/cedar-for-agents
+
+   *  Description: WASM bindings for Cedar policy evaluation in JS/TS
+      agent hosts.  SchemaGenerator (PR #64, merged) and
+      RequestGenerator (PR #73) enable Cedar-native policy evaluation
+      that produces the policy_digest field referenced in receipts.
+
+   *  Coverage: Policy evaluation inputs; does not produce receipts
+      directly.
+
+
+
+Farley                    Expires 2 March 2027                 [Page 36]
+
+Internet-Draft            Acta Signed Receipts               August 2026
+
+
+   *  Licensing: Apache-2.0.
+
+A.11.  Sigstore Rekor (Transparency Log Anchor)
+
+   *  Organization: Linux Foundation / Sigstore
+
+   *  Implementation: https://rekor.sigstore.dev
+
+   *  Description: Receipts submitted as DSSE entries to Rekor's public
+      transparency log.  Provides an independent temporal anchor: the
+      Rekor inclusion proof and signed entry timestamp prove the receipt
+      existed at a specific time without trusting the receipt operator.
+      Working proof-of-concept submitted (issue #2798).
+
+   *  Coverage: Temporal anchoring of any receipt type.
+
+   *  Notes: Uses DSSE envelope with payloadType "application/
+      vnd.scopeblind.receipt+json".  Ed25519ph (prehash variant)
+      required for the alternative hashedrekord entry type.
+
+Appendix B.  Example: Complete Verification Flow
+
+   The following example demonstrates end-to-end receipt creation and
+   verification.
+
+B.1.  Step 1: Generate Issuer Keys
+
+   import { generateIssuerKey } from '@scopeblind/passport';
+   const issuer = generateIssuerKey();
+   // issuer.issuerId = "sb:issuer:4Kpm7Q3wXx2b"
+
+B.2.  Step 2: Sign a Receipt
+
+   import { signReceipt } from '@scopeblind/passport';
+
+   const receipt = signReceipt(
+     {
+       type: "protectmcp:decision",
+       tool_name: "deploy",
+       decision: "allow",
+       agent_tier: "privileged",
+       policy_digest: "sha256:a8f3...c91e",
+       issued_at: "2026-03-22T14:32:06.551Z",
+       issuer_id: issuer.issuerId
+     },
+     issuer.secretKeyHex,
+     issuer.issuerId
+   );
+
+
+
+Farley                    Expires 2 March 2027                 [Page 37]
+
+Internet-Draft            Acta Signed Receipts               August 2026
+
+
+B.3.  Step 3: Verify (CLI)
+
+   $ npx @veritasacta/verify receipt.json --key issuer-public.json
+   [ok] Signature valid
+   [ok] Issuer: sb:issuer:4Kpm7Q3wXx2b
+   [ok] Decision: allow (deploy)
+   [ok] Issued: 2026-03-22T14:32:06.551Z
+
+Appendix C.  Changes from -02
+
+   *  New normative section Section 6.8: the policy digest construction
+      (acta-policy-digest-v1) is specified rather than implementation-
+      defined, with a per-file-hash manifest that avoids concatenation
+      ambiguity, and a compatibility note for pre-0.10.0 truncated
+      digests.
+
+   *  New section Section 6.8.1: the acta.policy-bundle.v1 publication
+      format at .well-known/acta-policies/<hex>.json, recomputable from
+      the bundle bytes alone.
+
+   *  Access decision receipts: "require_approval" added to the decision
+      value set for actions held pending human approval.
+
+   *  New OPTIONAL predicate Section 4: records the evidentiary basis a
+      decision rested on (dimension, state, source, and an optional
+      as_of), additive and ignorable by existing verifiers.  Section 4.3
+      states the condition under which a dimension counts as independent
+      corroboration, and Section 9.9 records the false-assurance risk:
+      every field is inside the payload the receipt signer controls, so
+      a named authority or key id is not proof that the named authority
+      attested anything.
+
+   *  Section 6.7: previousReceiptHash carries an explicit "sha256:"
+      prefix, matching policy_digest and source.ref rather than being
+      the one bare digest in the document, and the preimage is stated as
+      the whole receipt with its signature.  Implementations differed on
+      both points: some hashed the payload alone, which cannot
+      distinguish a re-signed receipt from the original, and some
+      encoded as base64url.  The bare-hex form is accepted for
+      compatibility and no longer emitted.
+
+   *  Section 2.2: verifier_sigil is removed.  It described the verifier
+      that checked a receipt but was listed as a signed payload member,
+      which cannot be produced: the issuer signs the payload before any
+      verifier sees it.  See Section 9.6.
+
+
+
+
+
+
+Farley                    Expires 2 March 2027                 [Page 38]
+
+Internet-Draft            Acta Signed Receipts               August 2026
+
+
+   *  Section 2.1: names the envelope as the shape new implementations
+      emit and points at the flat shape, rather than presenting one
+      shape as the only receipt and introducing the second later.
+
+   *  Section 5.2: the procedure no longer assumes the envelope in the
+      steps around the signing input.  It extracted a payload member a
+      flat receipt does not have, read the key identifier from a
+      signature object a flat receipt does not have, and named Ed25519
+      in a document that permits ES256.
+
+   *  Section 6: removed a claim that the leaf construction is byte-
+      identical to SD-JWT.  It is not.  SD-JWT ([RFC9901], which also
+      replaces a citation to an expired draft) uses salted hashes in an
+      _sd array with no tree, while this builds an RFC 6962 Merkle tree.
+      Deployments that need selective disclosure over JWT claims and no
+      tree are now pointed at SD-JWT instead.
+
+   *  Section 6.9: corrected the post-quantum paragraph, which claimed
+      SHA-256 gives 128-bit security against quantum collision attacks.
+      Collision resistance is already 128-bit classically by the
+      birthday bound; Grover applies to pre-image.
+
+   *  Corrected the receipt type count, which said four and listed six;
+      added the missing normative references for [RFC2119], [RFC8174]
+      and [RFC9497]; removed a reference to a policy_id field this
+      document does not define.
+
+   *  New Section 9.7: a chain proves no alteration and no reordering,
+      not that the verifier holds every receipt.  Truncating the newest
+      receipts leaves all remaining links and signatures valid,
+      detecting it requires an external commitment to count and terminal
+      hash, and that commitment constrains an issuer only once it
+      reaches somewhere the issuer cannot rewrite.  Records non-
+      equivocation as out of scope rather than implied.
+
+   *  New Section 9.8: a decision receipt attests policy evaluation, not
+      that the action executed.  Names the post-execution receipt as the
+      separate artifact and identifies the fields that distinguish one
+      from the other, a distinction the prior text carried only in a
+      single field description.
+
+   *  Section 2.2: evidence and committed_fields_root are listed in the
+      common payload table.  Both were defined in their own sections and
+      appeared in no field table, the same omission reported against
+      previousReceiptHash.  The table's scope is now stated, so a member
+      defined elsewhere that may appear in any payload type is listed
+      there.
+
+
+
+
+Farley                    Expires 2 March 2027                 [Page 39]
+
+Internet-Draft            Acta Signed Receipts               August 2026
+
+
+   *  Section 4.1: source.sig is no longer pinned to Ed25519 at a fixed
+      length.  It takes an OPTIONAL alg defaulting to "EdDSA", and its
+      encoded length derives from that algorithm.  The prior text would
+      have excluded an attesting authority holding P-256 keys, including
+      implementations of the ES256 profile this document already permits
+      for receipt signatures.
+
+   *  Section 4.2: specifies how evidence composes with Section 6.  The
+      unit of selective disclosure is the whole entry, because
+      disclosing a dimension and state without its source strips the
+      independence signal the trust model depends on.
+
+   *  Section 6.6, Section 5.1, and Section 5.2: the signing input is
+      now named once and defined in one place.  The prior text described
+      the signature as covering payload and then redefined payload mid-
+      sentence to mean the receipt with its signature removed, so the
+      two sections specified different byte strings.  The signing input
+      is the receipt without its signature member.  The verification
+      procedure carried the same defect.  Checking the deployed
+      implementations showed the two statements were not a drafting
+      error but two real receipt shapes described in one place: an
+      envelope carrying a payload member and a structured signature,
+      signed over JCS(payload), and a flat form carrying its fields at
+      the top level with a hexadecimal signature, signed over the
+      receipt minus that member.  Both are in use and both verify today.
+      Section 6.6 now defines the shapes separately and requires an
+      implementation to determine the shape before computing the signing
+      input.
+
+   *  Section 2.2: previousReceiptHash is listed as an optional payload
+      member with its cardinality and genesis behaviour, having
+      previously been defined only inside the optional commitment
+      extension and listed in no field table.
+
+   *  Section 2.1.1: the fixed 128-character signature length is removed
+      and the algorithm list defers to Section 6.9.  The prior text
+      pinned an Ed25519-sized encoding that the agility section's own
+      recommended algorithms cannot satisfy.
+
+   *  Section 6.5: states that the sibling side in an inclusion proof is
+      derived from index and tree_size under the split rule and is
+      deliberately not carried, so implementers do not assume a padded
+      fixed-depth tree and diverge on non-power-of-two trees.
+
+   *  Section 9.1: the freshness window is scoped to live presentation
+      and explicitly does not apply to archival verification, which it
+      would otherwise have rejected wholesale.
+
+
+
+
+Farley                    Expires 2 March 2027                 [Page 40]
+
+Internet-Draft            Acta Signed Receipts               August 2026
+
+
+   *  Change-log appendices: corrected a crossed anchor and an appendix
+      that named the wrong source revision.
+
+Appendix D.  Changes from -01
+
+   This section summarizes the changes from draft-farley-acta-signed-
+   receipts-01.
+
+   action_ref:  Added action_ref as an OPTIONAL common payload field
+      (Section 2.2).  Provides a normative cross-engine correlation
+      anchor computed as SHA-256 of the JCS-canonicalized action inputs.
+      Enables bilateral verification across independent governance
+      engines evaluating the same action.  Motivated by successful
+      composition testing between ScopeBlind Cedar and Agent Passport
+      System delegation engines, where 8 receipts from 2 engines
+      verified against a single action reference.
+
+   verifier_sigil:  Added verifier_sigil as an OPTIONAL common payload
+      field (Section 2.2).  Carries the fingerprint of the Sigil
+      commitment on the verifier that checked the receipt.  Enables
+      downstream consumers to distinguish receipts verified by the
+      canonical @veritasacta/verify from those verified by forks or
+      modified copies.  Produced at verification time, not at signing
+      time.
+
+   iteration_id:  Added iteration_id as an OPTIONAL common payload field
+      (Section 2.2).  Supports behavioral analysis of multi-step agent
+      workflows by providing a logical grouping identifier.  Designed
+      for optimization loops, multi-round deliberations, and meta-agent
+      modification chains.  Agent-declared, covered by the receipt
+      signature for tamper evidence but not a security boundary.
+
+   ES256 algorithm support:  Updated the alg field specification
+      (Section 2.1.1) to permit "ES256" (ECDSA with P-256 and SHA-256)
+      as an additional supported algorithm alongside the mandatory-to-
+      implement "EdDSA" (Ed25519).  Motivated by ecosystem providers
+      (compliance risk attestation, multi-attestation envelopes) that
+      use P-256 keys natively.
+
+   Transparency log anchoring:  Documented Sigstore Rekor as an OPTIONAL
+      temporal anchor for receipts.  Receipts wrapped in DSSE envelopes
+      (payloadType "application/vnd.scopeblind.receipt+json") can be
+      submitted to Rekor's public transparency log.  The Rekor inclusion
+      proof provides an independent timestamp from the Linux
+      Foundation's append-only log, giving receipts a second
+      verification path beyond the signer's Ed25519 key.  Motivated by
+      the need to prevent operators from backdating receipts.
+
+
+
+
+Farley                    Expires 2 March 2027                 [Page 41]
+
+Internet-Draft            Acta Signed Receipts               August 2026
+
+
+   Physical attestation use case:  Extended the specification's
+      applicability from software agent tool calls to physical sensor
+      attestation.  A cold chain attestation sensor (ATECC608B secure
+      element, SHT40 temp, LIS2DH12 accel, L76K GPS, VEML7700 lux)
+      produces receipts using the same format, same canonicalization,
+      and same verification CLI as software agent receipts.
+      Demonstrates that the receipt format is domain-agnostic: the same
+      envelope carries software decisions and physical-world
+      observations.
+
+   SLSA provenance mapping:  Documented field-by-field correspondence
+      between receipt payload fields and SLSA v1.0 provenance
+      predicates.  When an AI agent builds software and protect-mcp
+      generates a signed receipt chain, the chain constitutes build
+      provenance at SLSA L1/L2.  The policy_digest field provides
+      governance metadata that standard SLSA provenance does not carry.
+
+   Implementation count:  Updated from 3 implementations (protect-mcp,
+      verify, passport) to 11 implementations across 8 frameworks, 4
+      enterprise ecosystems (Microsoft AGT, AWS Cedar, Linux Foundation
+      Sigstore, OWASP DependencyTrack), and 2 registries (npm, PyPI).
+      Combined monthly downloads exceed 10,000.
+
+Appendix E.  Acknowledgements
+
+   The Acta receipt format was developed as part of the Veritas Acta
+   protocol, an infrastructure for verifiable machine decision-making.
+   The design draws on work in the IETF OAuth and Web Authentication
+   communities, particularly RFC 9449 (DPoP) for proof-of-possession
+   patterns and RFC 8785 (JCS) for deterministic serialization.
+
+   The evidence predicate in Section 4 originated in a proposal from
+   Seydou Diaby of UseTruth, who identified that a receipt records which
+   decision was made but not the basis it rested on, and who contributed
+   the closed value sets and the structured source object.  The
+   requirement that the attesting key be independent of the receipt
+   signer, and the false-assurance analysis that follows from it, were
+   developed jointly.
+
+   Thanks to Michael Msebenzi for a detailed errata review of the -02
+   revision, conducted by building an independent verifier and
+   recomputing against pinned bytes.  That review identified the
+   signing-scope contradiction between Sections 2.2, 4.1 and 5.6, the
+   unspecified location and lifecycle of previousReceiptHash, the
+   conflict between the fixed signature length and algorithm agility,
+   the freshness window's effect on archival verification, the absent
+   note on deriving sibling side in inclusion proofs, and errors in the
+   change-log appendices.  All are addressed in this revision.
+
+
+
+Farley                    Expires 2 March 2027                 [Page 42]
+
+Internet-Draft            Acta Signed Receipts               August 2026
+
+
+   Thanks to Sam Gardner for identifying an inconsistency in the
+   signature preimage definition in the -01 revision, where the
+   signature scope section described signing over SHA-256(JCS(payload))
+   while the signature object and the signing and verification
+   procedures signed over the canonical JCS bytes directly.  The
+   signature scope section (Section 6.6) was corrected in -02 to match
+   the signing process (Section 5.1).  Sections are named rather than
+   numbered here because the numbering has changed across revisions.
+
+   The action_ref normative definition was developed in collaboration
+   with the Agent Passport System project.  The verifier_sigil mechanism
+   was motivated by the Sigil visual commitment primitive.  The
+   iteration_id field was proposed by contributors to the HyperAgents
+   safety policy discussion.  Cross-engine composition testing was
+   performed against receipts from ScopeBlind (Cedar policy), Agent
+   Passport System (delegation scope), and AgentID (identity
+   verification).
+
+   The Rekor transparency log integration was informed by feedback from
+   Hayden-IO (Sigstore contributor), who clarified the Ed25519ph
+   requirement for hashedrekord entries and confirmed DSSE as the
+   recommended entry type for Ed25519-signed attestations.
+
+   The physical attestation extension was motivated by the Australian
+   Emerging Technology Commercialisation Fund (ETCF) grant program and
+   by discussions on Microsoft Agent Governance Toolkit issue #787
+   (Physical AI agents: OWASP coverage gap for robotic/actuator systems)
+   with contributions from SINT Protocol (physical constraint
+   enforcement) and the agent-governance-vocabulary project
+   (context_dimensions for physical-world policy attributes).
+
+   The SLSA provenance mapping was proposed in collaboration with the
+   SLSA framework specification community (issue #1606).
+
+Author's Address
+
+   Tom Farley
+   ScopeBlind (Veritas Acta)
+   Email: tom@scopeblind.com
+
+
+
+
+
+
+
+
+
+
+
+
+Farley                    Expires 2 March 2027                 [Page 43]

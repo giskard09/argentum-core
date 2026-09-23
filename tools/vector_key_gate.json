@@ -1,0 +1,12 @@
+{
+  "description": "Vector sets whose fixtures declare to be payloads of an external schema. Each is checked by tools/check_vector_keys.py against a vendored, hash-pinned copy of that spec. Changing the spec revision is an explicit commit (new file + new spec_sha256).",
+  "sets": [
+    {
+      "vectors": "examples/conformance/farley-receipt-signature",
+      "spec": "docs/spec/vendor/draft-farley-acta-signed-receipts-03.txt",
+      "spec_source": "https://www.ietf.org/archive/id/draft-farley-acta-signed-receipts-03.txt",
+      "spec_sha256": "bcde71799a621305254ea8b442fc829ac6d65fcff039f365e8a2349d8e902f19",
+      "exclude": ["index.json"]
+    }
+  ]
+}

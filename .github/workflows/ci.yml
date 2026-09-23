@@ -73,6 +73,10 @@ jobs:
             echo "No tests — skipping"
           fi
 
+      - name: Vector key gate — no invented fields in external-schema vectors
+        run: |
+          python tools/check_vector_keys.py
+
       - name: Secret scan — gitleaks
         uses: gitleaks/gitleaks-action@v2
         env:
