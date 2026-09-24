@@ -64,7 +64,32 @@ Once the root is on-chain, the operator can no longer serve a history shorter th
 
 ## Verification
 
-Input: the agent's records from seq 1 in presented order, and optionally a checkpoint with its Merkle proof and the period root.
+Input: the agent's records from seq 1 in presented order, and optionally a checkpoint with its Merkle proof and the period root. A log presented from seq k > 1 is a window: see [Window verification](#window-verification) for the extra input and results.
+
+Verifier input and result (names as in the reference module and the vectors):
+
+```
+input = {
+  "entries":      [<record>, ...],        -- presented order
+  "from_seq":     <integer >= 1>          -- 1 (default) for a full log, k for a window
+  "checkpoint":   <checkpoint>,           -- OPTIONAL, completeness
+  "proof":        [<hex>, ...],           -- its Merkle proof
+  "root":         <hex>,                  -- its period root
+  "anchor":       <checkpoint at k-1>,    -- OPTIONAL, window only
+  "anchor_proof": [<hex>, ...],
+  "anchor_root":  <hex>
+}
+result = {
+  "verdict":        <see the tables>,
+  "completeness":   "proven" | "proven_through_checkpoint" | "proven_from_seq"
+                    | "proven_from_seq_through_checkpoint" | "not_evaluated" | "failed",
+  "reason":         <see the tables, null on a positive verdict>,
+  "at_seq":         <seq where the failure was seen, or null>,
+  "from_seq":       <k>,                  -- every result that reaches check 4
+  "window_anchor":  "genesis" | "certified" | "uncertified",
+  "root_anchoring": "not_checked"
+}
+```
 
 Checks run in this order; the first failure decides the verdict. Each failure has its own `verdict`/`reason`, so a verifier reports *which* attack it saw, not only that it rejected.
 
@@ -75,7 +100,8 @@ Checks run in this order; the first failure decides the verdict. Each failure ha
 | 2b | Each seq is the previous seq + 1 (a removed record leaves a gap) | `broken` | `seq_gap` |
 | 2c | Each `head` recomputes from its own fields | `broken` | `head_mismatch` |
 | 2d | Each `prev_head` equals the previous record's `head` (a removed record with the next one renumbered and re-hashed) | `broken` | `link_mismatch` |
-| 3 | If any record carries `agent_seq`, all do, starting at 1 with no gaps | `agent_gap` | `agent_seq_partial`, `agent_seq_not_contiguous` |
+| 2e | Window only: the anchor is well formed, is for this agent, is included in its root, and is at seq k-1; the first record's `prev_head` equals its `head` | `anchor_unproven` / `anchor_mismatch` | `anchor_shape`, `anchor_other_agent`, `anchor_not_in_root`, `anchor_not_adjacent` / `prev_head_differs_from_anchor` |
+| 3 | If any record carries `agent_seq`, all do, starting at 1 (window: any start) with no gaps | `agent_gap` | `agent_seq_partial`, `agent_seq_not_contiguous` |
 | 4 | A checkpoint was supplied | `continuity_only` (completeness `not_evaluated`) | `no_checkpoint` |
 | 5 | The checkpoint is well formed (`malformed`, `checkpoint_shape`), is for this agent, and its digest is included in the root | `checkpoint_unproven` | `checkpoint_other_agent`, `not_in_root` |
 | 6 | The checkpoint is not older than the verifier's bound (optional) | `stale_checkpoint` | `checkpoint_too_old` |
@@ -89,7 +115,33 @@ Positive verdicts:
 | `complete` | `proven` | The log ends exactly at the checkpoint. |
 | `complete_unsealed_tail` | `proven_through_checkpoint` | Complete up to the checkpoint; the records after it are continuous but not yet externally witnessed. |
 
+A window gets `window_complete` (`proven_from_seq`) and `window_complete_unsealed_tail` (`proven_from_seq_through_checkpoint`) instead: see below.
+
 `continuity_only` is **not** a pass for completeness. A verifier that has no checkpoint knows the log was not altered internally and nothing about whether it is whole; it MUST report completeness as `not_evaluated`, never fold it into a positive result.
+
+---
+
+## Window verification
+
+A verifier may be given only part of a log: the records from seq k > 1 on, for example the entries of one session. The first record of a window carries a `prev_head` that points outside it. Nothing in the window can certify that value: it comes from the records, and the records are what is being checked. Whoever rewrites a window can re-chain it from any `prev_head` it chooses, and the result has the same internal structure as the honest window.
+
+The caller declares the window (`from_seq = k`). A verifier never infers it from the lowest seq presented: a full log missing its first records is a `seq_gap` at the first seq present, not a window.
+
+Optional extra input: an **anchor**, a checkpoint at seq k-1 with its Merkle proof and period root. It is checked like the completeness checkpoint (shape, agent, inclusion; check 2e), and the caller takes it from the anchor stream, as for any checkpoint, never from whoever presents the window. It must be at seq k-1 exactly (`anchor_not_adjacent` otherwise) and the first record's `prev_head` must equal its `head` (`anchor_mismatch`, `prev_head_differs_from_anchor`).
+
+Continuity (checks 2a-2d) runs from seq k. `agent_seq`, if present, must be contiguous inside the window; its starting value is not checked, since the anchor does not carry it. Every result that reaches check 4 reports its scope: `from_seq` and `window_anchor`, one of `genesis` (k = 1), `certified` (an anchor was checked) or `uncertified` (a window without an anchor).
+
+| Input | Completeness result |
+|-------|---------------------|
+| No completeness checkpoint | `continuity_only`, `not_evaluated`, whatever the anchor. With an uncertified start, a window re-chained from a chosen `prev_head` is indistinguishable from the honest one; `window_anchor: "uncertified"` says so. |
+| Checkpoint older than the window (its seq < k) | `continuity_only`, `not_evaluated`, reason `checkpoint_before_window`: nothing presented is sealed. |
+| Checkpoint at seq >= k | Checks 7 and 8 against the window; if both hold, `window_complete` / `window_complete_unsealed_tail`. |
+
+A matching checkpoint head at seq c >= k commits, through the chain, to every window record up to c **and** to the window's first `prev_head`, so it certifies the start transitively even without an anchor. It says nothing about seq < k. That is why a window never gets `complete`: its positive verdicts are separate (`proven_from_seq`, `proven_from_seq_through_checkpoint`) and carry `from_seq`, so a reader cannot take them for a result about the whole log.
+
+The anchor matters when there is no completeness checkpoint for the window (the window is newer than the last seal): it is then the only thing that catches a rewrite that also moved the start.
+
+*Added 2026-09-24:* surfaced by an internal cross-check against independent session-chain data verified from a mid-log entry. Earlier text defined verification only from seq 1. Existing results for full logs are unchanged; they now also report `from_seq: 1` and `window_anchor: "genesis"`. Vectors: `examples/conformance/trail-head-window-ref/`.
 
 ---
 
@@ -109,6 +161,7 @@ This answers the independence question from autogen#7353 only under one conditio
 
 - **That the root was anchored.** The module verifies inclusion in the root it is given (`root_anchoring: "not_checked"` in every result). The caller confirms the root on-chain with an AnchorRegistry query, as for any batch root.
 - **That the checkpoint is the latest one.** Whoever presents the log could present an old checkpoint to hide a later truncation. The verifier MUST take the checkpoint from the anchor stream for the most recent period, not from the presenter. The optional staleness bound (check 6) limits how old an accepted checkpoint may be; it does not replace fetching the latest one.
+- **That a window without an anchor or a checkpoint starts where the log really was.** Its start is `uncertified` and reported as such (see [Window verification](#window-verification)).
 - **Anything between the last checkpoint and now.** Records after the last seal are continuous but unwitnessed (`complete_unsealed_tail`). The period length is the window in which a tail cut is undetectable.
 - **Actions never submitted.** Without `agent_seq`, an action the agent never sent, or one the operator dropped at ingest, leaves no trace. With `agent_seq`, only actions the agent itself signed are covered, and a drop of the agent's latest actions is visible only against the agent's own last counter.
 - **The meaning or legitimacy of any record.** Same limits as [batch-anchor.md](batch-anchor.md) and [action-ref.md](action-ref.md).
