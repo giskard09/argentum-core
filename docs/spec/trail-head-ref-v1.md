@@ -99,7 +99,9 @@ The checkpoint witnesses what the operator wrote. It cannot show an action the o
 
 To close that, the agent MAY carry its own counter, `agent_seq`, inside the request it signs with its own key (Ed25519, verified at ingest as for any trail). The operator copies it into the entry preimage. A verifier that sees `agent_seq` on every record, starting at 1 with no gaps, knows that no signed action *between the first and the last one presented* was dropped before reaching the log; a gap is reported as `agent_gap`. A drop at the tail (the agent's most recent signed actions) leaves the remaining counters contiguous: only the agent, which knows its own last `agent_seq`, can see it, or a verifier that obtains that value from the agent.
 
-This answers the independence question from autogen#7353: the count is signed by the agent's key, which the operator does not hold, so whoever can rewrite the log cannot re-sign the count. The reference module checks the sequence of `agent_seq` values it is given; checking the agent's signature over each one is the ingest step's job and is out of scope here.
+This answers the independence question from autogen#7353 only under one condition: the agent's key is held by a party other than the operator. Then whoever can rewrite the log cannot re-sign the count. If the operator holds both keys, it can drop a record and re-sign a gapless count, so `agent_seq` adds no independence and completeness rests on the anchored checkpoint alone. The spec cannot establish who holds the agent's key; a verifier that relies on `agent_seq` for independence has to establish it separately. The reference module checks the sequence of `agent_seq` values it is given; checking the agent's signature over each one is the ingest step's job and is out of scope here.
+
+*Correction (2026-09-24):* the previous text stated as a fact that the operator does not hold the agent's key. That holds only in deployments where a different party holds it; the paragraph above now states it as a condition. No code or vector changes.
 
 ---
 
