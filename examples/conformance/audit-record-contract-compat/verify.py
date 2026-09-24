@@ -181,7 +181,7 @@ def vector_3_boundary_anchoring() -> bool:
     print("=" * 78)
 
     chain_head_hash = "f733fed9cc757165f810b778e4baba1f51a45504988e937707aaab4361b2f064"
-    outcome_ts_ms = 1749211200000  # 2026-06-06T12:00:00.000Z, from the record's occurred_at
+    outcome_ts_ms = 1780747200000  # 2026-06-06T12:00:00.000Z, from the record's occurred_at
 
     # existence_only: an external anchor for this chain head exists, but arrives
     # AFTER the outcome it would need to attest to. SEP §2.8: "addresses a
@@ -189,7 +189,7 @@ def vector_3_boundary_anchoring() -> bool:
     # construction" -- existence alone does not establish WHEN relative to the
     # outcome.
     existence_only = {
-        "anchor_block_time": 1749211500,  # 300s AFTER outcome_ts_ms/1000
+        "anchor_block_time": 1780747500,  # 300s AFTER outcome_ts_ms/1000
         "outcome_ts_ms": outcome_ts_ms,
         "chain_head": chain_head_hash,
     }
@@ -205,7 +205,7 @@ def vector_3_boundary_anchoring() -> bool:
 
     # precedence: anchor strictly before the outcome.
     precedence = {
-        "anchor_block_time": 1749211100,  # 100s BEFORE outcome_ts_ms/1000
+        "anchor_block_time": 1780747100,  # 100s BEFORE outcome_ts_ms/1000
         "outcome_ts_ms": outcome_ts_ms,
         "chain_head": chain_head_hash,
     }
