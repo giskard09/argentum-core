@@ -1,0 +1,82 @@
+{
+  "spec_version": "host-capability-ref-v1",
+  "description": "A valid profile algorithm the host may lack. `expected` lists every verdict a conformant verifier may return on some host; `expected_by_host` is what the reference verifier returns with and without bip340-schnorr-secp256k1.",
+  "vectors": [
+    {
+      "id": "hc-001-valid-signature",
+      "description": "Valid BIP-340 signature over the declared canonical bytes. A host without the algorithm cannot confirm it and must not reject it.",
+      "expected": [
+        "PASS",
+        "NOT_ASSESSED"
+      ],
+      "expected_by_host": {
+        "capable": "PASS",
+        "incapable": "NOT_ASSESSED"
+      },
+      "artifact": {
+        "preimage": {
+          "schema": "host-capability-ref.v1",
+          "subject": "example",
+          "issued_at": "2026-09-24T12:00:00.000Z"
+        },
+        "preimage_jcs": "{\"issued_at\":\"2026-09-24T12:00:00.000Z\",\"schema\":\"host-capability-ref.v1\",\"subject\":\"example\"}",
+        "signature": {
+          "scheme": "bip340-schnorr-secp256k1",
+          "pubkey_x_only": "b65bb910f5b485dc378a3da45df259b5924ee5524370065944dfb199a90ca091",
+          "sig": "ed2119cfdfecc36414dfbebb6188f430c42ffef1e1fe197e5355302ceec923b94094b7b61529c409671414ae0db87511db428a517201d8d020ba62fb3350dd71"
+        }
+      }
+    },
+    {
+      "id": "hc-002-invalid-signature",
+      "description": "Canonical bytes match, signature corrupted. Only a host with the algorithm can see it; one without must not accept it.",
+      "expected": [
+        "FAIL",
+        "NOT_ASSESSED"
+      ],
+      "expected_by_host": {
+        "capable": "FAIL",
+        "incapable": "NOT_ASSESSED"
+      },
+      "failure_mode": "signature_invalid",
+      "artifact": {
+        "preimage": {
+          "schema": "host-capability-ref.v1",
+          "subject": "example",
+          "issued_at": "2026-09-24T12:00:00.000Z"
+        },
+        "preimage_jcs": "{\"issued_at\":\"2026-09-24T12:00:00.000Z\",\"schema\":\"host-capability-ref.v1\",\"subject\":\"example\"}",
+        "signature": {
+          "scheme": "bip340-schnorr-secp256k1",
+          "pubkey_x_only": "b65bb910f5b485dc378a3da45df259b5924ee5524370065944dfb199a90ca091",
+          "sig": "ec2119cfdfecc36414dfbebb6188f430c42ffef1e1fe197e5355302ceec923b94094b7b61529c409671414ae0db87511db428a517201d8d020ba62fb3350dd71"
+        }
+      }
+    },
+    {
+      "id": "hc-003-mixed-preimage-mismatch",
+      "description": "The preimage was altered after signing: JCS(preimage) no longer matches preimage_jcs. Any host sees that without the algorithm, so the missing capability does not soften it.",
+      "expected": [
+        "FAIL"
+      ],
+      "expected_by_host": {
+        "capable": "FAIL",
+        "incapable": "FAIL"
+      },
+      "failure_mode": "preimage_jcs_mismatch",
+      "artifact": {
+        "preimage": {
+          "schema": "host-capability-ref.v1",
+          "subject": "example-altered",
+          "issued_at": "2026-09-24T12:00:00.000Z"
+        },
+        "preimage_jcs": "{\"issued_at\":\"2026-09-24T12:00:00.000Z\",\"schema\":\"host-capability-ref.v1\",\"subject\":\"example\"}",
+        "signature": {
+          "scheme": "bip340-schnorr-secp256k1",
+          "pubkey_x_only": "b65bb910f5b485dc378a3da45df259b5924ee5524370065944dfb199a90ca091",
+          "sig": "ed2119cfdfecc36414dfbebb6188f430c42ffef1e1fe197e5355302ceec923b94094b7b61529c409671414ae0db87511db428a517201d8d020ba62fb3350dd71"
+        }
+      }
+    }
+  ]
+}
