@@ -14,21 +14,25 @@ Receipt-signature vectors for [draft-farley-acta-signed-receipts-03](https://dat
 | `superseded-key.reject.json` | REJECT `key_outside_validity_window` | SHOULD (§9.2) | Valid signature under key A, but `issued_at` is after key A's `valid_until`. |
 | `superseded-key.conformant.json` | ACCEPT | SHOULD (§9.2) | Minimal pair: same key A, `issued_at` inside the window. `issued_at` is the only difference. |
 
+The two `superseded-key` vectors test a SHOULD, so `index.json` gives them a second outcome, `expected_if_not_honoured` (`ACCEPT` for both). `expected` is the verdict from a verifier that applies the §9.2 windows. `expected_if_not_honoured` is the verdict from one that does not implement the check or was not given the windows, which §9.2 permits ("when available"). A run declares which case it is in and is scored against that outcome. This keeps "does not implement §9.2" apart from "implements §9.2 and gets it wrong". The MUST vectors have one outcome only.
+
 The window check has a limit. `issued_at` is asserted by the signer, so the check catches a key that is still in use after an honest rotation. It does not catch a compromised key whose holder backdates `issued_at` into the window.
 
 ## Run
 
 ```
-python3 examples/conformance/farley-receipt-signature/verify.py   # exit 0 iff all four match index.json
+python3 examples/conformance/farley-receipt-signature/verify.py                    # windows honoured; exit 0 iff all four match index.json
+python3 examples/conformance/farley-receipt-signature/verify.py --no-key-windows   # windows withheld; SHOULD vectors scored against expected_if_not_honoured
 python3 examples/conformance/farley-receipt-signature/build.py    # regenerates the files byte for byte
 ```
 
-CI runs `tests/test_farley_receipt_vectors.py`. It checks five things:
+CI runs `tests/test_farley_receipt_vectors.py`. It checks six things:
 
 - every vector matches `index.json`;
 - every signature verifies over the `signed_input_hex` that `index.json` publishes for it, and only `signature-input-drift.reject` was signed over something other than `JCS(payload)` (Python `json.dumps(payload, indent=2)`), so a re-run can check why a reject fails, not only that it does;
 - `build.py` regenerates the files byte for byte;
 - the superseded-key pair differs only in `issued_at`;
+- the SHOULD vectors pass in both runs, only they carry `expected_if_not_honoured`, and a verifier that skips the windows while the run declares them honoured still fails, on `superseded-key.reject` only;
 - `verify.py` refuses mutated receipts: wrong envelope shape, `alg`, a signature inside the signing input, tampering, missing field, bad encoding, and a mismatch between `kid` and `issuer_id`.
 
 ## Observed: @veritasacta/verify 0.10.19
@@ -42,4 +46,4 @@ Run with `--jwks ./jwks.json --mode receipt` (0.10.19 was the latest npm release
 | `superseded-key.reject.json` | **`valid: true`** |
 | `superseded-key.conformant.json` | `valid: true` |
 
-In the JWKS path for receipts (`src/util/jwks.js`, `resolveFromJwks`), the key is matched by `kid` and checked for `kty`/`crv`. `valid_from`/`valid_until` are not read. The same package does check validity windows in another path, the claims-v211 key registry (`src/engines/claims-v211.js:348`), so the concept exists in the package but not in the receipt JWKS path. §9.2 is a SHOULD, so this is a gap and not a violation of a MUST.
+In the JWKS path for receipts (`src/util/jwks.js`, `resolveFromJwks`), the key is matched by `kid` and checked for `kty`/`crv`. `valid_from`/`valid_until` are not read. The same package does check validity windows in another path, the claims-v211 key registry (`src/engines/claims-v211.js:348`), so the concept exists in the package but not in the receipt JWKS path. §9.2 is a SHOULD, so this is a gap and not a violation of a MUST. Scored against `expected_if_not_honoured`, 0.10.19 matches all four verdicts (re-run 2026-09-24).

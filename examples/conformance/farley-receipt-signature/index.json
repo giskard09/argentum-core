@@ -3,6 +3,7 @@
   "verification_mode": "archival (Section 9.1). A verifier applying the live-presentation freshness window (24h RECOMMENDED) would reject all four as stale; that is out of scope here.",
   "key_source": "jwks.json (external to the receipts, per Section 9.5)",
   "test_keys": "TEST ONLY. Ed25519 seeds = SHA-256('agent-evidence-vectors/test-only/' + label); see build.py",
+  "should_vectors": "A SHOULD vector carries two outcomes. expected is the verdict when the verifier honours the SHOULD with the material it needs (here: the valid_from/valid_until windows in jwks.json, Section 9.2). expected_if_not_honoured is the verdict when it does not: SHOULD is not MUST, so an ACCEPT on superseded-key.reject is conformant from a verifier that does not implement the window check or was not given the windows. A run declares which case it is in (verify.py: key_windows honoured, or --no-key-windows) and is scored against that outcome, so does-not-implement Section 9.2 stays separate from implements-it-wrong.",
   "signed_input": "signed_input_hex is the exact byte string each signature was made over, so a re-run can check why a reject fails, not only that it does. For signature-input-drift.reject it is Python json.dumps(payload, indent=2), not JCS(payload): the signature verifies over these bytes and fails over JCS(payload).",
   "vectors": [
     {
@@ -26,6 +27,7 @@
       "expected": "REJECT",
       "code": "key_outside_validity_window",
       "requirement": "SHOULD (Section 9.2)",
+      "expected_if_not_honoured": "ACCEPT",
       "note": "Valid signature under key A; issued_at is after A's valid_until. issued_at is asserted by the signer, so this catches a key used after an honest rotation, not a compromised key backdating within the window.",
       "signed_input_hex": "7b226465636973696f6e223a22616c6c6f77222c226973737565645f6174223a22323032362d30372d31355431323a30303a30305a222c226973737565725f6964223a2273623a6973737565723a36585276385a665075787431222c22706f6c6963795f646967657374223a227368613235363a38636139326637646661616636663466656538386633383932636437313232616234383931326330663936363666373064663739623239373336323762383838222c22746f6f6c5f6e616d65223a227061796d656e74732e7472616e73666572222c2274797065223a2270726f746563746d63703a6465636973696f6e227d"
     },
@@ -34,6 +36,7 @@
       "expected": "ACCEPT",
       "code": null,
       "requirement": "SHOULD (Section 9.2)",
+      "expected_if_not_honoured": "ACCEPT",
       "note": "Minimal pair: same key A, issued_at inside A's window. Only issued_at differs from the reject.",
       "signed_input_hex": "7b226465636973696f6e223a22616c6c6f77222c226973737565645f6174223a22323032362d30332d31355431323a30303a30305a222c226973737565725f6964223a2273623a6973737565723a36585276385a665075787431222c22706f6c6963795f646967657374223a227368613235363a38636139326637646661616636663466656538386633383932636437313232616234383931326330663936363666373064663739623239373336323762383838222c22746f6f6c5f6e616d65223a227061796d656e74732e7472616e73666572222c2274797065223a2270726f746563746d63703a6465636973696f6e227d"
     }
