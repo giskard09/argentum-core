@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Added — idempotency-ref-v1.1: the four cases through crewAI (2026-09-24)
+
+- `examples/conformance/crewai-unguarded-retry/`: the v1.1 four-case test through crewAI's real `ToolUsage.use()`, not only replayed at spec level. Case 2 is crewAI's own re-dispatch after a lost acknowledgement; case 4 is a separate re-proposal. Effects are read from the independent effect store; `idempotency_ref` and `admitted_payload_digest` match `idempotency-ref-v1.1/vectors.json` byte for byte. The three negatives run on the same path and each diverges where its vector declares. Runner: `verify_logical_identity.py`; details in `LOGICAL_IDENTITY_V1_1.md`.
+
 ### Added — farley-receipt-signature: signed input published per vector (2026-09-23)
 
 - `examples/conformance/farley-receipt-signature/index.json`: `signed_input_hex` per vector, the exact bytes each signature was made over. Without it, a re-run could confirm that `signature-input-drift.reject` fails, but not that it fails for the stated reason (signed over pretty-printed bytes rather than `JCS(payload)`). The four receipts and `jwks.json` are byte-identical; only `index.json` changes.

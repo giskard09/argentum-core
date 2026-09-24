@@ -113,3 +113,38 @@ def run_single_tool_call(func, tool_name: str, arguments: dict) -> dict:
         "run_attempts": usage._run_attempts,
         "last_failure": str(usage.last_failure) if usage.last_failure else None,
     }
+
+
+def run_tool_call_under_real_crewai_retry(
+    func, tool_name: str, arguments: dict, max_attempts: int = 3
+) -> dict:
+    """Same as `run_tool_under_real_crewai_retry`, for a tool whose
+    arguments carry more than `logical_action_id` (the idempotency-ref v1.1
+    cases send the effect-bearing payload too). crewAI's own re-dispatch
+    resends this exact `ToolCalling` on every attempt."""
+    structured_tool = CrewStructuredTool.from_function(
+        func=func,
+        name=tool_name,
+        description="Applies a local effect keyed by logical_action_id.",
+    )
+
+    calling = ToolCalling(tool_name=structured_tool.name, arguments=arguments)
+
+    usage = ToolUsage(
+        tools_handler=None,
+        tools=[structured_tool],
+        task=None,
+        function_calling_llm=None,
+        agent=None,
+        action=_Action(tool=structured_tool.name, tool_input=arguments),
+    )
+    usage._max_parsing_attempts = max_attempts
+
+    tool_string = f"{tool_name}({arguments})"
+    result = usage.use(calling=calling, tool_string=tool_string)
+
+    return {
+        "outcome": result,
+        "run_attempts": usage._run_attempts,
+        "last_failure": str(usage.last_failure) if usage.last_failure else None,
+    }
