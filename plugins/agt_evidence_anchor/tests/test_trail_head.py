@@ -239,3 +239,159 @@ def test_seal_rejects_two_checkpoints_same_agent():
     log = _log(2)
     with pytest.raises(ValueError):
         seal_period([make_checkpoint(AGENT, T1, log), make_checkpoint(AGENT, T1, log)])
+
+
+# ── Window: a log presented from seq k > 1 ────────────────────────────────
+#
+# Found by an internal cross-check against independent session-chain data:
+# a window that starts from a prev_head taken from the presented records is
+# certified by nothing, so a rewrite that also changes that prev_head looks
+# identical to an honest window.
+
+K = 5  # window = seq 5..8 of an 8-entry log
+
+
+def _window(n=8, k=K, agent_seq=False):
+    log = _log(n, agent_seq=agent_seq)
+    return log, [dict(e) for e in log[k - 1:]]
+
+
+def _anchor(log, k=K, period_end=T1):
+    """Checkpoint at seq k-1, sealed in a period root: (anchor, proof, root)."""
+    cp, proof, root = _sealed(log[:k - 1], period_end=period_end)
+    return {"anchor": cp, "anchor_proof": proof, "anchor_root": root}
+
+
+def _rechain_window(refs, start_seq, prev, agent_seqs=None):
+    out = []
+    for i, ref in enumerate(refs):
+        a = agent_seqs[i] if agent_seqs else None
+        pre = entry_preimage(AGENT, start_seq + i, ref, prev, a)
+        new = dict(pre)
+        del new["v"]
+        new["head"] = compute_head(agent_id=AGENT, seq=start_seq + i, action_ref=ref,
+                                   prev_head=prev, agent_seq=a)
+        out.append(new)
+        prev = new["head"]
+    return out
+
+
+def _w(entries, **kw):
+    r = verify_trail(entries, from_seq=K, **kw)
+    return r["verdict"], r["completeness"], r["reason"], r.get("window_anchor")
+
+
+def test_window_certified_anchor_no_checkpoint():
+    log, win = _window()
+    assert _w(win, **_anchor(log)) == ("continuity_only", "not_evaluated",
+                                       "no_checkpoint", "certified")
+
+
+def test_window_uncertified_anchor_is_declared():
+    log, win = _window()
+    r = verify_trail(win, from_seq=K)
+    assert (r["verdict"], r["completeness"]) == ("continuity_only", "not_evaluated")
+    assert (r["from_seq"], r["window_anchor"]) == (K, "uncertified")
+
+
+def test_window_with_tail_checkpoint_is_window_complete_not_complete():
+    log, win = _window()
+    cp, proof, root = _sealed(log, period_end=T2)
+    for kw in ({}, _anchor(log)):
+        r = verify_trail(win, cp, proof, root, from_seq=K, **kw)
+        assert (r["verdict"], r["completeness"]) == ("window_complete", "proven_from_seq")
+        assert r["from_seq"] == K
+
+
+def test_window_unsealed_tail():
+    log, win = _window()
+    cp, proof, root = _sealed(log[:7], period_end=T2)
+    r = verify_trail(win, cp, proof, root, from_seq=K, **_anchor(log))
+    assert (r["verdict"], r["completeness"]) == ("window_complete_unsealed_tail",
+                                                "proven_from_seq_through_checkpoint")
+    assert r["unsealed_entries"] == 1
+
+
+def test_window_rewrite_including_anchor():
+    """The attacker re-chains seq 5..8 from a prev_head of its own choosing."""
+    log, win = _window()
+    fake = _rechain_window([_ref(40 + i) for i in range(4)], K, "ab" * 32)
+    # Uncertified start and no checkpoint: indistinguishable (documented limit).
+    assert _w(fake) == ("continuity_only", "not_evaluated", "no_checkpoint", "uncertified")
+    # A certified anchor catches the changed start on its own.
+    assert _w(fake, **_anchor(log)) == ("anchor_mismatch", "failed",
+                                        "prev_head_differs_from_anchor", None)
+    # A tail checkpoint catches it without an anchor.
+    cp, proof, root = _sealed(log, period_end=T2)
+    assert _w(fake, checkpoint=cp, proof=proof, root=root)[:3] == (
+        "checkpoint_mismatch", "failed", "head_differs_from_checkpoint")
+
+
+def test_window_rewrite_keeping_anchor_needs_tail_checkpoint():
+    log, win = _window()
+    fake = _rechain_window([_ref(40 + i) for i in range(4)], K, win[0]["prev_head"])
+    assert _w(fake, **_anchor(log))[:3] == ("continuity_only", "not_evaluated", "no_checkpoint")
+    cp, proof, root = _sealed(log, period_end=T2)
+    assert _w(fake, checkpoint=cp, proof=proof, root=root, **_anchor(log))[:3] == (
+        "checkpoint_mismatch", "failed", "head_differs_from_checkpoint")
+
+
+def test_window_truncation():
+    log, win = _window()
+    assert _w(win[:2])[:3] == ("continuity_only", "not_evaluated", "no_checkpoint")
+    cp, proof, root = _sealed(log, period_end=T2)
+    assert _w(win[:2], checkpoint=cp, proof=proof, root=root)[:3] == (
+        "truncated", "failed", "log_shorter_than_checkpoint")
+
+
+def test_anchor_head_is_actually_compared():
+    """A verifier that checks only the anchor's Merkle proof would pass this."""
+    log, win = _window()
+    bad = dict(make_checkpoint(AGENT, T1, log[:K - 1]), head="cd" * 32)
+    root, tree, _ = seal_period([bad, make_checkpoint(OTHER, T1, _log(2, OTHER))])
+    kw = {"anchor": bad, "anchor_proof": get_proof(checkpoint_digest(bad), tree),
+          "anchor_root": root}
+    assert _w(win, **kw)[0] == "anchor_mismatch"
+
+
+def test_anchor_failures_are_distinct():
+    log, win = _window()
+    good = _anchor(log)
+    assert verify_trail(win, from_seq=K, **_anchor(log, k=K - 1))["reason"] == "anchor_not_adjacent"
+    assert verify_trail(win, from_seq=K, anchor=good["anchor"], anchor_proof=[],
+                        anchor_root="00" * 32)["reason"] == "anchor_not_in_root"
+    other = dict(good, anchor=dict(good["anchor"], agent_id=OTHER))
+    assert verify_trail(win, from_seq=K, **other)["reason"] == "anchor_other_agent"
+    assert verify_trail(win, from_seq=K, anchor={"v": "x"}, anchor_proof=[],
+                        anchor_root="00" * 32)["reason"] == "anchor_shape"
+    assert verify_trail(log, **good)["reason"] == "anchor_not_adjacent"  # from_seq=1
+
+
+def test_checkpoint_before_window():
+    log, win = _window()
+    cp, proof, root = _sealed(log[:3], period_end=T2)
+    r = verify_trail(win, cp, proof, root, from_seq=K)
+    assert (r["verdict"], r["completeness"], r["reason"]) == (
+        "continuity_only", "not_evaluated", "checkpoint_before_window")
+
+
+def test_window_agent_seq_checks_contiguity_only():
+    log, win = _window(agent_seq=True)
+    assert win[0]["agent_seq"] == K  # does not start at 1, and need not
+    assert _w(win)[0] == "continuity_only"
+    refs = [e["action_ref"] for e in win]
+    gap = _rechain_window(refs, K, win[0]["prev_head"], agent_seqs=[5, 6, 8, 9])
+    r = verify_trail(gap, from_seq=K)
+    assert (r["verdict"], r["reason"], r["at_seq"]) == ("agent_gap", "agent_seq_not_contiguous", 7)
+
+
+def test_full_log_missing_its_head_is_not_a_window():
+    """Without from_seq a log that starts at seq 5 stays a seq_gap."""
+    log, win = _window()
+    r = verify_trail(win)
+    assert (r["verdict"], r["reason"], r["at_seq"]) == ("broken", "seq_gap", K)
+
+
+def test_full_log_reports_genesis_scope():
+    r = verify_trail(_log(3))
+    assert (r["from_seq"], r["window_anchor"]) == (1, "genesis")

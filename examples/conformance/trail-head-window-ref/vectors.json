@@ -1,0 +1,568 @@
+{
+  "spec_version": "trail-head-ref-v1#window-verification",
+  "description": "Window verification for trail-head-ref v1: a log presented from seq k > 1. `input` holds the arguments of verify_trail; `expected` is what a conformant verifier reports.",
+  "vectors": [
+    {
+      "id": "thw-001-full-log-no-checkpoint",
+      "description": "Regression: full log from seq 1, no checkpoint.",
+      "input": {
+        "entries": [
+          {
+            "agent_id": "agent-alpha",
+            "seq": 1,
+            "action_ref": "9ef01d7eed7e2a09cc82377833e1b64ec57bc366b21b985db17e0364af92f634",
+            "head": "28d7c44a5272cd231ea4c48157c53d33d921c99ec15779e08a1356dd9b023c0e"
+          },
+          {
+            "agent_id": "agent-alpha",
+            "seq": 2,
+            "action_ref": "49883268ce6678eb1b09eca64e592918ba824a4055556fbaa56989ef516ccd01",
+            "prev_head": "28d7c44a5272cd231ea4c48157c53d33d921c99ec15779e08a1356dd9b023c0e",
+            "head": "68fa419435745f4b867b7bd02284fe35097b652ab1c7e88339a3d278d4eaf8b0"
+          },
+          {
+            "agent_id": "agent-alpha",
+            "seq": 3,
+            "action_ref": "ebbf83c9a214dbeded2b290ce675fa795af497fe6353de7cfce0b5054b8bd9fa",
+            "prev_head": "68fa419435745f4b867b7bd02284fe35097b652ab1c7e88339a3d278d4eaf8b0",
+            "head": "b9bffe0f8c67d11d841a742f44abb428b8a5dab9fd7d45812e37d21d703d8857"
+          },
+          {
+            "agent_id": "agent-alpha",
+            "seq": 4,
+            "action_ref": "f48a5faf95889b28d0553faecb8752c33854d00df6eac491a2f25af1225b660d",
+            "prev_head": "b9bffe0f8c67d11d841a742f44abb428b8a5dab9fd7d45812e37d21d703d8857",
+            "head": "c27908516985307f7e22bf0c3d704930cdaf278e7114bdb8a7f9f1a9eb92105c"
+          },
+          {
+            "agent_id": "agent-alpha",
+            "seq": 5,
+            "action_ref": "639cef88c106aa9c1e67cf089851d88841e9e6efb9634183ff33f063ca7509db",
+            "prev_head": "c27908516985307f7e22bf0c3d704930cdaf278e7114bdb8a7f9f1a9eb92105c",
+            "head": "d60eed6d9725f216fc9ecc4134459d60602b972ee38103a732fcb349b2e12fba"
+          },
+          {
+            "agent_id": "agent-alpha",
+            "seq": 6,
+            "action_ref": "da360f21421261e7f487f2c3765fea73441701a88c90239e54cf570842df287e",
+            "prev_head": "d60eed6d9725f216fc9ecc4134459d60602b972ee38103a732fcb349b2e12fba",
+            "head": "7def58394e0354f35087e2a562f96a65800bc505d35d7f4fcb4ac0e5b2b9f606"
+          },
+          {
+            "agent_id": "agent-alpha",
+            "seq": 7,
+            "action_ref": "25e59b885e4860b461ebd62d7752f37d993af37d10b5b67d36811a350918fa52",
+            "prev_head": "7def58394e0354f35087e2a562f96a65800bc505d35d7f4fcb4ac0e5b2b9f606",
+            "head": "e7379b57bbb6fe640d68208f1f844157198e27723e4eb3f8d850ccef4a596f2f"
+          },
+          {
+            "agent_id": "agent-alpha",
+            "seq": 8,
+            "action_ref": "bc2483012ae6ca3dbac9a5f414f3dd7370017b507c65ce8af5e16f3324890042",
+            "prev_head": "e7379b57bbb6fe640d68208f1f844157198e27723e4eb3f8d850ccef4a596f2f",
+            "head": "5d98f641a77e54d0feb29dd153555ed7825fb3b2a93b8d9ed27337ef03f10a02"
+          }
+        ]
+      },
+      "expected": {
+        "verdict": "continuity_only",
+        "completeness": "not_evaluated",
+        "reason": "no_checkpoint",
+        "window_anchor": "genesis"
+      }
+    },
+    {
+      "id": "thw-002-full-log-tail-checkpoint",
+      "description": "Regression: full log sealed at seq 8.",
+      "input": {
+        "entries": [
+          {
+            "agent_id": "agent-alpha",
+            "seq": 1,
+            "action_ref": "9ef01d7eed7e2a09cc82377833e1b64ec57bc366b21b985db17e0364af92f634",
+            "head": "28d7c44a5272cd231ea4c48157c53d33d921c99ec15779e08a1356dd9b023c0e"
+          },
+          {
+            "agent_id": "agent-alpha",
+            "seq": 2,
+            "action_ref": "49883268ce6678eb1b09eca64e592918ba824a4055556fbaa56989ef516ccd01",
+            "prev_head": "28d7c44a5272cd231ea4c48157c53d33d921c99ec15779e08a1356dd9b023c0e",
+            "head": "68fa419435745f4b867b7bd02284fe35097b652ab1c7e88339a3d278d4eaf8b0"
+          },
+          {
+            "agent_id": "agent-alpha",
+            "seq": 3,
+            "action_ref": "ebbf83c9a214dbeded2b290ce675fa795af497fe6353de7cfce0b5054b8bd9fa",
+            "prev_head": "68fa419435745f4b867b7bd02284fe35097b652ab1c7e88339a3d278d4eaf8b0",
+            "head": "b9bffe0f8c67d11d841a742f44abb428b8a5dab9fd7d45812e37d21d703d8857"
+          },
+          {
+            "agent_id": "agent-alpha",
+            "seq": 4,
+            "action_ref": "f48a5faf95889b28d0553faecb8752c33854d00df6eac491a2f25af1225b660d",
+            "prev_head": "b9bffe0f8c67d11d841a742f44abb428b8a5dab9fd7d45812e37d21d703d8857",
+            "head": "c27908516985307f7e22bf0c3d704930cdaf278e7114bdb8a7f9f1a9eb92105c"
+          },
+          {
+            "agent_id": "agent-alpha",
+            "seq": 5,
+            "action_ref": "639cef88c106aa9c1e67cf089851d88841e9e6efb9634183ff33f063ca7509db",
+            "prev_head": "c27908516985307f7e22bf0c3d704930cdaf278e7114bdb8a7f9f1a9eb92105c",
+            "head": "d60eed6d9725f216fc9ecc4134459d60602b972ee38103a732fcb349b2e12fba"
+          },
+          {
+            "agent_id": "agent-alpha",
+            "seq": 6,
+            "action_ref": "da360f21421261e7f487f2c3765fea73441701a88c90239e54cf570842df287e",
+            "prev_head": "d60eed6d9725f216fc9ecc4134459d60602b972ee38103a732fcb349b2e12fba",
+            "head": "7def58394e0354f35087e2a562f96a65800bc505d35d7f4fcb4ac0e5b2b9f606"
+          },
+          {
+            "agent_id": "agent-alpha",
+            "seq": 7,
+            "action_ref": "25e59b885e4860b461ebd62d7752f37d993af37d10b5b67d36811a350918fa52",
+            "prev_head": "7def58394e0354f35087e2a562f96a65800bc505d35d7f4fcb4ac0e5b2b9f606",
+            "head": "e7379b57bbb6fe640d68208f1f844157198e27723e4eb3f8d850ccef4a596f2f"
+          },
+          {
+            "agent_id": "agent-alpha",
+            "seq": 8,
+            "action_ref": "bc2483012ae6ca3dbac9a5f414f3dd7370017b507c65ce8af5e16f3324890042",
+            "prev_head": "e7379b57bbb6fe640d68208f1f844157198e27723e4eb3f8d850ccef4a596f2f",
+            "head": "5d98f641a77e54d0feb29dd153555ed7825fb3b2a93b8d9ed27337ef03f10a02"
+          }
+        ],
+        "checkpoint": {
+          "v": "trail-head-ref/v1/checkpoint",
+          "agent_id": "agent-alpha",
+          "period_end": "2026-09-23T19:00:00.000Z",
+          "seq": 8,
+          "head": "5d98f641a77e54d0feb29dd153555ed7825fb3b2a93b8d9ed27337ef03f10a02"
+        },
+        "proof": [
+          "644d6d9845a2c7e76943c85596b461999b2c7ad3efb9869bc72942d907c40a74"
+        ],
+        "root": "71ffe9d29a3055ba3d4c81589ae0937ea9bec556b122786b697e542a7673320e"
+      },
+      "expected": {
+        "verdict": "complete",
+        "completeness": "proven",
+        "reason": null,
+        "window_anchor": "genesis"
+      }
+    },
+    {
+      "id": "thw-003-window-certified-anchor",
+      "description": "Honest window 5..8 with a checkpoint at seq 4 proven in its root.",
+      "input": {
+        "entries": [
+          {
+            "agent_id": "agent-alpha",
+            "seq": 5,
+            "action_ref": "639cef88c106aa9c1e67cf089851d88841e9e6efb9634183ff33f063ca7509db",
+            "prev_head": "c27908516985307f7e22bf0c3d704930cdaf278e7114bdb8a7f9f1a9eb92105c",
+            "head": "d60eed6d9725f216fc9ecc4134459d60602b972ee38103a732fcb349b2e12fba"
+          },
+          {
+            "agent_id": "agent-alpha",
+            "seq": 6,
+            "action_ref": "da360f21421261e7f487f2c3765fea73441701a88c90239e54cf570842df287e",
+            "prev_head": "d60eed6d9725f216fc9ecc4134459d60602b972ee38103a732fcb349b2e12fba",
+            "head": "7def58394e0354f35087e2a562f96a65800bc505d35d7f4fcb4ac0e5b2b9f606"
+          },
+          {
+            "agent_id": "agent-alpha",
+            "seq": 7,
+            "action_ref": "25e59b885e4860b461ebd62d7752f37d993af37d10b5b67d36811a350918fa52",
+            "prev_head": "7def58394e0354f35087e2a562f96a65800bc505d35d7f4fcb4ac0e5b2b9f606",
+            "head": "e7379b57bbb6fe640d68208f1f844157198e27723e4eb3f8d850ccef4a596f2f"
+          },
+          {
+            "agent_id": "agent-alpha",
+            "seq": 8,
+            "action_ref": "bc2483012ae6ca3dbac9a5f414f3dd7370017b507c65ce8af5e16f3324890042",
+            "prev_head": "e7379b57bbb6fe640d68208f1f844157198e27723e4eb3f8d850ccef4a596f2f",
+            "head": "5d98f641a77e54d0feb29dd153555ed7825fb3b2a93b8d9ed27337ef03f10a02"
+          }
+        ],
+        "from_seq": 5,
+        "anchor": {
+          "v": "trail-head-ref/v1/checkpoint",
+          "agent_id": "agent-alpha",
+          "period_end": "2026-09-23T18:00:00.000Z",
+          "seq": 4,
+          "head": "c27908516985307f7e22bf0c3d704930cdaf278e7114bdb8a7f9f1a9eb92105c"
+        },
+        "anchor_proof": [
+          "54bbbe7480e5a514e62b414286ebd6e2060e03ece5dcd0af8543411c456c8fdb"
+        ],
+        "anchor_root": "ad4594c2f4022b1641abd0123c7ea25708b33cf6b65f8bf69ade58d5e45bf2ea"
+      },
+      "expected": {
+        "verdict": "continuity_only",
+        "completeness": "not_evaluated",
+        "reason": "no_checkpoint",
+        "window_anchor": "certified"
+      }
+    },
+    {
+      "id": "thw-004-window-uncertified-anchor",
+      "description": "Honest window 5..8, start taken from the records: scope is declared.",
+      "input": {
+        "entries": [
+          {
+            "agent_id": "agent-alpha",
+            "seq": 5,
+            "action_ref": "639cef88c106aa9c1e67cf089851d88841e9e6efb9634183ff33f063ca7509db",
+            "prev_head": "c27908516985307f7e22bf0c3d704930cdaf278e7114bdb8a7f9f1a9eb92105c",
+            "head": "d60eed6d9725f216fc9ecc4134459d60602b972ee38103a732fcb349b2e12fba"
+          },
+          {
+            "agent_id": "agent-alpha",
+            "seq": 6,
+            "action_ref": "da360f21421261e7f487f2c3765fea73441701a88c90239e54cf570842df287e",
+            "prev_head": "d60eed6d9725f216fc9ecc4134459d60602b972ee38103a732fcb349b2e12fba",
+            "head": "7def58394e0354f35087e2a562f96a65800bc505d35d7f4fcb4ac0e5b2b9f606"
+          },
+          {
+            "agent_id": "agent-alpha",
+            "seq": 7,
+            "action_ref": "25e59b885e4860b461ebd62d7752f37d993af37d10b5b67d36811a350918fa52",
+            "prev_head": "7def58394e0354f35087e2a562f96a65800bc505d35d7f4fcb4ac0e5b2b9f606",
+            "head": "e7379b57bbb6fe640d68208f1f844157198e27723e4eb3f8d850ccef4a596f2f"
+          },
+          {
+            "agent_id": "agent-alpha",
+            "seq": 8,
+            "action_ref": "bc2483012ae6ca3dbac9a5f414f3dd7370017b507c65ce8af5e16f3324890042",
+            "prev_head": "e7379b57bbb6fe640d68208f1f844157198e27723e4eb3f8d850ccef4a596f2f",
+            "head": "5d98f641a77e54d0feb29dd153555ed7825fb3b2a93b8d9ed27337ef03f10a02"
+          }
+        ],
+        "from_seq": 5
+      },
+      "expected": {
+        "verdict": "continuity_only",
+        "completeness": "not_evaluated",
+        "reason": "no_checkpoint",
+        "window_anchor": "uncertified"
+      }
+    },
+    {
+      "id": "thw-005-window-tail-checkpoint",
+      "description": "Honest window 5..8 sealed at seq 8: proven from seq 5 only, never complete.",
+      "input": {
+        "entries": [
+          {
+            "agent_id": "agent-alpha",
+            "seq": 5,
+            "action_ref": "639cef88c106aa9c1e67cf089851d88841e9e6efb9634183ff33f063ca7509db",
+            "prev_head": "c27908516985307f7e22bf0c3d704930cdaf278e7114bdb8a7f9f1a9eb92105c",
+            "head": "d60eed6d9725f216fc9ecc4134459d60602b972ee38103a732fcb349b2e12fba"
+          },
+          {
+            "agent_id": "agent-alpha",
+            "seq": 6,
+            "action_ref": "da360f21421261e7f487f2c3765fea73441701a88c90239e54cf570842df287e",
+            "prev_head": "d60eed6d9725f216fc9ecc4134459d60602b972ee38103a732fcb349b2e12fba",
+            "head": "7def58394e0354f35087e2a562f96a65800bc505d35d7f4fcb4ac0e5b2b9f606"
+          },
+          {
+            "agent_id": "agent-alpha",
+            "seq": 7,
+            "action_ref": "25e59b885e4860b461ebd62d7752f37d993af37d10b5b67d36811a350918fa52",
+            "prev_head": "7def58394e0354f35087e2a562f96a65800bc505d35d7f4fcb4ac0e5b2b9f606",
+            "head": "e7379b57bbb6fe640d68208f1f844157198e27723e4eb3f8d850ccef4a596f2f"
+          },
+          {
+            "agent_id": "agent-alpha",
+            "seq": 8,
+            "action_ref": "bc2483012ae6ca3dbac9a5f414f3dd7370017b507c65ce8af5e16f3324890042",
+            "prev_head": "e7379b57bbb6fe640d68208f1f844157198e27723e4eb3f8d850ccef4a596f2f",
+            "head": "5d98f641a77e54d0feb29dd153555ed7825fb3b2a93b8d9ed27337ef03f10a02"
+          }
+        ],
+        "from_seq": 5,
+        "checkpoint": {
+          "v": "trail-head-ref/v1/checkpoint",
+          "agent_id": "agent-alpha",
+          "period_end": "2026-09-23T19:00:00.000Z",
+          "seq": 8,
+          "head": "5d98f641a77e54d0feb29dd153555ed7825fb3b2a93b8d9ed27337ef03f10a02"
+        },
+        "proof": [
+          "644d6d9845a2c7e76943c85596b461999b2c7ad3efb9869bc72942d907c40a74"
+        ],
+        "root": "71ffe9d29a3055ba3d4c81589ae0937ea9bec556b122786b697e542a7673320e"
+      },
+      "expected": {
+        "verdict": "window_complete",
+        "completeness": "proven_from_seq",
+        "reason": null,
+        "window_anchor": "uncertified"
+      }
+    },
+    {
+      "id": "thw-006-rewrite-with-start-no-evidence",
+      "description": "Window re-chained from a chosen prev_head, nothing external: indistinguishable, documented limit.",
+      "input": {
+        "entries": [
+          {
+            "agent_id": "agent-alpha",
+            "seq": 5,
+            "action_ref": "4b2fe31774b822c19b38ea0be68e71bfeef8083280510341108a16c24e67906f",
+            "prev_head": "abababababababababababababababababababababababababababababababab",
+            "head": "073b4c49e2f162b6c27ad249b82e3abfa88511f7fd613c102c1e807c72f0dd1a"
+          },
+          {
+            "agent_id": "agent-alpha",
+            "seq": 6,
+            "action_ref": "6bb2852fd9456b4bb113fecfe73c1995a38213475a6dd53a5b6b843cd02cd29c",
+            "prev_head": "073b4c49e2f162b6c27ad249b82e3abfa88511f7fd613c102c1e807c72f0dd1a",
+            "head": "3d1d4e34c167e1fe348667043506a84f4179e5560438bd45e31b90b7d6f63666"
+          },
+          {
+            "agent_id": "agent-alpha",
+            "seq": 7,
+            "action_ref": "354e81deb5bc5e9f35677c22e45128f0cb978553671f4f009f75d773fba66801",
+            "prev_head": "3d1d4e34c167e1fe348667043506a84f4179e5560438bd45e31b90b7d6f63666",
+            "head": "0524ac8c715ee0d9852b495b7559c9e502b7a375e82216ddac9422b51eed2d4c"
+          },
+          {
+            "agent_id": "agent-alpha",
+            "seq": 8,
+            "action_ref": "14eb35ce2bd07a15ad5afd3febd7c74ba38771ab08a9e7f86839e1aace5def15",
+            "prev_head": "0524ac8c715ee0d9852b495b7559c9e502b7a375e82216ddac9422b51eed2d4c",
+            "head": "77bb20d1db1ed254edb2f01af823b3e59d763fb6c25e61675d58677fc51040d7"
+          }
+        ],
+        "from_seq": 5
+      },
+      "expected": {
+        "verdict": "continuity_only",
+        "completeness": "not_evaluated",
+        "reason": "no_checkpoint",
+        "window_anchor": "uncertified"
+      }
+    },
+    {
+      "id": "thw-007-rewrite-with-start-certified-anchor",
+      "description": "Same rewrite against a certified anchor.",
+      "input": {
+        "entries": [
+          {
+            "agent_id": "agent-alpha",
+            "seq": 5,
+            "action_ref": "4b2fe31774b822c19b38ea0be68e71bfeef8083280510341108a16c24e67906f",
+            "prev_head": "abababababababababababababababababababababababababababababababab",
+            "head": "073b4c49e2f162b6c27ad249b82e3abfa88511f7fd613c102c1e807c72f0dd1a"
+          },
+          {
+            "agent_id": "agent-alpha",
+            "seq": 6,
+            "action_ref": "6bb2852fd9456b4bb113fecfe73c1995a38213475a6dd53a5b6b843cd02cd29c",
+            "prev_head": "073b4c49e2f162b6c27ad249b82e3abfa88511f7fd613c102c1e807c72f0dd1a",
+            "head": "3d1d4e34c167e1fe348667043506a84f4179e5560438bd45e31b90b7d6f63666"
+          },
+          {
+            "agent_id": "agent-alpha",
+            "seq": 7,
+            "action_ref": "354e81deb5bc5e9f35677c22e45128f0cb978553671f4f009f75d773fba66801",
+            "prev_head": "3d1d4e34c167e1fe348667043506a84f4179e5560438bd45e31b90b7d6f63666",
+            "head": "0524ac8c715ee0d9852b495b7559c9e502b7a375e82216ddac9422b51eed2d4c"
+          },
+          {
+            "agent_id": "agent-alpha",
+            "seq": 8,
+            "action_ref": "14eb35ce2bd07a15ad5afd3febd7c74ba38771ab08a9e7f86839e1aace5def15",
+            "prev_head": "0524ac8c715ee0d9852b495b7559c9e502b7a375e82216ddac9422b51eed2d4c",
+            "head": "77bb20d1db1ed254edb2f01af823b3e59d763fb6c25e61675d58677fc51040d7"
+          }
+        ],
+        "from_seq": 5,
+        "anchor": {
+          "v": "trail-head-ref/v1/checkpoint",
+          "agent_id": "agent-alpha",
+          "period_end": "2026-09-23T18:00:00.000Z",
+          "seq": 4,
+          "head": "c27908516985307f7e22bf0c3d704930cdaf278e7114bdb8a7f9f1a9eb92105c"
+        },
+        "anchor_proof": [
+          "54bbbe7480e5a514e62b414286ebd6e2060e03ece5dcd0af8543411c456c8fdb"
+        ],
+        "anchor_root": "ad4594c2f4022b1641abd0123c7ea25708b33cf6b65f8bf69ade58d5e45bf2ea"
+      },
+      "expected": {
+        "verdict": "anchor_mismatch",
+        "completeness": "failed",
+        "reason": "prev_head_differs_from_anchor",
+        "window_anchor": null
+      }
+    },
+    {
+      "id": "thw-008-rewrite-with-start-tail-checkpoint",
+      "description": "Same rewrite against the tail checkpoint.",
+      "input": {
+        "entries": [
+          {
+            "agent_id": "agent-alpha",
+            "seq": 5,
+            "action_ref": "4b2fe31774b822c19b38ea0be68e71bfeef8083280510341108a16c24e67906f",
+            "prev_head": "abababababababababababababababababababababababababababababababab",
+            "head": "073b4c49e2f162b6c27ad249b82e3abfa88511f7fd613c102c1e807c72f0dd1a"
+          },
+          {
+            "agent_id": "agent-alpha",
+            "seq": 6,
+            "action_ref": "6bb2852fd9456b4bb113fecfe73c1995a38213475a6dd53a5b6b843cd02cd29c",
+            "prev_head": "073b4c49e2f162b6c27ad249b82e3abfa88511f7fd613c102c1e807c72f0dd1a",
+            "head": "3d1d4e34c167e1fe348667043506a84f4179e5560438bd45e31b90b7d6f63666"
+          },
+          {
+            "agent_id": "agent-alpha",
+            "seq": 7,
+            "action_ref": "354e81deb5bc5e9f35677c22e45128f0cb978553671f4f009f75d773fba66801",
+            "prev_head": "3d1d4e34c167e1fe348667043506a84f4179e5560438bd45e31b90b7d6f63666",
+            "head": "0524ac8c715ee0d9852b495b7559c9e502b7a375e82216ddac9422b51eed2d4c"
+          },
+          {
+            "agent_id": "agent-alpha",
+            "seq": 8,
+            "action_ref": "14eb35ce2bd07a15ad5afd3febd7c74ba38771ab08a9e7f86839e1aace5def15",
+            "prev_head": "0524ac8c715ee0d9852b495b7559c9e502b7a375e82216ddac9422b51eed2d4c",
+            "head": "77bb20d1db1ed254edb2f01af823b3e59d763fb6c25e61675d58677fc51040d7"
+          }
+        ],
+        "from_seq": 5,
+        "checkpoint": {
+          "v": "trail-head-ref/v1/checkpoint",
+          "agent_id": "agent-alpha",
+          "period_end": "2026-09-23T19:00:00.000Z",
+          "seq": 8,
+          "head": "5d98f641a77e54d0feb29dd153555ed7825fb3b2a93b8d9ed27337ef03f10a02"
+        },
+        "proof": [
+          "644d6d9845a2c7e76943c85596b461999b2c7ad3efb9869bc72942d907c40a74"
+        ],
+        "root": "71ffe9d29a3055ba3d4c81589ae0937ea9bec556b122786b697e542a7673320e"
+      },
+      "expected": {
+        "verdict": "checkpoint_mismatch",
+        "completeness": "failed",
+        "reason": "head_differs_from_checkpoint",
+        "window_anchor": null
+      }
+    },
+    {
+      "id": "thw-009-window-truncated-no-checkpoint",
+      "description": "Window cut to 5..6, nothing external.",
+      "input": {
+        "entries": [
+          {
+            "agent_id": "agent-alpha",
+            "seq": 5,
+            "action_ref": "639cef88c106aa9c1e67cf089851d88841e9e6efb9634183ff33f063ca7509db",
+            "prev_head": "c27908516985307f7e22bf0c3d704930cdaf278e7114bdb8a7f9f1a9eb92105c",
+            "head": "d60eed6d9725f216fc9ecc4134459d60602b972ee38103a732fcb349b2e12fba"
+          },
+          {
+            "agent_id": "agent-alpha",
+            "seq": 6,
+            "action_ref": "da360f21421261e7f487f2c3765fea73441701a88c90239e54cf570842df287e",
+            "prev_head": "d60eed6d9725f216fc9ecc4134459d60602b972ee38103a732fcb349b2e12fba",
+            "head": "7def58394e0354f35087e2a562f96a65800bc505d35d7f4fcb4ac0e5b2b9f606"
+          }
+        ],
+        "from_seq": 5
+      },
+      "expected": {
+        "verdict": "continuity_only",
+        "completeness": "not_evaluated",
+        "reason": "no_checkpoint",
+        "window_anchor": "uncertified"
+      }
+    },
+    {
+      "id": "thw-010-window-truncated-tail-checkpoint",
+      "description": "Window cut to 5..6 against the checkpoint at seq 8.",
+      "input": {
+        "entries": [
+          {
+            "agent_id": "agent-alpha",
+            "seq": 5,
+            "action_ref": "639cef88c106aa9c1e67cf089851d88841e9e6efb9634183ff33f063ca7509db",
+            "prev_head": "c27908516985307f7e22bf0c3d704930cdaf278e7114bdb8a7f9f1a9eb92105c",
+            "head": "d60eed6d9725f216fc9ecc4134459d60602b972ee38103a732fcb349b2e12fba"
+          },
+          {
+            "agent_id": "agent-alpha",
+            "seq": 6,
+            "action_ref": "da360f21421261e7f487f2c3765fea73441701a88c90239e54cf570842df287e",
+            "prev_head": "d60eed6d9725f216fc9ecc4134459d60602b972ee38103a732fcb349b2e12fba",
+            "head": "7def58394e0354f35087e2a562f96a65800bc505d35d7f4fcb4ac0e5b2b9f606"
+          }
+        ],
+        "from_seq": 5,
+        "checkpoint": {
+          "v": "trail-head-ref/v1/checkpoint",
+          "agent_id": "agent-alpha",
+          "period_end": "2026-09-23T19:00:00.000Z",
+          "seq": 8,
+          "head": "5d98f641a77e54d0feb29dd153555ed7825fb3b2a93b8d9ed27337ef03f10a02"
+        },
+        "proof": [
+          "644d6d9845a2c7e76943c85596b461999b2c7ad3efb9869bc72942d907c40a74"
+        ],
+        "root": "71ffe9d29a3055ba3d4c81589ae0937ea9bec556b122786b697e542a7673320e"
+      },
+      "expected": {
+        "verdict": "truncated",
+        "completeness": "failed",
+        "reason": "log_shorter_than_checkpoint",
+        "window_anchor": null
+      }
+    },
+    {
+      "id": "thw-011-headless-log-not-a-window",
+      "description": "Seq 5..8 presented without declaring a window: a full log missing its head.",
+      "input": {
+        "entries": [
+          {
+            "agent_id": "agent-alpha",
+            "seq": 5,
+            "action_ref": "639cef88c106aa9c1e67cf089851d88841e9e6efb9634183ff33f063ca7509db",
+            "prev_head": "c27908516985307f7e22bf0c3d704930cdaf278e7114bdb8a7f9f1a9eb92105c",
+            "head": "d60eed6d9725f216fc9ecc4134459d60602b972ee38103a732fcb349b2e12fba"
+          },
+          {
+            "agent_id": "agent-alpha",
+            "seq": 6,
+            "action_ref": "da360f21421261e7f487f2c3765fea73441701a88c90239e54cf570842df287e",
+            "prev_head": "d60eed6d9725f216fc9ecc4134459d60602b972ee38103a732fcb349b2e12fba",
+            "head": "7def58394e0354f35087e2a562f96a65800bc505d35d7f4fcb4ac0e5b2b9f606"
+          },
+          {
+            "agent_id": "agent-alpha",
+            "seq": 7,
+            "action_ref": "25e59b885e4860b461ebd62d7752f37d993af37d10b5b67d36811a350918fa52",
+            "prev_head": "7def58394e0354f35087e2a562f96a65800bc505d35d7f4fcb4ac0e5b2b9f606",
+            "head": "e7379b57bbb6fe640d68208f1f844157198e27723e4eb3f8d850ccef4a596f2f"
+          },
+          {
+            "agent_id": "agent-alpha",
+            "seq": 8,
+            "action_ref": "bc2483012ae6ca3dbac9a5f414f3dd7370017b507c65ce8af5e16f3324890042",
+            "prev_head": "e7379b57bbb6fe640d68208f1f844157198e27723e4eb3f8d850ccef4a596f2f",
+            "head": "5d98f641a77e54d0feb29dd153555ed7825fb3b2a93b8d9ed27337ef03f10a02"
+          }
+        ]
+      },
+      "expected": {
+        "verdict": "broken",
+        "completeness": "failed",
+        "reason": "seq_gap",
+        "window_anchor": null
+      }
+    }
+  ]
+}

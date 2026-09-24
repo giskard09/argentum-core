@@ -62,9 +62,12 @@ from plugins.agt_evidence_anchor.merkle import build_merkle_tree, verify_inclusi
 ENTRY_V = "trail-head-ref/v1"
 CHECKPOINT_V = "trail-head-ref/v1/checkpoint"
 
-# Completeness states. Only the first two are positive answers.
+# Completeness states. Only the first four are positive answers; the two
+# window states cover seq >= from_seq only.
 PROVEN = "proven"
 PROVEN_THROUGH_CHECKPOINT = "proven_through_checkpoint"
+PROVEN_FROM_SEQ = "proven_from_seq"
+PROVEN_FROM_SEQ_THROUGH_CHECKPOINT = "proven_from_seq_through_checkpoint"
 NOT_EVALUATED = "not_evaluated"
 FAILED = "failed"
 
@@ -196,15 +199,27 @@ def verify_trail(
     root: Optional[str] = None,
     now: Optional[str] = None,
     max_checkpoint_age_s: Optional[int] = None,
+    anchor: Optional[dict] = None,
+    anchor_proof: Optional[list[str]] = None,
+    anchor_root: Optional[str] = None,
+    from_seq: int = 1,
 ) -> dict:
     """Check an agent's presented log for continuity and, given an anchored
     checkpoint, for completeness.
 
-    entries: the full log from seq 1, in presented order.
+    entries: the log in presented order, from seq `from_seq`.
+    from_seq: 1 for a full log (the default). A window starting at seq k > 1
+      is verified only when the caller asks for it with from_seq=k, so a
+      full log missing its first records is still a seq_gap, never a window
+      (see "Window verification" in the spec).
     checkpoint/proof/root: the checkpoint, its Merkle proof and the period
       root. The caller confirms separately that `root` is anchored on-chain
       and that this is the latest checkpoint for the agent.
     now/max_checkpoint_age_s: optional staleness bound for the checkpoint.
+    anchor/anchor_proof/anchor_root: for a window only, a checkpoint at seq
+      k-1 with its Merkle proof and period root. It certifies the window's
+      first prev_head. Without it the window's start is uncertified: taken
+      from the presented records, which is the party being checked.
 
     Each failure has its own verdict; the first failing check wins.
     """
@@ -222,13 +237,15 @@ def verify_trail(
 
     # 2. continuity: seq order, then each head, then each link.
     # A reorder is told apart from a removal up front: the same contiguous
-    # seq set 1..n presented out of order is "seq_order", a missing or
-    # duplicated seq is "seq_gap".
+    # seq set k..k+n-1 presented out of order is "seq_order", a missing or
+    # duplicated seq is "seq_gap". k is 1 for a full log, > 1 for a window.
+    if not isinstance(from_seq, int) or isinstance(from_seq, bool) or from_seq < 1:
+        raise ValueError("from_seq must be an integer >= 1")
     seqs = [e["seq"] for e in entries]
-    if sorted(seqs) == list(range(1, len(seqs) + 1)) and seqs != sorted(seqs):
-        first_bad = next(s for i, s in enumerate(seqs) if s != i + 1)
+    if sorted(seqs) == list(range(from_seq, from_seq + len(seqs))) and seqs != sorted(seqs):
+        first_bad = next(s for i, s in enumerate(seqs) if s != from_seq + i)
         return _result("broken", FAILED, at_seq=first_bad, reason="seq_order")
-    prev_seq, prev_head = 0, None
+    prev_seq, prev_head = from_seq - 1, None
     for e in entries:
         seq = e["seq"]
         if seq != prev_seq + 1:
@@ -241,16 +258,42 @@ def verify_trail(
             return _result("malformed", FAILED, at_seq=seq, reason="entry_preimage")
         if _sha256_jcs(pre) != e["head"]:
             return _result("broken", FAILED, at_seq=seq, reason="head_mismatch")
-        if seq > 1 and stated_prev != prev_head:
+        if seq > from_seq and stated_prev != prev_head:
             return _result("broken", FAILED, at_seq=seq, reason="link_mismatch")
         prev_seq, prev_head = seq, e["head"]
+
+    # 2e. window start. A full log starts at genesis. A window's first
+    # prev_head is certified only by an anchor checkpoint at seq k-1 proven
+    # in a period root; the presented records cannot certify themselves.
+    if anchor is not None:
+        if not isinstance(anchor, dict) or anchor.get("v") != CHECKPOINT_V \
+                or not _is_hex64(anchor.get("head")) \
+                or not isinstance(anchor.get("seq"), int) or isinstance(anchor.get("seq"), bool):
+            return _result("anchor_unproven", FAILED, reason="anchor_shape")
+        if anchor.get("agent_id") != agent_id:
+            return _result("anchor_unproven", FAILED, reason="anchor_other_agent")
+        if anchor_root is None or anchor_proof is None or \
+                not verify_inclusion(checkpoint_digest(anchor), anchor_proof, anchor_root):
+            return _result("anchor_unproven", FAILED, reason="anchor_not_in_root")
+        if from_seq == 1 or anchor["seq"] != from_seq - 1:
+            return _result("anchor_unproven", FAILED, at_seq=from_seq,
+                           reason="anchor_not_adjacent")
+        if entries[0]["prev_head"] != anchor["head"]:
+            return _result("anchor_mismatch", FAILED, at_seq=from_seq,
+                           reason="prev_head_differs_from_anchor")
+        window_anchor = "certified"
+    else:
+        window_anchor = "genesis" if from_seq == 1 else "uncertified"
+    scope = {"from_seq": from_seq, "window_anchor": window_anchor}
 
     # 3. agent-side counter, if the agent supplied one
     with_agent_seq = [e for e in entries if "agent_seq" in e]
     if with_agent_seq:
         if len(with_agent_seq) != len(entries):
             return _result("agent_gap", FAILED, reason="agent_seq_partial")
-        if entries[0]["agent_seq"] != 1:
+        # A window cannot know the agent_seq of seq k-1 (the anchor does
+        # not carry it): only contiguity inside the window is checked.
+        if from_seq == 1 and entries[0]["agent_seq"] != 1:
             return _result("agent_gap", FAILED, at_seq=1,
                            reason="agent_seq_not_contiguous")
         for a, b in zip(entries, entries[1:]):
@@ -263,7 +306,7 @@ def verify_trail(
     # 4. completeness needs an external checkpoint
     if checkpoint is None:
         return _result("continuity_only", NOT_EVALUATED, reason="no_checkpoint",
-                       last_seq=last_seq)
+                       last_seq=last_seq, **scope)
 
     if not isinstance(checkpoint, dict) or checkpoint.get("v") != CHECKPOINT_V \
             or not _is_hex64(checkpoint.get("head")) \
@@ -282,17 +325,29 @@ def verify_trail(
                            checkpoint_age_s=int(age))
 
     cp_seq = checkpoint["seq"]
+    if cp_seq < from_seq:
+        # The latest checkpoint predates the window: nothing presented is sealed.
+        return _result("continuity_only", NOT_EVALUATED,
+                       reason="checkpoint_before_window", last_seq=last_seq,
+                       checkpoint_seq=cp_seq, **scope)
     if last_seq < cp_seq:
         return _result("truncated", FAILED, at_seq=last_seq + 1,
                        reason="log_shorter_than_checkpoint",
                        last_seq=last_seq, checkpoint_seq=cp_seq)
-    if entries[cp_seq - 1]["head"] != checkpoint["head"]:
+    if entries[cp_seq - from_seq]["head"] != checkpoint["head"]:
         return _result("checkpoint_mismatch", FAILED, at_seq=cp_seq,
                        reason="head_differs_from_checkpoint")
+    # A matching head at cp_seq commits, through the chain, to every window
+    # record up to it AND to the window's first prev_head: the checkpoint
+    # certifies the anchor transitively. It says nothing about seq < k, so a
+    # window gets its own positive verdicts, never "complete".
+    window = from_seq > 1
     if last_seq == cp_seq:
-        return _result("complete", PROVEN, last_seq=last_seq,
-                       as_of=checkpoint["period_end"])
-    return _result("complete_unsealed_tail", PROVEN_THROUGH_CHECKPOINT,
+        return _result("window_complete" if window else "complete",
+                       PROVEN_FROM_SEQ if window else PROVEN,
+                       last_seq=last_seq, as_of=checkpoint["period_end"], **scope)
+    return _result("window_complete_unsealed_tail" if window else "complete_unsealed_tail",
+                   PROVEN_FROM_SEQ_THROUGH_CHECKPOINT if window else PROVEN_THROUGH_CHECKPOINT,
                    last_seq=last_seq, checkpoint_seq=cp_seq,
                    unsealed_entries=last_seq - cp_seq,
-                   as_of=checkpoint["period_end"])
+                   as_of=checkpoint["period_end"], **scope)
