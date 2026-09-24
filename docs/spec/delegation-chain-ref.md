@@ -197,6 +197,27 @@ attenuated rather than merely claimed.
   without depending on a live key-registry service. A production verifier may resolve
   keys however it already does for signed artifacts in its system (e.g. a pubkey
   registry with historical epoch resolution).
+- **A key that does not resolve is not a bad signature.** When a hop carries
+  `hop_signature` and its `delegator` has no key in the key set the verifier was given,
+  the signature was not checked, and the verifier MUST NOT report `hop_signature_invalid`
+  for it. What follows depends on a completeness declaration made by the caller, never
+  inferred from the fixture (`keys_are_complete`, default absent):
+  - absent: the hop's signature is `NOT_ASSESSED`, and so is the chain unless another
+    check already found something adverse;
+  - declared `true`: `FAIL delegator_key_not_in_complete_key_set`, a policy rejection with
+    its own reason code, distinct from `hop_signature_invalid`.
+
+  An adverse finding the verifier did make (a signature that does not verify, a chain
+  break, scope widening, a replay) is `FAIL` whatever else could not be assessed. A
+  `NOT_ASSESSED` chain is not recorded by the replay guard, for the same reason a failed
+  one is not. Vectors: `examples/conformance/delegation-chain-ref/key-completeness-vectors.json`,
+  one per form plus a mixed case (a forged hop next to an unresolved key → `FAIL
+  hop_signature_invalid`); a vector may carry its own `pubkeys` and `keys_are_complete`,
+  and `expected` may list more than one acceptable verdict.
+
+  *Correction (2026-09-24):* until this revision the reference verifier reported an
+  unresolved delegator key as `hop_signature_invalid`. No published vector exercised that
+  path, so no earlier result changes.
 
 ---
 
