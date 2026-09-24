@@ -63,6 +63,10 @@ jobs:
           if [ -f requirements.txt ]; then
             pip install -r requirements.txt
           fi
+          # Reference verifiers declare their own dependencies per corpus.
+          for f in examples/conformance/*/requirements.txt; do
+            pip install -r "$f"
+          done
 
       - name: Run tests if present
         run: |
