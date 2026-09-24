@@ -1,16 +1,28 @@
 # Mycelium Trails — Regulatory Compliance Mapping
 
-**Version:** 1.2 — 2026-08-05 — Corrects citation error in Note (1) (v1.1, 2026-05-19)  
+**Version:** 1.3 — 2026-09-24 — Corrects the application date of Art. 12 (v1.2, 2026-08-05; v1.1, 2026-05-19)  
 **Prepared by:** Legal, Rama (v1.1 approved for due diligence 2026-05-16, published to main 2026-05-19)
 
-**Changelog:** v1.1 Note (1) misquoted Art. 12.1 as requiring records "sufficient to
+**Correction (v1.3).** v1.2 stated that EU AI Act Art. 12 has been **in force since
+2 August 2026**. That is wrong. The AI Act entered into force on 1 August 2024, and the
+obligations for high-risk AI systems, Art. 12 among them, are not yet applicable. After the
+AI Omnibus (Regulation (EU) 2026/1744, in force 27 July 2026) they **apply from 2 December
+2027** for systems in the high-risk areas of Annex III, and **from 2 August 2028** for
+systems integrated into products covered by Annex I. Source: European Commission,
+*AI Act — Shaping Europe's digital future* (digital-strategy.ec.europa.eu, "Regulatory
+framework on AI"), read 2026-09-24. The consolidated text of Regulation (EU) 2026/1744 on
+EUR-Lex could not be loaded that day; verify it there before relying on either date. Every
+statement below that depended on the 2026 date has been corrected and is marked
+*(v1.3)*. The "supports, not satisfies" constraint is unchanged.
+
+**Changelog (v1.2):** v1.1 Note (1) misquoted Art. 12.1 as requiring records "sufficient to
 identify the reasons for the outputs of the system." That language does not appear
 in the enacted text. Corrected to reflect the actual three-paragraph structure
 (automatic event logging / linkage to Art. 79(1), 72, 26(5) oversight / minimum
 content fields limited to Annex III(1)(a) remote biometric identification).
 
 **Other changes in v1.2**, none of which widen any assertion made in v1.1:
-(1) EU AI Act Art. 12 is now **in force** (2 August 2026) — v1.1 described it prospectively;
+(1) ~~EU AI Act Art. 12 is now **in force** (2 August 2026) — v1.1 described it prospectively;~~ *withdrawn in v1.3, see Correction (v1.3) above;*
 (2) a new Note (3) records that **no harmonised technical standard for Art. 12 has been
 finalised**;
 (3) Current Status corrected — AGT PR #2415 was closed without merge.
@@ -74,7 +86,7 @@ the truthfulness of what was recorded.
 
 | Framework | Relevant Requirement | How Mycelium Trails Addresses It | Legal Status |
 |-----------|---------------------|----------------------------------|-------------|
-| **EU AI Act Art. 12** (**in force since 2 Aug 2026**) | Automatic recording of events (logs) over the system lifetime, enabling traceability appropriate to the intended purpose — specifically for risk identification (Art. 79(1)), post-market monitoring (Art. 72), and deployer monitoring (Art. 26(5)). | Each agent action produces a record with a signed, externally-anchored hash. The record is auditable by a party that did not produce it, without operator access. *Note: Art. 12 mandates that logs exist and be relevant; it does not prescribe tamper-evidence or any verification mechanism. See Note (1) for what the article does and does not say, and Note (3) on the absence of a harmonised standard.* | **[LEGAL-OK]** Mycelium "supports" Art. 12 — does not "satisfy" it alone. |
+| **EU AI Act Art. 12** (**applies from 2 Dec 2027** for Annex III systems, 2 Aug 2028 for Annex I — *corrected in v1.3*) | Automatic recording of events (logs) over the system lifetime, enabling traceability appropriate to the intended purpose — specifically for risk identification (Art. 79(1)), post-market monitoring (Art. 72), and deployer monitoring (Art. 26(5)). | Each agent action produces a record with a signed, externally-anchored hash. The record is auditable by a party that did not produce it, without operator access. *Note: Art. 12 mandates that logs exist and be relevant; it does not prescribe tamper-evidence or any verification mechanism. See Note (1) for what the article does and does not say, and Note (3) on the absence of a harmonised standard.* | **[LEGAL-OK]** Mycelium "supports" Art. 12 — does not "satisfy" it alone. |
 | **SOC 2 CC7.x** (Change Management / Incident Response) | Detection of unauthorized changes to system components and integrity evidence in audit reviews. | External anchoring enables detection of any post-write modification to the evidence record. The auditor runs independent verification without relying on the operator. | **[LEGAL-OK]** |
 | **ISO 27001 A.12.4** (Logging and Monitoring) | Protection of event logs against modification or unauthorized access. | Records cannot be altered without the system detecting a discrepancy on verification. Protection is structural — does not depend on the operator's internal access controls. | **[LEGAL-OK]** |
 | **FCA SYSC 9.1** (Recordkeeping — UK financial services) | Retention of records sufficient for the FCA to supervise compliance, for the applicable period. | Mycelium generates records the FCA can verify independently. However, "sufficiency" under SYSC 9.1 also encompasses content and retention period. The system covers integrity but does not define retention policy — that must be configured by the operator per the financial instrument. See Note (2). | **[REVIEW]** Retention policy is operator responsibility. |
@@ -148,7 +160,8 @@ limitation.
 
 ### (3) No harmonised technical standard exists for Art. 12 (as at 2026-08-05)
 
-Article 12 has been in force since 2 August 2026, but the technical standards intended to
+*(v1.3)* Article 12 applies from 2 December 2027 (Annex III systems) and 2 August 2028
+(Annex I systems), and the technical standards intended to
 give it operational shape are **not yet published**. ISO/IEC 24970 (AI system logging)
 reached **FDIS** — the final approval stage — in June 2026; it is close to publication, not
 early-stage. prEN 18229-1 (AI logging and human oversight) remains at prEN stage.
@@ -159,9 +172,10 @@ a third party's process, which changes without notice to us.
 
 Two consequences, and they pull in opposite directions:
 
-- **For an operator today**, there is a binding obligation with no settled specification to
-  implement against. Anything adopted now is a good-faith interpretation, and should be
-  documented as such rather than presented as conformity.
+- **For an operator today** *(v1.3)*, there is an obligation that will bind from the dates
+  above and no settled specification to implement against yet. Anything adopted now is a
+  good-faith interpretation, and should be documented as such rather than presented as
+  conformity.
 - **For this project**, the absence of a settled standard is not a licence to position
   `action_ref` as *the* answer to Art. 12. It is not, and no artefact of ours should imply
   it. What can be stated accurately is narrower and still useful: the assurance path
@@ -199,9 +213,9 @@ enforcement risk or regulatory intent.*
 | **[LEGAL-OK]** | 4 |
 | **[REVIEW]** | 1 (FCA SYSC 9.1 — retention policy is operator configuration, not a product gap) |
 | EU AI Act language | Approved with precision note: "supports" not "satisfies" — and, as of v1.2, never "Art. 12 requires tamper-evidence" |
-| Art. 12 status | In force since 2026-08-02. No harmonised technical standard finalised (Note 3) |
+| Art. 12 status | *(v1.3)* Applies from 2027-12-02 (Annex III) and 2028-08-02 (Annex I); not yet applicable. No harmonised technical standard finalised (Note 3) |
 | Approved for | Due diligence with compliance officers (banking, insurance, regulated enterprise) |
-| Pending | Legal re-review of the corrected Note (1) and the new Note (3) |
+| Pending | Legal re-review of the corrected Note (1) and the new Note (3); Legal review of Correction (v1.3) |
 
 ---
 
