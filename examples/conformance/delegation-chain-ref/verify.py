@@ -13,6 +13,11 @@ Checks five invariants per spec (delegation-chain-ref-v1):
      turn a claimed chain into a verified one when hops are independent parties with no
      shared authority). The preimage binds delegator/delegatee/scope/chain_id, not just
      delegation_ref alone — see "hop_signature preimage" erratum below for why.
+     A delegator with no key in the given key set is NOT_ASSESSED, or FAIL
+     delegator_key_not_in_complete_key_set when the caller declares the key set complete
+     (keys_are_complete) — never hop_signature_invalid. See evaluate_vector().
+
+Verdicts are PASS / FAIL / NOT_ASSESSED; any adverse finding makes the chain FAIL.
 
 delegation_chain_ref byte-match is also verified against SHA-256(JCS(chain_artifact)).
 
@@ -103,21 +108,52 @@ def hop_signing_preimage(chain_id: str, hop: dict) -> str:
     })
 
 
-def verify_hop_signature(chain_id: str, hop: dict, hop_signature_b64: str, pubkeys: dict) -> bool:
+HOP_SIG_VALID = "valid"
+HOP_SIG_INVALID = "invalid"
+HOP_SIG_KEY_UNRESOLVED = "key_unresolved"
+
+
+def verify_hop_signature(chain_id: str, hop: dict, hop_signature_b64: str, pubkeys: dict) -> str:
+    """Returns HOP_SIG_VALID, HOP_SIG_INVALID or HOP_SIG_KEY_UNRESOLVED.
+
+    A delegator with no key in `pubkeys` is not a bad signature: the signature was never
+    checked. Reporting it as invalid would claim an adverse finding the verifier did not
+    make (the collapse verify-failure-mode-ref invariant 1 rules out). What an unresolved
+    key means for the verdict depends on whether the caller declared the key set complete
+    -- see evaluate_vector().
+    """
     pub_b64 = pubkeys.get(hop["delegator"])
     if not pub_b64:
-        return False
+        return HOP_SIG_KEY_UNRESOLVED
     try:
         vk = VerifyKey(base64.b64decode(pub_b64))
         preimage = hop_signing_preimage(chain_id, hop)
         vk.verify(preimage.encode("utf-8"), base64.b64decode(hop_signature_b64))
-        return True
+        return HOP_SIG_VALID
     except (BadSignatureError, ValueError, TypeError, KeyError):
-        return False
+        return HOP_SIG_INVALID
 
 
-def verify_vector(vector: dict, pubkeys: dict | None = None, seen_registry: "SeenRegistry | None" = None) -> tuple[bool, list[str]]:
+def verify_vector(vector: dict, pubkeys: dict | None = None, seen_registry: "SeenRegistry | None" = None,
+                  keys_are_complete: bool = False) -> tuple[bool, list[str]]:
+    """Two-valued view of evaluate_vector(): conforms only on PASS."""
+    verdict, failures, not_assessed = evaluate_vector(vector, pubkeys, seen_registry, keys_are_complete)
+    return verdict == "PASS", failures + not_assessed
+
+
+def evaluate_vector(vector: dict, pubkeys: dict | None = None, seen_registry: "SeenRegistry | None" = None,
+                    keys_are_complete: bool = False) -> tuple[str, list[str], list[str]]:
+    """Returns (verdict, failures, not_assessed), verdict in PASS / FAIL / NOT_ASSESSED.
+
+    keys_are_complete is declared by the caller, never inferred from the fixture. Absent
+    (default False), a delegator missing from `pubkeys` leaves that hop's signature
+    NOT_ASSESSED. Declared True, the same absence is a policy rejection (FAIL
+    delegator_key_not_in_complete_key_set), still not a bad signature. Any adverse finding
+    the verifier did make (a signature that does not verify, a chain break, ...) is FAIL
+    regardless of what else could not be assessed.
+    """
     failures = []
+    not_assessed = []
     chain = vector["chain_artifact"]
     hops = chain["hops"]
     pubkeys = pubkeys or {}
@@ -182,12 +218,23 @@ def verify_vector(vector: dict, pubkeys: dict | None = None, seen_registry: "See
     # swap in a different scope/delegatee while carrying forward an untouched, still-"valid" signature.
     for i, hop in enumerate(hops):
         if "hop_signature" in hop:
-            ok = verify_hop_signature(chain["chain_id"], hop, hop["hop_signature"], pubkeys)
-            if not ok:
+            sig = verify_hop_signature(chain["chain_id"], hop, hop["hop_signature"], pubkeys)
+            if sig == HOP_SIG_INVALID:
                 failures.append(
                     f"hop_signature_invalid at hop {i}: signature does not verify against "
                     f"delegator={hop['delegator']!r}'s registered pubkey over "
                     f"{{chain_id, delegator, delegatee, scope, delegation_ref}} for this hop"
+                )
+            elif sig == HOP_SIG_KEY_UNRESOLVED and keys_are_complete:
+                failures.append(
+                    f"delegator_key_not_in_complete_key_set at hop {i}: "
+                    f"delegator={hop['delegator']!r} has no key in a key set the caller declared "
+                    f"complete (policy rejection; the signature itself was not checked)"
+                )
+            elif sig == HOP_SIG_KEY_UNRESOLVED:
+                not_assessed.append(
+                    f"hop_signature_not_assessed at hop {i}: no key for "
+                    f"delegator={hop['delegator']!r} and the key set is not declared complete"
                 )
 
     # 6. replay_detected — chain_id or any hop delegation_ref already accepted before.
@@ -202,16 +249,24 @@ def verify_vector(vector: dict, pubkeys: dict | None = None, seen_registry: "See
                 f"replay_detected: chain_id={chain['chain_id']!r} (or one of its hop "
                 f"delegation_ref values) was already submitted"
             )
-        elif len(failures) == 0:
+        elif not failures and not not_assessed:
+            # A NOT_ASSESSED submission was not accepted either, so it must not consume
+            # the chain_id (same reasoning as the recording-order erratum).
             seen_registry.record(chain["chain_id"], hop_refs)
 
-    return len(failures) == 0, failures
+    if failures:
+        return "FAIL", failures, not_assessed
+    if not_assessed:
+        return "NOT_ASSESSED", failures, not_assessed
+    return "PASS", failures, not_assessed
 
 
 def run_file(vectors_path: Path):
+    """`expected` is a verdict or a list of acceptable verdicts. A vector may carry its
+    own `pubkeys` and `keys_are_complete`; otherwise the file-level ones apply (default:
+    not declared complete). An expected FAIL also has to fail for its `failure_mode`."""
     data = json.loads(vectors_path.read_text())
     vectors = data["vectors"]
-    pubkeys = data.get("pubkeys", {})
     seen_registry = SeenRegistry()
     passed = 0
     failed = 0
@@ -220,28 +275,26 @@ def run_file(vectors_path: Path):
 
     for v in vectors:
         vid = v["id"]
-        expected = v["expected"]
-        conforms, failures = verify_vector(v, pubkeys, seen_registry)
+        expected = v["expected"] if isinstance(v["expected"], list) else [v["expected"]]
+        pubkeys = v.get("pubkeys", data.get("pubkeys", {}))
+        complete = v.get("keys_are_complete", data.get("keys_are_complete", False))
+        verdict, failures, not_assessed = evaluate_vector(v, pubkeys, seen_registry, complete)
 
-        if expected == "PASS":
-            ok = conforms
-        else:
-            ok = not conforms
+        ok = verdict in expected
+        mode = v.get("failure_mode")
+        if ok and verdict == "FAIL" and mode:
+            ok = any(f.startswith(mode) for f in failures)
 
         status = "PASS" if ok else "FAIL"
         marker = "✓" if ok else "✗"
 
-        print(f"  {marker} [{status}] {vid}")
+        print(f"  {marker} [{status}] {vid}  -> {verdict}")
         if not ok:
-            if expected == "PASS" and failures:
-                for f in failures:
-                    print(f"         unexpected failure: {f}")
-            elif expected == "FAIL" and conforms:
-                print(f"         expected FAIL ({v.get('failure_mode', '?')}) but verifier accepted it")
-        elif not conforms and expected == "FAIL":
-            mode = v.get("failure_mode", "?")
-            matched = any(mode.replace("_", " ") in f or mode in f for f in failures)
-            print(f"         correctly rejected: {failures[0]}")
+            print(f"         expected {'/'.join(expected)}" + (f" ({mode})" if mode else ""))
+            for f in failures + not_assessed:
+                print(f"         got: {f}")
+        elif verdict != "PASS":
+            print(f"         {(failures + not_assessed)[0]}")
 
         if ok:
             passed += 1
@@ -256,7 +309,8 @@ def main():
     base = Path(__file__).parent
     total_passed = 0
     total_failed = 0
-    for fname in ("vectors.json", "cross-org-vectors.json", "replay-vectors.json"):
+    for fname in ("vectors.json", "cross-org-vectors.json", "replay-vectors.json",
+                  "key-completeness-vectors.json"):
         p, f = run_file(base / fname)
         total_passed += p
         total_failed += f

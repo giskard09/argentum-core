@@ -1,0 +1,168 @@
+{
+  "spec_version": "delegation-chain-ref-v1",
+  "description": "Key completeness. A delegator with no key in the given key set leaves that hop's signature unchecked: NOT_ASSESSED when the caller has not declared the key set complete, FAIL delegator_key_not_in_complete_key_set (a policy rejection, not a bad signature) when it has. One vector per form, plus a mixed vector where an unresolved key sits next to a signature that does not verify: the adverse finding decides, FAIL. Every vector carries its own pubkeys; keys_are_complete is set only where declared.",
+  "vectors": [
+    {
+      "id": "kc-001-all-keys-present",
+      "description": "Control. Both delegators' keys are in the set and both hop signatures verify.",
+      "expected": "PASS",
+      "pubkeys": {
+        "test-kc-a": "aeUeNw5msVlGmTYWqpILuu66srzNYAkOJvyBGTcHaoE=",
+        "test-kc-b": "DisTyuiAVzcn41JK0sgJw/3yTU+O1i1XKexJRvMa2Hg=",
+        "test-kc-c": "ZaIe6WzJGCvkMm2gfGkVY+hpiLsGne8k19UjLXxuqFM="
+      },
+      "chain_artifact": {
+        "chain_id": "chain-kc-001",
+        "hops": [
+          {
+            "delegator": "test-kc-a",
+            "delegatee": "test-kc-b",
+            "scope": "mycelium:payment",
+            "delegation_ref": "ffdfa9be329584d47774985f84db566911e6b0c6cef12dde181ffd6cd9350c0e",
+            "hop_signature": "LlCaHRsNFMlNzjdOWzPDZruDMP1/DIrw5BOZWYoyxmU+mjwHaJLrMP8iCBVXTpC8NjdA3FAFgRtGG907kHVNCw=="
+          },
+          {
+            "delegator": "test-kc-b",
+            "delegatee": "test-kc-c",
+            "scope": "mycelium:payment",
+            "delegation_ref": "a8fbc2467ec586f6ebfc196a596c89fe5377769abba9bc16b30588f4dd1a6a0e",
+            "hop_signature": "fDeO+nENgoPdsvN2Gh3GD8DzRxtXABCxAFV2XaxHDDvRXPOjP9e1/uC8+4HHzbjR1l2DfflIs5zZ6WcRTOobDQ=="
+          }
+        ],
+        "leaf_action_ref": "b1ea648141ef3925f4f16701d42c3f2e2b645b976ac75b47623c339d11306412",
+        "root_delegator": "test-kc-a",
+        "scope": "mycelium:payment",
+        "version": "delegation-chain-ref-v1"
+      },
+      "delegation_chain_ref": "b8e443ca5b4d1808934d85187a026d62f46c33afa3879dc993fbe638978acd3d",
+      "leaf_preimage": {
+        "agent_id": "test-kc-c",
+        "action_type": "payment.route",
+        "scope": "mycelium:payment",
+        "timestamp": "2026-09-24T12:00:00.000Z"
+      }
+    },
+    {
+      "id": "kc-002-key-absent-not-declared-complete",
+      "description": "test-kc-b's key is missing and completeness is not declared. Hop 1 is validly signed but cannot be checked here. FAIL would claim a finding the verifier did not make.",
+      "expected": [
+        "NOT_ASSESSED"
+      ],
+      "pubkeys": {
+        "test-kc-a": "aeUeNw5msVlGmTYWqpILuu66srzNYAkOJvyBGTcHaoE=",
+        "test-kc-c": "ZaIe6WzJGCvkMm2gfGkVY+hpiLsGne8k19UjLXxuqFM="
+      },
+      "chain_artifact": {
+        "chain_id": "chain-kc-002",
+        "hops": [
+          {
+            "delegator": "test-kc-a",
+            "delegatee": "test-kc-b",
+            "scope": "mycelium:payment",
+            "delegation_ref": "824cd1e29200b4fbfec896db203c839e9d1d989993aaced844142e3a9d7f61fb",
+            "hop_signature": "d7jGsAicYmXYuZMzzYtZgT2ZrJF+WMkuk2oDHfRIKRQR4WqTh6J12qLokuKfDZBN00xqecKvFYWHfzcmZ5ecDA=="
+          },
+          {
+            "delegator": "test-kc-b",
+            "delegatee": "test-kc-c",
+            "scope": "mycelium:payment",
+            "delegation_ref": "725c94d331aad451bbc0259deb8e222fc6e537a2cb94fdf8b86cc911eb8893a1",
+            "hop_signature": "2pENISPlmULnAVv8B0SiU3HUK/tikpJ9bjn5AtfxmliKClOoUpxFh8nBi8tC2DexSYY7f1SqYtzlAbPRsu+KCQ=="
+          }
+        ],
+        "leaf_action_ref": "b1ea648141ef3925f4f16701d42c3f2e2b645b976ac75b47623c339d11306412",
+        "root_delegator": "test-kc-a",
+        "scope": "mycelium:payment",
+        "version": "delegation-chain-ref-v1"
+      },
+      "delegation_chain_ref": "ca8e02e26df3a60730dde73900cf41c4f56a1d2199e586dd39fb71aed7985a58",
+      "leaf_preimage": {
+        "agent_id": "test-kc-c",
+        "action_type": "payment.route",
+        "scope": "mycelium:payment",
+        "timestamp": "2026-09-24T12:00:00.000Z"
+      }
+    },
+    {
+      "id": "kc-003-key-absent-declared-complete",
+      "description": "Same absence, key set declared complete by the caller. Rejected by policy; the reason code must not be hop_signature_invalid.",
+      "expected": "FAIL",
+      "failure_mode": "delegator_key_not_in_complete_key_set",
+      "pubkeys": {
+        "test-kc-a": "aeUeNw5msVlGmTYWqpILuu66srzNYAkOJvyBGTcHaoE=",
+        "test-kc-c": "ZaIe6WzJGCvkMm2gfGkVY+hpiLsGne8k19UjLXxuqFM="
+      },
+      "keys_are_complete": true,
+      "chain_artifact": {
+        "chain_id": "chain-kc-003",
+        "hops": [
+          {
+            "delegator": "test-kc-a",
+            "delegatee": "test-kc-b",
+            "scope": "mycelium:payment",
+            "delegation_ref": "4b93b9ad34812977985bb64f0644c06ba64bb736cdd9ac350ff8de9828566046",
+            "hop_signature": "XlRneVVfOvmG4Hvpp9zENAzSBVdC6wD2LeZORm2bUADWXl+HSLOgApQcEx9dRX7O/YGdNz9tP4Zg3fHNRKcDBQ=="
+          },
+          {
+            "delegator": "test-kc-b",
+            "delegatee": "test-kc-c",
+            "scope": "mycelium:payment",
+            "delegation_ref": "4fe95b8f9cceb0e11317706c06ab7908d1b342d3ad0a900171a407b8098db117",
+            "hop_signature": "bafcmrLMU9elklqiRdIBO7EMcEwm+Ot9FdmxJiUq1+rICRhL0ef3Ia87idsZJUXWP3szy9Zt2b1QinVpPq6pBw=="
+          }
+        ],
+        "leaf_action_ref": "b1ea648141ef3925f4f16701d42c3f2e2b645b976ac75b47623c339d11306412",
+        "root_delegator": "test-kc-a",
+        "scope": "mycelium:payment",
+        "version": "delegation-chain-ref-v1"
+      },
+      "delegation_chain_ref": "af9edcb19443c7167e9e3643dfcbf3d381a5eedba2554210abbb5d7ebb85d51a",
+      "leaf_preimage": {
+        "agent_id": "test-kc-c",
+        "action_type": "payment.route",
+        "scope": "mycelium:payment",
+        "timestamp": "2026-09-24T12:00:00.000Z"
+      }
+    },
+    {
+      "id": "kc-004-mixed-forged-and-key-absent",
+      "description": "Hop 0 is signed by a key that is not test-kc-a's (forged) and test-kc-b's key is missing, completeness not declared. What could not be assessed does not mask what was found: FAIL hop_signature_invalid.",
+      "expected": "FAIL",
+      "failure_mode": "hop_signature_invalid",
+      "pubkeys": {
+        "test-kc-a": "aeUeNw5msVlGmTYWqpILuu66srzNYAkOJvyBGTcHaoE=",
+        "test-kc-c": "ZaIe6WzJGCvkMm2gfGkVY+hpiLsGne8k19UjLXxuqFM="
+      },
+      "chain_artifact": {
+        "chain_id": "chain-kc-004",
+        "hops": [
+          {
+            "delegator": "test-kc-a",
+            "delegatee": "test-kc-b",
+            "scope": "mycelium:payment",
+            "delegation_ref": "32518449fc77d3743a011c519ddee14f9dda23a9b015da5f478a7a333db63588",
+            "hop_signature": "xMEii4jGuG35qvLtBV7aQRHSl85lsbEH9Ym7EcLZCSv4do8WgHvJ+zvHHh6UInLo+4vzgiI61qHCIvFzVLQ+Dg=="
+          },
+          {
+            "delegator": "test-kc-b",
+            "delegatee": "test-kc-c",
+            "scope": "mycelium:payment",
+            "delegation_ref": "572ee82f03d0e3ba29f4cc4fd7655c1a20a989e2bc7464c9dcc3df3b27309ea3",
+            "hop_signature": "CBcWzbjbAvQUmTgWBSO/tEQ2oSFMEj0ueFRkDZXz+L4FtZrRyiLE8iPrNUGhgMzvzZTpjoxbfNS5j9/blZMiDA=="
+          }
+        ],
+        "leaf_action_ref": "b1ea648141ef3925f4f16701d42c3f2e2b645b976ac75b47623c339d11306412",
+        "root_delegator": "test-kc-a",
+        "scope": "mycelium:payment",
+        "version": "delegation-chain-ref-v1"
+      },
+      "delegation_chain_ref": "e3ad120bec21b60af76929a84694eebbe683bf5089ea6dcf6f4155105a7c0bab",
+      "leaf_preimage": {
+        "agent_id": "test-kc-c",
+        "action_type": "payment.route",
+        "scope": "mycelium:payment",
+        "timestamp": "2026-09-24T12:00:00.000Z"
+      }
+    }
+  ]
+}
