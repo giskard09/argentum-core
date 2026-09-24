@@ -1462,8 +1462,8 @@
               "failure_mode": "anchoring_precedence",
               "envelope": {
                 "chain_head": "f733fed9cc757165f810b778e4baba1f51a45504988e937707aaab4361b2f064",
-                "anchor_block_time": 1749211500,
-                "outcome_ts_ms": 1749211200000
+                "anchor_block_time": 1780747500,
+                "outcome_ts_ms": 1780747200000
               },
               "checks": {
                 "anchoring_existence": true,
@@ -1477,8 +1477,8 @@
               "expected": "PASS",
               "envelope": {
                 "chain_head": "f733fed9cc757165f810b778e4baba1f51a45504988e937707aaab4361b2f064",
-                "anchor_block_time": 1749211100,
-                "outcome_ts_ms": 1749211200000
+                "anchor_block_time": 1780747100,
+                "outcome_ts_ms": 1780747200000
               },
               "checks": {
                 "anchoring_existence": true,

@@ -8,6 +8,19 @@ type-keyed `extensions` mechanism, and an append-only SHA-256 hash chain for
 audit records, with a fixed cross-implementation known-answer digest pinned in
 the PR text.
 
+**Correction (2026-09-24).** Vectors 4–5 (boundary anchoring) stated
+`outcome_ts_ms: 1749211200000` as taken from the record's `occurred_at`
+(`2026-06-06T12:00:00.000Z`). That value is 2025-06-06T12:00:00.000Z, one year
+earlier, and the two anchor times (`1749211500`, `1749211100`) were offset from
+it. They now read `outcome_ts_ms: 1780747200000` (the record's actual
+`occurred_at`), with anchors at `1780747500` (300 s after, existence only) and
+`1780747100` (100 s before, precedence). The offsets are unchanged, so both
+outcomes are too: vector 4 is still FAIL on `anchoring_precedence` and vector 5
+still PASS. No digest depends on these fields. The same four values are
+corrected in `../conformance-export.json` and `../conformance-vectors.json`.
+The error dates from commit 4cd11b6 (2026-07-08). It was found with this
+repository's own probe (`tools/probe_expected_flip.py`, pull request 105).
+
 ## What this reproduces
 
 **1. Known-answer digest.** SEP-3004 §Conformance publishes a two-extension
