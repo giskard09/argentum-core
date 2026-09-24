@@ -17,8 +17,13 @@ A "set" is one top-level entry directly under examples/conformance/:
 
 Excluded, deliberately: README.md, verify.py / *.py, __pycache__/,
 node_modules/, package.json, package-lock.json (npm tooling noise, not
-conformance data — present only in agenttrust-v1 today) and this script's
-own output file, so re-running is idempotent.
+conformance data — present only in agenttrust-v1 today), this script's
+own output file and conformance-vectors.json (built FROM this export by
+build_conformance_vectors.py), so re-running is idempotent.
+
+Only files tracked by git are exported. The script used to walk the disk,
+so an untracked local virtualenv (crewai-unguarded-retry/venv/) put 59
+site-packages JSON files into the export.
 
 Usage: python3 build_export.py [--out conformance-export.json]
 """
@@ -26,17 +31,31 @@ Usage: python3 build_export.py [--out conformance-export.json]
 import argparse
 import datetime
 import json
+import subprocess
 import sys
 from pathlib import Path
 
-HERE = Path(__file__).parent
+HERE = Path(__file__).resolve().parent
 EXCLUDE_DIRS = {"__pycache__", "node_modules"}
 EXCLUDE_FILENAMES = {"package.json", "package-lock.json"}
+# Built from this export; aggregating it would nest the export inside itself.
+DERIVED_OUTPUTS = {"conformance-vectors.json"}
+
+
+def tracked_files() -> set:
+    out = subprocess.run(["git", "ls-files", "-z", "."], cwd=HERE, check=True,
+                         capture_output=True).stdout.decode()
+    return {(HERE / f).resolve() for f in out.split("\0") if f}
+
+
+TRACKED = tracked_files()
 
 
 def collect_dir_files(d: Path) -> dict:
     files = {}
     for p in sorted(d.rglob("*.json")):
+        if p.resolve() not in TRACKED:
+            continue
         if p.name in EXCLUDE_FILENAMES:
             continue
         if any(part in EXCLUDE_DIRS for part in p.relative_to(d).parts):
@@ -51,7 +70,9 @@ def build(out_name: str) -> dict:
     skipped = []
 
     for entry in sorted(HERE.iterdir()):
-        if entry.name in (out_name, "README.md", "build_export.py"):
+        if entry.name in (out_name, "README.md", "build_export.py") or entry.name in DERIVED_OUTPUTS:
+            continue
+        if entry.is_file() and entry.resolve() not in TRACKED:
             continue
         if entry.name.startswith("."):
             continue
