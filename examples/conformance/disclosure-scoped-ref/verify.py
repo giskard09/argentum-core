@@ -160,7 +160,18 @@ def main() -> int:
     print(f"neg-hidden-field-altered (correctly caught): {'PASS' if r2 else 'FAIL'}")
     print(f"neg-salt-reuse-and-digest-substitution     : {'PASS' if r3 else 'FAIL'}")
 
-    ok = r1 and r2 and r3
+    # Each check above proves one polarity. The fixture's declared `expected` must
+    # agree with it, otherwise the JSON could say anything and still run green.
+    polarity = {"pos-subset-disclosure": "PASS", "neg-hidden-field-altered": "FAIL",
+                "neg-salt-reuse-and-digest-substitution": "FAIL"}
+    declared_ok = True
+    for vid, proves in polarity.items():
+        declared = by_id[vid].get("expected")
+        if declared != proves:
+            declared_ok = False
+            print(f"{vid}: fixture declares expected={declared!r}, this check proves {proves}")
+
+    ok = r1 and r2 and r3 and declared_ok
     print()
     if ok:
         print("PASS -- subset disclosure verifies against the root; a tampered closed")

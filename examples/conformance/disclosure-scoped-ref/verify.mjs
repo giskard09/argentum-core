@@ -163,7 +163,23 @@ function main() {
   console.log(`neg-hidden-field-altered (correctly caught): ${r2 ? "PASS" : "FAIL"}`);
   console.log(`neg-salt-reuse-and-digest-substitution     : ${r3 ? "PASS" : "FAIL"}`);
 
-  const ok = r1 && r2 && r3;
+  // Each check above proves one polarity. The fixture's declared `expected` must
+  // agree with it, otherwise the JSON could say anything and still run green.
+  const polarity = {
+    "pos-subset-disclosure": "PASS",
+    "neg-hidden-field-altered": "FAIL",
+    "neg-salt-reuse-and-digest-substitution": "FAIL",
+  };
+  let declaredOk = true;
+  for (const [vid, proves] of Object.entries(polarity)) {
+    const declared = byId[vid].expected;
+    if (declared !== proves) {
+      declaredOk = false;
+      console.log(`${vid}: fixture declares expected=${JSON.stringify(declared)}, this check proves ${proves}`);
+    }
+  }
+
+  const ok = r1 && r2 && r3 && declaredOk;
   console.log();
   if (ok) {
     console.log("PASS -- subset disclosure verifies against the root; a tampered closed");

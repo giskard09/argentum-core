@@ -66,7 +66,11 @@ def main() -> int:
             )
 
         else:
-            print(f"[SKIP] {vid} ({name}) — unrecognized vector shape")
+            # A vector this runner cannot score is not a pass: counting it green would let
+            # a vector whose expected_result was edited (or mistyped) drop out silently.
+            ok = False
+            print(f"[FAIL] {vid} ({name}) — unrecognized vector shape "
+                  f"(expected_result={v.get('expected_result')!r}), not scored")
 
     print()
     print("ALL CHECKS PASS" if ok else "CHECKS FAILED")

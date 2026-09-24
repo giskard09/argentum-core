@@ -221,17 +221,59 @@ def vector_3_boundary_anchoring() -> bool:
     return ok
 
 
+def fixture_agrees() -> bool:
+    """Recompute every declared value in vectors.json from its own fields. The three
+    functions above build their inputs inline; without this, the published fixture
+    could drift from them (or have an `expected` edited) and still run green."""
+    print("\n" + "=" * 78)
+    print("vectors.json — declared values recomputed from the fixture's own fields")
+    print("=" * 78)
+    by_id = {v["id"]: v for v in json.loads((HERE / "vectors.json").read_text())["vectors"]}
+    fails = []
+
+    def expect(label, cond):
+        print(f"  [{'ok' if cond else 'MISMATCH'}] {label}")
+        if not cond:
+            fails.append(label)
+
+    ka = by_id["known-answer-two-extension"]
+    expect("known-answer: event_hash(record) == declared == published",
+           event_hash(ka["record"]) == ka["event_hash"] == KNOWN_ANSWER_DIGEST)
+
+    pos, neg = by_id["action-ref-join-positive"], by_id["action-ref-join-negative-preimage-drift"]
+    expect("join-positive: event_hash(record) == declared", event_hash(pos["record"]) == pos["event_hash"])
+    expect("join-positive: action_ref(preimage) == declared",
+           action_ref(**pos["action_ref_preimage"]) == pos["action_ref"])
+    expect("join-negative: event_hash and action_ref both differ from the positive",
+           event_hash(neg["record"]) != pos["event_hash"]
+           and action_ref(**neg["action_ref_preimage"]) != pos["action_ref"])
+
+    for vid in ("boundary-anchoring-existence-only", "boundary-anchoring-precedence"):
+        v = by_id[vid]
+        env = v["envelope"]
+        exists = env.get("anchor_block_time") is not None
+        precedes = exists and env["anchor_block_time"] * 1000 < env["outcome_ts_ms"]
+        expect(f"{vid}: checks == recomputed",
+               v["checks"] == {"anchoring_existence": exists, "anchoring_precedence": precedes})
+        verdict = "PASS" if exists and precedes else "FAIL"
+        expect(f"{vid}: expected {v['expected']!r} == recomputed {verdict!r}", v["expected"] == verdict)
+
+    return not fails
+
+
 def main() -> int:
     r1 = vector_1_known_answer()
     r2 = vector_2_action_ref_join()
     r3 = vector_3_boundary_anchoring()
+    r4 = fixture_agrees()
 
     print("\n" + "-" * 78)
     print(f"Vector 1 (known-answer)     : {'PASS' if r1 else 'FAIL'}")
     print(f"Vector 2 (action_ref join)  : {'PASS' if r2 else 'FAIL'}")
     print(f"Vector 3 (boundary anchor)  : {'PASS' if r3 else 'FAIL'}")
+    print(f"vectors.json agrees         : {'PASS' if r4 else 'FAIL'}")
 
-    ok = r1 and r2 and r3
+    ok = r1 and r2 and r3 and r4
     print()
     if ok:
         print("PASS — SEP-3004's own known-answer digest reproduces byte-for-byte;")
