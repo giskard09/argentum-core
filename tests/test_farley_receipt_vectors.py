@@ -95,3 +95,29 @@ def test_signed_input_published_and_explains_each_verdict():
         vk.verify(signed, bytes.fromhex(receipt["signature"]["sig"]))
         is_jcs = signed == jcs_bytes(receipt["payload"])
         assert is_jcs == (v["file"] != "signature-input-drift.reject.json"), v["file"]
+
+
+def test_should_vectors_score_both_runs():
+    """A SHOULD vector carries expected_if_not_honoured, so a verifier that
+    does not implement Section 9.2 is not scored as a failure; a MUST vector
+    never does. A run that declares the windows honoured but does not apply
+    them still fails, on superseded-key.reject only, so the corpus keeps
+    does-not-implement separate from implements-it-wrong."""
+    with open(os.path.join(VEC, "index.json")) as f:
+        vectors = json.load(f)["vectors"]
+    for v in vectors:
+        if v["requirement"].startswith("MUST"):
+            assert "expected_if_not_honoured" not in v, v["file"]
+        else:
+            assert v["expected_if_not_honoured"] in ("ACCEPT", "REJECT"), v["file"]
+
+    assert all(ok for _, _, ok in verify.run(key_windows=False))
+
+    jwks = verify.load_jwks()
+    wrong = []
+    for v in vectors:
+        with open(os.path.join(VEC, v["file"])) as f:
+            got = verify.verify(json.load(f), jwks, key_windows=False)
+        if got != verify.expected(v, key_windows=True):
+            wrong.append(v["file"])
+    assert wrong == ["superseded-key.reject.json"]

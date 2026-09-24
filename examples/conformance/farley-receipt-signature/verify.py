@@ -3,7 +3,11 @@
 
 The key is resolved from jwks.json only, never from the receipt (Section 9.5).
 
-    python3 verify.py    # exit 0 iff every vector matches index.json
+    python3 verify.py                    # exit 0 iff every vector matches index.json
+    python3 verify.py --no-key-windows   # same, as a verifier that does not honour
+                                         # the Section 9.2 SHOULD: windows are withheld
+                                         # and SHOULD vectors are scored against
+                                         # expected_if_not_honoured
 """
 import base64
 import json
@@ -29,7 +33,7 @@ def load_jwks(path=os.path.join(HERE, "jwks.json")):
         return {k["kid"]: k for k in json.load(f)["keys"]}
 
 
-def verify(r, jwks):
+def verify(r, jwks, key_windows=True):
     if not isinstance(r, dict) or set(r) != {"payload", "signature"}:
         return "REJECT not_envelope_shape"                                   # 6.6
     p, s = r["payload"], r["signature"]
@@ -56,30 +60,34 @@ def verify(r, jwks):
     except (BadSignatureError, ValueError):
         return "REJECT signature_invalid"
     t = ts(p["issued_at"])
-    if ("valid_from" in k and t < ts(k["valid_from"])) or \
-       ("valid_until" in k and t >= ts(k["valid_until"])):
+    if key_windows and (("valid_from" in k and t < ts(k["valid_from"])) or
+                        ("valid_until" in k and t >= ts(k["valid_until"]))):
         return "REJECT key_outside_validity_window"                          # 9.2 (SHOULD)
     return "ACCEPT"
 
 
-def expected(v):
-    return "ACCEPT" if v["expected"] == "ACCEPT" else "REJECT " + v["code"]
+def expected(v, key_windows=True):
+    e = v["expected"] if key_windows else v.get("expected_if_not_honoured", v["expected"])
+    return "ACCEPT" if e == "ACCEPT" else "REJECT " + v["code"]
 
 
-def run():
+def run(key_windows=True):
     jwks = load_jwks()
     with open(os.path.join(HERE, "index.json")) as f:
         vectors = json.load(f)["vectors"]
     results = []
     for v in vectors:
         with open(os.path.join(HERE, v["file"])) as f:
-            got = verify(json.load(f), jwks)
-        results.append((v["file"], got, got == expected(v)))
+            got = verify(json.load(f), jwks, key_windows)
+        results.append((v["file"], got, got == expected(v, key_windows)))
     return results
 
 
 if __name__ == "__main__":
-    results = run()
+    key_windows = "--no-key-windows" not in sys.argv[1:]
+    print("key_windows: " + ("honoured (valid_from/valid_until from jwks.json)" if key_windows
+                             else "not honoured (SHOULD vectors scored against expected_if_not_honoured)"))
+    results = run(key_windows)
     for name, got, ok in results:
         print(f"[{'PASS' if ok else 'FAIL'}] {name:40s} {got}")
     sys.exit(0 if all(ok for _, _, ok in results) else 1)

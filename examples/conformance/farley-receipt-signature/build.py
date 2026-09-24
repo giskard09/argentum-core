@@ -96,6 +96,7 @@ def build():
         "verification_mode": "archival (Section 9.1). A verifier applying the live-presentation freshness window (24h RECOMMENDED) would reject all four as stale; that is out of scope here.",
         "key_source": "jwks.json (external to the receipts, per Section 9.5)",
         "test_keys": "TEST ONLY. Ed25519 seeds = SHA-256('agent-evidence-vectors/test-only/' + label); see build.py",
+        "should_vectors": "A SHOULD vector carries two outcomes. expected is the verdict when the verifier honours the SHOULD with the material it needs (here: the valid_from/valid_until windows in jwks.json, Section 9.2). expected_if_not_honoured is the verdict when it does not: SHOULD is not MUST, so an ACCEPT on superseded-key.reject is conformant from a verifier that does not implement the window check or was not given the windows. A run declares which case it is in (verify.py: key_windows honoured, or --no-key-windows) and is scored against that outcome, so does-not-implement Section 9.2 stays separate from implements-it-wrong.",
         "signed_input": "signed_input_hex is the exact byte string each signature was made over, so a re-run can check why a reject fails, not only that it does. For signature-input-drift.reject it is Python json.dumps(payload, indent=2), not JCS(payload): the signature verifies over these bytes and fails over JCS(payload).",
         "vectors": [
             {"file": "signature-input-drift.reject.json", "expected": "REJECT", "code": "signature_invalid",
@@ -104,10 +105,10 @@ def build():
             {"file": "signature-input-drift.conformant.json", "expected": "ACCEPT", "code": None,
              "requirement": "MUST (Sections 5.1, 5.2, 6.6)", "note": "Same payload, signed over JCS(payload)."},
             {"file": "superseded-key.reject.json", "expected": "REJECT", "code": "key_outside_validity_window",
-             "requirement": "SHOULD (Section 9.2)",
+             "requirement": "SHOULD (Section 9.2)", "expected_if_not_honoured": "ACCEPT",
              "note": "Valid signature under key A; issued_at is after A's valid_until. issued_at is asserted by the signer, so this catches a key used after an honest rotation, not a compromised key backdating within the window."},
             {"file": "superseded-key.conformant.json", "expected": "ACCEPT", "code": None,
-             "requirement": "SHOULD (Section 9.2)",
+             "requirement": "SHOULD (Section 9.2)", "expected_if_not_honoured": "ACCEPT",
              "note": "Minimal pair: same key A, issued_at inside A's window. Only issued_at differs from the reject."}]}
     for v in out["index"]["vectors"]:
         v["signed_input_hex"] = signed[v["file"][:-len(".json")]].hex()
