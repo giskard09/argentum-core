@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Fixed — EU AI Act Art. 12 application date (2026-09-24)
+
+- `docs/compliance/regulatory-compliance.md` (v1.3) and `examples/conformance/art12-log-integrity-notes/README.md`: both said Art. 12 "has been in force since 2 August 2026". The AI Act entered into force on 1 August 2024; after the AI Omnibus (Regulation (EU) 2026/1744) the high-risk obligations apply from 2 December 2027 (Annex III) and 2 August 2028 (Annex I). Corrected with a visible correction note, in the same style as Correction (v1.2). Source: European Commission, "Regulatory framework on AI". Pending Legal review.
+
 ### Added — idempotency-ref-v1.1: the four cases through crewAI (2026-09-24)
 
 - `examples/conformance/crewai-unguarded-retry/`: the v1.1 four-case test through crewAI's real `ToolUsage.use()`, not only replayed at spec level. Case 2 is crewAI's own re-dispatch after a lost acknowledgement; case 4 is a separate re-proposal. Effects are read from the independent effect store; `idempotency_ref` and `admitted_payload_digest` match `idempotency-ref-v1.1/vectors.json` byte for byte. The three negatives run on the same path and each diverges where its vector declares. Runner: `verify_logical_identity.py`; details in `LOGICAL_IDENTITY_V1_1.md`.

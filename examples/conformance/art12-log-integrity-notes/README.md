@@ -9,7 +9,15 @@ record determine that the record was not rewritten before they read it?**
 
 ## Why that question, and why it is not invented
 
-Article 12 has been in force since 2 August 2026. Read against the enacted text:
+*Correction (2026-09-24): an earlier version said Article 12 "has been in force since
+2 August 2026". The AI Act entered into force on 1 August 2024; after the AI Omnibus
+(Regulation (EU) 2026/1744) the high-risk obligations, Article 12 among them, apply from
+2 December 2027 for Annex III systems and 2 August 2028 for Annex I systems (European
+Commission, digital-strategy.ec.europa.eu, "Regulatory framework on AI", read 2026-09-24).
+See `docs/compliance/regulatory-compliance.md`, Correction (v1.3).*
+
+Article 12 applies from 2 December 2027 (Annex III) and 2 August 2028 (Annex I). Read
+against the enacted text:
 
 - **Art. 12(1)** — high-risk AI systems "shall technically allow for the automatic recording
   of events (logs) over the lifetime of the system."
