@@ -1,10 +1,10 @@
 {
   "export_version": "conformance-export-v0-draft",
-  "generated_at": "2026-08-28T22:00:28.000Z",
+  "generated_at": "2026-09-24T23:42:26.000Z",
   "generated_by": "examples/conformance/build_export.py",
   "source_repo": "giskard09/argentum-core",
   "note": "Draft aggregation of every conformance vector set in this repo. Public discovery route and final field-naming convention are deliberately NOT decided here — pending convergence with Kenneives/CTEF (agentgraph.co/.well-known/cte-test-vectors.json pattern, A2A#1628) so the ecosystem doesn't end up with two competing conventions. Each set's `files` map preserves the original vectors.json/fixture.json bytes unmodified.",
-  "set_count": 61,
+  "set_count": 71,
   "sets": {
     "action-ref-v1-baseline.fixture": {
       "path": "examples/conformance/action-ref-v1-baseline.fixture.json",
@@ -254,7 +254,7 @@
           "preimage_format": "jcs-rfc8785-v1",
           "domain_tag": "mycelium.action-ref:v2:",
           "generated_at": "2026-07-29",
-          "purpose": "ADDITIVE conformance vectors for action_ref v2 (domain-separated derivation). Does NOT replace or narrow the existing v1 fixture set — a v2-conformant verifier MUST still pass all v1 vectors. Each vector pairs the v1 hash (unchanged derivation) with the v2 hash (same four fields, domain tag prepended before hashing, 'v2:' prefix on the result) for the identical preimage, to demonstrate the two never collide.",
+          "purpose": "ADDITIVE conformance vectors for action_ref v2 (domain-separated derivation), scoped to the live post-Domain-enforcement profile (see docs/spec/action-ref.md's Domain paragraph, effective 2026-07-29). Does NOT replace or narrow the live v1 fixture set at this same profile -- a v2-conformant verifier against this profile MUST still pass the live v1 domain-negative vectors. This is NOT a claim about the historical action-ref-v1.0 tag's own vector set (frozen before Domain enforcement, permissive on non-ASCII fields and empty scope) -- the two profiles disagree on some inputs by design, and results against each must be reported separately, never aggregated into one pass/fail count. Each vector here pairs the v1 hash (unchanged derivation) with the v2 hash (same four fields, domain tag prepended before hashing, 'v2:' prefix on the result) for the identical preimage, showing the two derivations differ for these three pinned preimages. validate.py additionally carries a defensive digest-equality assertion for the general case, which is a property no vector in this file (or any normally-constructed vector) can actually exercise -- see validate.py's module docstring.",
           "reproduce_in_python": "import hashlib, json\nV2_DOMAIN_TAG = 'mycelium.action-ref:v2:'\ndef jcs(obj): return json.dumps(dict(sorted(obj.items())), separators=(',',':'), ensure_ascii=False).encode('utf-8')\ndef compute_action_ref_v1(payload): return hashlib.sha256(jcs(payload)).hexdigest()\ndef compute_action_ref_v2(payload): return 'v2:' + hashlib.sha256(V2_DOMAIN_TAG.encode('utf-8') + jcs(payload)).hexdigest()",
           "vectors": [
             {
@@ -298,10 +298,32 @@
             }
           ],
           "version_marker_conformance": {
-            "note": "A conformant verifier determines the derivation from the action_ref string's own syntax, never from context or assumption.",
-            "rule": "action_ref_version(s): 'v1' if len(s) == 64 (bare hex); 'v2' if s.startswith('v2:') and len(s) == 67; ValueError otherwise.",
+            "note": "A conformant verifier determines the derivation from the action_ref string's own grammar, never from context, assumption, or length/prefix alone.",
+            "rule": "action_ref_version(s): 'v1' if s matches ^[0-9a-f]{64}$ (64 lowercase hex chars); 'v2' if s matches ^v2:[0-9a-f]{64}$; ValueError otherwise. A same-length string with uppercase hex or non-hex characters matches neither and must raise, not be misread by length/prefix alone.",
             "checked_in": "validate.py"
-          }
+          },
+          "version_marker_negative_vectors": [
+            {
+              "id": "vm-neg-001",
+              "description": "uppercase hex, 64 chars — same length as a valid v1 digest but not lowercase, must raise ValueError, not be misread as v1",
+              "input": "FDD7F810499F06BE24355CA8E2BFB8C4B965CC80C838F41FA074683443D89F5A"
+            },
+            {
+              "id": "vm-neg-002",
+              "description": "non-hex characters, 64 chars — same length as a valid v1 digest but not hex, must raise ValueError, not be misread as v1",
+              "input": "gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg"
+            },
+            {
+              "id": "vm-neg-003",
+              "description": "bare 64-hex v1 digest with a trailing newline — fullmatch must reject it (a regex using match/search would accept it, treating the newline as trailing garbage after a valid match), so it must raise ValueError, not be misread as v1",
+              "input": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+            },
+            {
+              "id": "vm-neg-004",
+              "description": "v2-prefixed digest with a trailing newline — same fullmatch-vs-match distinction as vm-neg-003, applied to the v2: prefix form, must raise ValueError, not be misread as v2",
+              "input": "v2:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+            }
+          ]
         }
       }
     },
@@ -2573,6 +2595,108 @@
         }
       }
     },
+    "crewai-unguarded-retry": {
+      "path": "examples/conformance/crewai-unguarded-retry/",
+      "files": {
+        "receipt.json": {
+          "receipt_version": "1.0",
+          "subject": "crewAIInc/crewAI#5802 -- UNGUARDED_RETRY reproduction against real retry engine",
+          "requested_by": "socksninja (sable-agent-reliability)",
+          "runtime": {
+            "crewai_package": "crewai",
+            "crewai_version": "1.15.21",
+            "retry_entrypoint": "crewai.tools.tool_usage.ToolUsage.use/_use (outer _run_attempts/_max_parsing_attempts loop) and its inner schema-args-filter except/retry fallback around tool.invoke() -- both confirmed by direct source read of the installed package, not mocked or simulated."
+          },
+          "on_chain_anchor": {
+            "ref": "0xf28ee32220242db2d66dee7207a6b0e42869685b5b47f5ef10d3903deb22ac40",
+            "ref_preimage": "crewai-unguarded-retry-v1:argentum-core@4613c83",
+            "registry_contract": "0x49fEcA52bC634a9Ab773226D16619deC547794aa",
+            "chain": "Base mainnet",
+            "chain_id": 8453,
+            "tx_hash": "0xd5ff5b661424f27963643c9ef208b38e04196ff33808974d22e820efaa151733",
+            "block": 51285043,
+            "status": "0x1",
+            "verified_via": "eth_getTransactionReceipt against mainnet.base.org, independent of sender's own response"
+          },
+          "cases": [
+            {
+              "case_id": "UNGUARDED_RETRY",
+              "logical_action_id": "unguarded-retry-001",
+              "attempt_ids": [
+                1,
+                2,
+                3,
+                4,
+                5,
+                6
+              ],
+              "injection_point": "raise RuntimeError() immediately after EffectStore.apply_effect() commits, before the tool function returns -- i.e. after the effect lands, before crewAI registers/confirms the tool's result.",
+              "worker_exit_status": {
+                "crewai_outer_run_attempts": 4,
+                "python_level_invocations": 6,
+                "final_runtime_reported_outcome": "error (max parsing attempts exhausted)",
+                "last_failure": "message='simulated crash: effect committed, result not yet registered' reason=<ToolFailureReason.EXCEPTION: 'exception'> code='RuntimeError' retryable=False details={}"
+              },
+              "observation": {
+                "complete": true,
+                "effect_count": 6,
+                "effect_ids": [
+                  "d1d0d4fb-6d4c-4701-a66c-8f5d3683f4f7",
+                  "200d69d9-2250-4088-a71d-95315d4927e6",
+                  "050c33fc-c4dc-4aea-8cfd-cd6ea4837c2b",
+                  "edcf0fce-1eca-4db0-b4c1-2cc660fb5749",
+                  "c50026fe-306e-4e91-955f-38e9a0bbdc7a",
+                  "adc70ba9-0748-48f0-a59f-84ea840cdf75"
+                ]
+              },
+              "bug_confirmed": true
+            },
+            {
+              "case_id": "UNGUARDED_RETRY_WITH_IDEMPOTENCY_REF_V1_GUARD",
+              "logical_action_id": "unguarded-retry-001",
+              "idempotency_ref": "fd48b62da84aa728e65898b12eb118595c737a382cc06c65e6eae801d84a6b37",
+              "attempt_ids": [
+                1,
+                2
+              ],
+              "injection_point": "same as UNGUARDED_RETRY -- identical crash point, only the tool is wrapped with an idempotency-ref-v1 guard (PENDING/COMMITTED lifecycle) before the effect call.",
+              "worker_exit_status": {
+                "crewai_outer_run_attempts": 1,
+                "python_level_invocations": 2,
+                "final_runtime_reported_outcome": "success (guard absorbed the retry, no exception surfaced to the outer loop)"
+              },
+              "guard_events": [
+                {
+                  "attempt_no": 2,
+                  "guard_outcome": "PENDING_GUARD",
+                  "idempotency_ref": "fd48b62da84aa728e65898b12eb118595c737a382cc06c65e6eae801d84a6b37",
+                  "effect_id": null
+                },
+                {
+                  "attempt_no": null,
+                  "guard_outcome": "RECONCILED_GUARD",
+                  "idempotency_ref": "fd48b62da84aa728e65898b12eb118595c737a382cc06c65e6eae801d84a6b37",
+                  "effect_id": "a52812f8-c312-4bf3-b01d-b4e7fe04fccc"
+                }
+              ],
+              "observation": {
+                "complete": true,
+                "effect_count": 1,
+                "effect_ids": [
+                  "a52812f8-c312-4bf3-b01d-b4e7fe04fccc"
+                ]
+              },
+              "duplicate_prevented": true
+            }
+          ],
+          "notes": [
+            "Both cases run the identical crewAI ToolUsage retry engine (unmocked, installed package crewai==1.15.21). The only variable between them is the presence of the idempotency-ref-v1 guard at the tool boundary.",
+            "Effect counts and IDs are read independently, after each run, from a fresh SQLite connection -- never inferred from the runtime's own reported outcome.",
+            "This receipt is generated by re-running both cases live, not replayed from a cached log."
+          ]
+        }
+      }
+    },
     "custody-ref": {
       "path": "examples/conformance/custody-ref/",
       "files": {
@@ -3014,6 +3138,174 @@
             }
           ]
         },
+        "key-completeness-vectors.json": {
+          "spec_version": "delegation-chain-ref-v1",
+          "description": "Key completeness. A delegator with no key in the given key set leaves that hop's signature unchecked: NOT_ASSESSED when the caller has not declared the key set complete, FAIL delegator_key_not_in_complete_key_set (a policy rejection, not a bad signature) when it has. One vector per form, plus a mixed vector where an unresolved key sits next to a signature that does not verify: the adverse finding decides, FAIL. Every vector carries its own pubkeys; keys_are_complete is set only where declared.",
+          "vectors": [
+            {
+              "id": "kc-001-all-keys-present",
+              "description": "Control. Both delegators' keys are in the set and both hop signatures verify.",
+              "expected": "PASS",
+              "pubkeys": {
+                "test-kc-a": "aeUeNw5msVlGmTYWqpILuu66srzNYAkOJvyBGTcHaoE=",
+                "test-kc-b": "DisTyuiAVzcn41JK0sgJw/3yTU+O1i1XKexJRvMa2Hg=",
+                "test-kc-c": "ZaIe6WzJGCvkMm2gfGkVY+hpiLsGne8k19UjLXxuqFM="
+              },
+              "chain_artifact": {
+                "chain_id": "chain-kc-001",
+                "hops": [
+                  {
+                    "delegator": "test-kc-a",
+                    "delegatee": "test-kc-b",
+                    "scope": "mycelium:payment",
+                    "delegation_ref": "ffdfa9be329584d47774985f84db566911e6b0c6cef12dde181ffd6cd9350c0e",
+                    "hop_signature": "LlCaHRsNFMlNzjdOWzPDZruDMP1/DIrw5BOZWYoyxmU+mjwHaJLrMP8iCBVXTpC8NjdA3FAFgRtGG907kHVNCw=="
+                  },
+                  {
+                    "delegator": "test-kc-b",
+                    "delegatee": "test-kc-c",
+                    "scope": "mycelium:payment",
+                    "delegation_ref": "a8fbc2467ec586f6ebfc196a596c89fe5377769abba9bc16b30588f4dd1a6a0e",
+                    "hop_signature": "fDeO+nENgoPdsvN2Gh3GD8DzRxtXABCxAFV2XaxHDDvRXPOjP9e1/uC8+4HHzbjR1l2DfflIs5zZ6WcRTOobDQ=="
+                  }
+                ],
+                "leaf_action_ref": "b1ea648141ef3925f4f16701d42c3f2e2b645b976ac75b47623c339d11306412",
+                "root_delegator": "test-kc-a",
+                "scope": "mycelium:payment",
+                "version": "delegation-chain-ref-v1"
+              },
+              "delegation_chain_ref": "b8e443ca5b4d1808934d85187a026d62f46c33afa3879dc993fbe638978acd3d",
+              "leaf_preimage": {
+                "agent_id": "test-kc-c",
+                "action_type": "payment.route",
+                "scope": "mycelium:payment",
+                "timestamp": "2026-09-24T12:00:00.000Z"
+              }
+            },
+            {
+              "id": "kc-002-key-absent-not-declared-complete",
+              "description": "test-kc-b's key is missing and completeness is not declared. Hop 1 is validly signed but cannot be checked here. FAIL would claim a finding the verifier did not make.",
+              "expected": [
+                "NOT_ASSESSED"
+              ],
+              "pubkeys": {
+                "test-kc-a": "aeUeNw5msVlGmTYWqpILuu66srzNYAkOJvyBGTcHaoE=",
+                "test-kc-c": "ZaIe6WzJGCvkMm2gfGkVY+hpiLsGne8k19UjLXxuqFM="
+              },
+              "chain_artifact": {
+                "chain_id": "chain-kc-002",
+                "hops": [
+                  {
+                    "delegator": "test-kc-a",
+                    "delegatee": "test-kc-b",
+                    "scope": "mycelium:payment",
+                    "delegation_ref": "824cd1e29200b4fbfec896db203c839e9d1d989993aaced844142e3a9d7f61fb",
+                    "hop_signature": "d7jGsAicYmXYuZMzzYtZgT2ZrJF+WMkuk2oDHfRIKRQR4WqTh6J12qLokuKfDZBN00xqecKvFYWHfzcmZ5ecDA=="
+                  },
+                  {
+                    "delegator": "test-kc-b",
+                    "delegatee": "test-kc-c",
+                    "scope": "mycelium:payment",
+                    "delegation_ref": "725c94d331aad451bbc0259deb8e222fc6e537a2cb94fdf8b86cc911eb8893a1",
+                    "hop_signature": "2pENISPlmULnAVv8B0SiU3HUK/tikpJ9bjn5AtfxmliKClOoUpxFh8nBi8tC2DexSYY7f1SqYtzlAbPRsu+KCQ=="
+                  }
+                ],
+                "leaf_action_ref": "b1ea648141ef3925f4f16701d42c3f2e2b645b976ac75b47623c339d11306412",
+                "root_delegator": "test-kc-a",
+                "scope": "mycelium:payment",
+                "version": "delegation-chain-ref-v1"
+              },
+              "delegation_chain_ref": "ca8e02e26df3a60730dde73900cf41c4f56a1d2199e586dd39fb71aed7985a58",
+              "leaf_preimage": {
+                "agent_id": "test-kc-c",
+                "action_type": "payment.route",
+                "scope": "mycelium:payment",
+                "timestamp": "2026-09-24T12:00:00.000Z"
+              }
+            },
+            {
+              "id": "kc-003-key-absent-declared-complete",
+              "description": "Same absence, key set declared complete by the caller. Rejected by policy; the reason code must not be hop_signature_invalid.",
+              "expected": "FAIL",
+              "failure_mode": "delegator_key_not_in_complete_key_set",
+              "pubkeys": {
+                "test-kc-a": "aeUeNw5msVlGmTYWqpILuu66srzNYAkOJvyBGTcHaoE=",
+                "test-kc-c": "ZaIe6WzJGCvkMm2gfGkVY+hpiLsGne8k19UjLXxuqFM="
+              },
+              "keys_are_complete": true,
+              "chain_artifact": {
+                "chain_id": "chain-kc-003",
+                "hops": [
+                  {
+                    "delegator": "test-kc-a",
+                    "delegatee": "test-kc-b",
+                    "scope": "mycelium:payment",
+                    "delegation_ref": "4b93b9ad34812977985bb64f0644c06ba64bb736cdd9ac350ff8de9828566046",
+                    "hop_signature": "XlRneVVfOvmG4Hvpp9zENAzSBVdC6wD2LeZORm2bUADWXl+HSLOgApQcEx9dRX7O/YGdNz9tP4Zg3fHNRKcDBQ=="
+                  },
+                  {
+                    "delegator": "test-kc-b",
+                    "delegatee": "test-kc-c",
+                    "scope": "mycelium:payment",
+                    "delegation_ref": "4fe95b8f9cceb0e11317706c06ab7908d1b342d3ad0a900171a407b8098db117",
+                    "hop_signature": "bafcmrLMU9elklqiRdIBO7EMcEwm+Ot9FdmxJiUq1+rICRhL0ef3Ia87idsZJUXWP3szy9Zt2b1QinVpPq6pBw=="
+                  }
+                ],
+                "leaf_action_ref": "b1ea648141ef3925f4f16701d42c3f2e2b645b976ac75b47623c339d11306412",
+                "root_delegator": "test-kc-a",
+                "scope": "mycelium:payment",
+                "version": "delegation-chain-ref-v1"
+              },
+              "delegation_chain_ref": "af9edcb19443c7167e9e3643dfcbf3d381a5eedba2554210abbb5d7ebb85d51a",
+              "leaf_preimage": {
+                "agent_id": "test-kc-c",
+                "action_type": "payment.route",
+                "scope": "mycelium:payment",
+                "timestamp": "2026-09-24T12:00:00.000Z"
+              }
+            },
+            {
+              "id": "kc-004-mixed-forged-and-key-absent",
+              "description": "Hop 0 is signed by a key that is not test-kc-a's (forged) and test-kc-b's key is missing, completeness not declared. What could not be assessed does not mask what was found: FAIL hop_signature_invalid.",
+              "expected": "FAIL",
+              "failure_mode": "hop_signature_invalid",
+              "pubkeys": {
+                "test-kc-a": "aeUeNw5msVlGmTYWqpILuu66srzNYAkOJvyBGTcHaoE=",
+                "test-kc-c": "ZaIe6WzJGCvkMm2gfGkVY+hpiLsGne8k19UjLXxuqFM="
+              },
+              "chain_artifact": {
+                "chain_id": "chain-kc-004",
+                "hops": [
+                  {
+                    "delegator": "test-kc-a",
+                    "delegatee": "test-kc-b",
+                    "scope": "mycelium:payment",
+                    "delegation_ref": "32518449fc77d3743a011c519ddee14f9dda23a9b015da5f478a7a333db63588",
+                    "hop_signature": "xMEii4jGuG35qvLtBV7aQRHSl85lsbEH9Ym7EcLZCSv4do8WgHvJ+zvHHh6UInLo+4vzgiI61qHCIvFzVLQ+Dg=="
+                  },
+                  {
+                    "delegator": "test-kc-b",
+                    "delegatee": "test-kc-c",
+                    "scope": "mycelium:payment",
+                    "delegation_ref": "572ee82f03d0e3ba29f4cc4fd7655c1a20a989e2bc7464c9dcc3df3b27309ea3",
+                    "hop_signature": "CBcWzbjbAvQUmTgWBSO/tEQ2oSFMEj0ueFRkDZXz+L4FtZrRyiLE8iPrNUGhgMzvzZTpjoxbfNS5j9/blZMiDA=="
+                  }
+                ],
+                "leaf_action_ref": "b1ea648141ef3925f4f16701d42c3f2e2b645b976ac75b47623c339d11306412",
+                "root_delegator": "test-kc-a",
+                "scope": "mycelium:payment",
+                "version": "delegation-chain-ref-v1"
+              },
+              "delegation_chain_ref": "e3ad120bec21b60af76929a84694eebbe683bf5089ea6dcf6f4155105a7c0bab",
+              "leaf_preimage": {
+                "agent_id": "test-kc-c",
+                "action_type": "payment.route",
+                "scope": "mycelium:payment",
+                "timestamp": "2026-09-24T12:00:00.000Z"
+              }
+            }
+          ]
+        },
         "leaf-screen-halt/vectors.json": {
           "spec_version": "delegation-chain-ref-v1",
           "description": "Leaf-screen-halt: a payment-authority delegation chain cannot anchor a PII_BLOCKED screen action. The leaf_action_ref correctly recomputes to the screen's action_ref (leaf-anchoring passes), but the screen's preimage scope is not the authorized leaf hop scope, so the chain is rejected on scope_mismatch_at_leaf. Authorization over a payment does not cover a leaf whose identity is a different action.",
@@ -3243,6 +3535,163 @@
             "test-cross-org-b": "v0aL312hS/F5IdbeN5+1cktH7XytX/u7qSUFfmV2zG8=",
             "test-cross-org-c": "TzBj6JCweJqiDXBFSYI4GxafubML//Gvp9THE9sxZyQ="
           }
+        },
+        "revoked-ancestor/vectors.json": {
+          "spec_version": "delegation-chain-ref-v1",
+          "description": "Differential vector requested by MoltyCel (x402#2332): the same chain_artifact/leaf_preimage verified twice — once alone, once alongside a revocation_artifact that revokes the mid-chain ancestor hop (hops[1], pioneer-agent-001 -> lightning) before the leaf action's timestamp. delegation-chain-ref-v1's structural invariants (continuity, root/leaf anchoring, scope narrowing, hop_signature, replay) do not reference revocation_ref or revocation-ref.md at all, so both runs verify identically and both PASS. This is the gap MoltyCel's differential test surfaces: an ancestor revoked mid-chain does not change the chain verifier's verdict, because the chain verifier never looks at revocation state.",
+          "revocation_artifact": {
+            "reason": "credential_expired",
+            "revocation_key": "rev_ancestor_hop1_001",
+            "revoked_action_ref": "0ad117af7a77317fdf0d35886fc1ca945bda074a5609c1477d640e4d9015b73d",
+            "revoked_at": "2026-08-15T09:00:00.000Z",
+            "revoker": "pioneer-agent-001",
+            "scope": "mycelium:payment",
+            "version": "revocation-ref-v1"
+          },
+          "revocation_ref": "8ad9f9a33fce4a15306bba9c14d0b0277f7bc1c0383f56df42a392a38a1ee0ca",
+          "revocation_note": "revoked_action_ref points at hops[1].delegation_ref (the ancestor grant being invalidated), not at a trail action_ref. revocation-ref.md's schema anchors revoked_action_ref to an action's action_ref; delegation-chain-ref.md does not yet define what an ancestor-in-a-chain revocation event should reference. This vector uses the delegation_ref directly as a pragmatic stand-in -- the exact target field is a separate, still-open question from the one this vector demonstrates (that the chain verifier ignores revocation state regardless of what it targets).",
+          "vectors": [
+            {
+              "id": "chain-revoked-ancestor-001-baseline",
+              "description": "3-hop chain (giskard-self -> pioneer-agent-001 -> lightning -> soma-agent), no revocation considered. Baseline: verifier PASSes on structural invariants alone.",
+              "expected": "PASS",
+              "chain_artifact": {
+                "chain_id": "chain-revoked-ancestor-001",
+                "hops": [
+                  {
+                    "delegatee": "pioneer-agent-001",
+                    "delegator": "giskard-self",
+                    "delegation_ref": "e7a936ee9b30fceae7239df32ecb593b60b109f05463f3048740c8bc45f9824a",
+                    "scope": "mycelium:payment"
+                  },
+                  {
+                    "delegatee": "lightning",
+                    "delegator": "pioneer-agent-001",
+                    "delegation_ref": "0ad117af7a77317fdf0d35886fc1ca945bda074a5609c1477d640e4d9015b73d",
+                    "scope": "mycelium:payment"
+                  },
+                  {
+                    "delegatee": "soma-agent",
+                    "delegator": "lightning",
+                    "delegation_ref": "6a09fa302daa05f875aeee1f54463a1e6eae5c3d2ceb1075ae8c66043ba2f8a2",
+                    "scope": "mycelium:payment"
+                  }
+                ],
+                "leaf_action_ref": "29e7c1a981d7e902cf94164f18bdfad2e7858621937dce143a51e9bc34db23f8",
+                "root_delegator": "giskard-self",
+                "scope": "mycelium:payment",
+                "version": "delegation-chain-ref-v1"
+              },
+              "delegation_artifacts": [
+                {
+                  "capability": "delegate",
+                  "delegatee": "pioneer-agent-001",
+                  "delegator": "giskard-self",
+                  "expires_at": "2026-12-31T00:00:00.000Z",
+                  "policy_version": "2026-06-01",
+                  "scope": "mycelium:payment",
+                  "version": "delegation-ref-v1"
+                },
+                {
+                  "capability": "delegate",
+                  "delegatee": "lightning",
+                  "delegator": "pioneer-agent-001",
+                  "expires_at": "2026-12-31T00:00:00.000Z",
+                  "parent_delegation_ref": "e7a936ee9b30fceae7239df32ecb593b60b109f05463f3048740c8bc45f9824a",
+                  "policy_version": "2026-06-01",
+                  "scope": "mycelium:payment",
+                  "version": "delegation-ref-v1"
+                },
+                {
+                  "capability": "payment.route",
+                  "delegatee": "soma-agent",
+                  "delegator": "lightning",
+                  "expires_at": "2026-12-31T00:00:00.000Z",
+                  "parent_delegation_ref": "0ad117af7a77317fdf0d35886fc1ca945bda074a5609c1477d640e4d9015b73d",
+                  "policy_version": "2026-06-01",
+                  "scope": "mycelium:payment",
+                  "version": "delegation-ref-v1"
+                }
+              ],
+              "leaf_preimage": {
+                "agent_id": "soma-agent",
+                "action_type": "payment.route",
+                "scope": "mycelium:payment",
+                "timestamp": "2026-09-01T12:00:00.000Z"
+              },
+              "delegation_chain_ref": "02aa006af1b093370f5baa0ada9e33f7591a04911a6d5cc837e0de399efd9e55"
+            },
+            {
+              "id": "chain-revoked-ancestor-001-with-revocation",
+              "description": "Byte-identical chain_artifact and leaf_preimage to the baseline above. The only difference is the presence of revocation_artifact (top-level, sibling of this file) revoking hops[1].delegation_ref at 2026-08-15T09:00:00.000Z, before the leaf action's timestamp (2026-09-01T12:00:00.000Z). Documented current behavior (not a bug): delegation_chain_ref's derivation and the reference verifier's six invariants (chain_continuity, root_anchoring, leaf_anchoring, monotonic_scope_narrowing, hop_signature_valid, replay_detected) make no reference to revocation_ref, revoked_action_ref, or any external revocation state. Running verify_vector() on this vector reproduces the exact same PASS as the baseline -- delegation_chain_ref is computed purely from chain_artifact, which does not embed or reference the revocation artifact at all. See docs/spec/delegation-chain-ref.md 'What it does not do' for the explicit disclaimer, and the new 'Revocation and already-committed hops (default model)' section for what a verifier without its own policy should assume when it encounters this case.",
+              "expected": "PASS",
+              "chain_artifact": {
+                "chain_id": "chain-revoked-ancestor-001",
+                "hops": [
+                  {
+                    "delegatee": "pioneer-agent-001",
+                    "delegator": "giskard-self",
+                    "delegation_ref": "e7a936ee9b30fceae7239df32ecb593b60b109f05463f3048740c8bc45f9824a",
+                    "scope": "mycelium:payment"
+                  },
+                  {
+                    "delegatee": "lightning",
+                    "delegator": "pioneer-agent-001",
+                    "delegation_ref": "0ad117af7a77317fdf0d35886fc1ca945bda074a5609c1477d640e4d9015b73d",
+                    "scope": "mycelium:payment"
+                  },
+                  {
+                    "delegatee": "soma-agent",
+                    "delegator": "lightning",
+                    "delegation_ref": "6a09fa302daa05f875aeee1f54463a1e6eae5c3d2ceb1075ae8c66043ba2f8a2",
+                    "scope": "mycelium:payment"
+                  }
+                ],
+                "leaf_action_ref": "29e7c1a981d7e902cf94164f18bdfad2e7858621937dce143a51e9bc34db23f8",
+                "root_delegator": "giskard-self",
+                "scope": "mycelium:payment",
+                "version": "delegation-chain-ref-v1"
+              },
+              "delegation_artifacts": [
+                {
+                  "capability": "delegate",
+                  "delegatee": "pioneer-agent-001",
+                  "delegator": "giskard-self",
+                  "expires_at": "2026-12-31T00:00:00.000Z",
+                  "policy_version": "2026-06-01",
+                  "scope": "mycelium:payment",
+                  "version": "delegation-ref-v1"
+                },
+                {
+                  "capability": "delegate",
+                  "delegatee": "lightning",
+                  "delegator": "pioneer-agent-001",
+                  "expires_at": "2026-12-31T00:00:00.000Z",
+                  "parent_delegation_ref": "e7a936ee9b30fceae7239df32ecb593b60b109f05463f3048740c8bc45f9824a",
+                  "policy_version": "2026-06-01",
+                  "scope": "mycelium:payment",
+                  "version": "delegation-ref-v1"
+                },
+                {
+                  "capability": "payment.route",
+                  "delegatee": "soma-agent",
+                  "delegator": "lightning",
+                  "expires_at": "2026-12-31T00:00:00.000Z",
+                  "parent_delegation_ref": "0ad117af7a77317fdf0d35886fc1ca945bda074a5609c1477d640e4d9015b73d",
+                  "policy_version": "2026-06-01",
+                  "scope": "mycelium:payment",
+                  "version": "delegation-ref-v1"
+                }
+              ],
+              "leaf_preimage": {
+                "agent_id": "soma-agent",
+                "action_type": "payment.route",
+                "scope": "mycelium:payment",
+                "timestamp": "2026-09-01T12:00:00.000Z"
+              },
+              "delegation_chain_ref": "02aa006af1b093370f5baa0ada9e33f7591a04911a6d5cc837e0de399efd9e55"
+            }
+          ]
         },
         "vectors.json": {
           "spec_version": "delegation-chain-ref-v1",
@@ -4600,6 +5049,136 @@
         }
       }
     },
+    "farley-receipt-signature": {
+      "path": "examples/conformance/farley-receipt-signature/",
+      "files": {
+        "index.json": {
+          "profile": "draft-farley-acta-signed-receipts-03, envelope shape",
+          "verification_mode": "archival (Section 9.1). A verifier applying the live-presentation freshness window (24h RECOMMENDED) would reject all four as stale; that is out of scope here.",
+          "key_source": "jwks.json (external to the receipts, per Section 9.5)",
+          "test_keys": "TEST ONLY. Ed25519 seeds = SHA-256('agent-evidence-vectors/test-only/' + label); see build.py",
+          "should_vectors": "A SHOULD vector carries two outcomes. expected is the verdict when the verifier honours the SHOULD with the material it needs (here: the valid_from/valid_until windows in jwks.json, Section 9.2). expected_if_not_honoured is the verdict when it does not: SHOULD is not MUST, so an ACCEPT on superseded-key.reject is conformant from a verifier that does not implement the window check or was not given the windows. A run declares which case it is in (verify.py: key_windows honoured, or --no-key-windows) and is scored against that outcome, so does-not-implement Section 9.2 stays separate from implements-it-wrong.",
+          "signed_input": "signed_input_hex is the exact byte string each signature was made over, so a re-run can check why a reject fails, not only that it does. For signature-input-drift.reject it is Python json.dumps(payload, indent=2), not JCS(payload): the signature verifies over these bytes and fails over JCS(payload).",
+          "vectors": [
+            {
+              "file": "signature-input-drift.reject.json",
+              "expected": "REJECT",
+              "code": "signature_invalid",
+              "requirement": "MUST (Sections 5.1, 5.2, 6.6)",
+              "note": "Signed over the pretty-printed payload bytes, not JCS(payload).",
+              "signed_input_hex": "7b0a20202274797065223a202270726f746563746d63703a6465636973696f6e222c0a2020226973737565645f6174223a2022323032362d30372d31355431323a30303a30305a222c0a2020226973737565725f6964223a202273623a6973737565723a337a3275566777364c5a5972222c0a202022746f6f6c5f6e616d65223a20227061796d656e74732e7472616e73666572222c0a2020226465636973696f6e223a2022616c6c6f77222c0a202022706f6c6963795f646967657374223a20227368613235363a38636139326637646661616636663466656538386633383932636437313232616234383931326330663936363666373064663739623239373336323762383838220a7d"
+            },
+            {
+              "file": "signature-input-drift.conformant.json",
+              "expected": "ACCEPT",
+              "code": null,
+              "requirement": "MUST (Sections 5.1, 5.2, 6.6)",
+              "note": "Same payload, signed over JCS(payload).",
+              "signed_input_hex": "7b226465636973696f6e223a22616c6c6f77222c226973737565645f6174223a22323032362d30372d31355431323a30303a30305a222c226973737565725f6964223a2273623a6973737565723a337a3275566777364c5a5972222c22706f6c6963795f646967657374223a227368613235363a38636139326637646661616636663466656538386633383932636437313232616234383931326330663936363666373064663739623239373336323762383838222c22746f6f6c5f6e616d65223a227061796d656e74732e7472616e73666572222c2274797065223a2270726f746563746d63703a6465636973696f6e227d"
+            },
+            {
+              "file": "superseded-key.reject.json",
+              "expected": "REJECT",
+              "code": "key_outside_validity_window",
+              "requirement": "SHOULD (Section 9.2)",
+              "expected_if_not_honoured": "ACCEPT",
+              "note": "Valid signature under key A; issued_at is after A's valid_until. issued_at is asserted by the signer, so this catches a key used after an honest rotation, not a compromised key backdating within the window.",
+              "signed_input_hex": "7b226465636973696f6e223a22616c6c6f77222c226973737565645f6174223a22323032362d30372d31355431323a30303a30305a222c226973737565725f6964223a2273623a6973737565723a36585276385a665075787431222c22706f6c6963795f646967657374223a227368613235363a38636139326637646661616636663466656538386633383932636437313232616234383931326330663936363666373064663739623239373336323762383838222c22746f6f6c5f6e616d65223a227061796d656e74732e7472616e73666572222c2274797065223a2270726f746563746d63703a6465636973696f6e227d"
+            },
+            {
+              "file": "superseded-key.conformant.json",
+              "expected": "ACCEPT",
+              "code": null,
+              "requirement": "SHOULD (Section 9.2)",
+              "expected_if_not_honoured": "ACCEPT",
+              "note": "Minimal pair: same key A, issued_at inside A's window. Only issued_at differs from the reject.",
+              "signed_input_hex": "7b226465636973696f6e223a22616c6c6f77222c226973737565645f6174223a22323032362d30332d31355431323a30303a30305a222c226973737565725f6964223a2273623a6973737565723a36585276385a665075787431222c22706f6c6963795f646967657374223a227368613235363a38636139326637646661616636663466656538386633383932636437313232616234383931326330663936363666373064663739623239373336323762383838222c22746f6f6c5f6e616d65223a227061796d656e74732e7472616e73666572222c2274797065223a2270726f746563746d63703a6465636973696f6e227d"
+            }
+          ]
+        },
+        "jwks.json": {
+          "keys": [
+            {
+              "kty": "OKP",
+              "crv": "Ed25519",
+              "kid": "sb:issuer:6XRv8ZfPuxt1",
+              "x": "UhYIFG8QFIVT9nNeKL1fcXp5akfQa3DkjOtjsN-w1Uo",
+              "use": "sig",
+              "valid_from": "2026-01-01T00:00:00Z",
+              "valid_until": "2026-06-01T00:00:00Z"
+            },
+            {
+              "kty": "OKP",
+              "crv": "Ed25519",
+              "kid": "sb:issuer:3z2uVgw6LZYr",
+              "x": "LFOiUSPIwhEYKf2eeA2naJTjVzErz9LBpMG3DmmZwAA",
+              "use": "sig",
+              "valid_from": "2026-06-01T00:00:00Z"
+            }
+          ]
+        },
+        "signature-input-drift.conformant.json": {
+          "payload": {
+            "type": "protectmcp:decision",
+            "issued_at": "2026-07-15T12:00:00Z",
+            "issuer_id": "sb:issuer:3z2uVgw6LZYr",
+            "tool_name": "payments.transfer",
+            "decision": "allow",
+            "policy_digest": "sha256:8ca92f7dfaaf6f4fee88f3892cd7122ab48912c0f9666f70df79b2973627b888"
+          },
+          "signature": {
+            "alg": "EdDSA",
+            "kid": "sb:issuer:3z2uVgw6LZYr",
+            "sig": "81917aec34f88617f45f5c251e4a188aca49b7182f0d02c2ac2407e13e93f9b863cf3a59f03cab82e8df45e30aad1b943aecd72958f14c8606134e692448700c"
+          }
+        },
+        "signature-input-drift.reject.json": {
+          "payload": {
+            "type": "protectmcp:decision",
+            "issued_at": "2026-07-15T12:00:00Z",
+            "issuer_id": "sb:issuer:3z2uVgw6LZYr",
+            "tool_name": "payments.transfer",
+            "decision": "allow",
+            "policy_digest": "sha256:8ca92f7dfaaf6f4fee88f3892cd7122ab48912c0f9666f70df79b2973627b888"
+          },
+          "signature": {
+            "alg": "EdDSA",
+            "kid": "sb:issuer:3z2uVgw6LZYr",
+            "sig": "2371c8523d4b9d0963540952878a4883a48d1a763b67c5d2fb89d8feee256a882412e6eabfc988f96f6b4f907a8bafa03f1607e01e814829cb7a138e01b6d60d"
+          }
+        },
+        "superseded-key.conformant.json": {
+          "payload": {
+            "type": "protectmcp:decision",
+            "issued_at": "2026-03-15T12:00:00Z",
+            "issuer_id": "sb:issuer:6XRv8ZfPuxt1",
+            "tool_name": "payments.transfer",
+            "decision": "allow",
+            "policy_digest": "sha256:8ca92f7dfaaf6f4fee88f3892cd7122ab48912c0f9666f70df79b2973627b888"
+          },
+          "signature": {
+            "alg": "EdDSA",
+            "kid": "sb:issuer:6XRv8ZfPuxt1",
+            "sig": "70fd65588197dac2761a15c411c778b642135111f10fd85fd9a4da2e03ffcc713de49d0f6c98782db9f6587c478b22a792a342ce0a756f5bb713944dee778303"
+          }
+        },
+        "superseded-key.reject.json": {
+          "payload": {
+            "type": "protectmcp:decision",
+            "issued_at": "2026-07-15T12:00:00Z",
+            "issuer_id": "sb:issuer:6XRv8ZfPuxt1",
+            "tool_name": "payments.transfer",
+            "decision": "allow",
+            "policy_digest": "sha256:8ca92f7dfaaf6f4fee88f3892cd7122ab48912c0f9666f70df79b2973627b888"
+          },
+          "signature": {
+            "alg": "EdDSA",
+            "kid": "sb:issuer:6XRv8ZfPuxt1",
+            "sig": "04090e914118245765ba4114e3addfb764900c353bc13806d317160651ddac73357ae1e67ad02328cd8c672ca3f396e45eae18e87af04f35cb8355ff05bbc606"
+          }
+        }
+      }
+    },
     "governance-block-join-ref-v1": {
       "path": "examples/conformance/governance-block-join-ref-v1/",
       "files": {
@@ -5205,6 +5784,332 @@
         }
       }
     },
+    "host-capability-ref": {
+      "path": "examples/conformance/host-capability-ref/",
+      "files": {
+        "vectors.json": {
+          "spec_version": "host-capability-ref-v1",
+          "description": "A valid profile algorithm the host may lack. `expected` lists every verdict a conformant verifier may return on some host; `expected_by_host` is what the reference verifier returns with and without bip340-schnorr-secp256k1.",
+          "vectors": [
+            {
+              "id": "hc-001-valid-signature",
+              "description": "Valid BIP-340 signature over the declared canonical bytes. A host without the algorithm cannot confirm it and must not reject it.",
+              "expected": [
+                "PASS",
+                "NOT_ASSESSED"
+              ],
+              "expected_by_host": {
+                "capable": "PASS",
+                "incapable": "NOT_ASSESSED"
+              },
+              "artifact": {
+                "preimage": {
+                  "schema": "host-capability-ref.v1",
+                  "subject": "example",
+                  "issued_at": "2026-09-24T12:00:00.000Z"
+                },
+                "preimage_jcs": "{\"issued_at\":\"2026-09-24T12:00:00.000Z\",\"schema\":\"host-capability-ref.v1\",\"subject\":\"example\"}",
+                "signature": {
+                  "scheme": "bip340-schnorr-secp256k1",
+                  "pubkey_x_only": "b65bb910f5b485dc378a3da45df259b5924ee5524370065944dfb199a90ca091",
+                  "sig": "ed2119cfdfecc36414dfbebb6188f430c42ffef1e1fe197e5355302ceec923b94094b7b61529c409671414ae0db87511db428a517201d8d020ba62fb3350dd71"
+                }
+              }
+            },
+            {
+              "id": "hc-002-invalid-signature",
+              "description": "Canonical bytes match, signature corrupted. Only a host with the algorithm can see it; one without must not accept it.",
+              "expected": [
+                "FAIL",
+                "NOT_ASSESSED"
+              ],
+              "expected_by_host": {
+                "capable": "FAIL",
+                "incapable": "NOT_ASSESSED"
+              },
+              "failure_mode": "signature_invalid",
+              "artifact": {
+                "preimage": {
+                  "schema": "host-capability-ref.v1",
+                  "subject": "example",
+                  "issued_at": "2026-09-24T12:00:00.000Z"
+                },
+                "preimage_jcs": "{\"issued_at\":\"2026-09-24T12:00:00.000Z\",\"schema\":\"host-capability-ref.v1\",\"subject\":\"example\"}",
+                "signature": {
+                  "scheme": "bip340-schnorr-secp256k1",
+                  "pubkey_x_only": "b65bb910f5b485dc378a3da45df259b5924ee5524370065944dfb199a90ca091",
+                  "sig": "ec2119cfdfecc36414dfbebb6188f430c42ffef1e1fe197e5355302ceec923b94094b7b61529c409671414ae0db87511db428a517201d8d020ba62fb3350dd71"
+                }
+              }
+            },
+            {
+              "id": "hc-003-mixed-preimage-mismatch",
+              "description": "The preimage was altered after signing: JCS(preimage) no longer matches preimage_jcs. Any host sees that without the algorithm, so the missing capability does not soften it.",
+              "expected": [
+                "FAIL"
+              ],
+              "expected_by_host": {
+                "capable": "FAIL",
+                "incapable": "FAIL"
+              },
+              "failure_mode": "preimage_jcs_mismatch",
+              "artifact": {
+                "preimage": {
+                  "schema": "host-capability-ref.v1",
+                  "subject": "example-altered",
+                  "issued_at": "2026-09-24T12:00:00.000Z"
+                },
+                "preimage_jcs": "{\"issued_at\":\"2026-09-24T12:00:00.000Z\",\"schema\":\"host-capability-ref.v1\",\"subject\":\"example\"}",
+                "signature": {
+                  "scheme": "bip340-schnorr-secp256k1",
+                  "pubkey_x_only": "b65bb910f5b485dc378a3da45df259b5924ee5524370065944dfb199a90ca091",
+                  "sig": "ed2119cfdfecc36414dfbebb6188f430c42ffef1e1fe197e5355302ceec923b94094b7b61529c409671414ae0db87511db428a517201d8d020ba62fb3350dd71"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "idempotency-ref-v1.1": {
+      "path": "examples/conformance/idempotency-ref-v1.1/",
+      "files": {
+        "vectors.json": {
+          "spec_version": "idempotency-ref-v1.1",
+          "spec": "docs/spec/idempotency-ref.md",
+          "description": "Four-case logical-identity test (impartshadow, crewAIInc/crewAI#5802 comment 5790417981; regression in stringsofthemind-oss/once#45, 9ca1eb3). Events are replayed in order against one ledger, all within window_ms. idempotency_ref = SHA-256(JCS(idempotency_artifact)); admitted_payload_digest = SHA-256(JCS(admitted_payload)), carried next to idempotency_ref in the envelope and never inside the artifact.",
+          "decision_rule": {
+            "EXECUTE": "no prior admission under this idempotency_ref within window_ms",
+            "DUPLICATE": "prior admission under this idempotency_ref with the same admitted_payload_digest: reconcile, no new effect",
+            "CONFLICT": "prior admission under this idempotency_ref with a different admitted_payload_digest: fail closed, no new effect"
+          },
+          "events": [
+            {
+              "id": "case-1-first-intentional",
+              "description": "First intentional payment A, $100 -> merchant_x. No prior admission under this idempotency_ref: execute once.",
+              "idempotency_artifact": {
+                "action_type": "payment.send",
+                "agent_id": "crew-runtime-agent-042",
+                "idempotency_key": "adm_4f1c9e2a",
+                "scope": "mycelium:payment",
+                "version": "idempotency-ref-v1.1",
+                "window_ms": 300000
+              },
+              "idempotency_ref": "b612c3039ad6b3337041b62258e580d65fe7856b4dbcb67ed7545c4cb494d629",
+              "admitted_payload": {
+                "amount_cents": 10000,
+                "currency": "USD",
+                "recipient": "merchant_x"
+              },
+              "admitted_payload_digest": "35dd375e2dc7d8f0c771b8868c335a859c15a23025d1afa41c7c9cdd05fdeab2",
+              "expected": "EXECUTE",
+              "effects_after": 1
+            },
+            {
+              "id": "case-2-retry-same-payload",
+              "description": "Retry of A after a lost acknowledgement. Same idempotency_ref, same admitted_payload_digest: reconcile against the prior outcome, no second effect.",
+              "idempotency_artifact": {
+                "action_type": "payment.send",
+                "agent_id": "crew-runtime-agent-042",
+                "idempotency_key": "adm_4f1c9e2a",
+                "scope": "mycelium:payment",
+                "version": "idempotency-ref-v1.1",
+                "window_ms": 300000
+              },
+              "idempotency_ref": "b612c3039ad6b3337041b62258e580d65fe7856b4dbcb67ed7545c4cb494d629",
+              "admitted_payload": {
+                "amount_cents": 10000,
+                "currency": "USD",
+                "recipient": "merchant_x"
+              },
+              "admitted_payload_digest": "35dd375e2dc7d8f0c771b8868c335a859c15a23025d1afa41c7c9cdd05fdeab2",
+              "expected": "DUPLICATE",
+              "effects_after": 1
+            },
+            {
+              "id": "case-3-second-intentional-same-payload",
+              "description": "Second intentional payment B with a payload byte-identical to A. B was admitted under its own logical id, so its idempotency_ref differs from A's: execute once. A key derived from payload content would collide here and wrongly deduplicate B (see negative-content-derived-key).",
+              "idempotency_artifact": {
+                "action_type": "payment.send",
+                "agent_id": "crew-runtime-agent-042",
+                "idempotency_key": "adm_b7d03e55",
+                "scope": "mycelium:payment",
+                "version": "idempotency-ref-v1.1",
+                "window_ms": 300000
+              },
+              "idempotency_ref": "ad5c912526127b429ea46e958e0f87080815fde8c8e55ac14ac12d007585dd4d",
+              "admitted_payload": {
+                "amount_cents": 10000,
+                "currency": "USD",
+                "recipient": "merchant_x"
+              },
+              "admitted_payload_digest": "35dd375e2dc7d8f0c771b8868c335a859c15a23025d1afa41c7c9cdd05fdeab2",
+              "expected": "EXECUTE",
+              "effects_after": 2
+            },
+            {
+              "id": "case-4-drifted-retry",
+              "description": "Retry of A whose payload drifted to $125. Same idempotency_ref as A (the ref carries logical identity, not payload), different admitted_payload_digest: conflict, fail closed. Neither a duplicate of A nor a new action; a changed payload needs a new idempotency_key.",
+              "idempotency_artifact": {
+                "action_type": "payment.send",
+                "agent_id": "crew-runtime-agent-042",
+                "idempotency_key": "adm_4f1c9e2a",
+                "scope": "mycelium:payment",
+                "version": "idempotency-ref-v1.1",
+                "window_ms": 300000
+              },
+              "idempotency_ref": "b612c3039ad6b3337041b62258e580d65fe7856b4dbcb67ed7545c4cb494d629",
+              "admitted_payload": {
+                "amount_cents": 12500,
+                "currency": "USD",
+                "recipient": "merchant_x"
+              },
+              "admitted_payload_digest": "5cd9ef51eebab17d494da8b25447d4c3c826678c032246543f0f64e0d20bce5f",
+              "expected": "CONFLICT",
+              "effects_after": 2
+            }
+          ],
+          "negative_vectors": [
+            {
+              "id": "negative-content-derived-key",
+              "violates": "Invariant 6 (distinct intentional actions MUST carry distinct keys)",
+              "description": "idempotency_key = sha256 of the admitted payload. v1.0 Invariant 5 allowed 'a hash of the caller's own pre-execution request'. A and B collide on one idempotency_ref, so case 3 is deduplicated as a retry and payment B never happens.",
+              "events": [
+                {
+                  "id": "case-1-first-intentional",
+                  "idempotency_artifact": {
+                    "action_type": "payment.send",
+                    "agent_id": "crew-runtime-agent-042",
+                    "idempotency_key": "sha256:35dd375e2dc7d8f0c771b8868c335a859c15a23025d1afa41c7c9cdd05fdeab2",
+                    "scope": "mycelium:payment",
+                    "version": "idempotency-ref-v1.1",
+                    "window_ms": 300000
+                  },
+                  "idempotency_ref": "c77753885559b33c9c62d35df302e80a158ae5294e844855f5773b12330afb37"
+                },
+                {
+                  "id": "case-2-retry-same-payload",
+                  "idempotency_artifact": {
+                    "action_type": "payment.send",
+                    "agent_id": "crew-runtime-agent-042",
+                    "idempotency_key": "sha256:35dd375e2dc7d8f0c771b8868c335a859c15a23025d1afa41c7c9cdd05fdeab2",
+                    "scope": "mycelium:payment",
+                    "version": "idempotency-ref-v1.1",
+                    "window_ms": 300000
+                  },
+                  "idempotency_ref": "c77753885559b33c9c62d35df302e80a158ae5294e844855f5773b12330afb37"
+                },
+                {
+                  "id": "case-3-second-intentional-same-payload",
+                  "idempotency_artifact": {
+                    "action_type": "payment.send",
+                    "agent_id": "crew-runtime-agent-042",
+                    "idempotency_key": "sha256:35dd375e2dc7d8f0c771b8868c335a859c15a23025d1afa41c7c9cdd05fdeab2",
+                    "scope": "mycelium:payment",
+                    "version": "idempotency-ref-v1.1",
+                    "window_ms": 300000
+                  },
+                  "idempotency_ref": "c77753885559b33c9c62d35df302e80a158ae5294e844855f5773b12330afb37"
+                },
+                {
+                  "id": "case-4-drifted-retry",
+                  "idempotency_artifact": {
+                    "action_type": "payment.send",
+                    "agent_id": "crew-runtime-agent-042",
+                    "idempotency_key": "sha256:5cd9ef51eebab17d494da8b25447d4c3c826678c032246543f0f64e0d20bce5f",
+                    "scope": "mycelium:payment",
+                    "version": "idempotency-ref-v1.1",
+                    "window_ms": 300000
+                  },
+                  "idempotency_ref": "dbe84ff39376f21add973cc23ae9661764bd12e0781925db11f18426a15be438"
+                }
+              ],
+              "expected_divergence": {
+                "event": "case-3-second-intentional-same-payload",
+                "outcome": "DUPLICATE",
+                "effects_after": 1
+              }
+            },
+            {
+              "id": "negative-no-digest-check",
+              "violates": "Invariant 7 (same key + different admitted_payload_digest MUST be a conflict)",
+              "description": "v1.0 ledger: dedup on idempotency_ref alone, no admitted_payload_digest. The drifted $125 retry has the same idempotency_ref as A and passes silently as a duplicate of A.",
+              "events": "same as events, admitted_payload_digest ignored",
+              "expected_divergence": {
+                "event": "case-4-drifted-retry",
+                "outcome": "DUPLICATE",
+                "effects_after": 2
+              }
+            },
+            {
+              "id": "negative-digest-inside-artifact",
+              "violates": "Derivation (admitted_payload_digest MUST NOT enter the idempotency_ref preimage)",
+              "description": "admitted_payload_digest placed inside idempotency_artifact. The ref now changes with the payload, so the drifted retry gets a fresh idempotency_ref and executes as a new action: a third effect for two intended payments.",
+              "events": [
+                {
+                  "id": "case-1-first-intentional",
+                  "idempotency_artifact": {
+                    "action_type": "payment.send",
+                    "agent_id": "crew-runtime-agent-042",
+                    "idempotency_key": "adm_4f1c9e2a",
+                    "scope": "mycelium:payment",
+                    "version": "idempotency-ref-v1.1",
+                    "window_ms": 300000,
+                    "admitted_payload_digest": "35dd375e2dc7d8f0c771b8868c335a859c15a23025d1afa41c7c9cdd05fdeab2"
+                  },
+                  "idempotency_ref": "28d7c28745f9e39d0a8dbb1a753887b21c9502ac78cf4062e0104db3a11d5256"
+                },
+                {
+                  "id": "case-2-retry-same-payload",
+                  "idempotency_artifact": {
+                    "action_type": "payment.send",
+                    "agent_id": "crew-runtime-agent-042",
+                    "idempotency_key": "adm_4f1c9e2a",
+                    "scope": "mycelium:payment",
+                    "version": "idempotency-ref-v1.1",
+                    "window_ms": 300000,
+                    "admitted_payload_digest": "35dd375e2dc7d8f0c771b8868c335a859c15a23025d1afa41c7c9cdd05fdeab2"
+                  },
+                  "idempotency_ref": "28d7c28745f9e39d0a8dbb1a753887b21c9502ac78cf4062e0104db3a11d5256"
+                },
+                {
+                  "id": "case-3-second-intentional-same-payload",
+                  "idempotency_artifact": {
+                    "action_type": "payment.send",
+                    "agent_id": "crew-runtime-agent-042",
+                    "idempotency_key": "adm_b7d03e55",
+                    "scope": "mycelium:payment",
+                    "version": "idempotency-ref-v1.1",
+                    "window_ms": 300000,
+                    "admitted_payload_digest": "35dd375e2dc7d8f0c771b8868c335a859c15a23025d1afa41c7c9cdd05fdeab2"
+                  },
+                  "idempotency_ref": "02f051276a0fb93c755f17acaea961f12441a6a3b25163c965c663660e398250"
+                },
+                {
+                  "id": "case-4-drifted-retry",
+                  "idempotency_artifact": {
+                    "action_type": "payment.send",
+                    "agent_id": "crew-runtime-agent-042",
+                    "idempotency_key": "adm_4f1c9e2a",
+                    "scope": "mycelium:payment",
+                    "version": "idempotency-ref-v1.1",
+                    "window_ms": 300000,
+                    "admitted_payload_digest": "5cd9ef51eebab17d494da8b25447d4c3c826678c032246543f0f64e0d20bce5f"
+                  },
+                  "idempotency_ref": "17aeaabfb7c62af8cd630b2a55c87990d8b1133c3c9a146adb83a72babf3a2e5"
+                }
+              ],
+              "expected_divergence": {
+                "event": "case-4-drifted-retry",
+                "outcome": "EXECUTE",
+                "effects_after": 3
+              }
+            }
+          ],
+          "credits": "Four-case test: impartshadow/agent-contracts (crewAIInc/crewAI#5802). Regression: stringsofthemind-oss/once#45."
+        }
+      }
+    },
     "idempotency-ref-v1.fixture": {
       "path": "examples/conformance/idempotency-ref-v1.fixture.json",
       "files": {
@@ -5251,6 +6156,160 @@
                 "idempotency_key": "Client-generated opaque string. Format is implementer-defined; only uniqueness within the deduplication window is required.",
                 "window_ms": "300000ms = 5 minutes. Represents the deduplication window — not a TTL on the trail record itself."
               }
+            },
+            {
+              "id": "idem-002-negative-model-regenerated-args",
+              "description": "NEGATIVE VECTOR (Invariant 5). crew-runtime-agent-042 attempts payment.send for the same intended refund twice: attempt 1 fails a guardrail and re-enters via the model, which regenerates the tool-call arguments (memo field reworded, amount unchanged) before retry. A non-conformant implementation derives idempotency_key as sha256(JCS(regenerated_args)) — because the two attempts' arguments differ in wording, the two idempotency_ref values do NOT collide, so equality-based deduplication never fires and both attempts commit as distinct effects (two refunds for the same order). This is the class of gap named by vasilisnasopoulos (crewAIInc/crewAI#5802, comment 5462928784) and independently cross-verified by mstevens843/crashpoint (2490 crash+recover trials against LangGraph/Temporal/DBOS, all three needed a fifth DIVERGED outcome for exactly this non-reproducibility). A conformant implementation instead derives idempotency_key from a durable, caller-assigned identifier fixed BEFORE the model runs (here, the order id) — see attempt_conformant.",
+              "attempt_1_non_conformant": {
+                "idempotency_artifact": {
+                  "action_type": "payment.send",
+                  "agent_id": "crew-runtime-agent-042",
+                  "idempotency_key": "sha256:a666384cc74a83d4d67257247740592e6a2f1a96f8228684b6b08f1b35da6ff8",
+                  "scope": "mycelium:payment",
+                  "version": "idempotency-ref-v1",
+                  "window_ms": 300000
+                },
+                "artifact_jcs_payload": "{\"action_type\":\"payment.send\",\"agent_id\":\"crew-runtime-agent-042\",\"idempotency_key\":\"sha256:a666384cc74a83d4d67257247740592e6a2f1a96f8228684b6b08f1b35da6ff8\",\"scope\":\"mycelium:payment\",\"version\":\"idempotency-ref-v1\",\"window_ms\":300000}",
+                "idempotency_ref": "c6c0cc20f7b7e719f4209d61d164bb6fa35a981a020955793fbd89aafe853496",
+                "regenerated_args_hashed": "sha256(JCS({\"amount\":4999,\"memo\":\"refund for order 88213\"}))"
+              },
+              "attempt_2_non_conformant": {
+                "idempotency_artifact": {
+                  "action_type": "payment.send",
+                  "agent_id": "crew-runtime-agent-042",
+                  "idempotency_key": "sha256:8045c3c9f8344b1578eee416888a7be5bc8b18592145e9c6261a18b49b90e6f3",
+                  "scope": "mycelium:payment",
+                  "version": "idempotency-ref-v1",
+                  "window_ms": 300000
+                },
+                "artifact_jcs_payload": "{\"action_type\":\"payment.send\",\"agent_id\":\"crew-runtime-agent-042\",\"idempotency_key\":\"sha256:8045c3c9f8344b1578eee416888a7be5bc8b18592145e9c6261a18b49b90e6f3\",\"scope\":\"mycelium:payment\",\"version\":\"idempotency-ref-v1\",\"window_ms\":300000}",
+                "idempotency_ref": "9b92a2dde16eefd9f68ae2a286b55d8e33596f1795dd184bd1d7b28affffa148",
+                "regenerated_args_hashed": "sha256(JCS({\"amount\":4999,\"memo\":\"issuing refund for order #88213\"}))",
+                "vs_attempt_1": "idempotency_ref DIFFERS from attempt_1 despite identical intent (same order, same amount) — memo wording changed on regeneration. Dedup by equality never fires; both attempts commit as separate effects. This is the bug the negative vector demonstrates."
+              },
+              "attempt_conformant": {
+                "idempotency_artifact": {
+                  "action_type": "payment.send",
+                  "agent_id": "crew-runtime-agent-042",
+                  "idempotency_key": "req_9c2f7e10-order-88213",
+                  "scope": "mycelium:payment",
+                  "version": "idempotency-ref-v1",
+                  "window_ms": 300000
+                },
+                "artifact_jcs_payload": "{\"action_type\":\"payment.send\",\"agent_id\":\"crew-runtime-agent-042\",\"idempotency_key\":\"req_9c2f7e10-order-88213\",\"scope\":\"mycelium:payment\",\"version\":\"idempotency-ref-v1\",\"window_ms\":300000}",
+                "idempotency_ref": "e0e86e129f5e32f95bd62f2619aa0b64fee81512574f335fe9ab978d38f24f3d",
+                "derivation_note": "idempotency_key = 'req_' + the caller's own pre-execution request id + order id — fixed before either model attempt ran, identical for both attempt_1 and attempt_2's underlying intent, so a retry with regenerated arguments produces the SAME idempotency_ref both times and dedup fires correctly.",
+                "v1_1_note": "v1.1 (Invariant 7): the same idempotency_ref only makes attempt_2 a duplicate if it dispatches the payload admitted before attempt_1. If it dispatches the regenerated arguments (memo reworded), its admitted_payload_digest differs and the dispatch is a CONFLICT, fail closed, not a silent duplicate. See examples/conformance/idempotency-ref-v1.1/ (four-case test, impartshadow crewAIInc/crewAI#5802; stringsofthemind-oss/once#45)."
+              },
+              "invariants": {
+                "invariant_5_durable_derivation": "idempotency_key MUST derive from inputs fixed before the model runs for that attempt, never from the model's regenerated output for that attempt. Hashing tool-call arguments that a guardrail retry can reword is non-conformant even though the derivation mechanics (JCS+SHA-256) are followed correctly — Invariant 5 constrains what may feed the hash, not how the hash is computed."
+              }
+            }
+          ]
+        }
+      }
+    },
+    "jcs-utf16-key-order-v1": {
+      "path": "examples/conformance/jcs-utf16-key-order-v1/",
+      "files": {
+        "vectors.json": {
+          "set": "jcs-utf16-key-order-v1",
+          "spec": "RFC 8785 §3.2.3 (object property sorting by UTF-16 code units)",
+          "purpose": "Pins the one place Python's json.dumps(sort_keys=True) diverges from RFC 8785: keys outside the Basic Multilingual Plane sort by UTF-16 code unit (surrogate pairs D800-DBFF sort before U+E000-FFFF), not by code point. Every docs/spec/*.md jcs() snippet in this repo is tested against these vectors (tests/test_jcs_docs_snippets.py). Negatives fail by two distinct checks: key order and string escaping.",
+          "reference_implementation": "jcs.py",
+          "precedent": "action-state-group/scitt-payload-binding lib/cpb/canonicalize.py (\"RFC 8785 §3.2.3: sort by UTF-16 code units\")",
+          "vectors": [
+            {
+              "id": "jcs-utf16-001-flat",
+              "kind": "positive",
+              "note": "U+1F600 is the surrogate pair D83D DE00; D83D < E000, so it sorts first. Code-point order puts U+E000 first.",
+              "input": {
+                "": 1,
+                "😀": 2
+              },
+              "expected_canonical": "{\"😀\":2,\"\":1}",
+              "expected_sha256": "28c95d1bbb2209223307e62f489020e8f9e0cfa16adf2daf6d88127a1e8dd22a",
+              "code_point_order_agrees": false
+            },
+            {
+              "id": "jcs-utf16-002-nested",
+              "kind": "positive",
+              "note": "Same rule applied recursively: nested object keys and objects inside arrays.",
+              "input": {
+                "a": 0,
+                "￿": {
+                  "𐀀": "x",
+                  "": "y"
+                },
+                "😀": [
+                  {
+                    "ﬁ": 1,
+                    "𝄞": 2
+                  }
+                ]
+              },
+              "expected_canonical": "{\"a\":0,\"😀\":[{\"𝄞\":2,\"ﬁ\":1}],\"￿\":{\"𐀀\":\"x\",\"\":\"y\"}}",
+              "expected_sha256": "610a17c896db515941c6cbf65c83fec77de155d3ae6823d021411763922b08d7",
+              "code_point_order_agrees": false
+            },
+            {
+              "id": "jcs-utf16-003-ascii-control",
+              "kind": "positive",
+              "note": "All-ASCII keys: UTF-16 order and code-point order agree. Shows why ASCII-only test data never catches the bug.",
+              "input": {
+                "scope": "s",
+                "agent_id": "a",
+                "timestamp": "2026-09-22T00:00:00.000Z",
+                "action_type": "t"
+              },
+              "expected_canonical": "{\"action_type\":\"t\",\"agent_id\":\"a\",\"scope\":\"s\",\"timestamp\":\"2026-09-22T00:00:00.000Z\"}",
+              "expected_sha256": "9127fa99db1aafeacaa7a766b33be8773734c0df88793a9a551cc11dd9384219",
+              "code_point_order_agrees": true
+            },
+            {
+              "id": "jcs-utf16-neg-001-code-point-order",
+              "kind": "negative",
+              "note": "json.dumps(sort_keys=True) output: keys in code-point order. MUST NOT verify as the RFC 8785 canonical form.",
+              "input": {
+                "": 1,
+                "😀": 2
+              },
+              "declared_canonical": "{\"\":1,\"😀\":2}",
+              "declared_sha256": "871954531859c7572c6279f90eb83a594ddc3a289e8bdc28d2a84ffb8c1a1703",
+              "expected_failure": "key_order"
+            },
+            {
+              "id": "jcs-utf16-neg-002-code-point-order-nested",
+              "kind": "negative",
+              "note": "Code-point order applied recursively (top level, nested object, object inside array).",
+              "input": {
+                "a": 0,
+                "￿": {
+                  "𐀀": "x",
+                  "": "y"
+                },
+                "😀": [
+                  {
+                    "ﬁ": 1,
+                    "𝄞": 2
+                  }
+                ]
+              },
+              "declared_canonical": "{\"a\":0,\"￿\":{\"\":\"y\",\"𐀀\":\"x\"},\"😀\":[{\"ﬁ\":1,\"𝄞\":2}]}",
+              "declared_sha256": "fbd6f70a7f885f1e0ccc997481e895dd8e398c9038ebcc221748caa546f4ef43",
+              "expected_failure": "key_order"
+            },
+            {
+              "id": "jcs-utf16-neg-003-escaped-non-ascii",
+              "kind": "negative",
+              "note": "Correct UTF-16 key order but non-ASCII emitted as \\uXXXX escapes (ensure_ascii=True). Fails on escaping, not ordering -- a different check.",
+              "input": {
+                "": 1,
+                "😀": 2
+              },
+              "declared_canonical": "{\"\\ud83d\\ude00\":2,\"\\ue000\":1}",
+              "declared_sha256": "cb9ffd9ff6ff82b282ec9529d79f40a66e0df21bbf69a4e662adc6a96649fd2a",
+              "expected_failure": "string_escaping"
             }
           ]
         }
@@ -5784,6 +6843,543 @@
               "tamper_description": "Last nibble flipped: '4' → '0'. Single-character mutation — a minimal but detectable forgery attempt.",
               "invariant": "correct_action_ref != tampered_action_ref",
               "verifier_must": "RE-DERIVE SHA-256(JCS(preimage)) and assert it equals the presented action_ref. A verifier that skips re-derivation and trusts the presented hash is trivially forgeable."
+            }
+          ]
+        }
+      }
+    },
+    "offer-identity-ref": {
+      "path": "examples/conformance/offer-identity-ref/",
+      "files": {
+        "vectors.json": {
+          "spec_version": "offer-identity-ref-v1",
+          "description": "Conformance vectors for offer-identity-ref-v1 (docs/spec/offer-identity-ref.md). offer_identity_ref = SHA-256(JCS(x402_response)), where x402_response is the exact x402Response object (x402Version + accepts[] of PaymentRequirements) served at S1. A verifier recomputes the hash from an independently held copy of the advertised offer and compares it against the reference a later artifact cites — any divergence, whether from tampering or from a Seller substituting a different offer after the fact (T1), surfaces as the same recompute mismatch.",
+          "comparator_rule": "PASS requires SHA-256(JCS(x402_response)) == declared offer_identity_ref, byte-exact. Any difference in accepts[] (amount, payee, asset, resource, or any other PaymentRequirements field) produces a different hash by construction — there is no separate 'was this offer substituted' check beyond the recompute comparison.",
+          "vectors": [
+            {
+              "id": "offer-identity-001",
+              "description": "Baseline: single-mechanism offer (one PaymentRequirements entry in accepts). Verifier holds an independent copy of the exact x402Response served and recomputes the same hash.",
+              "expected": "PASS",
+              "x402_response": {
+                "x402Version": 1,
+                "accepts": [
+                  {
+                    "scheme": "exact",
+                    "network": "base-sepolia",
+                    "maxAmountRequired": "10000",
+                    "resource": "https://api.example.com/weather",
+                    "description": "Current weather data for a given location",
+                    "mimeType": "application/json",
+                    "payTo": "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+                    "maxTimeoutSeconds": 60,
+                    "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e"
+                  }
+                ]
+              },
+              "offer_identity_ref": "0df1f6792f5aa482568ff3b6cb39568d5fe0b5f29b7dc7148b5dba400451d4c4"
+            },
+            {
+              "id": "offer-identity-multi-accepts-001",
+              "description": "v1 invariant 1: offer advertises two accepted mechanisms (exact/base-sepolia and exact/eth-sepolia) for the same resource. offer_identity_ref commits to the complete accepts array, not to whichever single entry a Buyer later selects at S3.",
+              "expected": "PASS",
+              "x402_response": {
+                "x402Version": 1,
+                "accepts": [
+                  {
+                    "scheme": "exact",
+                    "network": "base-sepolia",
+                    "maxAmountRequired": "25000",
+                    "resource": "https://api.example.com/tokenize",
+                    "description": "Tokenize a real-world asset record",
+                    "mimeType": "application/json",
+                    "payTo": "0x4f2A91827C6F3E0b1D5a8C4e9F7b2D6a1C8E5F3B9",
+                    "maxTimeoutSeconds": 120,
+                    "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
+                  },
+                  {
+                    "scheme": "exact",
+                    "network": "eth-sepolia",
+                    "maxAmountRequired": "25000",
+                    "resource": "https://api.example.com/tokenize",
+                    "description": "Tokenize a real-world asset record",
+                    "mimeType": "application/json",
+                    "payTo": "0x4f2A91827C6F3E0b1D5a8C4e9F7b2D6a1C8E5F3B9",
+                    "maxTimeoutSeconds": 120,
+                    "asset": "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14"
+                  }
+                ]
+              },
+              "offer_identity_ref": "284fe4bb0d5c4792d78c069df60402b27498c13364cf94a0c202045676de72df"
+            },
+            {
+              "id": "offer-substitution-mismatch-001",
+              "description": "T1 CRITICAL negative: a later artifact cites offer_identity_ref for the CHEAP offer (maxAmountRequired=10000), but the x402_response the verifier independently holds — the one actually served at S1 — is the EXPENSIVE offer for the same resource (maxAmountRequired=50000, otherwise identical). This is the exact shape of offer substitution the RFP names for T1: a Seller pairing a cheap-offer transaction with the expensive offer after the fact. The recompute mismatch catches it directly, with no separate substitution-detection step.",
+              "expected": "FAIL",
+              "failure_mode": "hash_mismatch",
+              "failure_detail": "declared offer_identity_ref resolves to a different (cheaper) offer than the x402_response actually held by the verifier",
+              "x402_response": {
+                "x402Version": 1,
+                "accepts": [
+                  {
+                    "scheme": "exact",
+                    "network": "base-sepolia",
+                    "maxAmountRequired": "50000",
+                    "resource": "https://api.example.com/weather",
+                    "description": "Current weather data for a given location",
+                    "mimeType": "application/json",
+                    "payTo": "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+                    "maxTimeoutSeconds": 60,
+                    "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e"
+                  }
+                ]
+              },
+              "offer_identity_ref": "0df1f6792f5aa482568ff3b6cb39568d5fe0b5f29b7dc7148b5dba400451d4c4"
+            },
+            {
+              "id": "malformed-hash-mismatch-001",
+              "description": "Generic negative: declared offer_identity_ref is a zero digest, unrelated to any real offer. Same check path as the substitution vector — this profile does not distinguish 'corrupted reference' from 'substituted offer' at the invariant level, both are a recompute mismatch.",
+              "expected": "FAIL",
+              "failure_mode": "hash_mismatch",
+              "failure_detail": "declared offer_identity_ref does not match SHA-256(JCS(x402_response))",
+              "x402_response": {
+                "x402Version": 1,
+                "accepts": [
+                  {
+                    "scheme": "exact",
+                    "network": "base-sepolia",
+                    "maxAmountRequired": "10000",
+                    "resource": "https://api.example.com/weather",
+                    "description": "Current weather data for a given location",
+                    "mimeType": "application/json",
+                    "payTo": "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+                    "maxTimeoutSeconds": 60,
+                    "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e"
+                  }
+                ]
+              },
+              "offer_identity_ref": "0000000000000000000000000000000000000000000000000000000000000000"
+            }
+          ]
+        }
+      }
+    },
+    "peer-reconciliation-ref": {
+      "path": "examples/conformance/peer-reconciliation-ref/",
+      "files": {
+        "vectors.json": {
+          "spec_version": "peer-reconciliation-ref-v1.1",
+          "description": "Conformance vectors for peer-reconciliation-ref-v1. Four invariants are separately recomputable: canonical_envelope, structural_validity, signature_validity, comparator_state. A verifier that treats any pair of present observations as AGREED without checking action_ref equality will silently pass disagreed-001. A verifier that defaults a missing half to AGREED will silently pass unresolved-001. v1.1 adds three optional additive checks: supersedes_chain_integrity (correction pointers), requested_at (recommended non-suppression timestamp), as_of (informational per-observation time) — none change how the five v1.0 vectors evaluate.",
+          "comparator_rule": "AGREED requires both observed=true, both signatures valid, and matching action_ref. DISAGREED requires both observed=true, both signatures valid, and differing action_ref. Anything else (missing observation, invalid signature on an observed=true party) is UNRESOLVED — never defaulted to AGREED or DISAGREED.",
+          "vectors": [
+            {
+              "id": "agreed-001",
+              "description": "Two independently controlled Guardians (SafeAgent's own + a counterparty's) derive the same action_ref for the same interaction. Both signatures declared valid. comparator_state=AGREED.",
+              "expected": "PASS",
+              "envelope": {
+                "interaction_id": "3f9c9e2e-6b5a-4b7e-8f3e-1a2b3c4d5e6f",
+                "party_a": {
+                  "party_id": "safeagent-guardian",
+                  "observed": true,
+                  "action_ref": "a2f1c9e0b8e93d4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f",
+                  "co_signer": {
+                    "issuer": "safeagent-guardian",
+                    "kid": "sg-key-01",
+                    "pubkey": "MCowBQYDK2VwAyEAqQm7VZ0X8tGxJm6QwYh3fN4dL9pRk2vC5eA1sT7uHzM=",
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.c2FmZWFnZW50LWd1YXJkaWFu.QVKz8n2Lp9wXbYr4Ht7c"
+                  }
+                },
+                "party_b": {
+                  "party_id": "counterparty-guardian",
+                  "observed": true,
+                  "action_ref": "a2f1c9e0b8e93d4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f",
+                  "co_signer": {
+                    "issuer": "counterparty-guardian",
+                    "kid": "cg-key-01",
+                    "pubkey": "MCowBQYDK2VwAyEAnR3xW9vL2sKfQd6BhTz1oYc8gEj4pXm0aVn5rUw7iCk=",
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.Y291bnRlcnBhcnR5LWd1YXJkaWFu.Bt6Jd0mQx3Ny8VpFcW2r"
+                  }
+                },
+                "version": "peer-reconciliation-ref-v1"
+              },
+              "peer_reconciliation_ref": "8555d6a080388ecc6a5d562becb01dda3c75243b9598200f9b1616e2655cf67c",
+              "checks": {
+                "canonical_envelope": true,
+                "structural_validity": true,
+                "signature_valid_a": true,
+                "signature_valid_b": true
+              },
+              "comparator_state": "AGREED"
+            },
+            {
+              "id": "disagreed-001",
+              "description": "CRITICAL: both Guardians observed and both signatures declared valid, but the two action_ref values genuinely differ (modeled on the narko4u/ScopeBlind cross-engine correlation gap that motivated this spec). comparator_state=DISAGREED — the mismatch is named, not resolved. A verifier that treats any two present observations as AGREED will silently accept this.",
+              "expected": "PASS",
+              "envelope": {
+                "interaction_id": "8b2e5d1a-4c3f-4e7a-9d6b-2f1e0c9a8b7d",
+                "party_a": {
+                  "party_id": "narko4u-guardian",
+                  "observed": true,
+                  "action_ref": "b1a2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2",
+                  "co_signer": {
+                    "issuer": "narko4u-guardian",
+                    "kid": "ng-key-02",
+                    "pubkey": "MCowBQYDK2VwAyEAeK7pQ2mN9xVfR4tLc0bYs8gHj3oDw6zA1uEi5rTn2qC=",
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.bmFya280dS1ndWFyZGlhbg.Fp3Rz9wKm6HbXd1Vt4cJ"
+                  }
+                },
+                "party_b": {
+                  "party_id": "scopeblind-guardian",
+                  "observed": true,
+                  "action_ref": "c9d8e7f6a5b4c3d2e1f0a9b8c7d6e5f4a3b2c1d0e9f8a7b6c5d4e3f2a1b0c9d8",
+                  "co_signer": {
+                    "issuer": "scopeblind-guardian",
+                    "kid": "sb-key-03",
+                    "pubkey": "MCowBQYDK2VwAyEAsY4mB1nQ7xLwK3eV9tRc2oFj6pDz0aGh8uEi5wTn4qX=",
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.c2NvcGVibGluZC1ndWFyZGlhbg.Hn5Tx2vLp8QwYc7Rd3bK"
+                  }
+                },
+                "version": "peer-reconciliation-ref-v1"
+              },
+              "peer_reconciliation_ref": "063ca9d07aff8a11d0312a36c0cbfda3ff207ce26ca8062fa0944efbafce6c03",
+              "checks": {
+                "canonical_envelope": true,
+                "structural_validity": true,
+                "signature_valid_a": true,
+                "signature_valid_b": true
+              },
+              "comparator_state": "DISAGREED"
+            },
+            {
+              "id": "unresolved-001",
+              "description": "party_a (astrogilda-guardian) observed and signed; party_b (tenant-guardian) has not produced its half yet (observed=false, action_ref/co_signer both null). comparator_state=UNRESOLVED — MUST NOT default to AGREED just because the present half looks fine, and MUST NOT be reported as DISAGREED (no second value exists to disagree with).",
+              "expected": "PASS",
+              "envelope": {
+                "interaction_id": "5d4c3b2a-1e0f-4a9b-8c7d-6e5f4a3b2c1d",
+                "party_a": {
+                  "party_id": "astrogilda-guardian",
+                  "observed": true,
+                  "action_ref": "d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1",
+                  "co_signer": {
+                    "issuer": "astrogilda-guardian",
+                    "kid": "ag-key-04",
+                    "pubkey": "MCowBQYDK2VwAyEAxJ2nR8mQ4vLcK1eT7oWs9bYd3pGh0aFi6uEj5rTx8qZ=",
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.YXN0cm9naWxkYS1ndWFyZGlhbg.Kq7Wm4xPn9RbYd2Vt6cH"
+                  }
+                },
+                "party_b": {
+                  "party_id": "tenant-guardian",
+                  "observed": false,
+                  "action_ref": null,
+                  "co_signer": null
+                },
+                "version": "peer-reconciliation-ref-v1"
+              },
+              "peer_reconciliation_ref": "b709073411cedb50e4ccde67a634b1190c2a05162579800b14487d235c5e723b",
+              "checks": {
+                "canonical_envelope": true,
+                "structural_validity": true,
+                "signature_valid_a": true,
+                "signature_valid_b": false
+              },
+              "comparator_state": "UNRESOLVED"
+            },
+            {
+              "id": "malformed-structural-001",
+              "description": "party_a claims observed=true but action_ref is null while co_signer is fully populated — decouples the signed claim from the thing it claims to attest, structurally invalid by construction (not a normal UNRESOLVED, since the party asserted it DID observe). Envelope hash itself is internally consistent (recomputes correctly) — only the structural_validity invariant catches this, which is the point of checking it independently of the hash.",
+              "expected": "FAIL",
+              "failure_mode": "structural_validity",
+              "failure_detail": "party_a: observed=true but action_ref=null (must be non-null when observed=true)",
+              "envelope": {
+                "interaction_id": "1a0b9c8d-7e6f-4a5b-3c2d-1e0f9a8b7c6d",
+                "party_a": {
+                  "party_id": "empire-labs-guardian",
+                  "observed": true,
+                  "action_ref": null,
+                  "co_signer": {
+                    "issuer": "empire-labs-guardian",
+                    "kid": "el-key-05",
+                    "pubkey": "MCowBQYDK2VwAyEAqL8nT2mR9xVcK4eW7oYs1bGd6pFj0aHi3uEk5rTz8qW=",
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.ZW1waXJlLWxhYnMtZ3VhcmRpYW4.Mn8Yz4vLq2WbXd7Rt5cJ"
+                  }
+                },
+                "party_b": {
+                  "party_id": "counterparty-guardian",
+                  "observed": true,
+                  "action_ref": "e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3",
+                  "co_signer": {
+                    "issuer": "counterparty-guardian",
+                    "kid": "cg-key-01",
+                    "pubkey": "MCowBQYDK2VwAyEAnR3xW9vL2sKfQd6BhTz1oYc8gEj4pXm0aVn5rUw7iCk=",
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.Y291bnRlcnBhcnR5LWd1YXJkaWFu.Bt6Jd0mQx3Ny8VpFcW2r"
+                  }
+                },
+                "version": "peer-reconciliation-ref-v1"
+              },
+              "peer_reconciliation_ref": "04119149929a39545628b4f98b8dd0967c71d0fa02fe140c04b80d69b8cf7333",
+              "checks": {
+                "canonical_envelope": true,
+                "structural_validity": false,
+                "signature_valid_a": true,
+                "signature_valid_b": true
+              },
+              "comparator_state": "UNRESOLVED"
+            },
+            {
+              "id": "malformed-hash-mismatch-001",
+              "description": "Same envelope as agreed-001, but the declared peer_reconciliation_ref does not match SHA-256(JCS(envelope)) — simulates a party or relay mutating a field after the hash was computed and signed. canonical_envelope invariant catches this before any comparator logic runs.",
+              "expected": "FAIL",
+              "failure_mode": "canonical_envelope",
+              "failure_detail": "declared peer_reconciliation_ref does not match recomputed SHA-256(JCS(envelope))",
+              "envelope": {
+                "interaction_id": "3f9c9e2e-6b5a-4b7e-8f3e-1a2b3c4d5e6f",
+                "party_a": {
+                  "party_id": "safeagent-guardian",
+                  "observed": true,
+                  "action_ref": "a2f1c9e0b8e93d4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f",
+                  "co_signer": {
+                    "issuer": "safeagent-guardian",
+                    "kid": "sg-key-01",
+                    "pubkey": "MCowBQYDK2VwAyEAqQm7VZ0X8tGxJm6QwYh3fN4dL9pRk2vC5eA1sT7uHzM=",
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.c2FmZWFnZW50LWd1YXJkaWFu.QVKz8n2Lp9wXbYr4Ht7c"
+                  }
+                },
+                "party_b": {
+                  "party_id": "counterparty-guardian",
+                  "observed": true,
+                  "action_ref": "a2f1c9e0b8e93d4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f",
+                  "co_signer": {
+                    "issuer": "counterparty-guardian",
+                    "kid": "cg-key-01",
+                    "pubkey": "MCowBQYDK2VwAyEAnR3xW9vL2sKfQd6BhTz1oYc8gEj4pXm0aVn5rUw7iCk=",
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.Y291bnRlcnBhcnR5LWd1YXJkaWFu.Bt6Jd0mQx3Ny8VpFcW2r"
+                  }
+                },
+                "version": "peer-reconciliation-ref-v1"
+              },
+              "peer_reconciliation_ref": "0000000000000000000000000000000000000000000000000000000000000000",
+              "checks": {
+                "canonical_envelope": false,
+                "structural_validity": true,
+                "signature_valid_a": true,
+                "signature_valid_b": true
+              },
+              "comparator_state": "AGREED"
+            },
+            {
+              "id": "correction-supersedes-001",
+              "description": "v1.1. safeagent-guardian corrects a previously signed action_ref (the one from agreed-001) via a new envelope with supersedes pointing at agreed-001's peer_reconciliation_ref. The original envelope (known_envelopes entry) is never mutated — only referenced. Both parties now agree on the corrected value. comparator_state=AGREED, supersedes_chain_integrity resolves against known_envelopes.",
+              "expected": "PASS",
+              "envelope": {
+                "interaction_id": "3f9c9e2e-6b5a-4b7e-8f3e-1a2b3c4d5e6f",
+                "party_a": {
+                  "party_id": "safeagent-guardian",
+                  "observed": true,
+                  "action_ref": "f00dbabe1234c9e0b8e93d4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5",
+                  "co_signer": {
+                    "issuer": "safeagent-guardian",
+                    "kid": "sg-key-02",
+                    "pubkey": "MCowBQYDK2VwAyEAqQm7VZ0X8tGxJm6QwYh3fN4dL9pRk2vC5eA1sT7uHzM=",
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.c2FmZWFnZW50LWd1YXJkaWFuLWNvcnJlY3Rpb24.Rk3Wm7xNp2QbYd9Vt1cH"
+                  }
+                },
+                "party_b": {
+                  "party_id": "counterparty-guardian",
+                  "observed": true,
+                  "action_ref": "f00dbabe1234c9e0b8e93d4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5",
+                  "co_signer": {
+                    "issuer": "counterparty-guardian",
+                    "kid": "cg-key-01",
+                    "pubkey": "MCowBQYDK2VwAyEAnR3xW9vL2sKfQd6BhTz1oYc8gEj4pXm0aVn5rUw7iCk=",
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.Y291bnRlcnBhcnR5LWd1YXJkaWFuLWNvcnJlY3Rpb24.Nt4Rd2mLx8VpBc6Wq3fT"
+                  }
+                },
+                "version": "peer-reconciliation-ref-v1",
+                "supersedes": "8555d6a080388ecc6a5d562becb01dda3c75243b9598200f9b1616e2655cf67c"
+              },
+              "peer_reconciliation_ref": "a1ad58d955709c2994661c7983b4aeb66d93df53789bd50dbaa34f9f1fcb3848",
+              "known_envelopes": {
+                "8555d6a080388ecc6a5d562becb01dda3c75243b9598200f9b1616e2655cf67c": {
+                  "interaction_id": "3f9c9e2e-6b5a-4b7e-8f3e-1a2b3c4d5e6f",
+                  "resolved_by": "mycelium-trail-index"
+                }
+              },
+              "checks": {
+                "canonical_envelope": true,
+                "structural_validity": true,
+                "signature_valid_a": true,
+                "signature_valid_b": true,
+                "supersedes_chain_integrity": true
+              },
+              "comparator_state": "AGREED"
+            },
+            {
+              "id": "unresolved-requested-at-001",
+              "description": "v1.1. Same UNRESOLVED shape as unresolved-001, but party_b's missing observation now carries requested_at — proving the request was made and timestamped rather than silently absent, per CELL-v1.md's non-suppression principle. Still UNRESOLVED: a declared request timestamp does not manufacture a missing observation.",
+              "expected": "PASS",
+              "envelope": {
+                "interaction_id": "6c5b4a39-2e1f-4d0c-9b8a-7e6f5d4c3b2a",
+                "party_a": {
+                  "party_id": "empire-labs-guardian",
+                  "observed": true,
+                  "action_ref": "e1d2c3b4a5968778695a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3",
+                  "co_signer": {
+                    "issuer": "empire-labs-guardian",
+                    "kid": "el-key-06",
+                    "pubkey": "MCowBQYDK2VwAyEAqL8nT2mR9xVcK4eW7oYs1bGd6pFj0aHi3uEk5rTz8qW=",
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.ZW1waXJlLWxhYnMtZ3VhcmRpYW4tdHM.Xy8Zn4vMq2WbTd7Rt5cJ"
+                  }
+                },
+                "party_b": {
+                  "party_id": "tenant-guardian",
+                  "observed": false,
+                  "action_ref": null,
+                  "co_signer": null,
+                  "requested_at": 1787654321000
+                },
+                "version": "peer-reconciliation-ref-v1"
+              },
+              "peer_reconciliation_ref": "628e55e89ad3abc9bafde196aece903e915b25775c190a0df0b6b8800e0e318c",
+              "checks": {
+                "canonical_envelope": true,
+                "structural_validity": true,
+                "signature_valid_a": true,
+                "signature_valid_b": false
+              },
+              "comparator_state": "UNRESOLVED"
+            },
+            {
+              "id": "agreed-with-as-of-001",
+              "description": "v1.1. Both parties observed=true, matching action_ref, each declares its own as_of (300s apart, no shared clock required). as_of is transported for audit legibility only — the comparator still evaluates to AGREED purely from action_ref equality + signature validity, exactly as it would without as_of.",
+              "expected": "PASS",
+              "envelope": {
+                "interaction_id": "9a8b7c6d-5e4f-4a3b-2c1d-0e9f8a7b6c5d",
+                "party_a": {
+                  "party_id": "narko4u-guardian",
+                  "observed": true,
+                  "action_ref": "c1b2a3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2",
+                  "co_signer": {
+                    "issuer": "narko4u-guardian",
+                    "kid": "ng-key-03",
+                    "pubkey": "MCowBQYDK2VwAyEAeK7pQ2mN9xVfR4tLc0bYs8gHj3oDw6zA1uEi5rTn2qC=",
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.bmFya280dS1ndWFyZGlhbi1hc29m.Pq5Tz8wKm6HbXd1Vt4cJ"
+                  },
+                  "as_of": 1787650000000
+                },
+                "party_b": {
+                  "party_id": "scopeblind-guardian",
+                  "observed": true,
+                  "action_ref": "c1b2a3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2",
+                  "co_signer": {
+                    "issuer": "scopeblind-guardian",
+                    "kid": "sb-key-04",
+                    "pubkey": "MCowBQYDK2VwAyEAsY4mB1nQ7xLwK3eV9tRc2oFj6pDz0aGh8uEi5wTn4qX=",
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.c2NvcGVibGluZC1ndWFyZGlhbi1hc29m.Wn5Tx2vLp8QwRc7Yd3bK"
+                  },
+                  "as_of": 1787650300000
+                },
+                "version": "peer-reconciliation-ref-v1"
+              },
+              "peer_reconciliation_ref": "9de456bbc7526d6fe368e268367e33e284e92dcab9d690c51575566a81f3b793",
+              "checks": {
+                "canonical_envelope": true,
+                "structural_validity": true,
+                "signature_valid_a": true,
+                "signature_valid_b": true
+              },
+              "comparator_state": "AGREED"
+            },
+            {
+              "id": "malformed-supersedes-unresolved-001",
+              "description": "v1.1 CRITICAL negative: same envelope shape as correction-supersedes-001, but supersedes points at a hash (all-f) that resolves to nothing in known_envelopes. canonical_envelope, structural_validity, signature_validity, and comparator_state all still compute cleanly (this is not a hash-tampering or structural bug) — only supersedes_chain_integrity catches the dangling correction pointer, which is the point of checking it as a fifth, independent invariant.",
+              "expected": "FAIL",
+              "failure_mode": "supersedes_chain_integrity",
+              "failure_detail": "supersedes references a peer_reconciliation_ref not present in known_envelopes — dangling correction pointer",
+              "envelope": {
+                "interaction_id": "3f9c9e2e-6b5a-4b7e-8f3e-1a2b3c4d5e6f",
+                "party_a": {
+                  "party_id": "safeagent-guardian",
+                  "observed": true,
+                  "action_ref": "f00dbabe1234c9e0b8e93d4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5",
+                  "co_signer": {
+                    "issuer": "safeagent-guardian",
+                    "kid": "sg-key-02",
+                    "pubkey": "MCowBQYDK2VwAyEAqQm7VZ0X8tGxJm6QwYh3fN4dL9pRk2vC5eA1sT7uHzM=",
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.c2FmZWFnZW50LWd1YXJkaWFuLWNvcnJlY3Rpb24.Rk3Wm7xNp2QbYd9Vt1cH"
+                  }
+                },
+                "party_b": {
+                  "party_id": "counterparty-guardian",
+                  "observed": true,
+                  "action_ref": "f00dbabe1234c9e0b8e93d4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5",
+                  "co_signer": {
+                    "issuer": "counterparty-guardian",
+                    "kid": "cg-key-01",
+                    "pubkey": "MCowBQYDK2VwAyEAnR3xW9vL2sKfQd6BhTz1oYc8gEj4pXm0aVn5rUw7iCk=",
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.Y291bnRlcnBhcnR5LWd1YXJkaWFuLWNvcnJlY3Rpb24.Nt4Rd2mLx8VpBc6Wq3fT"
+                  }
+                },
+                "version": "peer-reconciliation-ref-v1",
+                "supersedes": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+              },
+              "peer_reconciliation_ref": "461961d7e5582fd0a50143b4e9ff8a7b0ce2ebf230ea752bd685fbcd1b812ab1",
+              "known_envelopes": {},
+              "checks": {
+                "canonical_envelope": true,
+                "structural_validity": true,
+                "signature_valid_a": true,
+                "signature_valid_b": true,
+                "supersedes_chain_integrity": false
+              },
+              "comparator_state": "AGREED"
+            },
+            {
+              "id": "malformed-supersedes-self-attested-001",
+              "description": "v1.1 CRITICAL negative: same envelope as correction-supersedes-001 (safeagent-guardian corrects agreed-001 via supersedes), but the known_envelopes entry it resolves against is resolved_by=safeagent-guardian — the same party that emits the supersedes pointer also attests the prior envelope it claims to resolve to. interaction_id matches, the pointer resolves, nothing about canonical_envelope/structural_validity/signature_validity/comparator_state is broken — this is the could-not-check shape Certisyn flagged for a SCITT clause: a check that runs, terminates, takes no fallback, but compares two values that cannot diverge because the same party supplies both sides. Only the resolved_by independence requirement catches it.",
+              "expected": "FAIL",
+              "envelope": {
+                "interaction_id": "3f9c9e2e-6b5a-4b7e-8f3e-1a2b3c4d5e6f",
+                "party_a": {
+                  "party_id": "safeagent-guardian",
+                  "observed": true,
+                  "action_ref": "f00dbabe1234c9e0b8e93d4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5",
+                  "co_signer": {
+                    "issuer": "safeagent-guardian",
+                    "kid": "sg-key-02",
+                    "pubkey": "MCowBQYDK2VwAyEAqQm7VZ0X8tGxJm6QwYh3fN4dL9pRk2vC5eA1sT7uHzM=",
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.c2FmZWFnZW50LWd1YXJkaWFuLWNvcnJlY3Rpb24.Rk3Wm7xNp2QbYd9Vt1cH"
+                  }
+                },
+                "party_b": {
+                  "party_id": "counterparty-guardian",
+                  "observed": true,
+                  "action_ref": "f00dbabe1234c9e0b8e93d4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5",
+                  "co_signer": {
+                    "issuer": "counterparty-guardian",
+                    "kid": "cg-key-01",
+                    "pubkey": "MCowBQYDK2VwAyEAnR3xW9vL2sKfQd6BhTz1oYc8gEj4pXm0aVn5rUw7iCk=",
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.Y291bnRlcnBhcnR5LWd1YXJkaWFuLWNvcnJlY3Rpb24.Nt4Rd2mLx8VpBc6Wq3fT"
+                  }
+                },
+                "version": "peer-reconciliation-ref-v1",
+                "supersedes": "8555d6a080388ecc6a5d562becb01dda3c75243b9598200f9b1616e2655cf67c"
+              },
+              "peer_reconciliation_ref": "a1ad58d955709c2994661c7983b4aeb66d93df53789bd50dbaa34f9f1fcb3848",
+              "known_envelopes": {
+                "8555d6a080388ecc6a5d562becb01dda3c75243b9598200f9b1616e2655cf67c": {
+                  "interaction_id": "3f9c9e2e-6b5a-4b7e-8f3e-1a2b3c4d5e6f",
+                  "resolved_by": "safeagent-guardian"
+                }
+              },
+              "checks": {
+                "canonical_envelope": true,
+                "structural_validity": true,
+                "signature_valid_a": true,
+                "signature_valid_b": true,
+                "supersedes_chain_integrity": false
+              },
+              "comparator_state": "AGREED",
+              "failure_mode": "supersedes_chain_integrity",
+              "failure_detail": "known_envelopes entry resolved_by=safeagent-guardian is one of this envelope's own parties — not an independent source"
             }
           ]
         }
@@ -7765,6 +9361,324 @@
         }
       }
     },
+    "settlement-evidence-ref": {
+      "path": "examples/conformance/settlement-evidence-ref/",
+      "files": {
+        "vectors.json": {
+          "spec_version": "settlement-evidence-ref-v1",
+          "description": "Conformance vectors for settlement-evidence-ref-v1 (docs/spec/settlement-evidence-ref.md). Three checks: ledger_recomputed (payer_debit/payee_credit read from the rail's own transaction data, never accepted as a bare facilitator success flag), debit_credit_paired (both sides present, not just one), matches_offer (when offer_identity_ref is present, the settled amount/asset/payee match what the offer required). A verifier that accepts a facilitator's success:true alone, without independently recomputed debit/credit, silently passes facilitator-assertion-only-001 — this is R5's central prohibition.",
+          "comparator_rule": "PASS requires SHA-256(JCS(settlement_artifact)) == declared settlement_evidence_ref AND checks.ledger_recomputed==true AND checks.debit_credit_paired==true AND checks.matches_offer==true (when offer_identity_ref is present and a referenced_offer is supplied for comparison).",
+          "vectors": [
+            {
+              "id": "settlement-matched-001",
+              "description": "Baseline: payer_debit and payee_credit both independently recomputed from the rail's transaction receipt (ledger_recomputed=true), both present, amount/asset/payee match the referenced offer exactly.",
+              "expected": "PASS",
+              "settlement_artifact": {
+                "network": "base-sepolia",
+                "transaction": "0x7c8692c003b80a48bb8123ae6965e26464d271ee2041404cc025e0f15e5fcaba",
+                "offer_identity_ref": "0df1f6792f5aa482568ff3b6cb39568d5fe0b5f29b7dc7148b5dba400451d4c4",
+                "payer_debit": {
+                  "address": "0xA11ce00000000000000000000000000000000001",
+                  "amount": "10000",
+                  "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e"
+                },
+                "payee_credit": {
+                  "address": "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+                  "amount": "10000",
+                  "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e"
+                },
+                "version": "settlement-evidence-ref-v1"
+              },
+              "settlement_evidence_ref": "e061c6a77d1a3d7ae934b0869592b1b9dd518583f357763b76f73007f865f0c0",
+              "referenced_offer": {
+                "maxAmountRequired": "10000",
+                "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+                "payTo": "0x209693Bc6afc0C5328bA36FaF03C514EF312287C"
+              },
+              "checks": {
+                "ledger_recomputed": true,
+                "debit_credit_paired": true,
+                "matches_offer": true
+              }
+            },
+            {
+              "id": "facilitator-assertion-only-001",
+              "description": "R5 CRITICAL negative: settlement_artifact declares ledger_recomputed=false — payer_debit/payee_credit are both null, meaning the only thing behind this settlement claim is a facilitator's bare success:true (per x402's own SettleResponse schema, which carries no amount or payee at all). A verifier that accepts this as 'settled' without independent ledger recomputation is exactly the failure R5 prohibits.",
+              "expected": "FAIL",
+              "failure_mode": "facilitator_assertion_only",
+              "failure_detail": "ledger_recomputed=false — payer_debit/payee_credit were never independently confirmed against the rail, only asserted by the facilitator's SettleResponse.success",
+              "settlement_artifact": {
+                "network": "base-sepolia",
+                "transaction": "0x9d4e2f1a8c7b6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f1a0b9c8d7e6f5a4b3c2d1e",
+                "offer_identity_ref": "0df1f6792f5aa482568ff3b6cb39568d5fe0b5f29b7dc7148b5dba400451d4c4",
+                "payer_debit": {
+                  "address": null,
+                  "amount": null,
+                  "asset": null
+                },
+                "payee_credit": {
+                  "address": null,
+                  "amount": null,
+                  "asset": null
+                },
+                "version": "settlement-evidence-ref-v1"
+              },
+              "settlement_evidence_ref": "b468ad1891785b7166926af959ce80807f8982085574bb8f20f4e1b5ea776dde",
+              "referenced_offer": {
+                "maxAmountRequired": "10000",
+                "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+                "payTo": "0x209693Bc6afc0C5328bA36FaF03C514EF312287C"
+              },
+              "checks": {
+                "ledger_recomputed": false,
+                "debit_credit_paired": false,
+                "matches_offer": false
+              }
+            },
+            {
+              "id": "settlement-amount-mismatch-vs-offer-001",
+              "description": "T2 negative: payer_debit and payee_credit ARE independently recomputed from a real transaction (ledger_recomputed=true, both sides present and internally consistent with each other — 5000 debited, 5000 credited, same asset) but the amount settled (5000) does not match what the referenced offer required (10000). Invariant 5: this is a distinguishable failure state, not a hash-tamper and not a missing-side failure — the settlement is real, just for the wrong amount.",
+              "expected": "FAIL",
+              "failure_mode": "amount_mismatch_vs_offer",
+              "failure_detail": "payer_debit.amount=5000 does not match referenced_offer.maxAmountRequired=10000",
+              "settlement_artifact": {
+                "network": "base-sepolia",
+                "transaction": "0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b",
+                "offer_identity_ref": "0df1f6792f5aa482568ff3b6cb39568d5fe0b5f29b7dc7148b5dba400451d4c4",
+                "payer_debit": {
+                  "address": "0xA11ce00000000000000000000000000000000001",
+                  "amount": "5000",
+                  "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e"
+                },
+                "payee_credit": {
+                  "address": "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+                  "amount": "5000",
+                  "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e"
+                },
+                "version": "settlement-evidence-ref-v1"
+              },
+              "settlement_evidence_ref": "0e412c3d5c1e3404f0678e1b19acbe869594bc29cadfbf0e413a673c2c7f6782",
+              "referenced_offer": {
+                "maxAmountRequired": "10000",
+                "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+                "payTo": "0x209693Bc6afc0C5328bA36FaF03C514EF312287C"
+              },
+              "checks": {
+                "ledger_recomputed": true,
+                "debit_credit_paired": true,
+                "matches_offer": false
+              }
+            }
+          ]
+        }
+      }
+    },
+    "settlement-retry-safety": {
+      "path": "examples/conformance/settlement-retry-safety/",
+      "files": {
+        "vectors.json": {
+          "spec_version": "settlement-retry-safety-v1",
+          "description": "Behavioral conformance vectors for the seven-mode retry-safety battery named in x402-foundation/x402#3208 (aurumflux20, https://aurumflux.co/retry-safety/): accept_then_timeout, 5xx_after_settle, double_402, slow_answer, reconcile_unavailable, declared_safe, clean. Unlike the hash-derivation vectors elsewhere in this directory (offer-identity-ref, settlement-evidence-ref), these are behavioral: each vector names a mode and the expected outcome of actually running execute_payment() against MockFacilitator in that mode, not a static artifact hash. A conformant implementation reproduces the same terminal verdict and the same ledger_len==1 for every positive vector, by running the code, not by reading the spec.",
+          "comparator_rule": "PASS requires: running execute_payment() in a caller retry loop (bounded, MAX_ROUNDS=5) against MockFacilitator(mode) reaches final_verdict=='settled' with the facilitator's ledger holding exactly one entry (ledger_len==1) for that authorization. mutation-broken-client-001 is a negative control: it is expected to FAIL (ledger_len>1) precisely because it violates the rule under test (it mints a new authorization on every retry instead of re-presenting the same one) — its purpose is to prove the comparator discriminates, not to pass.",
+          "source": {
+            "issue": "https://github.com/x402-foundation/x402/issues/3208",
+            "cited_comment_author": "aurumflux20",
+            "cited_comment_at": "2026-09-03T09:52:07Z",
+            "receiver_obligation_author": "whawk46",
+            "receiver_obligation_comment_at": "2026-09-03T04:17:08Z",
+            "receiver_obligation_text": "an indeterminate state explicitly locks the invoice and preserves the broadcast hash until deterministic reconciliation completes. A normative clause stating that receivers MUST NOT re-challenge a pending authorization is essential to make third-party implementations safe by default."
+          },
+          "vectors": [
+            {
+              "id": "retry-safety-clean-001",
+              "mode": "clean",
+              "description": "Baseline: single settle() call succeeds on the first attempt, no fault.",
+              "expected": "PASS",
+              "expected_outcome": {
+                "final_verdict": "settled",
+                "ledger_len": 1,
+                "settle_calls": 1,
+                "reconcile_calls": 0
+              }
+            },
+            {
+              "id": "retry-safety-declared-safe-001",
+              "mode": "declared_safe",
+              "description": "Facilitator settles on first attempt AND a duplicate client-side submission of the same idempotency_key (simulating an accidental double-send, not a fault-triggered retry) must still settle exactly once — the 'exactly once there too' clause aurumflux20's proposal names for this mode specifically.",
+              "expected": "PASS",
+              "expected_outcome": {
+                "final_verdict": "settled",
+                "ledger_len": 1,
+                "settle_calls": 1,
+                "reconcile_calls": 0
+              }
+            },
+            {
+              "id": "retry-safety-accept-then-timeout-001",
+              "mode": "accept_then_timeout",
+              "description": "First settle() call broadcasts (facilitator ledger written) but the receipt-wait times out before the client sees it — the #3083 pattern: broadcast ref IS surfaced in the exception. Client reconciles by that ref on the next round instead of re-settling blind.",
+              "expected": "PASS",
+              "expected_outcome": {
+                "final_verdict": "settled",
+                "ledger_len": 1,
+                "settle_calls": 1,
+                "reconcile_calls": 1
+              }
+            },
+            {
+              "id": "retry-safety-5xx-after-settle-001",
+              "mode": "5xx_after_settle",
+              "description": "First settle() call broadcasts, then the facilitator 500s with no broadcast ref in the body (the ref-based reconcile path is unavailable to the client). Client re-presents the SAME authorization on retry; facilitator-side signature dedup returns the already-settled transaction instead of writing a second entry.",
+              "expected": "PASS",
+              "expected_outcome": {
+                "final_verdict": "settled",
+                "ledger_len": 1,
+                "settle_calls": 2,
+                "reconcile_calls": 0
+              }
+            },
+            {
+              "id": "retry-safety-slow-answer-001",
+              "mode": "slow_answer",
+              "description": "First settle() call broadcasts, but the client's own timeout fires before any response (server-side success, client-side loss) — no ref available to the client, same re-presentation path as 5xx_after_settle.",
+              "expected": "PASS",
+              "expected_outcome": {
+                "final_verdict": "settled",
+                "ledger_len": 1,
+                "settle_calls": 2,
+                "reconcile_calls": 0
+              }
+            },
+            {
+              "id": "retry-safety-reconcile-unavailable-001",
+              "mode": "reconcile_unavailable",
+              "description": "First settle() call broadcasts and times out with a ref surfaced, but the reconcile query against that ref itself fails on the first attempt. Client falls back to re-presenting the same authorization; facilitator-side dedup (not reconcile) is what actually closes it.",
+              "expected": "PASS",
+              "expected_outcome": {
+                "final_verdict": "settled",
+                "ledger_len": 1,
+                "settle_calls": 2,
+                "reconcile_calls": 1
+              }
+            },
+            {
+              "id": "retry-safety-double-402-001",
+              "mode": "double_402",
+              "description": "First settle() call times out with no broadcast yet. Second call: the facilitator re-challenges with a fresh 402 instead of resuming the pending authorization — the exact hazard whawk46's MUST-NOT-re-challenge clause targets. Client MUST NOT sign a new authorization to satisfy the new challenge; it re-presents the original signed authorization directly, which the facilitator then settles.",
+              "expected": "PASS",
+              "expected_outcome": {
+                "final_verdict": "settled",
+                "ledger_len": 1,
+                "settle_calls": 3,
+                "reconcile_calls": 0
+              }
+            },
+            {
+              "id": "mutation-broken-client-001",
+              "mode": "double_402",
+              "description": "Negative control, not a mode from the battery. A deliberately broken client that mints a NEW authorization signature on every retry (violating the re-presentation rule) run against the same double_402 facilitator. Must produce a real double charge (ledger_len==2) to prove the PASS vectors above are discriminating and not a facilitator mock that always settles once regardless of client behavior. Reproducible: see verify.py's run_mutation_control().",
+              "expected": "FAIL",
+              "expected_outcome": {
+                "ledger_len_gt": 1
+              }
+            }
+          ]
+        },
+        "vectors_generic.json": {
+          "spec_version": "settlement-retry-safety-v1-generic",
+          "description": "Same seven-mode retry-safety battery as vectors.json, run against GenericBackend (a non-payment implementation of SettlementBackend) instead of MockFacilitator (x402). Proves execute_payment.py's exactly-once guarantee holds for the interface, not for the x402 transport specifically — no code in execute_payment.py or pending_settlement_store.py changes between the two runs, only the backend object passed in.",
+          "comparator_rule": "Same as vectors.json: PASS requires execute_payment() in a bounded caller retry loop (MAX_ROUNDS=5) against GenericBackend(mode) to reach final_verdict=='settled' with ledger_len==1. mutation-broken-client-001-generic is the same negative control, expected to FAIL.",
+          "vectors": [
+            {
+              "id": "retry-safety-clean-001-generic",
+              "mode": "clean",
+              "expected": "PASS",
+              "expected_outcome": {
+                "final_verdict": "settled",
+                "ledger_len": 1,
+                "settle_calls": 1,
+                "reconcile_calls": 0
+              }
+            },
+            {
+              "id": "retry-safety-declared-idempotent-001-generic",
+              "mode": "declared_idempotent",
+              "expected": "PASS",
+              "expected_outcome": {
+                "final_verdict": "settled",
+                "ledger_len": 1,
+                "settle_calls": 1,
+                "reconcile_calls": 0
+              }
+            },
+            {
+              "id": "retry-safety-write-then-timeout-001-generic",
+              "mode": "write_then_timeout",
+              "expected": "PASS",
+              "expected_outcome": {
+                "final_verdict": "settled",
+                "ledger_len": 1,
+                "settle_calls": 1,
+                "reconcile_calls": 1
+              }
+            },
+            {
+              "id": "retry-safety-error-after-write-001-generic",
+              "mode": "error_after_write",
+              "expected": "PASS",
+              "expected_outcome": {
+                "final_verdict": "settled",
+                "ledger_len": 1,
+                "settle_calls": 2,
+                "reconcile_calls": 0
+              }
+            },
+            {
+              "id": "retry-safety-client-timeout-001-generic",
+              "mode": "client_timeout",
+              "expected": "PASS",
+              "expected_outcome": {
+                "final_verdict": "settled",
+                "ledger_len": 1,
+                "settle_calls": 2,
+                "reconcile_calls": 0
+              }
+            },
+            {
+              "id": "retry-safety-reconcile-unavailable-001-generic",
+              "mode": "reconcile_unavailable",
+              "expected": "PASS",
+              "expected_outcome": {
+                "final_verdict": "settled",
+                "ledger_len": 1,
+                "settle_calls": 2,
+                "reconcile_calls": 1
+              }
+            },
+            {
+              "id": "retry-safety-reissue-instead-of-resume-001-generic",
+              "mode": "reissue_instead_of_resume",
+              "expected": "PASS",
+              "expected_outcome": {
+                "final_verdict": "settled",
+                "ledger_len": 1,
+                "settle_calls": 3,
+                "reconcile_calls": 0
+              }
+            },
+            {
+              "id": "mutation-broken-client-001-generic",
+              "mode": "reissue_instead_of_resume",
+              "description": "Negative control: a client that mints a new key on every retry against GenericBackend. Must NOT settle exactly once.",
+              "expected": "FAIL",
+              "expected_outcome": {
+                "ledger_len_gt": 1
+              }
+            }
+          ]
+        }
+      }
+    },
     "signing-trust-ref": {
       "path": "examples/conformance/signing-trust-ref/",
       "files": {
@@ -8190,6 +10104,579 @@
               "trail-status-lifecycle-v1.fixture.json — trail_status three-state lifecycle"
             ]
           }
+        }
+      }
+    },
+    "trail-head-window-ref": {
+      "path": "examples/conformance/trail-head-window-ref/",
+      "files": {
+        "vectors.json": {
+          "spec_version": "trail-head-ref-v1#window-verification",
+          "description": "Window verification for trail-head-ref v1: a log presented from seq k > 1. `input` holds the arguments of verify_trail; `expected` is what a conformant verifier reports.",
+          "vectors": [
+            {
+              "id": "thw-001-full-log-no-checkpoint",
+              "description": "Regression: full log from seq 1, no checkpoint.",
+              "input": {
+                "entries": [
+                  {
+                    "agent_id": "agent-alpha",
+                    "seq": 1,
+                    "action_ref": "9ef01d7eed7e2a09cc82377833e1b64ec57bc366b21b985db17e0364af92f634",
+                    "head": "28d7c44a5272cd231ea4c48157c53d33d921c99ec15779e08a1356dd9b023c0e"
+                  },
+                  {
+                    "agent_id": "agent-alpha",
+                    "seq": 2,
+                    "action_ref": "49883268ce6678eb1b09eca64e592918ba824a4055556fbaa56989ef516ccd01",
+                    "prev_head": "28d7c44a5272cd231ea4c48157c53d33d921c99ec15779e08a1356dd9b023c0e",
+                    "head": "68fa419435745f4b867b7bd02284fe35097b652ab1c7e88339a3d278d4eaf8b0"
+                  },
+                  {
+                    "agent_id": "agent-alpha",
+                    "seq": 3,
+                    "action_ref": "ebbf83c9a214dbeded2b290ce675fa795af497fe6353de7cfce0b5054b8bd9fa",
+                    "prev_head": "68fa419435745f4b867b7bd02284fe35097b652ab1c7e88339a3d278d4eaf8b0",
+                    "head": "b9bffe0f8c67d11d841a742f44abb428b8a5dab9fd7d45812e37d21d703d8857"
+                  },
+                  {
+                    "agent_id": "agent-alpha",
+                    "seq": 4,
+                    "action_ref": "f48a5faf95889b28d0553faecb8752c33854d00df6eac491a2f25af1225b660d",
+                    "prev_head": "b9bffe0f8c67d11d841a742f44abb428b8a5dab9fd7d45812e37d21d703d8857",
+                    "head": "c27908516985307f7e22bf0c3d704930cdaf278e7114bdb8a7f9f1a9eb92105c"
+                  },
+                  {
+                    "agent_id": "agent-alpha",
+                    "seq": 5,
+                    "action_ref": "639cef88c106aa9c1e67cf089851d88841e9e6efb9634183ff33f063ca7509db",
+                    "prev_head": "c27908516985307f7e22bf0c3d704930cdaf278e7114bdb8a7f9f1a9eb92105c",
+                    "head": "d60eed6d9725f216fc9ecc4134459d60602b972ee38103a732fcb349b2e12fba"
+                  },
+                  {
+                    "agent_id": "agent-alpha",
+                    "seq": 6,
+                    "action_ref": "da360f21421261e7f487f2c3765fea73441701a88c90239e54cf570842df287e",
+                    "prev_head": "d60eed6d9725f216fc9ecc4134459d60602b972ee38103a732fcb349b2e12fba",
+                    "head": "7def58394e0354f35087e2a562f96a65800bc505d35d7f4fcb4ac0e5b2b9f606"
+                  },
+                  {
+                    "agent_id": "agent-alpha",
+                    "seq": 7,
+                    "action_ref": "25e59b885e4860b461ebd62d7752f37d993af37d10b5b67d36811a350918fa52",
+                    "prev_head": "7def58394e0354f35087e2a562f96a65800bc505d35d7f4fcb4ac0e5b2b9f606",
+                    "head": "e7379b57bbb6fe640d68208f1f844157198e27723e4eb3f8d850ccef4a596f2f"
+                  },
+                  {
+                    "agent_id": "agent-alpha",
+                    "seq": 8,
+                    "action_ref": "bc2483012ae6ca3dbac9a5f414f3dd7370017b507c65ce8af5e16f3324890042",
+                    "prev_head": "e7379b57bbb6fe640d68208f1f844157198e27723e4eb3f8d850ccef4a596f2f",
+                    "head": "5d98f641a77e54d0feb29dd153555ed7825fb3b2a93b8d9ed27337ef03f10a02"
+                  }
+                ]
+              },
+              "expected": {
+                "verdict": "continuity_only",
+                "completeness": "not_evaluated",
+                "reason": "no_checkpoint",
+                "window_anchor": "genesis"
+              }
+            },
+            {
+              "id": "thw-002-full-log-tail-checkpoint",
+              "description": "Regression: full log sealed at seq 8.",
+              "input": {
+                "entries": [
+                  {
+                    "agent_id": "agent-alpha",
+                    "seq": 1,
+                    "action_ref": "9ef01d7eed7e2a09cc82377833e1b64ec57bc366b21b985db17e0364af92f634",
+                    "head": "28d7c44a5272cd231ea4c48157c53d33d921c99ec15779e08a1356dd9b023c0e"
+                  },
+                  {
+                    "agent_id": "agent-alpha",
+                    "seq": 2,
+                    "action_ref": "49883268ce6678eb1b09eca64e592918ba824a4055556fbaa56989ef516ccd01",
+                    "prev_head": "28d7c44a5272cd231ea4c48157c53d33d921c99ec15779e08a1356dd9b023c0e",
+                    "head": "68fa419435745f4b867b7bd02284fe35097b652ab1c7e88339a3d278d4eaf8b0"
+                  },
+                  {
+                    "agent_id": "agent-alpha",
+                    "seq": 3,
+                    "action_ref": "ebbf83c9a214dbeded2b290ce675fa795af497fe6353de7cfce0b5054b8bd9fa",
+                    "prev_head": "68fa419435745f4b867b7bd02284fe35097b652ab1c7e88339a3d278d4eaf8b0",
+                    "head": "b9bffe0f8c67d11d841a742f44abb428b8a5dab9fd7d45812e37d21d703d8857"
+                  },
+                  {
+                    "agent_id": "agent-alpha",
+                    "seq": 4,
+                    "action_ref": "f48a5faf95889b28d0553faecb8752c33854d00df6eac491a2f25af1225b660d",
+                    "prev_head": "b9bffe0f8c67d11d841a742f44abb428b8a5dab9fd7d45812e37d21d703d8857",
+                    "head": "c27908516985307f7e22bf0c3d704930cdaf278e7114bdb8a7f9f1a9eb92105c"
+                  },
+                  {
+                    "agent_id": "agent-alpha",
+                    "seq": 5,
+                    "action_ref": "639cef88c106aa9c1e67cf089851d88841e9e6efb9634183ff33f063ca7509db",
+                    "prev_head": "c27908516985307f7e22bf0c3d704930cdaf278e7114bdb8a7f9f1a9eb92105c",
+                    "head": "d60eed6d9725f216fc9ecc4134459d60602b972ee38103a732fcb349b2e12fba"
+                  },
+                  {
+                    "agent_id": "agent-alpha",
+                    "seq": 6,
+                    "action_ref": "da360f21421261e7f487f2c3765fea73441701a88c90239e54cf570842df287e",
+                    "prev_head": "d60eed6d9725f216fc9ecc4134459d60602b972ee38103a732fcb349b2e12fba",
+                    "head": "7def58394e0354f35087e2a562f96a65800bc505d35d7f4fcb4ac0e5b2b9f606"
+                  },
+                  {
+                    "agent_id": "agent-alpha",
+                    "seq": 7,
+                    "action_ref": "25e59b885e4860b461ebd62d7752f37d993af37d10b5b67d36811a350918fa52",
+                    "prev_head": "7def58394e0354f35087e2a562f96a65800bc505d35d7f4fcb4ac0e5b2b9f606",
+                    "head": "e7379b57bbb6fe640d68208f1f844157198e27723e4eb3f8d850ccef4a596f2f"
+                  },
+                  {
+                    "agent_id": "agent-alpha",
+                    "seq": 8,
+                    "action_ref": "bc2483012ae6ca3dbac9a5f414f3dd7370017b507c65ce8af5e16f3324890042",
+                    "prev_head": "e7379b57bbb6fe640d68208f1f844157198e27723e4eb3f8d850ccef4a596f2f",
+                    "head": "5d98f641a77e54d0feb29dd153555ed7825fb3b2a93b8d9ed27337ef03f10a02"
+                  }
+                ],
+                "checkpoint": {
+                  "v": "trail-head-ref/v1/checkpoint",
+                  "agent_id": "agent-alpha",
+                  "period_end": "2026-09-23T19:00:00.000Z",
+                  "seq": 8,
+                  "head": "5d98f641a77e54d0feb29dd153555ed7825fb3b2a93b8d9ed27337ef03f10a02"
+                },
+                "proof": [
+                  "644d6d9845a2c7e76943c85596b461999b2c7ad3efb9869bc72942d907c40a74"
+                ],
+                "root": "71ffe9d29a3055ba3d4c81589ae0937ea9bec556b122786b697e542a7673320e"
+              },
+              "expected": {
+                "verdict": "complete",
+                "completeness": "proven",
+                "reason": null,
+                "window_anchor": "genesis"
+              }
+            },
+            {
+              "id": "thw-003-window-certified-anchor",
+              "description": "Honest window 5..8 with a checkpoint at seq 4 proven in its root.",
+              "input": {
+                "entries": [
+                  {
+                    "agent_id": "agent-alpha",
+                    "seq": 5,
+                    "action_ref": "639cef88c106aa9c1e67cf089851d88841e9e6efb9634183ff33f063ca7509db",
+                    "prev_head": "c27908516985307f7e22bf0c3d704930cdaf278e7114bdb8a7f9f1a9eb92105c",
+                    "head": "d60eed6d9725f216fc9ecc4134459d60602b972ee38103a732fcb349b2e12fba"
+                  },
+                  {
+                    "agent_id": "agent-alpha",
+                    "seq": 6,
+                    "action_ref": "da360f21421261e7f487f2c3765fea73441701a88c90239e54cf570842df287e",
+                    "prev_head": "d60eed6d9725f216fc9ecc4134459d60602b972ee38103a732fcb349b2e12fba",
+                    "head": "7def58394e0354f35087e2a562f96a65800bc505d35d7f4fcb4ac0e5b2b9f606"
+                  },
+                  {
+                    "agent_id": "agent-alpha",
+                    "seq": 7,
+                    "action_ref": "25e59b885e4860b461ebd62d7752f37d993af37d10b5b67d36811a350918fa52",
+                    "prev_head": "7def58394e0354f35087e2a562f96a65800bc505d35d7f4fcb4ac0e5b2b9f606",
+                    "head": "e7379b57bbb6fe640d68208f1f844157198e27723e4eb3f8d850ccef4a596f2f"
+                  },
+                  {
+                    "agent_id": "agent-alpha",
+                    "seq": 8,
+                    "action_ref": "bc2483012ae6ca3dbac9a5f414f3dd7370017b507c65ce8af5e16f3324890042",
+                    "prev_head": "e7379b57bbb6fe640d68208f1f844157198e27723e4eb3f8d850ccef4a596f2f",
+                    "head": "5d98f641a77e54d0feb29dd153555ed7825fb3b2a93b8d9ed27337ef03f10a02"
+                  }
+                ],
+                "from_seq": 5,
+                "anchor": {
+                  "v": "trail-head-ref/v1/checkpoint",
+                  "agent_id": "agent-alpha",
+                  "period_end": "2026-09-23T18:00:00.000Z",
+                  "seq": 4,
+                  "head": "c27908516985307f7e22bf0c3d704930cdaf278e7114bdb8a7f9f1a9eb92105c"
+                },
+                "anchor_proof": [
+                  "54bbbe7480e5a514e62b414286ebd6e2060e03ece5dcd0af8543411c456c8fdb"
+                ],
+                "anchor_root": "ad4594c2f4022b1641abd0123c7ea25708b33cf6b65f8bf69ade58d5e45bf2ea"
+              },
+              "expected": {
+                "verdict": "continuity_only",
+                "completeness": "not_evaluated",
+                "reason": "no_checkpoint",
+                "window_anchor": "certified"
+              }
+            },
+            {
+              "id": "thw-004-window-uncertified-anchor",
+              "description": "Honest window 5..8, start taken from the records: scope is declared.",
+              "input": {
+                "entries": [
+                  {
+                    "agent_id": "agent-alpha",
+                    "seq": 5,
+                    "action_ref": "639cef88c106aa9c1e67cf089851d88841e9e6efb9634183ff33f063ca7509db",
+                    "prev_head": "c27908516985307f7e22bf0c3d704930cdaf278e7114bdb8a7f9f1a9eb92105c",
+                    "head": "d60eed6d9725f216fc9ecc4134459d60602b972ee38103a732fcb349b2e12fba"
+                  },
+                  {
+                    "agent_id": "agent-alpha",
+                    "seq": 6,
+                    "action_ref": "da360f21421261e7f487f2c3765fea73441701a88c90239e54cf570842df287e",
+                    "prev_head": "d60eed6d9725f216fc9ecc4134459d60602b972ee38103a732fcb349b2e12fba",
+                    "head": "7def58394e0354f35087e2a562f96a65800bc505d35d7f4fcb4ac0e5b2b9f606"
+                  },
+                  {
+                    "agent_id": "agent-alpha",
+                    "seq": 7,
+                    "action_ref": "25e59b885e4860b461ebd62d7752f37d993af37d10b5b67d36811a350918fa52",
+                    "prev_head": "7def58394e0354f35087e2a562f96a65800bc505d35d7f4fcb4ac0e5b2b9f606",
+                    "head": "e7379b57bbb6fe640d68208f1f844157198e27723e4eb3f8d850ccef4a596f2f"
+                  },
+                  {
+                    "agent_id": "agent-alpha",
+                    "seq": 8,
+                    "action_ref": "bc2483012ae6ca3dbac9a5f414f3dd7370017b507c65ce8af5e16f3324890042",
+                    "prev_head": "e7379b57bbb6fe640d68208f1f844157198e27723e4eb3f8d850ccef4a596f2f",
+                    "head": "5d98f641a77e54d0feb29dd153555ed7825fb3b2a93b8d9ed27337ef03f10a02"
+                  }
+                ],
+                "from_seq": 5
+              },
+              "expected": {
+                "verdict": "continuity_only",
+                "completeness": "not_evaluated",
+                "reason": "no_checkpoint",
+                "window_anchor": "uncertified"
+              }
+            },
+            {
+              "id": "thw-005-window-tail-checkpoint",
+              "description": "Honest window 5..8 sealed at seq 8: proven from seq 5 only, never complete.",
+              "input": {
+                "entries": [
+                  {
+                    "agent_id": "agent-alpha",
+                    "seq": 5,
+                    "action_ref": "639cef88c106aa9c1e67cf089851d88841e9e6efb9634183ff33f063ca7509db",
+                    "prev_head": "c27908516985307f7e22bf0c3d704930cdaf278e7114bdb8a7f9f1a9eb92105c",
+                    "head": "d60eed6d9725f216fc9ecc4134459d60602b972ee38103a732fcb349b2e12fba"
+                  },
+                  {
+                    "agent_id": "agent-alpha",
+                    "seq": 6,
+                    "action_ref": "da360f21421261e7f487f2c3765fea73441701a88c90239e54cf570842df287e",
+                    "prev_head": "d60eed6d9725f216fc9ecc4134459d60602b972ee38103a732fcb349b2e12fba",
+                    "head": "7def58394e0354f35087e2a562f96a65800bc505d35d7f4fcb4ac0e5b2b9f606"
+                  },
+                  {
+                    "agent_id": "agent-alpha",
+                    "seq": 7,
+                    "action_ref": "25e59b885e4860b461ebd62d7752f37d993af37d10b5b67d36811a350918fa52",
+                    "prev_head": "7def58394e0354f35087e2a562f96a65800bc505d35d7f4fcb4ac0e5b2b9f606",
+                    "head": "e7379b57bbb6fe640d68208f1f844157198e27723e4eb3f8d850ccef4a596f2f"
+                  },
+                  {
+                    "agent_id": "agent-alpha",
+                    "seq": 8,
+                    "action_ref": "bc2483012ae6ca3dbac9a5f414f3dd7370017b507c65ce8af5e16f3324890042",
+                    "prev_head": "e7379b57bbb6fe640d68208f1f844157198e27723e4eb3f8d850ccef4a596f2f",
+                    "head": "5d98f641a77e54d0feb29dd153555ed7825fb3b2a93b8d9ed27337ef03f10a02"
+                  }
+                ],
+                "from_seq": 5,
+                "checkpoint": {
+                  "v": "trail-head-ref/v1/checkpoint",
+                  "agent_id": "agent-alpha",
+                  "period_end": "2026-09-23T19:00:00.000Z",
+                  "seq": 8,
+                  "head": "5d98f641a77e54d0feb29dd153555ed7825fb3b2a93b8d9ed27337ef03f10a02"
+                },
+                "proof": [
+                  "644d6d9845a2c7e76943c85596b461999b2c7ad3efb9869bc72942d907c40a74"
+                ],
+                "root": "71ffe9d29a3055ba3d4c81589ae0937ea9bec556b122786b697e542a7673320e"
+              },
+              "expected": {
+                "verdict": "window_complete",
+                "completeness": "proven_from_seq",
+                "reason": null,
+                "window_anchor": "uncertified"
+              }
+            },
+            {
+              "id": "thw-006-rewrite-with-start-no-evidence",
+              "description": "Window re-chained from a chosen prev_head, nothing external: indistinguishable, documented limit.",
+              "input": {
+                "entries": [
+                  {
+                    "agent_id": "agent-alpha",
+                    "seq": 5,
+                    "action_ref": "4b2fe31774b822c19b38ea0be68e71bfeef8083280510341108a16c24e67906f",
+                    "prev_head": "abababababababababababababababababababababababababababababababab",
+                    "head": "073b4c49e2f162b6c27ad249b82e3abfa88511f7fd613c102c1e807c72f0dd1a"
+                  },
+                  {
+                    "agent_id": "agent-alpha",
+                    "seq": 6,
+                    "action_ref": "6bb2852fd9456b4bb113fecfe73c1995a38213475a6dd53a5b6b843cd02cd29c",
+                    "prev_head": "073b4c49e2f162b6c27ad249b82e3abfa88511f7fd613c102c1e807c72f0dd1a",
+                    "head": "3d1d4e34c167e1fe348667043506a84f4179e5560438bd45e31b90b7d6f63666"
+                  },
+                  {
+                    "agent_id": "agent-alpha",
+                    "seq": 7,
+                    "action_ref": "354e81deb5bc5e9f35677c22e45128f0cb978553671f4f009f75d773fba66801",
+                    "prev_head": "3d1d4e34c167e1fe348667043506a84f4179e5560438bd45e31b90b7d6f63666",
+                    "head": "0524ac8c715ee0d9852b495b7559c9e502b7a375e82216ddac9422b51eed2d4c"
+                  },
+                  {
+                    "agent_id": "agent-alpha",
+                    "seq": 8,
+                    "action_ref": "14eb35ce2bd07a15ad5afd3febd7c74ba38771ab08a9e7f86839e1aace5def15",
+                    "prev_head": "0524ac8c715ee0d9852b495b7559c9e502b7a375e82216ddac9422b51eed2d4c",
+                    "head": "77bb20d1db1ed254edb2f01af823b3e59d763fb6c25e61675d58677fc51040d7"
+                  }
+                ],
+                "from_seq": 5
+              },
+              "expected": {
+                "verdict": "continuity_only",
+                "completeness": "not_evaluated",
+                "reason": "no_checkpoint",
+                "window_anchor": "uncertified"
+              }
+            },
+            {
+              "id": "thw-007-rewrite-with-start-certified-anchor",
+              "description": "Same rewrite against a certified anchor.",
+              "input": {
+                "entries": [
+                  {
+                    "agent_id": "agent-alpha",
+                    "seq": 5,
+                    "action_ref": "4b2fe31774b822c19b38ea0be68e71bfeef8083280510341108a16c24e67906f",
+                    "prev_head": "abababababababababababababababababababababababababababababababab",
+                    "head": "073b4c49e2f162b6c27ad249b82e3abfa88511f7fd613c102c1e807c72f0dd1a"
+                  },
+                  {
+                    "agent_id": "agent-alpha",
+                    "seq": 6,
+                    "action_ref": "6bb2852fd9456b4bb113fecfe73c1995a38213475a6dd53a5b6b843cd02cd29c",
+                    "prev_head": "073b4c49e2f162b6c27ad249b82e3abfa88511f7fd613c102c1e807c72f0dd1a",
+                    "head": "3d1d4e34c167e1fe348667043506a84f4179e5560438bd45e31b90b7d6f63666"
+                  },
+                  {
+                    "agent_id": "agent-alpha",
+                    "seq": 7,
+                    "action_ref": "354e81deb5bc5e9f35677c22e45128f0cb978553671f4f009f75d773fba66801",
+                    "prev_head": "3d1d4e34c167e1fe348667043506a84f4179e5560438bd45e31b90b7d6f63666",
+                    "head": "0524ac8c715ee0d9852b495b7559c9e502b7a375e82216ddac9422b51eed2d4c"
+                  },
+                  {
+                    "agent_id": "agent-alpha",
+                    "seq": 8,
+                    "action_ref": "14eb35ce2bd07a15ad5afd3febd7c74ba38771ab08a9e7f86839e1aace5def15",
+                    "prev_head": "0524ac8c715ee0d9852b495b7559c9e502b7a375e82216ddac9422b51eed2d4c",
+                    "head": "77bb20d1db1ed254edb2f01af823b3e59d763fb6c25e61675d58677fc51040d7"
+                  }
+                ],
+                "from_seq": 5,
+                "anchor": {
+                  "v": "trail-head-ref/v1/checkpoint",
+                  "agent_id": "agent-alpha",
+                  "period_end": "2026-09-23T18:00:00.000Z",
+                  "seq": 4,
+                  "head": "c27908516985307f7e22bf0c3d704930cdaf278e7114bdb8a7f9f1a9eb92105c"
+                },
+                "anchor_proof": [
+                  "54bbbe7480e5a514e62b414286ebd6e2060e03ece5dcd0af8543411c456c8fdb"
+                ],
+                "anchor_root": "ad4594c2f4022b1641abd0123c7ea25708b33cf6b65f8bf69ade58d5e45bf2ea"
+              },
+              "expected": {
+                "verdict": "anchor_mismatch",
+                "completeness": "failed",
+                "reason": "prev_head_differs_from_anchor",
+                "window_anchor": null
+              }
+            },
+            {
+              "id": "thw-008-rewrite-with-start-tail-checkpoint",
+              "description": "Same rewrite against the tail checkpoint.",
+              "input": {
+                "entries": [
+                  {
+                    "agent_id": "agent-alpha",
+                    "seq": 5,
+                    "action_ref": "4b2fe31774b822c19b38ea0be68e71bfeef8083280510341108a16c24e67906f",
+                    "prev_head": "abababababababababababababababababababababababababababababababab",
+                    "head": "073b4c49e2f162b6c27ad249b82e3abfa88511f7fd613c102c1e807c72f0dd1a"
+                  },
+                  {
+                    "agent_id": "agent-alpha",
+                    "seq": 6,
+                    "action_ref": "6bb2852fd9456b4bb113fecfe73c1995a38213475a6dd53a5b6b843cd02cd29c",
+                    "prev_head": "073b4c49e2f162b6c27ad249b82e3abfa88511f7fd613c102c1e807c72f0dd1a",
+                    "head": "3d1d4e34c167e1fe348667043506a84f4179e5560438bd45e31b90b7d6f63666"
+                  },
+                  {
+                    "agent_id": "agent-alpha",
+                    "seq": 7,
+                    "action_ref": "354e81deb5bc5e9f35677c22e45128f0cb978553671f4f009f75d773fba66801",
+                    "prev_head": "3d1d4e34c167e1fe348667043506a84f4179e5560438bd45e31b90b7d6f63666",
+                    "head": "0524ac8c715ee0d9852b495b7559c9e502b7a375e82216ddac9422b51eed2d4c"
+                  },
+                  {
+                    "agent_id": "agent-alpha",
+                    "seq": 8,
+                    "action_ref": "14eb35ce2bd07a15ad5afd3febd7c74ba38771ab08a9e7f86839e1aace5def15",
+                    "prev_head": "0524ac8c715ee0d9852b495b7559c9e502b7a375e82216ddac9422b51eed2d4c",
+                    "head": "77bb20d1db1ed254edb2f01af823b3e59d763fb6c25e61675d58677fc51040d7"
+                  }
+                ],
+                "from_seq": 5,
+                "checkpoint": {
+                  "v": "trail-head-ref/v1/checkpoint",
+                  "agent_id": "agent-alpha",
+                  "period_end": "2026-09-23T19:00:00.000Z",
+                  "seq": 8,
+                  "head": "5d98f641a77e54d0feb29dd153555ed7825fb3b2a93b8d9ed27337ef03f10a02"
+                },
+                "proof": [
+                  "644d6d9845a2c7e76943c85596b461999b2c7ad3efb9869bc72942d907c40a74"
+                ],
+                "root": "71ffe9d29a3055ba3d4c81589ae0937ea9bec556b122786b697e542a7673320e"
+              },
+              "expected": {
+                "verdict": "checkpoint_mismatch",
+                "completeness": "failed",
+                "reason": "head_differs_from_checkpoint",
+                "window_anchor": null
+              }
+            },
+            {
+              "id": "thw-009-window-truncated-no-checkpoint",
+              "description": "Window cut to 5..6, nothing external.",
+              "input": {
+                "entries": [
+                  {
+                    "agent_id": "agent-alpha",
+                    "seq": 5,
+                    "action_ref": "639cef88c106aa9c1e67cf089851d88841e9e6efb9634183ff33f063ca7509db",
+                    "prev_head": "c27908516985307f7e22bf0c3d704930cdaf278e7114bdb8a7f9f1a9eb92105c",
+                    "head": "d60eed6d9725f216fc9ecc4134459d60602b972ee38103a732fcb349b2e12fba"
+                  },
+                  {
+                    "agent_id": "agent-alpha",
+                    "seq": 6,
+                    "action_ref": "da360f21421261e7f487f2c3765fea73441701a88c90239e54cf570842df287e",
+                    "prev_head": "d60eed6d9725f216fc9ecc4134459d60602b972ee38103a732fcb349b2e12fba",
+                    "head": "7def58394e0354f35087e2a562f96a65800bc505d35d7f4fcb4ac0e5b2b9f606"
+                  }
+                ],
+                "from_seq": 5
+              },
+              "expected": {
+                "verdict": "continuity_only",
+                "completeness": "not_evaluated",
+                "reason": "no_checkpoint",
+                "window_anchor": "uncertified"
+              }
+            },
+            {
+              "id": "thw-010-window-truncated-tail-checkpoint",
+              "description": "Window cut to 5..6 against the checkpoint at seq 8.",
+              "input": {
+                "entries": [
+                  {
+                    "agent_id": "agent-alpha",
+                    "seq": 5,
+                    "action_ref": "639cef88c106aa9c1e67cf089851d88841e9e6efb9634183ff33f063ca7509db",
+                    "prev_head": "c27908516985307f7e22bf0c3d704930cdaf278e7114bdb8a7f9f1a9eb92105c",
+                    "head": "d60eed6d9725f216fc9ecc4134459d60602b972ee38103a732fcb349b2e12fba"
+                  },
+                  {
+                    "agent_id": "agent-alpha",
+                    "seq": 6,
+                    "action_ref": "da360f21421261e7f487f2c3765fea73441701a88c90239e54cf570842df287e",
+                    "prev_head": "d60eed6d9725f216fc9ecc4134459d60602b972ee38103a732fcb349b2e12fba",
+                    "head": "7def58394e0354f35087e2a562f96a65800bc505d35d7f4fcb4ac0e5b2b9f606"
+                  }
+                ],
+                "from_seq": 5,
+                "checkpoint": {
+                  "v": "trail-head-ref/v1/checkpoint",
+                  "agent_id": "agent-alpha",
+                  "period_end": "2026-09-23T19:00:00.000Z",
+                  "seq": 8,
+                  "head": "5d98f641a77e54d0feb29dd153555ed7825fb3b2a93b8d9ed27337ef03f10a02"
+                },
+                "proof": [
+                  "644d6d9845a2c7e76943c85596b461999b2c7ad3efb9869bc72942d907c40a74"
+                ],
+                "root": "71ffe9d29a3055ba3d4c81589ae0937ea9bec556b122786b697e542a7673320e"
+              },
+              "expected": {
+                "verdict": "truncated",
+                "completeness": "failed",
+                "reason": "log_shorter_than_checkpoint",
+                "window_anchor": null
+              }
+            },
+            {
+              "id": "thw-011-headless-log-not-a-window",
+              "description": "Seq 5..8 presented without declaring a window: a full log missing its head.",
+              "input": {
+                "entries": [
+                  {
+                    "agent_id": "agent-alpha",
+                    "seq": 5,
+                    "action_ref": "639cef88c106aa9c1e67cf089851d88841e9e6efb9634183ff33f063ca7509db",
+                    "prev_head": "c27908516985307f7e22bf0c3d704930cdaf278e7114bdb8a7f9f1a9eb92105c",
+                    "head": "d60eed6d9725f216fc9ecc4134459d60602b972ee38103a732fcb349b2e12fba"
+                  },
+                  {
+                    "agent_id": "agent-alpha",
+                    "seq": 6,
+                    "action_ref": "da360f21421261e7f487f2c3765fea73441701a88c90239e54cf570842df287e",
+                    "prev_head": "d60eed6d9725f216fc9ecc4134459d60602b972ee38103a732fcb349b2e12fba",
+                    "head": "7def58394e0354f35087e2a562f96a65800bc505d35d7f4fcb4ac0e5b2b9f606"
+                  },
+                  {
+                    "agent_id": "agent-alpha",
+                    "seq": 7,
+                    "action_ref": "25e59b885e4860b461ebd62d7752f37d993af37d10b5b67d36811a350918fa52",
+                    "prev_head": "7def58394e0354f35087e2a562f96a65800bc505d35d7f4fcb4ac0e5b2b9f606",
+                    "head": "e7379b57bbb6fe640d68208f1f844157198e27723e4eb3f8d850ccef4a596f2f"
+                  },
+                  {
+                    "agent_id": "agent-alpha",
+                    "seq": 8,
+                    "action_ref": "bc2483012ae6ca3dbac9a5f414f3dd7370017b507c65ce8af5e16f3324890042",
+                    "prev_head": "e7379b57bbb6fe640d68208f1f844157198e27723e4eb3f8d850ccef4a596f2f",
+                    "head": "5d98f641a77e54d0feb29dd153555ed7825fb3b2a93b8d9ed27337ef03f10a02"
+                  }
+                ]
+              },
+              "expected": {
+                "verdict": "broken",
+                "completeness": "failed",
+                "reason": "seq_gap",
+                "window_anchor": null
+              }
+            }
+          ]
         }
       }
     },

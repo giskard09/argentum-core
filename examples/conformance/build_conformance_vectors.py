@@ -74,19 +74,27 @@ CONTRACT = {
         "EdDSA_Ed25519": {
             "where": [
                 "agenttrust-v1 (JWS envelopes, verification.v0.3+composed)",
+                "farley-receipt-signature (signed receipts, draft-farley-acta-signed-receipts-03)",
+                "scitt-card-trust-root-ref (card signature, issuer key inline)",
+                "delegation-chain-ref (per-hop signatures, keys inline)",
                 "karma badges (/karma/{agent_id}, argentum.py _sign_badge)",
             ],
             "key_selection": (
-                "agenttrust-v1 uses a JWS `kid` (e.g. \"agenttrust-ed25519-v1\") "
-                "to select the verification key from its own JWKS file "
-                "(agenttrust-v1/jwks-agenttrust.json / jwks_url). This is the "
-                "only set in this export that uses kid-based key selection — "
-                "most sets are plain digest fixtures, not signed envelopes, so "
-                "there is no key-selection step to document for them."
+                "Two sets select the verification key by `kid` from a JWKS file "
+                "shipped with the set: agenttrust-v1 (JWS `kid`, e.g. "
+                "\"agenttrust-ed25519-v1\", agenttrust-v1/jwks-agenttrust.json / "
+                "jwks_url) and farley-receipt-signature (farley-receipt-signature/"
+                "jwks.json, with key validity windows). scitt-card-trust-root-ref "
+                "and delegation-chain-ref carry the public key inline next to the "
+                "signature. Most sets are plain digest fixtures, not signed "
+                "envelopes, so there is no key-selection step to document for them."
             ),
         },
         "BIP_340_Schnorr_secp256k1": {
-            "where": ["composed-attestation-bip340-cell"],
+            "where": [
+                "composed-attestation-bip340-cell",
+                "host-capability-ref (reuses the cell's bip340.py; a host may lack the algorithm)",
+            ],
         },
         "unsigned": (
             "The majority of sets (action_ref v1/v2 fixtures, trail lifecycle "
