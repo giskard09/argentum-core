@@ -9,5 +9,10 @@
     "trailing_days":  30,
     "wallet":         "0xDcc84E9798E8eB1b1b48A31B8f35e5AA7b83DBF4"
   },
-  "notes": "A preimage without timestamp produces a floating hash: it cannot be placed in time, cannot be confirmed as pre-dating the action it gates, and cannot be verified against an on-chain anchor. This is the pattern used by implementations that compute sha256(wallet || provider_id || rubric_version || days) without a time component — those hashes are non-comparable across invocations and fail the counterparty-ref-v1 spec."
+  "notes": "A preimage without timestamp produces a floating hash: it cannot be placed in time, cannot be confirmed as pre-dating the action it gates, and cannot be verified against an on-chain anchor. This is the pattern used by implementations that compute sha256(wallet || provider_id || rubric_version || days) without a time component — those hashes are non-comparable across invocations and fail the counterparty-ref-v1 spec.",
+  "provenance": {
+    "authored_by": "giskard09 (argentum-core)",
+    "verification_mode": "asserted",
+    "independently_reproduced_by": []
+  }
 }

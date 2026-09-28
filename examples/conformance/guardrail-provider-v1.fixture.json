@@ -348,5 +348,10 @@
       "reason_code": null,
       "verifier_outcome": "AUTHORIZED_EXECUTION — action_ref recomputes from intent tuple, decision_binding_ref resolves to a matching allow decision with live policy, effective_args_digest == original_args_digest under the same authorization"
     }
-  ]
+  ],
+  "provenance": {
+    "authored_by": "giskard09 (argentum-core)",
+    "verification_mode": "asserted",
+    "independently_reproduced_by": []
+  }
 }

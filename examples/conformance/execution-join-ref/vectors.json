@@ -407,5 +407,10 @@
       },
       "note": "chain_integrity passes because action_ref→decision_id→attempt_id→result_id is internally consistent. The failure requires a verifier that separately checks effective_action_ref against the decision_id that authorized the action. This is the arg-rewrite attack surface: a guardrail that rewrites args must issue a new decision_id over the rewritten preimage before dispatch."
     }
-  ]
+  ],
+  "provenance": {
+    "authored_by": "giskard09 (argentum-core)",
+    "verification_mode": "asserted",
+    "independently_reproduced_by": []
+  }
 }

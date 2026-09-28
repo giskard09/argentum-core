@@ -68,6 +68,11 @@ def build() -> dict:
                 "artifact": artifact(altered, signed_preimage=base),
             },
         ],
+        "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": [],
+        },
     }
 
 

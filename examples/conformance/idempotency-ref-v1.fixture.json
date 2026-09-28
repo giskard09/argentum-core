@@ -90,5 +90,10 @@
         "invariant_5_durable_derivation": "idempotency_key MUST derive from inputs fixed before the model runs for that attempt, never from the model's regenerated output for that attempt. Hashing tool-call arguments that a guardrail retry can reword is non-conformant even though the derivation mechanics (JCS+SHA-256) are followed correctly — Invariant 5 constrains what may feed the hash, not how the hash is computed."
       }
     }
-  ]
+  ],
+  "provenance": {
+    "authored_by": "giskard09 (argentum-core)",
+    "verification_mode": "asserted",
+    "independently_reproduced_by": []
+  }
 }

@@ -33,5 +33,10 @@
       "timestamp": "2025-05-18T10:05:00.000Z"
     },
     "jcs_payload": "{\"action_type\":\"payment.send\",\"agent_id\":\"nobulex-gogani\",\"scope\":\"payment:usdc:75\",\"timestamp\":\"2025-05-18T10:05:00.000Z\"}"
+  },
+  "provenance": {
+    "authored_by": "giskard09 (argentum-core)",
+    "verification_mode": "asserted",
+    "independently_reproduced_by": []
   }
 }

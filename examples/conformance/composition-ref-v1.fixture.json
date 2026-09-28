@@ -170,5 +170,10 @@
     "inline-no-origin-proof: key_source=inline without key_origin_proof is non-conformant — the enum is bypassable if the signer controls both key material and source label. A verifier cannot distinguish a genuinely pinned inline key from a resolver-origin key relabeled as inline.",
     "inline-with-origin-attestation: key_origin_type ∈ {self-generated, operator-pinned, resolver-attested, hardware-bound}. key_origin_proof = SHA-256 of the signed creation or pinning statement. Verifier checks: creation timestamp predates first use, no resolver fetch event in receipt chain for this key material.",
     "inline vs cache vs resolver: three provenance profiles, not an enum of trust levels. resolver proves through allowlist + fetch evidence. cache proves through a parent population event (cache_parent_ref). inline proves through origin attestation (key_origin_proof + key_origin_type)."
-  ]
+  ],
+  "provenance": {
+    "authored_by": "giskard09 (argentum-core)",
+    "verification_mode": "asserted",
+    "independently_reproduced_by": []
+  }
 }

@@ -117,6 +117,11 @@ def build() -> dict:
             },
         ],
         "credits": "Four-case test: impartshadow/agent-contracts (crewAIInc/crewAI#5802). Regression: stringsofthemind-oss/once#45.",
+        "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": [],
+        },
     }
 
 

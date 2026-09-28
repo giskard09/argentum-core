@@ -193,5 +193,10 @@
       "conformant": false,
       "verifier_outcome": "REJECT — verifier_id in audit_checkpoints does not match decision record; receipt verifier identity cannot be confirmed"
     }
-  ]
+  ],
+  "provenance": {
+    "authored_by": "giskard09 (argentum-core)",
+    "verification_mode": "asserted",
+    "independently_reproduced_by": []
+  }
 }

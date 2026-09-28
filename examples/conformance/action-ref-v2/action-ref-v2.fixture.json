@@ -75,5 +75,10 @@
       "description": "v2-prefixed digest with a trailing newline — same fullmatch-vs-match distinction as vm-neg-003, applied to the v2: prefix form, must raise ValueError, not be misread as v2",
       "input": "v2:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
     }
-  ]
+  ],
+  "provenance": {
+    "authored_by": "giskard09 (argentum-core)",
+    "verification_mode": "asserted",
+    "independently_reproduced_by": []
+  }
 }

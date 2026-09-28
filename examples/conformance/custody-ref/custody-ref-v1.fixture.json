@@ -194,5 +194,10 @@
       "expect_valid": false,
       "expect_reason": "captured_scope and excluded_scope are both empty -- indistinguishable from no boundary declaration"
     }
-  ]
+  ],
+  "provenance": {
+    "authored_by": "giskard09 (argentum-core)",
+    "verification_mode": "asserted",
+    "independently_reproduced_by": []
+  }
 }

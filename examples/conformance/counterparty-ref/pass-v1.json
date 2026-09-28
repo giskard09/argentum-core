@@ -11,5 +11,10 @@
   },
   "jcs_canonical": "{\"provider_id\":\"mycelium.argentum.v1\",\"rubric_version\":\"mycelium.rubric.v1\",\"timestamp\":\"2026-06-21T00:00:00.000Z\",\"trailing_days\":30,\"wallet\":\"0xDcc84E9798E8eB1b1b48A31B8f35e5AA7b83DBF4\"}",
   "counterparty_ref": "f969b8828e9c23a07cce4b1e2f10e7771ceca6ef9d924b2461819f548227fee0",
-  "notes": "Field order in source object is irrelevant — JCS sorts keys. Verifier must reproduce via SHA-256(JCS(preimage)) and compare byte-exact."
+  "notes": "Field order in source object is irrelevant — JCS sorts keys. Verifier must reproduce via SHA-256(JCS(preimage)) and compare byte-exact.",
+  "provenance": {
+    "authored_by": "giskard09 (argentum-core)",
+    "verification_mode": "asserted",
+    "independently_reproduced_by": []
+  }
 }

@@ -143,5 +143,10 @@
       },
       "dispatched_effective_call_digest": "9911887766554433221100ffeeddccbbaa998877665544332211ffeeddccbb"
     }
-  ]
+  ],
+  "provenance": {
+    "authored_by": "giskard09 (argentum-core)",
+    "verification_mode": "asserted",
+    "independently_reproduced_by": []
+  }
 }

@@ -72,5 +72,10 @@
         "agenttrust-ed25519-v1"
       ]
     }
-  ]
+  ],
+  "provenance": {
+    "authored_by": "giskard09 (argentum-core)",
+    "verification_mode": "asserted",
+    "independently_reproduced_by": []
+  }
 }

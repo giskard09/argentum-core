@@ -67,5 +67,10 @@
       "expected": "FAIL",
       "expected_outcome": {"ledger_len_gt": 1}
     }
-  ]
+  ],
+  "provenance": {
+    "authored_by": "giskard09 (argentum-core)",
+    "verification_mode": "asserted",
+    "independently_reproduced_by": []
+  }
 }

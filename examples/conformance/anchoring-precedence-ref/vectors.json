@@ -183,5 +183,10 @@
         "note": "margin is small and positive by construction — the check cannot distinguish a genuinely-early anchor from a backdated-but-consensus-valid one; this vector documents that blind spot, it is not evidence the check is broken"
       }
     }
-  ]
+  ],
+  "provenance": {
+    "authored_by": "giskard09 (argentum-core)",
+    "verification_mode": "asserted",
+    "independently_reproduced_by": []
+  }
 }

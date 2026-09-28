@@ -153,5 +153,10 @@
       },
       "delegation_chain_ref": "02aa006af1b093370f5baa0ada9e33f7591a04911a6d5cc837e0de399efd9e55"
     }
-  ]
+  ],
+  "provenance": {
+    "authored_by": "giskard09 (argentum-core)",
+    "verification_mode": "asserted",
+    "independently_reproduced_by": []
+  }
 }

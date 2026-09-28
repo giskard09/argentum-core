@@ -127,6 +127,11 @@ def build() -> dict:
                 failure_mode="hop_signature_invalid", forge_hop0=True,
             ),
         ],
+        "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": [],
+        },
     }
 
 

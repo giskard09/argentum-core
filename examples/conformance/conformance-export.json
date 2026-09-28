@@ -1,6 +1,6 @@
 {
   "export_version": "conformance-export-v0-draft",
-  "generated_at": "2026-09-24T23:42:26.000Z",
+  "generated_at": "2026-09-28T15:36:36.000Z",
   "generated_by": "examples/conformance/build_export.py",
   "source_repo": "giskard09/argentum-core",
   "note": "Draft aggregation of every conformance vector set in this repo. Public discovery route and final field-naming convention are deliberately NOT decided here — pending convergence with Kenneives/CTEF (agentgraph.co/.well-known/cte-test-vectors.json pattern, A2A#1628) so the ecosystem doesn't end up with two competing conventions. Each set's `files` map preserves the original vectors.json/fixture.json bytes unmodified.",
@@ -101,7 +101,12 @@
               "invariant": "prefixed_action_ref != unprefixed_action_ref",
               "verification_mode": "asserted"
             }
-          ]
+          ],
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
         }
       }
     },
@@ -239,7 +244,12 @@
                 "timestamp": "2026-05-24T10:30:00.000Z"
               }
             }
-          ]
+          ],
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
         }
       }
     },
@@ -323,7 +333,12 @@
               "description": "v2-prefixed digest with a trailing newline — same fullmatch-vs-match distinction as vm-neg-003, applied to the v2: prefix form, must raise ValueError, not be misread as v2",
               "input": "v2:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
             }
-          ]
+          ],
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
         }
       }
     },
@@ -503,7 +518,12 @@
               "reject": true,
               "reason": "Timestamp uses +00:00 offset instead of Z suffix. Canonical preimage MUST use Z."
             }
-          ]
+          ],
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
         }
       }
     },
@@ -708,7 +728,12 @@
                 "agenttrust-ed25519-v1"
               ]
             }
-          ]
+          ],
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
         }
       }
     },
@@ -846,7 +871,12 @@
                 "registry_row": "anchor_existence_only"
               }
             }
-          ]
+          ],
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
         }
       }
     },
@@ -1038,7 +1068,12 @@
                 "note": "margin is small and positive by construction — the check cannot distinguish a genuinely-early anchor from a backdated-but-consensus-valid one; this vector documents that blind spot, it is not evidence the check is broken"
               }
             }
-          ]
+          ],
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
         }
       }
     },
@@ -1236,7 +1271,12 @@
               "reject": true,
               "reason": "exactly three fractional digits are required; extra precision is rejected rather than truncated"
             }
-          ]
+          ],
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
         }
       }
     },
@@ -1376,7 +1416,12 @@
               "expected_result": "FAIL",
               "expected_error_code": "OUT_OF_PROFILE_DOMAIN"
             }
-          ]
+          ],
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
         }
       }
     },
@@ -1508,7 +1553,12 @@
                 "anchoring_precedence": true
               }
             }
-          ]
+          ],
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
         }
       }
     },
@@ -2185,7 +2235,12 @@
               "expected_error_code": "RECIPIENT_ALLOCATION_MISMATCH",
               "verification_mode": "asserted"
             }
-          ]
+          ],
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
         }
       }
     },
@@ -2212,7 +2267,12 @@
               "jcs_payload": "{\"action_type\":\"tool_call\",\"agent_id\":\"researcher-agent\",\"scope\":\"search:task-42\",\"timestamp\":\"2026-06-18T10:40:00.123Z\"}",
               "action_ref": "c6fb63e34b2d61446745d86dd90ececf4c321f15e5023f8ffb897e5b0a32a16b"
             }
-          ]
+          ],
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
         }
       }
     },
@@ -2254,6 +2314,11 @@
               "timestamp": "2025-05-18T10:00:00.000Z"
             },
             "jcs_payload": "{\"action_type\":\"payment.send\",\"agent_id\":\"nobulex-gogani\",\"scope\":\"payment:usdc:50\",\"timestamp\":\"2025-05-18T10:00:00.000Z\"}"
+          },
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
           }
         }
       }
@@ -2278,7 +2343,12 @@
             "sig": "2710d60a6d2f0887ad1f375bd10ff6b4ae6c5b600007bffe29a13fb8796a22a57c61eaeed11e165490906710654d8023858b33b533b6ae71797d059875a3d425",
             "aux_rand": "b7a0a76e3786d0c064841fe98465bcd3f59648de8051a18b5ea5fc483f41d213"
           },
-          "verify": "recompute preimage_jcs = JCS(preimage) with sort_keys/no-space separators/utf-8; bip340.schnorr_verify(preimage_jcs.encode(), bytes.fromhex(pubkey_x_only), bytes.fromhex(sig)) must be True; preimage.authority_ref must equal, byte-for-byte, the v2 action_ref string emitted by this suite -- drop this cell's signature and the co-suite leg's own signed preimage (which embeds the identical authority_ref string) is what R3 checks fails without it."
+          "verify": "recompute preimage_jcs = JCS(preimage) with sort_keys/no-space separators/utf-8; bip340.schnorr_verify(preimage_jcs.encode(), bytes.fromhex(pubkey_x_only), bytes.fromhex(sig)) must be True; preimage.authority_ref must equal, byte-for-byte, the v2 action_ref string emitted by this suite -- drop this cell's signature and the co-suite leg's own signed preimage (which embeds the identical authority_ref string) is what R3 checks fails without it.",
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
         }
       }
     },
@@ -2380,6 +2450,11 @@
             "cross_checked_against": "babyblueviper1/preaction-governance-conformance @ examples/composed-decision-chain-recompute/ (same construction, independently implemented, including pshkv's Axis 4 fork-matrix proposed on autogen#7353 2026-07-03)",
             "result": "byte-identical head_hash values across all vectors, including axis4b (position 41, heads 03d92bae.../1e1664b3..., prior_heads e3b0c442.../6b86b273...)",
             "method": "This repo's verify.py was written independently from the construction description (content_hash + head_hash formula, and pshkv's four-property fork-matrix description), not copied from any third party's code, then cross-checked against babyblueviper1's independently-published head_hash values. Both computations used the same source fixture (presidio-x402-decision-ref-v1.fixture.json, originally contributed to this repo by presidio-v), which is verified byte-identical between both repos."
+          },
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
           }
         }
       }
@@ -2558,7 +2633,12 @@
             "inline-no-origin-proof: key_source=inline without key_origin_proof is non-conformant — the enum is bypassable if the signer controls both key material and source label. A verifier cannot distinguish a genuinely pinned inline key from a resolver-origin key relabeled as inline.",
             "inline-with-origin-attestation: key_origin_type ∈ {self-generated, operator-pinned, resolver-attested, hardware-bound}. key_origin_proof = SHA-256 of the signed creation or pinning statement. Verifier checks: creation timestamp predates first use, no resolver fetch event in receipt chain for this key material.",
             "inline vs cache vs resolver: three provenance profiles, not an enum of trust levels. resolver proves through allowlist + fetch evidence. cache proves through a parent population event (cache_parent_ref). inline proves through origin attestation (key_origin_proof + key_origin_type)."
-          ]
+          ],
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
         }
       }
     },
@@ -2578,7 +2658,12 @@
           },
           "jcs_canonical": "{\"provider_id\":\"mycelium.argentum.v1\",\"rubric_version\":\"mycelium.rubric.v1\",\"timestamp\":\"2026-06-21T00:00:00.000Z\",\"trailing_days\":30,\"wallet\":\"0xDcc84E9798E8eB1b1b48A31B8f35e5AA7b83DBF4\"}",
           "counterparty_ref": "f969b8828e9c23a07cce4b1e2f10e7771ceca6ef9d924b2461819f548227fee0",
-          "notes": "Field order in source object is irrelevant — JCS sorts keys. Verifier must reproduce via SHA-256(JCS(preimage)) and compare byte-exact."
+          "notes": "Field order in source object is irrelevant — JCS sorts keys. Verifier must reproduce via SHA-256(JCS(preimage)) and compare byte-exact.",
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
         },
         "reject-missing-timestamp.json": {
           "description": "REJECT — preimage missing timestamp field (non-comparable, cannot satisfy anchor requirement)",
@@ -2591,7 +2676,12 @@
             "trailing_days": 30,
             "wallet": "0xDcc84E9798E8eB1b1b48A31B8f35e5AA7b83DBF4"
           },
-          "notes": "A preimage without timestamp produces a floating hash: it cannot be placed in time, cannot be confirmed as pre-dating the action it gates, and cannot be verified against an on-chain anchor. This is the pattern used by implementations that compute sha256(wallet || provider_id || rubric_version || days) without a time component — those hashes are non-comparable across invocations and fail the counterparty-ref-v1 spec."
+          "notes": "A preimage without timestamp produces a floating hash: it cannot be placed in time, cannot be confirmed as pre-dating the action it gates, and cannot be verified against an on-chain anchor. This is the pattern used by implementations that compute sha256(wallet || provider_id || rubric_version || days) without a time component — those hashes are non-comparable across invocations and fail the counterparty-ref-v1 spec.",
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
         }
       }
     },
@@ -2693,7 +2783,12 @@
             "Both cases run the identical crewAI ToolUsage retry engine (unmocked, installed package crewai==1.15.21). The only variable between them is the presence of the idempotency-ref-v1 guard at the tool boundary.",
             "Effect counts and IDs are read independently, after each run, from a fresh SQLite connection -- never inferred from the runtime's own reported outcome.",
             "This receipt is generated by re-running both cases live, not replayed from a cached log."
-          ]
+          ],
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
         }
       }
     },
@@ -2896,7 +2991,12 @@
               "expect_valid": false,
               "expect_reason": "captured_scope and excluded_scope are both empty -- indistinguishable from no boundary declaration"
             }
-          ]
+          ],
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
         }
       }
     },
@@ -3015,6 +3115,11 @@
           "independent_verification": {
             "status": "pending",
             "note": "eriknewton offered a worked example from the receipt side (trust-evidence-format). Notify when this fixture is published; cross-check pending his fixture, same pattern as composed-decision-chain-recompute's cross-check against babyblueviper1."
+          },
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
           }
         }
       }
@@ -3136,7 +3241,12 @@
                 "timestamp": "2026-08-01T10:00:00.000Z"
               }
             }
-          ]
+          ],
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
         },
         "key-completeness-vectors.json": {
           "spec_version": "delegation-chain-ref-v1",
@@ -3304,7 +3414,12 @@
                 "timestamp": "2026-09-24T12:00:00.000Z"
               }
             }
-          ]
+          ],
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
         },
         "leaf-screen-halt/vectors.json": {
           "spec_version": "delegation-chain-ref-v1",
@@ -3381,7 +3496,12 @@
               },
               "delegation_chain_ref": "ea9cc0163e6635d453eda062ec58ee020c8bdaad06b543001bbb18e11a8dbd8d"
             }
-          ]
+          ],
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
         },
         "replay-vectors.json": {
           "spec_version": "delegation-chain-ref-v1",
@@ -3534,6 +3654,11 @@
             "test-cross-org-a": "cM2fzXznjkKrREvc+Vq0A89IODqDnFP5l8knecbgoHQ=",
             "test-cross-org-b": "v0aL312hS/F5IdbeN5+1cktH7XytX/u7qSUFfmV2zG8=",
             "test-cross-org-c": "TzBj6JCweJqiDXBFSYI4GxafubML//Gvp9THE9sxZyQ="
+          },
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
           }
         },
         "revoked-ancestor/vectors.json": {
@@ -3691,7 +3816,12 @@
               },
               "delegation_chain_ref": "02aa006af1b093370f5baa0ada9e33f7591a04911a6d5cc837e0de399efd9e55"
             }
-          ]
+          ],
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
         },
         "vectors.json": {
           "spec_version": "delegation-chain-ref-v1",
@@ -3983,7 +4113,12 @@
               },
               "delegation_chain_ref": "94620858a7d2fd7b930d3de1d22dc9f6b7157e50512a8f3e92688b90eefa8a4b"
             }
-          ]
+          ],
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
         }
       }
     },
@@ -4034,7 +4169,12 @@
                 "scope_convention": "mycelium:delegation marks this as a first-party Mycelium delegation action. Third-party implementers should use their own namespace prefix."
               }
             }
-          ]
+          ],
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
         }
       }
     },
@@ -4086,7 +4226,12 @@
                 "expires_at": "Part of the artifact and enters the hash. Checking currency is the integrator's responsibility — the delegation_ref itself does not expire."
               }
             }
-          ]
+          ],
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
         }
       }
     },
@@ -4207,7 +4352,12 @@
                 }
               }
             }
-          ]
+          ],
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
         }
       }
     },
@@ -4351,7 +4501,12 @@
                 "outcome": "clean"
               }
             }
-          ]
+          ],
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
         }
       }
     },
@@ -4581,7 +4736,12 @@
                 "evidence_contract": "on-chain anchor failed: block_time required for both existence and precedence assertions"
               }
             }
-          ]
+          ],
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
         }
       }
     },
@@ -5003,7 +5163,12 @@
               },
               "note": "chain_integrity passes because action_ref→decision_id→attempt_id→result_id is internally consistent. The failure requires a verifier that separately checks effective_action_ref against the decision_id that authorized the action. This is the arg-rewrite attack surface: a guardrail that rewrites args must issue a new decision_id over the rewritten preimage before dispatch."
             }
-          ]
+          ],
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
         }
       }
     },
@@ -5045,6 +5210,11 @@
               "timestamp": "2025-05-18T10:15:00.000Z"
             },
             "jcs_payload": "{\"action_type\":\"payment.send\",\"agent_id\":\"nobulex-gogani\",\"scope\":\"payment:usdc:200\",\"timestamp\":\"2025-05-18T10:15:00.000Z\"}"
+          },
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
           }
         }
       }
@@ -5094,7 +5264,12 @@
               "note": "Minimal pair: same key A, issued_at inside A's window. Only issued_at differs from the reject.",
               "signed_input_hex": "7b226465636973696f6e223a22616c6c6f77222c226973737565645f6174223a22323032362d30332d31355431323a30303a30305a222c226973737565725f6964223a2273623a6973737565723a36585276385a665075787431222c22706f6c6963795f646967657374223a227368613235363a38636139326637646661616636663466656538386633383932636437313232616234383931326330663936363666373064663739623239373336323762383838222c22746f6f6c5f6e616d65223a227061796d656e74732e7472616e73666572222c2274797065223a2270726f746563746d63703a6465636973696f6e227d"
             }
-          ]
+          ],
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
         },
         "jwks.json": {
           "keys": [
@@ -5336,7 +5511,12 @@
               },
               "dispatched_effective_call_digest": "9911887766554433221100ffeeddccbbaa998877665544332211ffeeddccbb"
             }
-          ]
+          ],
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
         }
       }
     },
@@ -5397,7 +5577,12 @@
               "expected_failure": "missing_timestamp",
               "notes": "Companion to giskard09/argentum-core examples/conformance/counterparty-ref/reject-missing-timestamp.json — same failure mode, exercised from the provider-side (graph-advocate)."
             }
-          ]
+          ],
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
         }
       }
     },
@@ -5780,7 +5965,12 @@
               "reason_code": null,
               "verifier_outcome": "AUTHORIZED_EXECUTION — action_ref recomputes from intent tuple, decision_binding_ref resolves to a matching allow decision with live policy, effective_args_digest == original_args_digest under the same authorization"
             }
-          ]
+          ],
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
         }
       }
     },
@@ -5867,7 +6057,12 @@
                 }
               }
             }
-          ]
+          ],
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
         }
       }
     },
@@ -6106,7 +6301,12 @@
               }
             }
           ],
-          "credits": "Four-case test: impartshadow/agent-contracts (crewAIInc/crewAI#5802). Regression: stringsofthemind-oss/once#45."
+          "credits": "Four-case test: impartshadow/agent-contracts (crewAIInc/crewAI#5802). Regression: stringsofthemind-oss/once#45.",
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
         }
       }
     },
@@ -6205,7 +6405,12 @@
                 "invariant_5_durable_derivation": "idempotency_key MUST derive from inputs fixed before the model runs for that attempt, never from the model's regenerated output for that attempt. Hashing tool-call arguments that a guardrail retry can reword is non-conformant even though the derivation mechanics (JCS+SHA-256) are followed correctly — Invariant 5 constrains what may feed the hash, not how the hash is computed."
               }
             }
-          ]
+          ],
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
         }
       }
     },
@@ -6311,7 +6516,12 @@
               "declared_sha256": "cb9ffd9ff6ff82b282ec9529d79f40a66e0df21bbf69a4e662adc6a96649fd2a",
               "expected_failure": "string_escaping"
             }
-          ]
+          ],
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
         }
       }
     },
@@ -6386,7 +6596,12 @@
               "action_ref": "9636410f1e686c31500d764e37e7dbb11a46ff346747b3308c995d00219fbd3c",
               "note": "action_ref differs from mcp-01 despite identical agent_id, action_type, and timestamp. An auditor given only the four preimage fields from the commitment record computes 9636410f... but cannot verify it matches the original intent without the pre-hash value."
             }
-          ]
+          ],
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
         }
       }
     },
@@ -6493,6 +6708,11 @@
             "integrator_guide": "docs/guides/integrator-landing.md (Memory frameworks section)",
             "delegation_primitive": "examples/conformance/delegation-ref-v2.fixture.json",
             "complete_trail": "examples/conformance/trail-complete-v1.fixture.json"
+          },
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
           }
         }
       }
@@ -6784,7 +7004,12 @@
               "verifier_rule": "Walk parent_composition_ref from traversal_start maintaining a visited set of composition_ref values. On revisit → reject PROVENANCE_LOOP. A verifier without visited-set tracking will loop indefinitely.",
               "rationale": "A composition artifact parent chain that cycles is a provenance graph integrity failure. The verifier cannot establish a root anchor without termination, and an attacker who controls any node in the cycle can prevent root verification indefinitely. Fail-closed is required: accepting a cyclic chain leaks the unverified tail of the provenance graph as implicitly trusted."
             }
-          ]
+          ],
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
         }
       }
     },
@@ -6844,7 +7069,12 @@
               "invariant": "correct_action_ref != tampered_action_ref",
               "verifier_must": "RE-DERIVE SHA-256(JCS(preimage)) and assert it equals the presented action_ref. A verifier that skips re-derivation and trusts the presented hash is trivially forgeable."
             }
-          ]
+          ],
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
         }
       }
     },
@@ -6959,7 +7189,12 @@
               },
               "offer_identity_ref": "0000000000000000000000000000000000000000000000000000000000000000"
             }
-          ]
+          ],
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
         }
       }
     },
@@ -7381,7 +7616,12 @@
               "failure_mode": "supersedes_chain_integrity",
               "failure_detail": "known_envelopes entry resolved_by=safeagent-guardian is one of this envelope's own parties — not an independent source"
             }
-          ]
+          ],
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
         }
       }
     },
@@ -7423,6 +7663,11 @@
               "timestamp": "2025-05-18T10:05:00.000Z"
             },
             "jcs_payload": "{\"action_type\":\"payment.send\",\"agent_id\":\"nobulex-gogani\",\"scope\":\"payment:usdc:75\",\"timestamp\":\"2025-05-18T10:05:00.000Z\"}"
+          },
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
           }
         }
       }
@@ -7465,6 +7710,11 @@
               "timestamp": "2025-05-18T10:10:00.000Z"
             },
             "jcs_payload": "{\"action_type\":\"payment.send\",\"agent_id\":\"nobulex-gogani\",\"scope\":\"payment:usdc:100\",\"timestamp\":\"2025-05-18T10:10:00.000Z\"}"
+          },
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
           }
         }
       }
@@ -7577,7 +7827,12 @@
               "expected_result": "PASS",
               "rationale": "authorization_ref binds the policy state at execution time into the action_ref preimage. A subsequent policy update changes P but not the historical authorization_ref hash. The verifier can independently confirm that P was active when the action_ref was issued. This is the core invariant: action_ref is a commitment to both the action and the policy under which it was authorized."
             }
-          ]
+          ],
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
         }
       }
     },
@@ -7720,7 +7975,12 @@
               "expected_error_code": "POLICY_VERSION_CHANGED",
               "rationale": "The invocation filter MUST gate execution on SHA-256(JCS(P_current)) == embedded authorization_ref. If the policy was updated since the action_ref was issued, the embedded authorization_ref no longer matches the current policy hash. The filter rejects to prevent the action from executing under a policy context that was not in effect when the authorization was granted."
             }
-          ]
+          ],
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
         }
       }
     },
@@ -7829,6 +8089,11 @@
               "scope": "presidio:x402.pay:<resource origin> — requested-intent label from the policy envelope + resource_url; human-readable, not a hash",
               "timestamp": "AuditEvent.timestamp normalized from isoformat() (us,+00:00) to RFC 3339 mmmZ (== spec format_timestamp)"
             }
+          },
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
           }
         },
         "presidio-audit-entry.schema.json": {
@@ -8156,7 +8421,12 @@
               "verdict_recomputed": "DENY",
               "failure_mode": "verdict_not_recomputable"
             }
-          ]
+          ],
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
         }
       }
     },
@@ -8232,7 +8502,12 @@
                 "timestamp": "2026-06-20T14:00:00.000000Z"
               }
             }
-          ]
+          ],
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
         }
       }
     },
@@ -8357,7 +8632,12 @@
               "expected_error_code": "ALLOCATION_REDISTRIBUTION",
               "verification_mode": "asserted"
             }
-          ]
+          ],
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
         }
       }
     },
@@ -8629,7 +8909,12 @@
               "drifted_jcs_payload": "{\"action_type\":\"payment.preauth\",\"agent_id\":\"pioneer-agent-001\",\"scope\":\"nobulex:bilateral\",\"timestamp\":\"2026-06-11T16:05:00.000Z\"}",
               "drifted_bytes_hex": "7b22616374696f6e5f74797065223a227061796d656e742e70726561757468222c226167656e745f6964223a2270696f6e6565722d6167656e742d303031222c2273636f7065223a226e6f62756c65783a62696c61746572616c222c2274696d657374616d70223a22323032362d30362d31315431363a30353a30302e3030305a227d"
             }
-          ]
+          ],
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
         },
         "recompute-drift-v1-positive.fixture.json": {
           "fixture_id": "recompute-drift-v1-positive",
@@ -8707,7 +8992,12 @@
               "preimage_canonical_bytes_hex": "7b22616374696f6e5f74797065223a227061796d656e742e73656e64222c226167656e745f6964223a2270696f6e6565722d6167656e742d303031222c2273636f7065223a226e6f62756c65783a62696c61746572616c222c2274696d657374616d70223a22323032362d30362d31315432333a35393a35392e3939395a227d",
               "action_ref": "0cc0a719600948603fbefabb5167145df36215f63b7f677a0e84466540b445e5"
             }
-          ]
+          ],
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
         }
       }
     },
@@ -8912,7 +9202,12 @@
               "conformant": false,
               "verifier_outcome": "REJECT — verifier_id in audit_checkpoints does not match decision record; receipt verifier identity cannot be confirmed"
             }
-          ]
+          ],
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
         }
       }
     },
@@ -9092,7 +9387,12 @@
                 ]
               }
             }
-          ]
+          ],
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
         }
       }
     },
@@ -9146,6 +9446,11 @@
             "before": "A conformant receipt could carry a fresh revocation_check_at_ms while pointing at a stale, unreachable, or compromised revocation source — same timestamp, same appearance of compliance, zero real guarantee.",
             "after": "revocation_authority_ref makes the consulted authority explicit and content-addressed, so a verifier can at minimum confirm consistency of the authority referenced across receipts, and for permissionless-registry, independently verify the authority itself.",
             "origin": "Gap identified by claudeopus_mos (Moltbook, 2026-07-25) on revocation-ref-v1 — verified as real against docs/spec/action-ref.md and docs/spec/revocation-ref.md, which had no field binding the check to a specific authority."
+          },
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
           }
         }
       }
@@ -9204,7 +9509,12 @@
                 "revocation_check_at_ms": "See action-ref.md — dual-timestamps close the gap between 'was valid when I last checked' and 'became invalid at this exact moment'."
               }
             }
-          ]
+          ],
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
         }
       }
     },
@@ -9251,7 +9561,12 @@
               "canonical_jcs": "{\"action_type\":\"payment.settle\",\"agent_id\":\"0x2Dc36fb02357aDa6E210Cb4b0EA783EA5153EAa8\",\"scope\":\"req-003\",\"timestamp\":\"2026-06-28T10:02:00.000Z\"}",
               "action_ref": "2d9f6892450e55938fd8647d5f7020d40dcec7087204f0e9e936610995883cf8"
             }
-          ]
+          ],
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
         }
       }
     },
@@ -9357,7 +9672,12 @@
                 "self_consistency": true
               }
             }
-          ]
+          ],
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
         }
       }
     },
@@ -9469,7 +9789,12 @@
                 "matches_offer": false
               }
             }
-          ]
+          ],
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
         }
       }
     },
@@ -9582,7 +9907,12 @@
                 "ledger_len_gt": 1
               }
             }
-          ]
+          ],
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
         },
         "vectors_generic.json": {
           "spec_version": "settlement-retry-safety-v1-generic",
@@ -9675,7 +10005,12 @@
                 "ledger_len_gt": 1
               }
             }
-          ]
+          ],
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
         }
       }
     },
@@ -9731,7 +10066,12 @@
               "preimage_canonical_bytes_hex": "7b22616374696f6e5f726566223a2237323962386338646461613462313336393136616161353137356537323034316137633134326262343930336565333261653966663762366532643133646130222c227369676e65725f6964223a22746b633a322d6f662d333a3078346139623363316432653566366137623863396430653166326133623463356436653766386139623b3078623563366437653866396130623163326433653466356136623763386439653066316132623363343b307863376438653966306131623263336434653566366137623863396430653166326133623463356436222c227369676e65725f74797065223a226d756c74695f7061727479222c2274696d657374616d705f6d73223a313735303434383730303030327d",
               "signing_trust_ref": "46c83b520a52b6f8ac6067690b027c21237199578d5a5f43f887640ccb96f57d"
             }
-          ]
+          ],
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
         }
       }
     },
@@ -9777,7 +10117,12 @@
               }
             }
           ],
-          "reproduce_in_python": "import hashlib, json\ndef jcs(obj): return json.dumps(obj, separators=(',',':'), sort_keys=True, ensure_ascii=False)\npreimage = {'action_type': 'transfer.execute', 'agent_id': 'talos-agent', 'scope': 'talos:transfer', 'timestamp': '2026-06-14T00:00:00.000Z'}\nassert hashlib.sha256(jcs(preimage).encode()).hexdigest() == 'ab3a2fb3e3db34fb8993e5d171f3d8fa926c2727e907d7a7521ed184562bfc13'"
+          "reproduce_in_python": "import hashlib, json\ndef jcs(obj): return json.dumps(obj, separators=(',',':'), sort_keys=True, ensure_ascii=False)\npreimage = {'action_type': 'transfer.execute', 'agent_id': 'talos-agent', 'scope': 'talos:transfer', 'timestamp': '2026-06-14T00:00:00.000Z'}\nassert hashlib.sha256(jcs(preimage).encode()).hexdigest() == 'ab3a2fb3e3db34fb8993e5d171f3d8fa926c2727e907d7a7521ed184562bfc13'",
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
         }
       }
     },
@@ -9874,7 +10219,12 @@
               "reason_code": "posture_expired",
               "note": "tool_id matches TT-ACCEPT-001 but checked_at is 24h earlier. Same tool, same verifier, same policy — different check time. Fails closed."
             }
-          ]
+          ],
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
         }
       }
     },
@@ -10103,6 +10453,11 @@
               "revocation-ref-v1.fixture.json — revocation_ref primitive",
               "trail-status-lifecycle-v1.fixture.json — trail_status three-state lifecycle"
             ]
+          },
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
           }
         }
       }
@@ -10676,7 +11031,12 @@
                 "window_anchor": null
               }
             }
-          ]
+          ],
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
         }
       }
     },
@@ -10795,7 +11155,12 @@
                 }
               }
             }
-          ]
+          ],
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
         }
       }
     },
@@ -10889,7 +11254,12 @@
               "inclusion_operator": "set_subset",
               "resolvable": false
             }
-          ]
+          ],
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
         }
       }
     },
@@ -11004,7 +11374,12 @@
               "canonical_bytes_hex": "7b22616374696f6e5f726566223a2235343665663964356635393530366238636631353066333033333634386231656632313035393732666633653139623764363965396430326366366333353566222c22636c61696d5f74797065223a22636f6e74696e75697479222c2265766964656e636554797065223a226f62736572766174696f6e616c222c22686173685f616c676f223a22736861323536222c22707265696d616765223a7b22616374696f6e5f74797065223a226e65676f74696174696f6e2e616363657074222c226167656e745f6964223a2270696f6e6565722d6167656e742d303031222c2273636f7065223a22736f6d612d6d61726b6574706c616365222c2274696d657374616d70223a22323032362d30352d32315431303a30303a30302e3030305a227d2c22707265696d6167655f666f726d6174223a226a63732d72666338373835222c22736f757263655f70726f7669646572223a2268747470733a2f2f617267656e74756d2d6170692e726769736b6172642e78797a222c2275726e223a2275726e3a6d7963656c69756d3a747261696c227d",
               "canonical_sha256": "4e1d2cb22fc3846f0df21e4bc496fe34e45a76c045d7c553933b27155fed750d"
             }
-          ]
+          ],
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
         }
       }
     },
@@ -11095,7 +11470,12 @@
             "independence invariant: verdict.issuer_id != preimage.agent_id. This is a semantic check on top of hash recomputation — vr-003 recomputes correctly and still fails conformance, same pattern as composition-ref-v1's non-conformant-but-hash-valid vectors.",
             "verdict_ref binds forward to the action_ref it judges (verdict.action_ref), so a verifier confirms both directions: recompute action_ref from the preimage, recompute verdict_ref from the verdict object, and confirm verdict.action_ref matches the action_ref in scope.",
             "This complements, not replaces, agentoracle-v1 (examples/conformance/agentoracle-v1/): that fixture set shows a pre-action gate receipt embedding action_ref as a forward pointer (verdict receipt -> subject action). verdict-ref-v1 is the reverse binding (action envelope -> citing the verdict that judged it) — both directions are now conformance-covered."
-          ]
+          ],
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
         }
       }
     },
@@ -11286,7 +11666,12 @@
                 }
               ]
             }
-          ]
+          ],
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
         }
       }
     },
@@ -11434,7 +11819,12 @@
               },
               "expected": "REASON_CODES_MUST_REMAIN_DISTINGUISHABLE"
             }
-          ]
+          ],
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
         }
       }
     },
@@ -11635,7 +12025,12 @@
               "expected_error_code": "SESSION_EXPIRED",
               "rationale": "A decision taken within a valid session cannot authorize an action completed after the session expired. The binding between decision_id and the terminal receipt requires the receipt to be issued within the session validity window."
             }
-          ]
+          ],
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
         }
       }
     }

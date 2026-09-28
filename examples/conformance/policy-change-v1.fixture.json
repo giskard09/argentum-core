@@ -134,5 +134,10 @@
       "expected_error_code": "POLICY_VERSION_CHANGED",
       "rationale": "The invocation filter MUST gate execution on SHA-256(JCS(P_current)) == embedded authorization_ref. If the policy was updated since the action_ref was issued, the embedded authorization_ref no longer matches the current policy hash. The filter rejects to prevent the action from executing under a policy context that was not in effect when the authorization was granted."
     }
-  ]
+  ],
+  "provenance": {
+    "authored_by": "giskard09 (argentum-core)",
+    "verification_mode": "asserted",
+    "independently_reproduced_by": []
+  }
 }

@@ -51,5 +51,10 @@
       "invariant": "correct_action_ref != tampered_action_ref",
       "verifier_must": "RE-DERIVE SHA-256(JCS(preimage)) and assert it equals the presented action_ref. A verifier that skips re-derivation and trusts the presented hash is trivially forgeable."
     }
-  ]
+  ],
+  "provenance": {
+    "authored_by": "giskard09 (argentum-core)",
+    "verification_mode": "asserted",
+    "independently_reproduced_by": []
+  }
 }

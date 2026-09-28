@@ -282,5 +282,10 @@
       "verifier_rule": "Walk parent_composition_ref from traversal_start maintaining a visited set of composition_ref values. On revisit → reject PROVENANCE_LOOP. A verifier without visited-set tracking will loop indefinitely.",
       "rationale": "A composition artifact parent chain that cycles is a provenance graph integrity failure. The verifier cannot establish a root anchor without termination, and an attacker who controls any node in the cycle can prevent root verification indefinitely. Fail-closed is required: accepting a cyclic chain leaks the unverified tail of the provenance graph as implicitly trusted."
     }
-  ]
+  ],
+  "provenance": {
+    "authored_by": "giskard09 (argentum-core)",
+    "verification_mode": "asserted",
+    "independently_reproduced_by": []
+  }
 }

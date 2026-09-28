@@ -110,6 +110,11 @@ def build():
             {"file": "superseded-key.conformant.json", "expected": "ACCEPT", "code": None,
              "requirement": "SHOULD (Section 9.2)", "expected_if_not_honoured": "ACCEPT",
              "note": "Minimal pair: same key A, issued_at inside A's window. Only issued_at differs from the reject."}]}
+    out["index"]["provenance"] = {
+        "authored_by": "giskard09 (argentum-core)",
+        "verification_mode": "asserted",
+        "independently_reproduced_by": [],
+    }
     for v in out["index"]["vectors"]:
         v["signed_input_hex"] = signed[v["file"][:-len(".json")]].hex()
     return out

@@ -129,5 +129,10 @@
         "registry_row": "anchor_existence_only"
       }
     }
-  ]
+  ],
+  "provenance": {
+    "authored_by": "giskard09 (argentum-core)",
+    "verification_mode": "asserted",
+    "independently_reproduced_by": []
+  }
 }

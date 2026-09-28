@@ -103,5 +103,10 @@
       "expected_result": "PASS",
       "rationale": "authorization_ref binds the policy state at execution time into the action_ref preimage. A subsequent policy update changes P but not the historical authorization_ref hash. The verifier can independently confirm that P was active when the action_ref was issued. This is the core invariant: action_ref is a commitment to both the action and the policy under which it was authorized."
     }
-  ]
+  ],
+  "provenance": {
+    "authored_by": "giskard09 (argentum-core)",
+    "verification_mode": "asserted",
+    "independently_reproduced_by": []
+  }
 }

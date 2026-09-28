@@ -472,5 +472,10 @@
       "expected_error_code": "RECIPIENT_ALLOCATION_MISMATCH",
       "verification_mode": "asserted"
     }
-  ]
+  ],
+  "provenance": {
+    "authored_by": "giskard09 (argentum-core)",
+    "verification_mode": "asserted",
+    "independently_reproduced_by": []
+  }
 }

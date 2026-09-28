@@ -149,5 +149,10 @@
     "test-cross-org-a": "cM2fzXznjkKrREvc+Vq0A89IODqDnFP5l8knecbgoHQ=",
     "test-cross-org-b": "v0aL312hS/F5IdbeN5+1cktH7XytX/u7qSUFfmV2zG8=",
     "test-cross-org-c": "TzBj6JCweJqiDXBFSYI4GxafubML//Gvp9THE9sxZyQ="
+  },
+  "provenance": {
+    "authored_by": "giskard09 (argentum-core)",
+    "verification_mode": "asserted",
+    "independently_reproduced_by": []
   }
 }

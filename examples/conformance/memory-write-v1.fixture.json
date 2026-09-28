@@ -98,5 +98,10 @@
     "integrator_guide": "docs/guides/integrator-landing.md (Memory frameworks section)",
     "delegation_primitive": "examples/conformance/delegation-ref-v2.fixture.json",
     "complete_trail": "examples/conformance/trail-complete-v1.fixture.json"
+  },
+  "provenance": {
+    "authored_by": "giskard09 (argentum-core)",
+    "verification_mode": "asserted",
+    "independently_reproduced_by": []
   }
 }

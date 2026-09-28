@@ -89,5 +89,10 @@
       "expected_error_code": "ALLOCATION_REDISTRIBUTION",
       "verification_mode": "asserted"
     }
-  ]
+  ],
+  "provenance": {
+    "authored_by": "giskard09 (argentum-core)",
+    "verification_mode": "asserted",
+    "independently_reproduced_by": []
+  }
 }

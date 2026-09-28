@@ -100,5 +100,10 @@
       "scope": "presidio:x402.pay:<resource origin> — requested-intent label from the policy envelope + resource_url; human-readable, not a hash",
       "timestamp": "AuditEvent.timestamp normalized from isoformat() (us,+00:00) to RFC 3339 mmmZ (== spec format_timestamp)"
     }
+  },
+  "provenance": {
+    "authored_by": "giskard09 (argentum-core)",
+    "verification_mode": "asserted",
+    "independently_reproduced_by": []
   }
 }

@@ -18,5 +18,10 @@
       "jcs_payload": "{\"action_type\":\"tool_call\",\"agent_id\":\"researcher-agent\",\"scope\":\"search:task-42\",\"timestamp\":\"2026-06-18T10:40:00.123Z\"}",
       "action_ref": "c6fb63e34b2d61446745d86dd90ececf4c321f15e5023f8ffb897e5b0a32a16b"
     }
-  ]
+  ],
+  "provenance": {
+    "authored_by": "giskard09 (argentum-core)",
+    "verification_mode": "asserted",
+    "independently_reproduced_by": []
+  }
 }

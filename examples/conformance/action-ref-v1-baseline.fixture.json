@@ -90,5 +90,10 @@
       "invariant": "prefixed_action_ref != unprefixed_action_ref",
       "verification_mode": "asserted"
     }
-  ]
+  ],
+  "provenance": {
+    "authored_by": "giskard09 (argentum-core)",
+    "verification_mode": "asserted",
+    "independently_reproduced_by": []
+  }
 }

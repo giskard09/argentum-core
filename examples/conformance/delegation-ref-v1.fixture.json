@@ -42,5 +42,10 @@
         "scope_convention": "mycelium:delegation marks this as a first-party Mycelium delegation action. Third-party implementers should use their own namespace prefix."
       }
     }
-  ]
+  ],
+  "provenance": {
+    "authored_by": "giskard09 (argentum-core)",
+    "verification_mode": "asserted",
+    "independently_reproduced_by": []
+  }
 }

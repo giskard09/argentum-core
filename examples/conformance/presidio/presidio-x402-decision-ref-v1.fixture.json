@@ -228,5 +228,10 @@
       "verdict_recomputed": "DENY",
       "failure_mode": "verdict_not_recomputable"
     }
-  ]
+  ],
+  "provenance": {
+    "authored_by": "giskard09 (argentum-core)",
+    "verification_mode": "asserted",
+    "independently_reproduced_by": []
+  }
 }

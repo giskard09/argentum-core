@@ -263,5 +263,10 @@
       "drifted_jcs_payload": "{\"action_type\":\"payment.preauth\",\"agent_id\":\"pioneer-agent-001\",\"scope\":\"nobulex:bilateral\",\"timestamp\":\"2026-06-11T16:05:00.000Z\"}",
       "drifted_bytes_hex": "7b22616374696f6e5f74797065223a227061796d656e742e70726561757468222c226167656e745f6964223a2270696f6e6565722d6167656e742d303031222c2273636f7065223a226e6f62756c65783a62696c61746572616c222c2274696d657374616d70223a22323032362d30362d31315431363a30353a30302e3030305a227d"
     }
-  ]
+  ],
+  "provenance": {
+    "authored_by": "giskard09 (argentum-core)",
+    "verification_mode": "asserted",
+    "independently_reproduced_by": []
+  }
 }

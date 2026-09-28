@@ -110,5 +110,10 @@
   "independent_verification": {
     "status": "pending",
     "note": "eriknewton offered a worked example from the receipt side (trust-evidence-format). Notify when this fixture is published; cross-check pending his fixture, same pattern as composed-decision-chain-recompute's cross-check against babyblueviper1."
+  },
+  "provenance": {
+    "authored_by": "giskard09 (argentum-core)",
+    "verification_mode": "asserted",
+    "independently_reproduced_by": []
   }
 }

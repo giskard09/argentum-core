@@ -66,5 +66,10 @@
       "action_ref": "9636410f1e686c31500d764e37e7dbb11a46ff346747b3308c995d00219fbd3c",
       "note": "action_ref differs from mcp-01 despite identical agent_id, action_type, and timestamp. An auditor given only the four preimage fields from the commitment record computes 9636410f... but cannot verify it matches the original intent without the pre-hash value."
     }
-  ]
+  ],
+  "provenance": {
+    "authored_by": "giskard09 (argentum-core)",
+    "verification_mode": "asserted",
+    "independently_reproduced_by": []
+  }
 }

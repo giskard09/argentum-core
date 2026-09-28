@@ -192,5 +192,10 @@
       "expected_error_code": "SESSION_EXPIRED",
       "rationale": "A decision taken within a valid session cannot authorize an action completed after the session expired. The binding between decision_id and the terminal receipt requires the receipt to be issued within the session validity window."
     }
-  ]
+  ],
+  "provenance": {
+    "authored_by": "giskard09 (argentum-core)",
+    "verification_mode": "asserted",
+    "independently_reproduced_by": []
+  }
 }

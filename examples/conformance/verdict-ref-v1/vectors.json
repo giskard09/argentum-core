@@ -82,5 +82,10 @@
     "independence invariant: verdict.issuer_id != preimage.agent_id. This is a semantic check on top of hash recomputation — vr-003 recomputes correctly and still fails conformance, same pattern as composition-ref-v1's non-conformant-but-hash-valid vectors.",
     "verdict_ref binds forward to the action_ref it judges (verdict.action_ref), so a verifier confirms both directions: recompute action_ref from the preimage, recompute verdict_ref from the verdict object, and confirm verdict.action_ref matches the action_ref in scope.",
     "This complements, not replaces, agentoracle-v1 (examples/conformance/agentoracle-v1/): that fixture set shows a pre-action gate receipt embedding action_ref as a forward pointer (verdict receipt -> subject action). verdict-ref-v1 is the reverse binding (action envelope -> citing the verdict that judged it) — both directions are now conformance-covered."
-  ]
+  ],
+  "provenance": {
+    "authored_by": "giskard09 (argentum-core)",
+    "verification_mode": "asserted",
+    "independently_reproduced_by": []
+  }
 }

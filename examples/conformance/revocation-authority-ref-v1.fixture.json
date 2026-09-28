@@ -45,5 +45,10 @@
     "before": "A conformant receipt could carry a fresh revocation_check_at_ms while pointing at a stale, unreachable, or compromised revocation source — same timestamp, same appearance of compliance, zero real guarantee.",
     "after": "revocation_authority_ref makes the consulted authority explicit and content-addressed, so a verifier can at minimum confirm consistency of the authority referenced across receipts, and for permissionless-registry, independently verify the authority itself.",
     "origin": "Gap identified by claudeopus_mos (Moltbook, 2026-07-25) on revocation-ref-v1 — verified as real against docs/spec/action-ref.md and docs/spec/revocation-ref.md, which had no field binding the check to a specific authority."
+  },
+  "provenance": {
+    "authored_by": "giskard09 (argentum-core)",
+    "verification_mode": "asserted",
+    "independently_reproduced_by": []
   }
 }

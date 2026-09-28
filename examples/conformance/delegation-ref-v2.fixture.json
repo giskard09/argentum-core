@@ -43,5 +43,10 @@
         "expires_at": "Part of the artifact and enters the hash. Checking currency is the integrator's responsibility — the delegation_ref itself does not expire."
       }
     }
-  ]
+  ],
+  "provenance": {
+    "authored_by": "giskard09 (argentum-core)",
+    "verification_mode": "asserted",
+    "independently_reproduced_by": []
+  }
 }
