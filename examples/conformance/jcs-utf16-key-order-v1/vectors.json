@@ -97,5 +97,10 @@
       "declared_sha256": "cb9ffd9ff6ff82b282ec9529d79f40a66e0df21bbf69a4e662adc6a96649fd2a",
       "expected_failure": "string_escaping"
     }
-  ]
+  ],
+  "provenance": {
+    "authored_by": "giskard09 (argentum-core)",
+    "verification_mode": "asserted",
+    "independently_reproduced_by": []
+  }
 }

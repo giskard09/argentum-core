@@ -220,5 +220,10 @@
       "revocation-ref-v1.fixture.json — revocation_ref primitive",
       "trail-status-lifecycle-v1.fixture.json — trail_status three-state lifecycle"
     ]
+  },
+  "provenance": {
+    "authored_by": "giskard09 (argentum-core)",
+    "verification_mode": "asserted",
+    "independently_reproduced_by": []
   }
 }

@@ -81,5 +81,10 @@
       "inclusion_operator": "set_subset",
       "resolvable": false
     }
-  ]
+  ],
+  "provenance": {
+    "authored_by": "giskard09 (argentum-core)",
+    "verification_mode": "asserted",
+    "independently_reproduced_by": []
+  }
 }

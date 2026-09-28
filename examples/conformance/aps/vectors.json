@@ -189,5 +189,10 @@
       "reject": true,
       "reason": "exactly three fractional digits are required; extra precision is rejected rather than truncated"
     }
-  ]
+  ],
+  "provenance": {
+    "authored_by": "giskard09 (argentum-core)",
+    "verification_mode": "asserted",
+    "independently_reproduced_by": []
+  }
 }

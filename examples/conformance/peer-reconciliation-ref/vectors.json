@@ -413,5 +413,10 @@
       "failure_mode": "supersedes_chain_integrity",
       "failure_detail": "known_envelopes entry resolved_by=safeagent-guardian is one of this envelope's own parties — not an independent source"
     }
-  ]
+  ],
+  "provenance": {
+    "authored_by": "giskard09 (argentum-core)",
+    "verification_mode": "asserted",
+    "independently_reproduced_by": []
+  }
 }

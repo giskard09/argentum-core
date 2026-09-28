@@ -131,5 +131,10 @@
       "expected_result": "FAIL",
       "expected_error_code": "OUT_OF_PROFILE_DOMAIN"
     }
-  ]
+  ],
+  "provenance": {
+    "authored_by": "giskard09 (argentum-core)",
+    "verification_mode": "asserted",
+    "independently_reproduced_by": []
+  }
 }

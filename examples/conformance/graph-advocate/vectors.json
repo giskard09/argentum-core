@@ -52,5 +52,10 @@
       "expected_failure": "missing_timestamp",
       "notes": "Companion to giskard09/argentum-core examples/conformance/counterparty-ref/reject-missing-timestamp.json — same failure mode, exercised from the provider-side (graph-advocate)."
     }
-  ]
+  ],
+  "provenance": {
+    "authored_by": "giskard09 (argentum-core)",
+    "verification_mode": "asserted",
+    "independently_reproduced_by": []
+  }
 }

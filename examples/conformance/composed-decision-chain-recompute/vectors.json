@@ -93,5 +93,10 @@
     "cross_checked_against": "babyblueviper1/preaction-governance-conformance @ examples/composed-decision-chain-recompute/ (same construction, independently implemented, including pshkv's Axis 4 fork-matrix proposed on autogen#7353 2026-07-03)",
     "result": "byte-identical head_hash values across all vectors, including axis4b (position 41, heads 03d92bae.../1e1664b3..., prior_heads e3b0c442.../6b86b273...)",
     "method": "This repo's verify.py was written independently from the construction description (content_hash + head_hash formula, and pshkv's four-property fork-matrix description), not copied from any third party's code, then cross-checked against babyblueviper1's independently-published head_hash values. Both computations used the same source fixture (presidio-x402-decision-ref-v1.fixture.json, originally contributed to this repo by presidio-v), which is verified byte-identical between both repos."
+  },
+  "provenance": {
+    "authored_by": "giskard09 (argentum-core)",
+    "verification_mode": "asserted",
+    "independently_reproduced_by": []
   }
 }

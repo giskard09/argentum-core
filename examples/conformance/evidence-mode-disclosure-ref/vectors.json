@@ -210,5 +210,10 @@
         "evidence_contract": "on-chain anchor failed: block_time required for both existence and precedence assertions"
       }
     }
-  ]
+  ],
+  "provenance": {
+    "authored_by": "giskard09 (argentum-core)",
+    "verification_mode": "asserted",
+    "independently_reproduced_by": []
+  }
 }

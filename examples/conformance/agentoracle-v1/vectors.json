@@ -171,5 +171,10 @@
       "reject": true,
       "reason": "Timestamp uses +00:00 offset instead of Z suffix. Canonical preimage MUST use Z."
     }
-  ]
+  ],
+  "provenance": {
+    "authored_by": "giskard09 (argentum-core)",
+    "verification_mode": "asserted",
+    "independently_reproduced_by": []
+  }
 }

@@ -49,5 +49,10 @@
         "revocation_check_at_ms": "See action-ref.md — dual-timestamps close the gap between 'was valid when I last checked' and 'became invalid at this exact moment'."
       }
     }
-  ]
+  ],
+  "provenance": {
+    "authored_by": "giskard09 (argentum-core)",
+    "verification_mode": "asserted",
+    "independently_reproduced_by": []
+  }
 }

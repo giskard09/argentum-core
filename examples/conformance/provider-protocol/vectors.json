@@ -67,5 +67,10 @@
         "timestamp": "2026-06-20T14:00:00.000000Z"
       }
     }
-  ]
+  ],
+  "provenance": {
+    "authored_by": "giskard09 (argentum-core)",
+    "verification_mode": "asserted",
+    "independently_reproduced_by": []
+  }
 }

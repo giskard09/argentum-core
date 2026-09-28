@@ -88,5 +88,10 @@
       "reason_code": "posture_expired",
       "note": "tool_id matches TT-ACCEPT-001 but checked_at is 24h earlier. Same tool, same verifier, same policy — different check time. Fails closed."
     }
-  ]
+  ],
+  "provenance": {
+    "authored_by": "giskard09 (argentum-core)",
+    "verification_mode": "asserted",
+    "independently_reproduced_by": []
+  }
 }

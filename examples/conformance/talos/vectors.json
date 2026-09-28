@@ -34,5 +34,10 @@
       }
     }
   ],
-  "reproduce_in_python": "import hashlib, json\ndef jcs(obj): return json.dumps(obj, separators=(',',':'), sort_keys=True, ensure_ascii=False)\npreimage = {'action_type': 'transfer.execute', 'agent_id': 'talos-agent', 'scope': 'talos:transfer', 'timestamp': '2026-06-14T00:00:00.000Z'}\nassert hashlib.sha256(jcs(preimage).encode()).hexdigest() == 'ab3a2fb3e3db34fb8993e5d171f3d8fa926c2727e907d7a7521ed184562bfc13'"
+  "reproduce_in_python": "import hashlib, json\ndef jcs(obj): return json.dumps(obj, separators=(',',':'), sort_keys=True, ensure_ascii=False)\npreimage = {'action_type': 'transfer.execute', 'agent_id': 'talos-agent', 'scope': 'talos:transfer', 'timestamp': '2026-06-14T00:00:00.000Z'}\nassert hashlib.sha256(jcs(preimage).encode()).hexdigest() == 'ab3a2fb3e3db34fb8993e5d171f3d8fa926c2727e907d7a7521ed184562bfc13'",
+  "provenance": {
+    "authored_by": "giskard09 (argentum-core)",
+    "verification_mode": "asserted",
+    "independently_reproduced_by": []
+  }
 }
