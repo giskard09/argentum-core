@@ -16,6 +16,8 @@
 
 **Default model when the implementer defines no revocation policy:** if a chain's ancestor hop is revoked, records already committed at hops downstream of that ancestor — actions already executed under the chain before the revocation — remain valid historical records. Revocation of an ancestor reaches only future use of the chain from that point forward; it does not retroactively invalidate hops that already closed. This mirrors the same principle stated for individual delegations in [`revocation-ref.md`](./revocation-ref.md#what-is-revocation-ref) ("does not retroactively invalidate COMMITTED trail records"), named here explicitly for chains because the base invariants above are silent on it. An implementer with a stricter policy (e.g. treating any downstream hop as tainted once an ancestor is revoked) MAY apply it — this is the default in the absence of one, not a requirement. See `examples/conformance/delegation-chain-ref/revoked-ancestor/` for a worked differential vector.
 
+A revocation artifact targeting an ancestor hop's delegation directly — rather than a trail action that consumed it — SHOULD use [`revoked_delegation_ref`](./revocation-ref.md#revoked_delegation_ref-additive-optional), pointing at the hop's `delegation_ref`, not `revoked_action_ref`. The `revoked-ancestor` vector referenced above predates this field and uses `revoked_action_ref` as a pragmatic stand-in for the same target (documented explicitly in that vector's README as an open question); it is not retroactively invalid, but a new vector exercising an ancestor-hop revocation SHOULD use `revoked_delegation_ref`.
+
 ---
 
 ## Derivation

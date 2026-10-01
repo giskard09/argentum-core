@@ -26,7 +26,7 @@
 
 - **JCS** is RFC 8785 canonical JSON: object keys sorted recursively by UTF-16 code units (§3.2.3), no whitespace, literal UTF-8 — **not** `json.dumps(sort_keys=True)`, which sorts by code point and diverges for keys outside the BMP. Reference implementation: [`jcs.py`](../../jcs.py)
 - **SHA-256** lowercase hex
-- `revocation_artifact` must contain at minimum: `revoker`, `revoked_action_ref`, `revoked_at`, `reason`, `scope`, `version`
+- `revocation_artifact` must contain at minimum: `revoker`, `revoked_at`, `reason`, `scope`, `version`, and at least one of `revoked_action_ref` or `revoked_delegation_ref` (see ["`revoked_delegation_ref` (additive, optional)"](#revoked_delegation_ref-additive-optional) below) — an artifact with neither has nothing for a verifier to link the revocation event to.
 
 ```python
 import hashlib, json
@@ -69,9 +69,9 @@ revocation_ref = hashlib.sha256(jcs(revocation_artifact).encode()).hexdigest()
 
 Revocation does not mutate the original trail record. It creates a new trail record with `action_type: authorization.revoke` that carries `revocation_ref`. The original record remains intact with its original `delegation_ref`.
 
-**3. revoked_action_ref links back to the delegation**
+**3. revoked_action_ref, when present, links back to the delegation**
 
-The `revoked_action_ref` field inside the revocation artifact should reference the `action_ref` of the trail record that used the now-revoked delegation. This creates a verifiable link: verifier can walk delegation → action → revocation without external lookups.
+When present, the `revoked_action_ref` field inside the revocation artifact references the `action_ref` of the trail record that used the now-revoked delegation. This creates a verifiable link: a verifier can walk delegation → action → revocation without external lookups. An artifact carrying only `revoked_delegation_ref` (see ["`revoked_delegation_ref` (additive, optional)"](#revoked_delegation_ref-additive-optional) below) has no `revoked_action_ref` for this invariant to check.
 
 **4. reason is informational, not normative**
 
@@ -80,6 +80,19 @@ The `reason` field is part of the artifact and enters the hash. Its value is imp
 **5. revocation_key scopes uniqueness**
 
 The `revocation_key` is client-generated to ensure uniqueness of the revocation artifact. Without it, two identical revocations (same revoker, same target, same timestamp) would produce the same `revocation_ref`, making it impossible to distinguish independent revocation events.
+
+---
+
+## `revoked_delegation_ref` (additive, optional)
+
+`revoked_action_ref` (invariant 3) links a revocation artifact to a trail action's `action_ref` — the action that *consumed* a delegation. It has no field for revoking a delegation hop directly: a grant that was never consumed by any action, or an ancestor hop inside a [`delegation_chain_ref`](./delegation-chain-ref.md) that carries no `action_ref` of its own.
+
+`revoked_delegation_ref` closes that gap: a revocation artifact MAY carry `revoked_delegation_ref` — a SHA-256 hex pointer to the `delegation_ref` of the hop being revoked (per [`delegation-ref.md`](./delegation-ref.md)) — instead of, or alongside, `revoked_action_ref`.
+
+- **Optional and additive.** A revocation artifact without `revoked_delegation_ref` conforms exactly as before this field was defined. Existing artifacts that do not carry the field retain their `revocation_ref` digests; an artifact that includes it hashes it like any other member.
+- **Distinct target from `revoked_action_ref`, never interchangeable.** `revoked_action_ref` points at an `action_ref` — the hash of a four-field action preimage (`action_type`, `agent_id`, `scope`, `timestamp`, per [`action-ref.md`](./action-ref.md)). `revoked_delegation_ref` points at a `delegation_ref` — the hash of a delegation grant artifact. These hash two different document shapes; a verifier MUST NOT compare one against the other or treat a match/mismatch between them as meaningful.
+- **At least one target MUST be present.** A revocation artifact MUST carry `revoked_action_ref`, `revoked_delegation_ref`, or both (see the Derivation section above) — an artifact with neither has nothing for a verifier to link the revocation event to.
+- **Does not add a check to `delegation_chain_ref`'s invariants.** As stated in [`delegation-chain-ref.md`](./delegation-chain-ref.md#what-is-delegation-chain-ref) ("What it does not do"), `delegation_chain_ref`'s structural invariants make no reference to `revocation_ref` or either target field. `revoked_delegation_ref` gives a verifier that *does* want to cross-reference revocation state against a chain's hops a well-defined field to resolve — it does not, by itself, make the reference chain verifier perform that cross-reference.
 
 ---
 
