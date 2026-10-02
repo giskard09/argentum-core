@@ -39,17 +39,17 @@ below is tagged with what evidence it is:
 
 **Contact:** [kenneives](https://github.com/kenneives)
 **Use case:** `urn:mycelium:trail` confirmed as official namespace in CTEF v0.3.3, `custody-ref-v1.2` adopted as their own reference implementation. REQUIRED as of CTEF v0.4.
-**Evidence:** [AgentAvow/AgentAvow PR #20](https://github.com/AgentAvow/AgentAvow/pull/20) — 3 conformance vectors, byte-match.
-**Status:** Merged 2026-07-23.
-**Kind:** (a) reproduction. Re-checked 2026-08-21: PR#20 was authored by us (giskard09), submitting our own `examples/conformance/` vectors to fill the CTEF matrix placeholder. It confirms the namespace/reference-impl designation was accepted into their matrix, not that a third party independently reimplemented and validated `action_ref`.
+**Evidence:** [AgentAvow/AgentAvow PR #20](https://github.com/AgentAvow/AgentAvow/pull/20) — 3 conformance vectors, byte-match. Independent follow-up, 2026-09-21: [giskard09/draft-etcheverry-action-ref PR #8](https://github.com/giskard09/draft-etcheverry-action-ref/pull/8) ("AgentAvow" author-set) and [PR #9](https://github.com/giskard09/draft-etcheverry-action-ref/pull/9) ("AgentGraph" author-set) — kenneives's own JCS canonicalizer and independently generated vectors (own files `agentavow-jcs-v1-vectors.json` + `verify.py`, not vendored from us), submitted as a third-party author-set directly into our own conformance repo rather than the reverse.
+**Status:** Merged 2026-07-23 (PR#20); 2026-09-21 (PR#8, PR#9).
+**Kind:** (a) reproduction for PR#20 — re-checked 2026-08-21: authored by us (giskard09), submitting our own `examples/conformance/` vectors to fill the CTEF matrix placeholder. Confirms the namespace/reference-impl designation was accepted into their matrix, not that a third party independently reimplemented and validated `action_ref`. PR#8/#9 are separate, stronger evidence: **(b) independent implementation** — kenneives's own canonicalizer and vectors, contributed as an adversarial third-party author-set to our own repo.
 
 ### Agent Passport System (APS)
 
 **Contact:** [aeoess](https://github.com/aeoess)
 **Use case:** `action_ref` implemented directly in their own codebase.
-**Evidence:** [`src/core/action-ref.ts`](https://github.com/aeoess/agent-passport-system/blob/main/src/core/action-ref.ts). Also: [aeoess/agent-passport-system PR #24](https://github.com/aeoess/agent-passport-system/pull/24) — TrailRecords as on-chain persistence layer.
-**Status:** Real code, in production repo.
-**Kind:** (b) independent implementation. Re-checked 2026-08-21: `action-ref.ts` is TypeScript written from their own I-D (`draft-pidlisnyi-aps-03`), own preimage type (`ActionRefIntent`), own canonicalizer (`canonical-jcs.js`) — no dependency on our code or fixtures. Same evidence class as `astrogilda/a2a-tck#228`.
+**Evidence:** [`src/core/action-ref.ts`](https://github.com/aeoess/agent-passport-system/blob/main/src/core/action-ref.ts). Also: [aeoess/agent-passport-system PR #24](https://github.com/aeoess/agent-passport-system/pull/24) — TrailRecords as on-chain persistence layer. **2026-08-30:** [Agent-Authority-Conformance/aps-conformance-suite PR #42](https://github.com/Agent-Authority-Conformance/aps-conformance-suite/pull/42) ("Ingest argentum-action-ref-v1v2 external-system vector family"), authored by us, merged by aeoess (merge commit `7b16a09`) into APS's own third-party-facing conformance suite — our action_ref vector family is now a permanent fixture family there, not a one-off PR.
+**Status:** Real code, in production repo. Permanent fixture family in a governed third-party conformance suite as of 2026-08-30.
+**Kind:** (b) independent implementation. Re-checked 2026-08-21: `action-ref.ts` is TypeScript written from their own I-D (`draft-pidlisnyi-aps-03`), own preimage type (`ActionRefIntent`), own canonicalizer (`canonical-jcs.js`) — no dependency on our code or fixtures. Same evidence class as `astrogilda/a2a-tck#228`. PR#42 is a distinct, stronger kind of evidence on top: not a reimplementation but our own vector family merged, by the project's maintainer, into its canonical conformance suite as a permanent fixture.
 
 ### AXES
 
@@ -58,6 +58,22 @@ below is tagged with what evidence it is:
 **Evidence:** [`docs/interop/x402-and-anchoring.md`](https://github.com/magentixai/axes/blob/main/docs/interop/x402-and-anchoring.md) cites `action_ref` explicitly.
 **Status:** Real code, in production repo.
 **Kind:** (c) spec-text adoption. Re-checked 2026-08-21: the doc cites `actionRef` (JCS + SHA-256 frozen content-addressed) as reference material for their evidence-lane layering, explicitly informative/non-normative. No AXES code implements or tests `action_ref` — "Real code, in production repo" (Status line above) describes the AXES repo generally, not action_ref-specific code. Status wording should not be read as implementation evidence for this row.
+
+### trustless-ai WG — Mycelium AnchorRegistry (Node 4)
+
+**Contact:** [TMerlini](https://github.com/TMerlini) (maintainer), WG members babyblueviper1/Pavlo/Jimmy Shi.
+**Use case:** AnchorRegistry (CREATE2, `0x49fEcA52bC634a9Ab773226D16619deC547794aa`) registered and operating as **Node 4** inside `trustless-ai/cross-reference-console`, the WG's cross-implementation trust mesh. Different Mycelium primitive from `action_ref` — listed here because mesh membership is itself public, independently checkable evidence of real external integration.
+**Evidence:** [PR #3](https://github.com/trustless-ai/cross-reference-console/pull/3) (Node 4 registration) and [PR #4](https://github.com/trustless-ai/cross-reference-console/pull/4) (first `crc.cell.v1` Cell), both merged 2026-08-07. Protocol design participation: [PR #8](https://github.com/trustless-ai/cross-reference-console/pull/8) ("derive lane distinctness instead of trusting the label"), merged 2026-08-07 — our review comment cited `action_ref`/`decision_binding_ref`/`anchoring-precedence-ref-v1` discipline directly in the design discussion that shaped the merged fix.
+**Status:** Node 4 live and merged, 2026-08-07.
+**Kind:** N/A — infrastructure-node registration + co-design participation, outside the (a)/(b)/(c) conformance-checker scale (same reasoning as the SafeAgent Tier 1 entry above).
+
+### astrogilda — GenAI-Security-Project/agent-control-standard
+
+**Contact:** [astrogilda](https://github.com/astrogilda)
+**Use case:** formal co-authorship of `cross-system-verification-v1`, a conformance contract in a third-party AI governance ledger spec. We authored the canonical contract (witness_scope/basis enumeration); astrogilda brought the fail-closed validator and negative vectors (branch `basis-method-conformance`, commit `f451b00`: 21 vectors / 25 negative controls / 13 mutants, CI green).
+**Evidence:** [GenAI-Security-Project/agent-control-standard#33](https://github.com/GenAI-Security-Project/agent-control-standard/issues/33) — astrogilda's explicit acceptance, [comment](https://github.com/GenAI-Security-Project/agent-control-standard/issues/33#issuecomment-5466354059) ("Co-author, yes..."), 2026-08-30. Our half merged in our own repo: [argentum-core PR #75](https://github.com/giskard09/argentum-core/pull/75) (`peer-reconciliation-ref-v1`), 2026-08-31, cross-validated against her fixtures in the same issue thread.
+**Status:** Co-authorship declared and sustained, 2026-08-30 onward (active thread as of 2026-09-27).
+**Kind:** N/A — declared co-authorship of a third-party governance artifact, outside the (a)/(b)/(c) conformance-checker scale. Not a production-trail submission, nor a reimplementation that passes our own checker — a distinct evidence class: the partner explicitly named us co-author, in their own repo, of a joint technical contract.
 
 ---
 
