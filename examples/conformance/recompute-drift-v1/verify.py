@@ -31,7 +31,7 @@ HERE = pathlib.Path(__file__).resolve().parent
 # Canonical timestamp grammar per docs/spec/action-ref.md: RFC 3339 UTC,
 # exactly three fractional digits, mandatory Z. One valid byte sequence
 # per instant.
-CANONICAL_TS = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$")
+CANONICAL_TS = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z$")
 
 REQUIRED_FIELDS = ("action_type", "agent_id", "scope", "timestamp")
 

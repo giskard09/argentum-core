@@ -21,7 +21,7 @@ import sys
 from pathlib import Path
 
 # RFC 3339 UTC, uppercase T and Z, exactly three fractional digits.
-TIMESTAMP_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$")
+TIMESTAMP_RE = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z$")
 PREIMAGE_KEYS = ("action_type", "agent_id", "scope", "timestamp")
 
 
