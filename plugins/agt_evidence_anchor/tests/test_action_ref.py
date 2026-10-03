@@ -299,3 +299,33 @@ def test_action_ref_version_rejects_trailing_newline_v1():
 def test_action_ref_version_rejects_trailing_newline_v2():
     with pytest.raises(ValueError):
         action_ref_version("v2:" + "a" * 64 + "\n")
+
+
+# ---- Non-ASCII decimal digits in the timestamp ----
+# RFC 3339 timestamps are written with ASCII digits. Python's \d matches any
+# Unicode decimal digit, so a grammar written with \d let Arabic-Indic digits
+# through _TIMESTAMP_RE and _EPOCH_MS_RE, and strptime/int() then parsed them.
+
+_ARABIC_INDIC_TS = "\u0662\u0660\u0662\u0666-06-30T12:00:00.000Z"  # year 2026 in Arabic-Indic digits
+_ARABIC_INDIC_EPOCH_MS = "".join(chr(0x0660 + int(c)) for c in "1778839200123")
+
+
+def test_v1_rejects_non_ascii_digits_in_timestamp():
+    with pytest.raises(OutOfProfileDomainError):
+        compute_action_ref("test-agent", "stripe:charge", "agt-evidence", _ARABIC_INDIC_TS)
+
+
+def test_v2_rejects_non_ascii_digits_in_timestamp():
+    with pytest.raises(OutOfProfileDomainError):
+        compute_action_ref_v2("test-agent", "stripe:charge", "agt-evidence", _ARABIC_INDIC_TS)
+
+
+def test_epoch_ms_path_rejects_non_ascii_digits():
+    with pytest.raises(OutOfProfileDomainError):
+        _validate_domain(
+            "test-agent", "stripe:charge", "agt-evidence", _ARABIC_INDIC_EPOCH_MS, allow_epoch_ms=True
+        )
+
+
+def test_ascii_timestamp_digest_unchanged_by_digit_grammar():
+    assert compute_action_ref(**_VECTOR_FIELDS) == _VECTOR_ACTION_REF
