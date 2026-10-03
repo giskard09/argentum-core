@@ -45,8 +45,10 @@ class OutOfProfileDomainError(ValueError):
         super().__init__(f"OUT_OF_PROFILE_DOMAIN: {field}: {reason}")
 
 
-_TIMESTAMP_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$")
-_EPOCH_MS_RE = re.compile(r"^\d+$")
+# [0-9], not \d: in Python \d matches any Unicode decimal digit, and RFC 3339
+# timestamps are written with ASCII digits.
+_TIMESTAMP_RE = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z$")
+_EPOCH_MS_RE = re.compile(r"^[0-9]+$")
 
 # Sane bound for the epoch-ms branch, self-audit 2026-08-15. Any all-digit
 # string is grammatically an integer, but a value like "1782783599" (10
