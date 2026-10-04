@@ -30,7 +30,7 @@ import sys
 
 HERE = pathlib.Path(__file__).resolve().parent
 
-CANONICAL_TS = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z$")
+CANONICAL_TS = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z\Z")
 
 # Guard against regressing to \d, \D, \w, \s in the grammar itself.
 assert not re.search(r"\\[dDwWsS]", CANONICAL_TS.pattern), "grammar must use [0-9], not shorthand classes"
