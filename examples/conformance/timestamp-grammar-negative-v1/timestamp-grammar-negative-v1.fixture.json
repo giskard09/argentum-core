@@ -1,0 +1,20 @@
+{
+  "fixture_id": "timestamp-grammar-negative-v1",
+  "version": "v1",
+  "spec": "docs/spec/action-ref.md",
+  "hash_algo": "sha256",
+  "preimage_format": "jcs-rfc8785-v1",
+  "generated_at": "2026-10-04",
+  "purpose": "Negative vectors for the action-ref timestamp grammar gate. A conformant verifier MUST reject any timestamp that is not canonical RFC 3339 UTC written with ASCII digits [0-9], three fractional digits and a mandatory Z, before any hashing. A timestamp that uses non-ASCII decimal digits is not a valid form even when it looks like one.",
+  "validation_rule": "The grammar gate runs before canonicalization. A timestamp that fails the gate is a terminal failure before invocation. A verifier that accepts any vector in this file has a conformance bug.",
+  "reserved_slots": [
+    {
+      "slot": "0001",
+      "status": "open",
+      "owner": "external contributor (follow-up to PR #115)",
+      "requirement": "A negative vector whose timestamp uses non-ASCII decimal digits in place of [0-9] in an otherwise canonical RFC 3339 string. Must be rejected at the grammar gate.",
+      "note": "Intentionally left empty by this repository. Not covered until the vector is contributed."
+    }
+  ],
+  "vectors": []
+}
