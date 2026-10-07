@@ -19,7 +19,7 @@ from pathlib import Path
 # The exact timestamp grammar from the specification and the SDK
 # implementation (src/core/external-action-ref.ts): RFC 3339 UTC, uppercase T
 # and Z, exactly three fractional digits.
-TIMESTAMP_RE = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z$")
+TIMESTAMP_RE = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z\Z")
 
 PREIMAGE_KEYS = ("action_type", "agent_id", "scope", "timestamp")
 
