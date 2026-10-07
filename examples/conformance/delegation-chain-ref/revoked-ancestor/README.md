@@ -6,6 +6,10 @@ alone, once alongside a `revocation_artifact` that revokes the mid-chain
 ancestor hop (`hops[1]`, `pioneer-agent-001 -> lightning`) before the leaf
 action's timestamp.
 
+**What it tests:** that the chain verifier's verdict is unchanged by a revocation artifact. Both runs PASS.
+
+**What it does not test:** whether a revocation is enforced on later use. `verify.py` does not read revocation fields. AAE-02 §7.5 (a relying party that already knows a parent is revoked MUST treat its descendants as invalid) is neither implemented nor tested here. The directory name predates this description and does not assert revocation enforcement.
+
 ## What it exercises
 
 3-hop chain, `mycelium:payment` scope throughout:
