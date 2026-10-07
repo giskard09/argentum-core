@@ -1,0 +1,304 @@
+{
+  "spec_version": "delegation-chain-ref-v1",
+  "description": "Partial-chain recovery: restoration of missing chain bytes under the original delegation_chain_ref, followed by the replay check. Vectors MUST be run in order against one initially empty replay registry (state carries across the file). The middle hop of a valid 3-hop chain is omitted while the reference is held fixed: FAIL (digest mismatch, broken continuity); a substituted hop in the right position: FAIL (digest mismatch only); the exact hop in the wrong position: FAIL; the exact hop restored in its original position: PASS; a further submission of the restored chain: FAIL replay_detected. Failed attempts are not recorded, per the reference verifier's recording-order rule. This set tests byte restoration and failed-attempt replay handling. It does not test recovery of authority, automatic retrieval of missing artifacts, renewed authority after revocation, or parent_delegation_ref resolution, which remains a separate open question.",
+  "scope_agreed_at": "https://github.com/x402-foundation/x402/issues/2332#issuecomment-5890759053",
+  "missing_hop_index": 1,
+  "original_chain_artifact": {
+    "chain_id": "chain-partial-chain-recovery-001",
+    "hops": [
+      {
+        "delegatee": "agent-b",
+        "delegator": "agent-a",
+        "delegation_ref": "ef1e99301dd5be210963cdd33fe96db7add5480463b990fc7686d500f7fb9eee",
+        "scope": "mycelium:payment"
+      },
+      {
+        "delegatee": "agent-c",
+        "delegator": "agent-b",
+        "delegation_ref": "d026354ff6c2c50119f6cb874bcd3ea3684228918d6a5d4153c96c2af5f2f974",
+        "scope": "mycelium:payment"
+      },
+      {
+        "delegatee": "agent-d",
+        "delegator": "agent-c",
+        "delegation_ref": "5dd43a1a84296cf018137bb89a5891bb9254d3a03a14a272080b2d6291007ef4",
+        "scope": "mycelium:payment:route"
+      }
+    ],
+    "leaf_action_ref": "9965cf231935c3ede01365933a6cd7b0b66e60cc07eef3cbd09e42f08647b4e4",
+    "root_delegator": "agent-a",
+    "scope": "mycelium:payment",
+    "version": "delegation-chain-ref-v1"
+  },
+  "delegation_chain_ref": "89b3d386856f9bf5de561f4d6f4eaaa07917d7fd06ef7874df46c802b8763b14",
+  "delegation_artifacts": [
+    {
+      "capability": "delegate",
+      "delegatee": "agent-b",
+      "delegator": "agent-a",
+      "expires_at": "2026-12-31T00:00:00.000Z",
+      "policy_version": "2026-10-01",
+      "scope": "mycelium:payment",
+      "version": "delegation-ref-v1"
+    },
+    {
+      "capability": "delegate",
+      "delegatee": "agent-c",
+      "delegator": "agent-b",
+      "expires_at": "2026-12-31T00:00:00.000Z",
+      "parent_delegation_ref": "ef1e99301dd5be210963cdd33fe96db7add5480463b990fc7686d500f7fb9eee",
+      "policy_version": "2026-10-01",
+      "scope": "mycelium:payment",
+      "version": "delegation-ref-v1"
+    },
+    {
+      "capability": "payment.route",
+      "delegatee": "agent-d",
+      "delegator": "agent-c",
+      "expires_at": "2026-12-31T00:00:00.000Z",
+      "parent_delegation_ref": "d026354ff6c2c50119f6cb874bcd3ea3684228918d6a5d4153c96c2af5f2f974",
+      "policy_version": "2026-10-01",
+      "scope": "mycelium:payment:route",
+      "version": "delegation-ref-v1"
+    }
+  ],
+  "vectors": [
+    {
+      "id": "recovery-001-missing-hop",
+      "description": "hops[1] (agent-b -> agent-c) is absent from chain_artifact; hops[0] and hops[2] are the original bytes and delegation_chain_ref is the original reference, held fixed. Expected FAIL for two reasons: the recomputed digest does not match the fixed reference, and chain_continuity breaks at hop 0 (agent-b != agent-c). The failed submission must not be recorded in the replay registry.",
+      "expected": "FAIL",
+      "failure_mode": "delegation_chain_ref mismatch",
+      "additional_failure_modes": [
+        "chain_break at hop 0"
+      ],
+      "expected_registry_after": {
+        "chain_ids": 0,
+        "delegation_refs": 0
+      },
+      "chain_artifact": {
+        "chain_id": "chain-partial-chain-recovery-001",
+        "hops": [
+          {
+            "delegatee": "agent-b",
+            "delegator": "agent-a",
+            "delegation_ref": "ef1e99301dd5be210963cdd33fe96db7add5480463b990fc7686d500f7fb9eee",
+            "scope": "mycelium:payment"
+          },
+          {
+            "delegatee": "agent-d",
+            "delegator": "agent-c",
+            "delegation_ref": "5dd43a1a84296cf018137bb89a5891bb9254d3a03a14a272080b2d6291007ef4",
+            "scope": "mycelium:payment:route"
+          }
+        ],
+        "leaf_action_ref": "9965cf231935c3ede01365933a6cd7b0b66e60cc07eef3cbd09e42f08647b4e4",
+        "root_delegator": "agent-a",
+        "scope": "mycelium:payment",
+        "version": "delegation-chain-ref-v1"
+      },
+      "leaf_preimage": {
+        "agent_id": "agent-d",
+        "action_type": "payment.route",
+        "scope": "mycelium:payment:route",
+        "timestamp": "2026-10-05T12:00:00.000Z"
+      },
+      "delegation_chain_ref": "89b3d386856f9bf5de561f4d6f4eaaa07917d7fd06ef7874df46c802b8763b14"
+    },
+    {
+      "id": "recovery-002-substituted-hop-control",
+      "description": "Control. A hop with the same delegator, delegatee and scope as the missing one but a different delegation_ref (a re-issued grant, policy_version 2026-10-02, see substitute_delegation_artifact) is placed in position 1. chain_continuity is satisfied again, so this must NOT fail with chain_break; it still FAILs because the recomputed digest does not match the fixed reference. Restoration has to be the exact bytes, not a hop that merely satisfies continuity. Not recorded in the replay registry.",
+      "expected": "FAIL",
+      "failure_mode": "delegation_chain_ref mismatch",
+      "must_not_fail_with": [
+        "chain_break"
+      ],
+      "expected_registry_after": {
+        "chain_ids": 0,
+        "delegation_refs": 0
+      },
+      "chain_artifact": {
+        "chain_id": "chain-partial-chain-recovery-001",
+        "hops": [
+          {
+            "delegatee": "agent-b",
+            "delegator": "agent-a",
+            "delegation_ref": "ef1e99301dd5be210963cdd33fe96db7add5480463b990fc7686d500f7fb9eee",
+            "scope": "mycelium:payment"
+          },
+          {
+            "delegatee": "agent-c",
+            "delegator": "agent-b",
+            "delegation_ref": "b0ea4bdae647fa41d161a3f2f65ec4ff2fcb9bbfd72f5c73634534ab4945a640",
+            "scope": "mycelium:payment"
+          },
+          {
+            "delegatee": "agent-d",
+            "delegator": "agent-c",
+            "delegation_ref": "5dd43a1a84296cf018137bb89a5891bb9254d3a03a14a272080b2d6291007ef4",
+            "scope": "mycelium:payment:route"
+          }
+        ],
+        "leaf_action_ref": "9965cf231935c3ede01365933a6cd7b0b66e60cc07eef3cbd09e42f08647b4e4",
+        "root_delegator": "agent-a",
+        "scope": "mycelium:payment",
+        "version": "delegation-chain-ref-v1"
+      },
+      "leaf_preimage": {
+        "agent_id": "agent-d",
+        "action_type": "payment.route",
+        "scope": "mycelium:payment:route",
+        "timestamp": "2026-10-05T12:00:00.000Z"
+      },
+      "delegation_chain_ref": "89b3d386856f9bf5de561f4d6f4eaaa07917d7fd06ef7874df46c802b8763b14",
+      "substitute_delegation_artifact": {
+        "capability": "delegate",
+        "delegatee": "agent-c",
+        "delegator": "agent-b",
+        "expires_at": "2026-12-31T00:00:00.000Z",
+        "parent_delegation_ref": "ef1e99301dd5be210963cdd33fe96db7add5480463b990fc7686d500f7fb9eee",
+        "policy_version": "2026-10-02",
+        "scope": "mycelium:payment",
+        "version": "delegation-ref-v1"
+      }
+    },
+    {
+      "id": "recovery-003-misplaced-hop-control",
+      "description": "Control. The exact missing hop is supplied, but appended after hops[2] instead of restored at position 1. hops order is semantic (delegation-chain-ref.md, HOPS_REORDERED), so the digest does not match the fixed reference and chain_continuity breaks at hop 0; other invariants fail as well. Not recorded in the replay registry.",
+      "expected": "FAIL",
+      "failure_mode": "delegation_chain_ref mismatch",
+      "additional_failure_modes": [
+        "chain_break at hop 0"
+      ],
+      "expected_registry_after": {
+        "chain_ids": 0,
+        "delegation_refs": 0
+      },
+      "chain_artifact": {
+        "chain_id": "chain-partial-chain-recovery-001",
+        "hops": [
+          {
+            "delegatee": "agent-b",
+            "delegator": "agent-a",
+            "delegation_ref": "ef1e99301dd5be210963cdd33fe96db7add5480463b990fc7686d500f7fb9eee",
+            "scope": "mycelium:payment"
+          },
+          {
+            "delegatee": "agent-d",
+            "delegator": "agent-c",
+            "delegation_ref": "5dd43a1a84296cf018137bb89a5891bb9254d3a03a14a272080b2d6291007ef4",
+            "scope": "mycelium:payment:route"
+          },
+          {
+            "delegatee": "agent-c",
+            "delegator": "agent-b",
+            "delegation_ref": "d026354ff6c2c50119f6cb874bcd3ea3684228918d6a5d4153c96c2af5f2f974",
+            "scope": "mycelium:payment"
+          }
+        ],
+        "leaf_action_ref": "9965cf231935c3ede01365933a6cd7b0b66e60cc07eef3cbd09e42f08647b4e4",
+        "root_delegator": "agent-a",
+        "scope": "mycelium:payment",
+        "version": "delegation-chain-ref-v1"
+      },
+      "leaf_preimage": {
+        "agent_id": "agent-d",
+        "action_type": "payment.route",
+        "scope": "mycelium:payment:route",
+        "timestamp": "2026-10-05T12:00:00.000Z"
+      },
+      "delegation_chain_ref": "89b3d386856f9bf5de561f4d6f4eaaa07917d7fd06ef7874df46c802b8763b14"
+    },
+    {
+      "id": "recovery-004-exact-restoration",
+      "description": "The exact missing hop restored in its original position; chain_artifact is byte-identical to original_chain_artifact. Expected PASS under the original delegation_chain_ref. The three failed attempts above did not consume replay state, so this first valid submission is accepted and now recorded (chain_id plus all three hop delegation_ref values).",
+      "expected": "PASS",
+      "expected_registry_after": {
+        "chain_ids": 1,
+        "delegation_refs": 3
+      },
+      "chain_artifact": {
+        "chain_id": "chain-partial-chain-recovery-001",
+        "hops": [
+          {
+            "delegatee": "agent-b",
+            "delegator": "agent-a",
+            "delegation_ref": "ef1e99301dd5be210963cdd33fe96db7add5480463b990fc7686d500f7fb9eee",
+            "scope": "mycelium:payment"
+          },
+          {
+            "delegatee": "agent-c",
+            "delegator": "agent-b",
+            "delegation_ref": "d026354ff6c2c50119f6cb874bcd3ea3684228918d6a5d4153c96c2af5f2f974",
+            "scope": "mycelium:payment"
+          },
+          {
+            "delegatee": "agent-d",
+            "delegator": "agent-c",
+            "delegation_ref": "5dd43a1a84296cf018137bb89a5891bb9254d3a03a14a272080b2d6291007ef4",
+            "scope": "mycelium:payment:route"
+          }
+        ],
+        "leaf_action_ref": "9965cf231935c3ede01365933a6cd7b0b66e60cc07eef3cbd09e42f08647b4e4",
+        "root_delegator": "agent-a",
+        "scope": "mycelium:payment",
+        "version": "delegation-chain-ref-v1"
+      },
+      "leaf_preimage": {
+        "agent_id": "agent-d",
+        "action_type": "payment.route",
+        "scope": "mycelium:payment:route",
+        "timestamp": "2026-10-05T12:00:00.000Z"
+      },
+      "delegation_chain_ref": "89b3d386856f9bf5de561f4d6f4eaaa07917d7fd06ef7874df46c802b8763b14"
+    },
+    {
+      "id": "recovery-005-resubmission-after-restoration",
+      "description": "Byte-identical resubmission of the restored chain. Every per-vector invariant still passes; only the replay guard, holding the state recorded by 004, rejects it as replay_detected. Registry unchanged.",
+      "expected": "FAIL",
+      "failure_mode": "replay_detected",
+      "expected_registry_after": {
+        "chain_ids": 1,
+        "delegation_refs": 3
+      },
+      "chain_artifact": {
+        "chain_id": "chain-partial-chain-recovery-001",
+        "hops": [
+          {
+            "delegatee": "agent-b",
+            "delegator": "agent-a",
+            "delegation_ref": "ef1e99301dd5be210963cdd33fe96db7add5480463b990fc7686d500f7fb9eee",
+            "scope": "mycelium:payment"
+          },
+          {
+            "delegatee": "agent-c",
+            "delegator": "agent-b",
+            "delegation_ref": "d026354ff6c2c50119f6cb874bcd3ea3684228918d6a5d4153c96c2af5f2f974",
+            "scope": "mycelium:payment"
+          },
+          {
+            "delegatee": "agent-d",
+            "delegator": "agent-c",
+            "delegation_ref": "5dd43a1a84296cf018137bb89a5891bb9254d3a03a14a272080b2d6291007ef4",
+            "scope": "mycelium:payment:route"
+          }
+        ],
+        "leaf_action_ref": "9965cf231935c3ede01365933a6cd7b0b66e60cc07eef3cbd09e42f08647b4e4",
+        "root_delegator": "agent-a",
+        "scope": "mycelium:payment",
+        "version": "delegation-chain-ref-v1"
+      },
+      "leaf_preimage": {
+        "agent_id": "agent-d",
+        "action_type": "payment.route",
+        "scope": "mycelium:payment:route",
+        "timestamp": "2026-10-05T12:00:00.000Z"
+      },
+      "delegation_chain_ref": "89b3d386856f9bf5de561f4d6f4eaaa07917d7fd06ef7874df46c802b8763b14"
+    }
+  ],
+  "provenance": {
+    "authored_by": "TKCollective (Tanilo)",
+    "verification_mode": "asserted",
+    "independently_reproduced_by": []
+  }
+}
