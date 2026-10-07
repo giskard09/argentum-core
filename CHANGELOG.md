@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Changed — JCS integer profile (2026-10-07)
+
+- `jcs.py` refuses integers outside `[-(2^53-1), 2^53-1]` with a `ValueError` that names the profile. Before, it emitted their exact value, which RFC 8785 (IEEE-754 doubles) does not reproduce: `2^53+1` came out as `9007199254740993` where a conformant verifier gives `9007199254740992`. Implemented in PR #121 (commit badcd25). Tests in `tests/test_jcs_integer_profile.py`.
+- Impact: in-range preimages are unchanged. Integers beyond the safe range are now refused, so a signed payload that carries one is rejected by our verifiers instead of being hashed as a different value. The repository, the local databases and the production databases contained no such integers at the time of the change (read-only scan).
+- Spec: `docs/spec/action-ref.md` carries a dated note in its Domain section.
+
 ### Fixed — EU AI Act Art. 12 application date (2026-09-24)
 
 - `docs/compliance/regulatory-compliance.md` (v1.3) and `examples/conformance/art12-log-integrity-notes/README.md`: both said Art. 12 "has been in force since 2 August 2026". The AI Act entered into force on 1 August 2024; after the AI Omnibus (Regulation (EU) 2026/1744) the high-risk obligations apply from 2 December 2027 (Annex III) and 2 August 2028 (Annex I). Corrected with a visible correction note, in the same style as Correction (v1.2). Source: European Commission, "Regulatory framework on AI". Pending Legal review.
