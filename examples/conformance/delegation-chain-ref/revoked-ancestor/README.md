@@ -8,7 +8,7 @@ action's timestamp.
 
 **What it tests:** that the chain verifier's verdict is unchanged by a revocation artifact. Both runs PASS.
 
-**What it does not test:** whether a revocation is enforced on later use. `verify.py` does not read revocation fields. AAE-02 §7.5 (a relying party that already knows a parent is revoked MUST treat its descendants as invalid) is neither implemented nor tested here. The directory name predates this description and does not assert revocation enforcement.
+**What it does not test:** whether a revocation is enforced on later use. `verify.py` does not read revocation fields and stays that way. Enforcement lives in a separate layer: `verify_enforcement.py` implements AAE-02 §7.5 (a relying party that already knows a parent is revoked MUST treat its descendants as invalid) and checks it against `enforcement-vectors.json` under two models: `default` (no enforcement) and `7.5` (structural AND enforcement). The structural verdict is identical under both models; the runner checks that for every case. The directory name predates this description and does not by itself assert enforcement.
 
 ## What it exercises
 
