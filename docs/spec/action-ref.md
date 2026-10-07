@@ -19,6 +19,8 @@ action-ref-verify v0.3.0`, X402-2398), not this repository or this tag. If a
 real citation of `action-ref-v1.0` surfaces later, notify the citing party of
 this erratum then.
 
+**2026-10-07:** Integer domain. Preimages are canonicalized with JCS (RFC 8785), which serializes numbers as IEEE-754 doubles. An integer outside `[-(2^53-1), 2^53-1]` is out of profile: `jcs.py` refuses it, and a verifier must return `OUT_OF_PROFILE_DOMAIN` rather than emit its exact value. Existing in-range preimages do not change. Integers beyond the safe range were not present in the repository's data or in the production databases at the time of the change. Implemented in PR #121.
+
 **2026-08-16:** ASCII-only Domain enforcement (2026-07-29, above) closes Unicode
 normalization ambiguity (NFC vs. NFD) by design for this canonical profile — NFC and
 NFD only diverge on non-ASCII code points, and any non-ASCII value in `agent_id`,
