@@ -208,7 +208,15 @@ def build():
         "provenance": {
             "authored_by": "TKCollective (Tanilo)",
             "verification_mode": "asserted",
-            "independently_reproduced_by": [],
+            "independently_reproduced_by": [
+                {
+                    "party": "babyblueviper1",
+                    "where": "giskard09/argentum-core#123 comment 6047862394; "
+                              "script and transcript at "
+                              "babyblueviper1/preaction-governance-conformance@08966cf",
+                    "when": "2026-10-07T22:10:41Z",
+                },
+            ],
         },
     }
 
