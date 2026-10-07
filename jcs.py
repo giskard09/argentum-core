@@ -85,6 +85,14 @@ def _encode(obj: Any, ensure_ascii: bool) -> str:
     if isinstance(obj, str):
         return json.dumps(obj, ensure_ascii=ensure_ascii)
     if isinstance(obj, int):
+        # RFC 8785 serializes numbers as IEEE-754 doubles. Integers outside
+        # +/-(2^53 - 1) are not exactly representable, so the serialization
+        # would not match a conformant verifier. Refuse them (out of profile)
+        # instead of emitting the exact value or a silently rounded one.
+        if not -(2**53 - 1) <= obj <= 2**53 - 1:
+            raise ValueError(
+                f"integer {obj} is outside +/-(2^53-1); out of JCS profile (RFC 8785 doubles)"
+            )
         return str(obj)
     if isinstance(obj, float):
         return _ecma_number_string(obj)
