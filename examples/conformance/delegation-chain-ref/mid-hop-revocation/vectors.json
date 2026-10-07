@@ -1,0 +1,347 @@
+{
+  "spec_version": "delegation-chain-ref-v1",
+  "description": "Mid-hop revocation, structural differential. The same chain_artifact and leaf_preimage are verified twice, with and without a revocation_artifact for the mid-chain hop (hops[1]); both PASS. A broken-continuity control is verified the same two ways; both FAIL with the same single failure. Each vector runs against a fresh replay registry. The revocation artifact targets the hop with revoked_delegation_ref (revocation-ref.md, merged in argentum-core#112 at c277309b); it carries no revoked_action_ref. This set asserts only that revocation metadata does not change the reference verifier's structural verdict. It asserts nothing about present authority, cascade rejection or future-use blocking, and does not cover parent_delegation_ref resolution.",
+  "scope_agreed_at": "https://github.com/x402-foundation/x402/issues/2332#issuecomment-5890759053",
+  "field_definition_pin": {
+    "field": "revoked_delegation_ref",
+    "spec": "docs/spec/revocation-ref.md",
+    "commit": "c277309b0d51dd3dca87d3c7c07688a80021a467",
+    "pull_request": "https://github.com/giskard09/argentum-core/pull/112"
+  },
+  "revoked_hop_index": 1,
+  "pairs": [
+    {
+      "baseline": "mid-hop-revocation-001-baseline",
+      "with_revocation": "mid-hop-revocation-001-with-revocation",
+      "expected": "PASS"
+    },
+    {
+      "baseline": "mid-hop-revocation-002-broken-continuity-baseline",
+      "with_revocation": "mid-hop-revocation-002-broken-continuity-with-revocation",
+      "expected": "FAIL"
+    }
+  ],
+  "vectors": [
+    {
+      "id": "mid-hop-revocation-001-baseline",
+      "description": "Continuous 3-hop chain (agent-a -> agent-b -> agent-c -> agent-d), mycelium:payment narrowing to mycelium:payment:route at the leaf hop. No revocation artifact submitted. Fresh replay registry.",
+      "expected": "PASS",
+      "chain_artifact": {
+        "chain_id": "chain-mid-hop-revocation-001",
+        "hops": [
+          {
+            "delegatee": "agent-b",
+            "delegator": "agent-a",
+            "delegation_ref": "ef1e99301dd5be210963cdd33fe96db7add5480463b990fc7686d500f7fb9eee",
+            "scope": "mycelium:payment"
+          },
+          {
+            "delegatee": "agent-c",
+            "delegator": "agent-b",
+            "delegation_ref": "d026354ff6c2c50119f6cb874bcd3ea3684228918d6a5d4153c96c2af5f2f974",
+            "scope": "mycelium:payment"
+          },
+          {
+            "delegatee": "agent-d",
+            "delegator": "agent-c",
+            "delegation_ref": "5dd43a1a84296cf018137bb89a5891bb9254d3a03a14a272080b2d6291007ef4",
+            "scope": "mycelium:payment:route"
+          }
+        ],
+        "leaf_action_ref": "9965cf231935c3ede01365933a6cd7b0b66e60cc07eef3cbd09e42f08647b4e4",
+        "root_delegator": "agent-a",
+        "scope": "mycelium:payment",
+        "version": "delegation-chain-ref-v1"
+      },
+      "delegation_artifacts": [
+        {
+          "capability": "delegate",
+          "delegatee": "agent-b",
+          "delegator": "agent-a",
+          "expires_at": "2026-12-31T00:00:00.000Z",
+          "policy_version": "2026-10-01",
+          "scope": "mycelium:payment",
+          "version": "delegation-ref-v1"
+        },
+        {
+          "capability": "delegate",
+          "delegatee": "agent-c",
+          "delegator": "agent-b",
+          "expires_at": "2026-12-31T00:00:00.000Z",
+          "parent_delegation_ref": "ef1e99301dd5be210963cdd33fe96db7add5480463b990fc7686d500f7fb9eee",
+          "policy_version": "2026-10-01",
+          "scope": "mycelium:payment",
+          "version": "delegation-ref-v1"
+        },
+        {
+          "capability": "payment.route",
+          "delegatee": "agent-d",
+          "delegator": "agent-c",
+          "expires_at": "2026-12-31T00:00:00.000Z",
+          "parent_delegation_ref": "d026354ff6c2c50119f6cb874bcd3ea3684228918d6a5d4153c96c2af5f2f974",
+          "policy_version": "2026-10-01",
+          "scope": "mycelium:payment:route",
+          "version": "delegation-ref-v1"
+        }
+      ],
+      "leaf_preimage": {
+        "agent_id": "agent-d",
+        "action_type": "payment.route",
+        "scope": "mycelium:payment:route",
+        "timestamp": "2026-10-05T12:00:00.000Z"
+      },
+      "delegation_chain_ref": "b8298aad76e70366cc78ca6f6e77fab844e912501caa6a9e623b3ae8490dde5d"
+    },
+    {
+      "id": "mid-hop-revocation-001-with-revocation",
+      "description": "Byte-identical chain_artifact and leaf_preimage to the baseline. The vector additionally carries a revocation_artifact whose revoked_delegation_ref is hops[1].delegation_ref (agent-b's grant to agent-c), revoked at 2026-10-03T09:00:00.000Z, before the leaf action at 2026-10-05T12:00:00.000Z. The reference verifier's structural verdict is expected to be identical to the baseline: none of its checks reads revocation_artifact, revocation_ref or revoked_delegation_ref. Fresh replay registry.",
+      "expected": "PASS",
+      "chain_artifact": {
+        "chain_id": "chain-mid-hop-revocation-001",
+        "hops": [
+          {
+            "delegatee": "agent-b",
+            "delegator": "agent-a",
+            "delegation_ref": "ef1e99301dd5be210963cdd33fe96db7add5480463b990fc7686d500f7fb9eee",
+            "scope": "mycelium:payment"
+          },
+          {
+            "delegatee": "agent-c",
+            "delegator": "agent-b",
+            "delegation_ref": "d026354ff6c2c50119f6cb874bcd3ea3684228918d6a5d4153c96c2af5f2f974",
+            "scope": "mycelium:payment"
+          },
+          {
+            "delegatee": "agent-d",
+            "delegator": "agent-c",
+            "delegation_ref": "5dd43a1a84296cf018137bb89a5891bb9254d3a03a14a272080b2d6291007ef4",
+            "scope": "mycelium:payment:route"
+          }
+        ],
+        "leaf_action_ref": "9965cf231935c3ede01365933a6cd7b0b66e60cc07eef3cbd09e42f08647b4e4",
+        "root_delegator": "agent-a",
+        "scope": "mycelium:payment",
+        "version": "delegation-chain-ref-v1"
+      },
+      "delegation_artifacts": [
+        {
+          "capability": "delegate",
+          "delegatee": "agent-b",
+          "delegator": "agent-a",
+          "expires_at": "2026-12-31T00:00:00.000Z",
+          "policy_version": "2026-10-01",
+          "scope": "mycelium:payment",
+          "version": "delegation-ref-v1"
+        },
+        {
+          "capability": "delegate",
+          "delegatee": "agent-c",
+          "delegator": "agent-b",
+          "expires_at": "2026-12-31T00:00:00.000Z",
+          "parent_delegation_ref": "ef1e99301dd5be210963cdd33fe96db7add5480463b990fc7686d500f7fb9eee",
+          "policy_version": "2026-10-01",
+          "scope": "mycelium:payment",
+          "version": "delegation-ref-v1"
+        },
+        {
+          "capability": "payment.route",
+          "delegatee": "agent-d",
+          "delegator": "agent-c",
+          "expires_at": "2026-12-31T00:00:00.000Z",
+          "parent_delegation_ref": "d026354ff6c2c50119f6cb874bcd3ea3684228918d6a5d4153c96c2af5f2f974",
+          "policy_version": "2026-10-01",
+          "scope": "mycelium:payment:route",
+          "version": "delegation-ref-v1"
+        }
+      ],
+      "leaf_preimage": {
+        "agent_id": "agent-d",
+        "action_type": "payment.route",
+        "scope": "mycelium:payment:route",
+        "timestamp": "2026-10-05T12:00:00.000Z"
+      },
+      "delegation_chain_ref": "b8298aad76e70366cc78ca6f6e77fab844e912501caa6a9e623b3ae8490dde5d",
+      "revocation_artifact": {
+        "reason": "grant_withdrawn",
+        "revocation_key": "rev_mid_hop_001",
+        "revoked_at": "2026-10-03T09:00:00.000Z",
+        "revoked_delegation_ref": "d026354ff6c2c50119f6cb874bcd3ea3684228918d6a5d4153c96c2af5f2f974",
+        "revoker": "agent-b",
+        "scope": "mycelium:payment",
+        "version": "revocation-ref-v1"
+      },
+      "revocation_ref": "104e8760a63f32ab123ae25c7d345bdeb0d5aaa2d91f845c65ee2f78a336f942",
+      "revocation_action_preimage": {
+        "action_type": "authorization.revoke",
+        "agent_id": "agent-b",
+        "scope": "mycelium:payment",
+        "timestamp": "2026-10-03T09:00:00.000Z"
+      },
+      "revocation_action_ref": "db2cfd63a5d132c8171bddd6b0e33358d607ff34ee0ef4687b55913ae5f1b9d9"
+    },
+    {
+      "id": "mid-hop-revocation-002-broken-continuity-baseline",
+      "description": "Control. hops[0] and hops[1] are byte-identical to chain 001; hops[2] is granted by agent-x, not by hops[1].delegatee agent-c, so chain_continuity breaks at hop 1. delegation_chain_ref is recomputed over this artifact, so chain_break is the only failure. No revocation artifact. Fresh replay registry.",
+      "expected": "FAIL",
+      "failure_mode": "chain_break at hop 1",
+      "chain_artifact": {
+        "chain_id": "chain-mid-hop-revocation-002",
+        "hops": [
+          {
+            "delegatee": "agent-b",
+            "delegator": "agent-a",
+            "delegation_ref": "ef1e99301dd5be210963cdd33fe96db7add5480463b990fc7686d500f7fb9eee",
+            "scope": "mycelium:payment"
+          },
+          {
+            "delegatee": "agent-c",
+            "delegator": "agent-b",
+            "delegation_ref": "d026354ff6c2c50119f6cb874bcd3ea3684228918d6a5d4153c96c2af5f2f974",
+            "scope": "mycelium:payment"
+          },
+          {
+            "delegatee": "agent-d",
+            "delegator": "agent-x",
+            "delegation_ref": "ffb7ee1bc5c118775381e7728b40aa794b0aac7367ea2d164035c1cbb84c991e",
+            "scope": "mycelium:payment:route"
+          }
+        ],
+        "leaf_action_ref": "9965cf231935c3ede01365933a6cd7b0b66e60cc07eef3cbd09e42f08647b4e4",
+        "root_delegator": "agent-a",
+        "scope": "mycelium:payment",
+        "version": "delegation-chain-ref-v1"
+      },
+      "delegation_artifacts": [
+        {
+          "capability": "delegate",
+          "delegatee": "agent-b",
+          "delegator": "agent-a",
+          "expires_at": "2026-12-31T00:00:00.000Z",
+          "policy_version": "2026-10-01",
+          "scope": "mycelium:payment",
+          "version": "delegation-ref-v1"
+        },
+        {
+          "capability": "delegate",
+          "delegatee": "agent-c",
+          "delegator": "agent-b",
+          "expires_at": "2026-12-31T00:00:00.000Z",
+          "parent_delegation_ref": "ef1e99301dd5be210963cdd33fe96db7add5480463b990fc7686d500f7fb9eee",
+          "policy_version": "2026-10-01",
+          "scope": "mycelium:payment",
+          "version": "delegation-ref-v1"
+        },
+        {
+          "capability": "payment.route",
+          "delegatee": "agent-d",
+          "delegator": "agent-x",
+          "expires_at": "2026-12-31T00:00:00.000Z",
+          "parent_delegation_ref": "d026354ff6c2c50119f6cb874bcd3ea3684228918d6a5d4153c96c2af5f2f974",
+          "policy_version": "2026-10-01",
+          "scope": "mycelium:payment:route",
+          "version": "delegation-ref-v1"
+        }
+      ],
+      "leaf_preimage": {
+        "agent_id": "agent-d",
+        "action_type": "payment.route",
+        "scope": "mycelium:payment:route",
+        "timestamp": "2026-10-05T12:00:00.000Z"
+      },
+      "delegation_chain_ref": "1468129dcc0f7a4de524f7885936759197e80dec318c28a47c77100534b3352c"
+    },
+    {
+      "id": "mid-hop-revocation-002-broken-continuity-with-revocation",
+      "description": "Control, byte-identical chain_artifact and leaf_preimage to 002-broken-continuity-baseline, submitted with the same revocation_artifact as 001-with-revocation (hops[1] is the same hop in both chains). Expected to FAIL for the same single reason, chain_break at hop 1: revocation metadata neither changes a passing structural verdict nor masks a failing one. Fresh replay registry.",
+      "expected": "FAIL",
+      "failure_mode": "chain_break at hop 1",
+      "chain_artifact": {
+        "chain_id": "chain-mid-hop-revocation-002",
+        "hops": [
+          {
+            "delegatee": "agent-b",
+            "delegator": "agent-a",
+            "delegation_ref": "ef1e99301dd5be210963cdd33fe96db7add5480463b990fc7686d500f7fb9eee",
+            "scope": "mycelium:payment"
+          },
+          {
+            "delegatee": "agent-c",
+            "delegator": "agent-b",
+            "delegation_ref": "d026354ff6c2c50119f6cb874bcd3ea3684228918d6a5d4153c96c2af5f2f974",
+            "scope": "mycelium:payment"
+          },
+          {
+            "delegatee": "agent-d",
+            "delegator": "agent-x",
+            "delegation_ref": "ffb7ee1bc5c118775381e7728b40aa794b0aac7367ea2d164035c1cbb84c991e",
+            "scope": "mycelium:payment:route"
+          }
+        ],
+        "leaf_action_ref": "9965cf231935c3ede01365933a6cd7b0b66e60cc07eef3cbd09e42f08647b4e4",
+        "root_delegator": "agent-a",
+        "scope": "mycelium:payment",
+        "version": "delegation-chain-ref-v1"
+      },
+      "delegation_artifacts": [
+        {
+          "capability": "delegate",
+          "delegatee": "agent-b",
+          "delegator": "agent-a",
+          "expires_at": "2026-12-31T00:00:00.000Z",
+          "policy_version": "2026-10-01",
+          "scope": "mycelium:payment",
+          "version": "delegation-ref-v1"
+        },
+        {
+          "capability": "delegate",
+          "delegatee": "agent-c",
+          "delegator": "agent-b",
+          "expires_at": "2026-12-31T00:00:00.000Z",
+          "parent_delegation_ref": "ef1e99301dd5be210963cdd33fe96db7add5480463b990fc7686d500f7fb9eee",
+          "policy_version": "2026-10-01",
+          "scope": "mycelium:payment",
+          "version": "delegation-ref-v1"
+        },
+        {
+          "capability": "payment.route",
+          "delegatee": "agent-d",
+          "delegator": "agent-x",
+          "expires_at": "2026-12-31T00:00:00.000Z",
+          "parent_delegation_ref": "d026354ff6c2c50119f6cb874bcd3ea3684228918d6a5d4153c96c2af5f2f974",
+          "policy_version": "2026-10-01",
+          "scope": "mycelium:payment:route",
+          "version": "delegation-ref-v1"
+        }
+      ],
+      "leaf_preimage": {
+        "agent_id": "agent-d",
+        "action_type": "payment.route",
+        "scope": "mycelium:payment:route",
+        "timestamp": "2026-10-05T12:00:00.000Z"
+      },
+      "delegation_chain_ref": "1468129dcc0f7a4de524f7885936759197e80dec318c28a47c77100534b3352c",
+      "revocation_artifact": {
+        "reason": "grant_withdrawn",
+        "revocation_key": "rev_mid_hop_001",
+        "revoked_at": "2026-10-03T09:00:00.000Z",
+        "revoked_delegation_ref": "d026354ff6c2c50119f6cb874bcd3ea3684228918d6a5d4153c96c2af5f2f974",
+        "revoker": "agent-b",
+        "scope": "mycelium:payment",
+        "version": "revocation-ref-v1"
+      },
+      "revocation_ref": "104e8760a63f32ab123ae25c7d345bdeb0d5aaa2d91f845c65ee2f78a336f942",
+      "revocation_action_preimage": {
+        "action_type": "authorization.revoke",
+        "agent_id": "agent-b",
+        "scope": "mycelium:payment",
+        "timestamp": "2026-10-03T09:00:00.000Z"
+      },
+      "revocation_action_ref": "db2cfd63a5d132c8171bddd6b0e33358d607ff34ee0ef4687b55913ae5f1b9d9"
+    }
+  ],
+  "provenance": {
+    "authored_by": "TKCollective (Tanilo)",
+    "verification_mode": "asserted",
+    "independently_reproduced_by": []
+  }
+}
