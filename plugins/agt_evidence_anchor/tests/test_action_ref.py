@@ -329,3 +329,23 @@ def test_epoch_ms_path_rejects_non_ascii_digits():
 
 def test_ascii_timestamp_digest_unchanged_by_digit_grammar():
     assert compute_action_ref(**_VECTOR_FIELDS) == _VECTOR_ACTION_REF
+
+
+def test_validate_domain_rejects_trailing_newline_on_rfc3339_timestamp():
+    """'$' in _TIMESTAMP_RE matched before a trailing newline. The grammar must
+    anchor with \\Z so a valid timestamp with '\\n' appended is refused."""
+    with pytest.raises(OutOfProfileDomainError):
+        _validate_domain("agent", "action", "scope", "2026-10-06T12:00:00.000Z\n")
+
+
+def test_validate_domain_rejects_trailing_newline_on_epoch_ms():
+    """'$' in _EPOCH_MS_RE matched before a trailing newline, so an epoch-ms
+    string with '\\n' appended passed on /nexus/trail (allow_epoch_ms=True) and
+    was hashed raw, giving a second action_ref for the same instant."""
+    with pytest.raises(OutOfProfileDomainError):
+        _validate_domain("agent", "action", "scope", "1789000000000\n", allow_epoch_ms=True)
+
+
+def test_validate_domain_still_accepts_clean_epoch_ms_and_rfc3339():
+    _validate_domain("agent", "action", "scope", "1789000000000", allow_epoch_ms=True)
+    _validate_domain("agent", "action", "scope", "2026-10-06T12:00:00.000Z")
