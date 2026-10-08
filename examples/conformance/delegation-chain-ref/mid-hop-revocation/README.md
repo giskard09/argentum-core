@@ -90,5 +90,7 @@ x402-foundation/x402#2332. The differential question comes from MoltyCel's
 test (comment 5995057822 and earlier); the field this set targets was
 proposed by giskard09 (comment 5887938781) and merged in #112 at the
 request of TKCollective (comment 5890759053). `verification_mode` is
-`asserted`: the result above was produced by the author with the reference
-verifier and has not yet been reproduced by anyone else.
+`asserted`, which classifies the result as structurally decidable (content-addressed,
+operator-independent) per `docs/spec/verification-semantics.md`; it does not count
+reproductions. Reproductions are listed under `provenance.independently_reproduced_by`
+in `vectors.json`.

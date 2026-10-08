@@ -91,6 +91,8 @@ Expected: `5/5 passed`.
 Authored by TKCollective (Tanilo) for
 x402-foundation/x402#2332. The reading of "recovery" as restoration of
 missing `chain_artifact` bytes, with the `parent_delegation_ref` path left
-open, was agreed with giskard09 (comment 5887938781). `verification_mode`
-is `asserted`: the result above was produced by the author with the
-reference verifier and has not yet been reproduced by anyone else.
+open, was agreed with giskard09 (comment 5887938781). `verification_mode` is
+`asserted`, which classifies the result as structurally decidable (content-addressed,
+operator-independent) per `docs/spec/verification-semantics.md`; it does not count
+reproductions. Reproductions are listed under `provenance.independently_reproduced_by`
+in `vectors.json`.
