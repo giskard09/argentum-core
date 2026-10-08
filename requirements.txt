@@ -7,3 +7,4 @@ mcp<2.0.0
 pynacl
 web3
 pytest
+rfc8785==0.1.4

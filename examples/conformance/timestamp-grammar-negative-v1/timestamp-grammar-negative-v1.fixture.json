@@ -1,0 +1,49 @@
+{
+  "fixture_id": "timestamp-grammar-negative-v1",
+  "version": "v1",
+  "spec": "docs/spec/action-ref.md",
+  "hash_algo": "sha256",
+  "preimage_format": "jcs-rfc8785-v1",
+  "generated_at": "2026-10-04",
+  "purpose": "Negative vectors for the action-ref timestamp grammar gate. A conformant verifier MUST reject any timestamp that is not canonical RFC 3339 UTC written with ASCII digits [0-9], three fractional digits and a mandatory Z, before any hashing. A timestamp that uses non-ASCII decimal digits is not a valid form even when it looks like one.",
+  "validation_rule": "The grammar gate runs before canonicalization. A timestamp that fails the gate is a terminal failure before invocation. A verifier that accepts any vector in this file has a conformance bug.",
+  "reserved_slots": [
+    {
+      "slot": "0001",
+      "status": "filled",
+      "owner": "aeoess (follow-up to PR #115)",
+      "requirement": "A negative vector whose timestamp uses non-ASCII decimal digits in place of [0-9] in an otherwise canonical RFC 3339 string. Must be rejected at the grammar gate.",
+      "note": "Filled by the contributed vector neg-0001-arabic-indic-digits.",
+      "vector_id": "neg-0001-arabic-indic-digits"
+    }
+  ],
+  "vectors": [
+    {
+      "id": "neg-0001-arabic-indic-digits",
+      "slot": "0001",
+      "failure_mode": "timestamp_digit_class_drift",
+      "description": "The invocation payload carries the canonical RFC 3339 instant written with Arabic-Indic digits (U+0660 to U+0669) in place of ASCII [0-9]. A grammar written with \\d accepts it, because Python's \\d matches any Unicode decimal digit. The claimed action_ref is the real digest of that payload, so a verifier that skips the grammar gate and hashes verbatim would see a match. A conformant verifier rejects the timestamp at the grammar gate before hashing and never normalizes the digits to retry.",
+      "timestamp": "٢٠٢٦-٠٦-١١T٠٨:٣٠:٠٠.١٢٣Z",
+      "timestamp_codepoints": "U+0662 U+0660 U+0662 U+0666 U+002D U+0660 U+0666 U+002D U+0661 U+0661 U+0054 U+0660 U+0668 U+003A U+0663 U+0660 U+003A U+0660 U+0660 U+002E U+0661 U+0662 U+0663 U+005A",
+      "invocation_payload": {
+        "action_type": "oracle.signal",
+        "agent_id": "nexus-agent-xa12.onrender.com",
+        "scope": "BTC",
+        "timestamp": "٢٠٢٦-٠٦-١١T٠٨:٣٠:٠٠.١٢٣Z"
+      },
+      "drifted_jcs_payload": "{\"action_type\":\"oracle.signal\",\"agent_id\":\"nexus-agent-xa12.onrender.com\",\"scope\":\"BTC\",\"timestamp\":\"٢٠٢٦-٠٦-١١T٠٨:٣٠:٠٠.١٢٣Z\"}",
+      "drifted_bytes_hex": "7b22616374696f6e5f74797065223a226f7261636c652e7369676e616c222c226167656e745f6964223a226e657875732d6167656e742d786131322e6f6e72656e6465722e636f6d222c2273636f7065223a22425443222c2274696d657374616d70223a22d9a2d9a0d9a2d9a62dd9a0d9a62dd9a1d9a154d9a0d9a83ad9a3d9a03ad9a0d9a02ed9a1d9a2d9a35a227d",
+      "claimed_action_ref": "68b81475017d4dedb17679f4a99f7645b91a5065c206e49dd7aa300dfe8e44fb",
+      "canonical_form_payload": {
+        "action_type": "oracle.signal",
+        "agent_id": "nexus-agent-xa12.onrender.com",
+        "scope": "BTC",
+        "timestamp": "2026-06-11T08:30:00.123Z"
+      },
+      "canonical_jcs_payload": "{\"action_type\":\"oracle.signal\",\"agent_id\":\"nexus-agent-xa12.onrender.com\",\"scope\":\"BTC\",\"timestamp\":\"2026-06-11T08:30:00.123Z\"}",
+      "correct_action_ref": "d461626a9ef4b3ab7fe59f2c5392d24143efc98306720bfa1f41373ce2326e10",
+      "expected": "rejected at the timestamp grammar gate, before canonicalization or hashing",
+      "provenance": "contributed by aeoess (Agent Passport System), follow-up to PR #115. Same tuple as recompute-drift-v1 neg-b01 with the timestamp digits replaced"
+    }
+  ]
+}
