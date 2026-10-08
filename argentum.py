@@ -2650,7 +2650,7 @@ def billing_summary(client: str, month: str):
     agent_id=conformance-check).
     """
     import re as _re
-    if not _re.fullmatch(r"\d{4}-\d{2}", month):
+    if not _re.fullmatch(r"[0-9]{4}-[0-9]{2}", month):
         raise HTTPException(400, "month must be YYYY-MM")
     conn = sqlite3.connect(TRAILS_DB)
     conn.row_factory = sqlite3.Row
