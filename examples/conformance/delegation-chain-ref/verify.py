@@ -1,12 +1,11 @@
 """
 Verifier for delegation-chain-ref conformance vectors.
 
-Checks five invariants per spec (delegation-chain-ref-v1):
+Checks four base invariants per spec (delegation-chain-ref-v1):
   1. chain_continuity    — hops[i].delegatee == hops[i+1].delegator
   2. root_anchoring      — root_delegator == hops[0].delegator
   3. leaf_anchoring      — leaf_action_ref matches recomputed action_ref from leaf_preimage
-  4. monotonic_scope_narrowing — hops[i].scope is equal to or a strict sub-namespace of hops[i-1].scope
-  5. hop_signature_valid — if hops[i].hop_signature is present, it must be a valid Ed25519
+  4. hop_signature_valid — if hops[i].hop_signature is present, it must be a valid Ed25519
      signature by hops[i].delegator over JCS({chain_id, delegator, delegatee, scope,
      delegation_ref}) for that hop (cross-org attenuation: without this, chain_continuity
      alone proves nothing about who actually authorized each hop — signatures are what
@@ -16,6 +15,29 @@ Checks five invariants per spec (delegation-chain-ref-v1):
      A delegator with no key in the given key set is NOT_ASSESSED, or FAIL
      delegator_key_not_in_complete_key_set when the caller declares the key set complete
      (keys_are_complete) — never hop_signature_invalid. See evaluate_vector().
+
+Plus one policy-level, opt-in check, corrected 2026-10-10 (see erratum below):
+  5. monotonic_scope_narrowing — hops[i].scope is equal to or a strict sub-namespace of
+     hops[i-1].scope. The spec (delegation-chain-ref.md:15, "It does not constrain scope
+     narrowing between hops — that is the implementer's policy", and the hop.scope field
+     table, "Implementers SHOULD verify...") has never made this a base invariant. Declared
+     by the caller like keys_are_complete, never inferred from the fixture
+     (enforce_scope_narrowing, default False): absent, a violation is not reported at all —
+     a verifier that skips this check entirely is still fully conformant, per the spec's own
+     words. Declared True, a violation is FAIL scope_widening, exactly as before.
+
+> **Erratum (2026-10-10).** From this file's first revision (commit `16e140a`, 2026-06-28)
+> through 2026-10-10, this invariant was checked unconditionally — any scope widening was an
+> unconditional FAIL, with no opt-out, contradicting both of the spec passages quoted above
+> (both already present in the spec a month earlier, commit `d67f620`, and never revised
+> since). Found in self-audit while estimating a GUARDIA ALTA request (narrowing by
+> action-subset, not built) raised the question of what the existing narrowing check's formal
+> status even was. No other vector in this repository depended on the unconditional behavior
+> except `narrowing-neg1-scope-widening` in this file's own `vectors.json` (grepped; the two
+> fixtures with a frozen copy of this verifier, `leaf-screen-halt/` and `revoked-ancestor/`,
+> have no vector that exercises a hop-to-hop widening violation, so neither is affected either
+> way). That vector now declares `enforce_scope_narrowing: true` at the file level to keep
+> demonstrating the FAIL case; its expected verdict is unchanged.
 
 Verdicts are PASS / FAIL / NOT_ASSESSED; any adverse finding makes the chain FAIL.
 
@@ -135,14 +157,16 @@ def verify_hop_signature(chain_id: str, hop: dict, hop_signature_b64: str, pubke
 
 
 def verify_vector(vector: dict, pubkeys: dict | None = None, seen_registry: "SeenRegistry | None" = None,
-                  keys_are_complete: bool = False) -> tuple[bool, list[str]]:
+                  keys_are_complete: bool = False, enforce_scope_narrowing: bool = False) -> tuple[bool, list[str]]:
     """Two-valued view of evaluate_vector(): conforms only on PASS."""
-    verdict, failures, not_assessed = evaluate_vector(vector, pubkeys, seen_registry, keys_are_complete)
+    verdict, failures, not_assessed = evaluate_vector(
+        vector, pubkeys, seen_registry, keys_are_complete, enforce_scope_narrowing)
     return verdict == "PASS", failures + not_assessed
 
 
 def evaluate_vector(vector: dict, pubkeys: dict | None = None, seen_registry: "SeenRegistry | None" = None,
-                    keys_are_complete: bool = False) -> tuple[str, list[str], list[str]]:
+                    keys_are_complete: bool = False,
+                    enforce_scope_narrowing: bool = False) -> tuple[str, list[str], list[str]]:
     """Returns (verdict, failures, not_assessed), verdict in PASS / FAIL / NOT_ASSESSED.
 
     keys_are_complete is declared by the caller, never inferred from the fixture. Absent
@@ -151,6 +175,13 @@ def evaluate_vector(vector: dict, pubkeys: dict | None = None, seen_registry: "S
     delegator_key_not_in_complete_key_set), still not a bad signature. Any adverse finding
     the verifier did make (a signature that does not verify, a chain break, ...) is FAIL
     regardless of what else could not be assessed.
+
+    enforce_scope_narrowing is the same kind of caller declaration, never inferred from the
+    fixture. The spec does not make monotonic scope narrowing a base invariant (see module
+    docstring, point 5, and its erratum) -- absent (default False), this function does not
+    check it at all, and a chain that widens scope between hops is not thereby FAIL or
+    NOT_ASSESSED. Declared True, a widening hop is FAIL scope_widening, same as every prior
+    revision of this file.
     """
     failures = []
     not_assessed = []
@@ -198,17 +229,7 @@ def evaluate_vector(vector: dict, pubkeys: dict | None = None, seen_registry: "S
                 f"!= hops[-1].scope={leaf_hop_scope!r}"
             )
 
-    # 4. monotonic_scope_narrowing
-    for i in range(1, len(hops)):
-        parent = hops[i - 1]["scope"]
-        child = hops[i]["scope"]
-        if not scope_is_narrower_or_equal(parent, child):
-            failures.append(
-                f"scope_widening at hop {i}: hops[{i}].scope={child!r} "
-                f"is not a sub-namespace of hops[{i-1}].scope={parent!r}"
-            )
-
-    # 5. hop_signature_valid — only enforced when hop_signature is present (additive,
+    # 4. hop_signature_valid — only enforced when hop_signature is present (additive,
     # optional field — hops without it are unaffected, per delegation-ref.md invariant 5
     # pattern of opaque/additional fields entering the hash but not required by the base schema).
     # The signature covers {chain_id, delegator, delegatee, scope, delegation_ref} for the hop,
@@ -237,6 +258,19 @@ def evaluate_vector(vector: dict, pubkeys: dict | None = None, seen_registry: "S
                     f"delegator={hop['delegator']!r} and the key set is not declared complete"
                 )
 
+    # 5. monotonic_scope_narrowing — policy-level, opt-in (see module docstring point 5 and
+    # its erratum). Not checked at all unless the caller declares enforce_scope_narrowing;
+    # a verifier that never checks this is still conformant, per the spec's own words.
+    if enforce_scope_narrowing:
+        for i in range(1, len(hops)):
+            parent = hops[i - 1]["scope"]
+            child = hops[i]["scope"]
+            if not scope_is_narrower_or_equal(parent, child):
+                failures.append(
+                    f"scope_widening at hop {i}: hops[{i}].scope={child!r} "
+                    f"is not a sub-namespace of hops[{i-1}].scope={parent!r}"
+                )
+
     # 6. replay_detected — chain_id or any hop delegation_ref already accepted before.
     # Recording happens only after every other check has passed: a submission recorded before
     # all checks were known-good would let a rejected (e.g. bad-signature) attempt consume the
@@ -263,8 +297,9 @@ def evaluate_vector(vector: dict, pubkeys: dict | None = None, seen_registry: "S
 
 def run_file(vectors_path: Path):
     """`expected` is a verdict or a list of acceptable verdicts. A vector may carry its
-    own `pubkeys` and `keys_are_complete`; otherwise the file-level ones apply (default:
-    not declared complete). An expected FAIL also has to fail for its `failure_mode`."""
+    own `pubkeys`, `keys_are_complete`, and `enforce_scope_narrowing`; otherwise the
+    file-level ones apply (default: not declared complete, narrowing not enforced). An
+    expected FAIL also has to fail for its `failure_mode`."""
     data = json.loads(vectors_path.read_text())
     vectors = data["vectors"]
     seen_registry = SeenRegistry()
@@ -278,7 +313,9 @@ def run_file(vectors_path: Path):
         expected = v["expected"] if isinstance(v["expected"], list) else [v["expected"]]
         pubkeys = v.get("pubkeys", data.get("pubkeys", {}))
         complete = v.get("keys_are_complete", data.get("keys_are_complete", False))
-        verdict, failures, not_assessed = evaluate_vector(v, pubkeys, seen_registry, complete)
+        enforce_narrowing = v.get("enforce_scope_narrowing", data.get("enforce_scope_narrowing", False))
+        verdict, failures, not_assessed = evaluate_vector(
+            v, pubkeys, seen_registry, complete, enforce_narrowing)
 
         ok = verdict in expected
         mode = v.get("failure_mode")

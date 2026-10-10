@@ -40,7 +40,8 @@ def _red_cases(v):
             expected = vec["expected"] if isinstance(vec["expected"], list) else [vec["expected"]]
             pubkeys = vec.get("pubkeys", data.get("pubkeys", {}))
             complete = vec.get("keys_are_complete", data.get("keys_are_complete", False))
-            verdict, failures, _ = v.evaluate_vector(vec, pubkeys, seen, complete)
+            narrowing = vec.get("enforce_scope_narrowing", data.get("enforce_scope_narrowing", False))
+            verdict, failures, _ = v.evaluate_vector(vec, pubkeys, seen, complete, narrowing)
             ok = verdict in expected
             if ok and verdict == "FAIL" and vec.get("failure_mode"):
                 ok = any(f.startswith(vec["failure_mode"]) for f in failures)
@@ -79,8 +80,8 @@ def _mutant_fail_open(orig):
 
 def _mutant_ignore_declaration(orig):
     """keys_are_complete dropped: the caller's declaration never reaches the check."""
-    def f(vector, pubkeys=None, seen_registry=None, keys_are_complete=False):
-        return orig(vector, pubkeys, seen_registry, False)
+    def f(vector, pubkeys=None, seen_registry=None, keys_are_complete=False, enforce_scope_narrowing=False):
+        return orig(vector, pubkeys, seen_registry, False, enforce_scope_narrowing)
     return f
 
 

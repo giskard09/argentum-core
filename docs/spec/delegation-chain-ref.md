@@ -12,7 +12,7 @@
 
 **What it enables:** a Mycelium verifier holding `delegation_chain_ref` can reconstruct the full authorization path from root delegator to leaf action, verify each hop's `delegation_ref` independently, confirm chain continuity (each `delegatee` equals the next `delegator`), and confirm the leaf agent's final action_ref. No single intermediary needs to be trusted — each hop is a tamper-evident commitment to the delegation artifact that authorized it.
 
-**What it does not do:** `delegation_chain_ref` does not validate that individual delegation artifacts are still in force (see [`revocation-ref.md`](./revocation-ref.md) for invalidation). It does not constrain scope narrowing between hops — that is the implementer's policy. It does not replace the individual `delegation_ref` fields carried in each hop's trail record.
+**What it does not do:** `delegation_chain_ref` does not validate that individual delegation artifacts are still in force (see [`revocation-ref.md`](./revocation-ref.md) for invalidation). It does not constrain scope narrowing between hops — that is the implementer's policy (see "Scope narrowing" below for what that means for the reference verifier, and a 2026-10-10 erratum correcting it to match this sentence). It does not replace the individual `delegation_ref` fields carried in each hop's trail record.
 
 **Relation to AAE:** the chain artifacts defined here are this spec's own format. They are not AAE envelopes: they carry none of the AAE-02 §2.1 JWS protected header (`alg`, `cty`, `kid`) or Verifiable Credential structure, and they carry no CONSTRAINTS block (AAE-02 §2.3). This spec does not evaluate AAE conformance, and no vector in this repository is an AAE conformance test.
 
@@ -85,7 +85,7 @@ delegation_chain_ref = hashlib.sha256(jcs(chain_artifact).encode()).hexdigest()
 | `delegatee` | string | Agent that received this delegation. Must equal `hops[i+1].delegator` for all non-leaf hops. |
 | `delegator` | string | Agent that granted this delegation. Must equal `hops[i-1].delegatee` for all non-root hops. |
 | `delegation_ref` | SHA-256 hex | Hash of the delegation artifact for this hop, derived per [`delegation-ref.md`](./delegation-ref.md). |
-| `scope` | string | Scope of this hop. Implementers SHOULD verify it is equal to or a subset of the parent hop's scope. |
+| `scope` | string | Scope of this hop. Implementers SHOULD verify it is equal to or a subset of the parent hop's scope — see "Scope narrowing" below. |
 | `hop_signature` | base64 (optional) | Ed25519 signature by `delegator` over the UTF-8 bytes of `JCS({chain_id, delegator, delegatee, scope, delegation_ref})` for this hop (erratum 2026-08-27, see below — an earlier revision signed `delegation_ref` alone). Additive field — omitting it does not change conformance of a chain that predates it (see "Cross-org attenuation" below). |
 
 ---
@@ -253,6 +253,47 @@ protection unless it holds this state.
 > "Recording should happen only after all checks succeed"). Fixed by recording only
 > when the submission has zero other failures; a check for an already-recorded chain
 > still runs unconditionally, so an actual replay is still caught.
+
+---
+
+## Scope narrowing (policy-level, opt-in)
+
+`hops[i].scope` SHOULD be equal to or a strict sub-namespace of `hops[i-1].scope` — see the
+hop field table above. This is a SHOULD, not a base invariant: "What it does not do" above
+already states that `delegation_chain_ref` does not constrain scope narrowing between hops,
+that this is the implementer's policy. A verifier that never checks this is not
+non-conformant — same standing as a verifier that never checks `hop_signature` or never
+tracks replay, both of which get the same "additive, optional" framing in this document.
+
+> **Erratum (2026-10-10).** From this check's introduction (commit `16e140a`, 2026-06-28)
+> through this revision, the reference verifier (`examples/conformance/delegation-chain-ref/
+> verify.py`) enforced scope narrowing unconditionally — any hop that widened scope was an
+> unconditional FAIL, with no opt-out, contradicting the "implementer's policy" sentence above
+> and this field's own SHOULD, both already present in this document a month earlier (commit
+> `d67f620`, unchanged since). The check was written as if it were a base invariant, alongside
+> `chain_continuity`/`root_anchoring`/`leaf_anchoring`, without anyone revisiting whether that
+> matched what this document already said. Found in self-audit, prompted by a question raised
+> while estimating an unrelated extension (narrowing by action-subset, not built — see
+> `aae-conformance-vectors` interop discussion, x402#2332). Fixed: `evaluate_vector()` and
+> `verify_vector()` take `enforce_scope_narrowing` (default `False`), the same kind of
+> caller declaration as `keys_are_complete` — never inferred from the fixture. Absent, scope
+> narrowing is not checked at all, and a widening hop does not make the chain FAIL or
+> NOT_ASSESSED. Declared `True` (a vector or vector file may declare it, same mechanic as
+> `keys_are_complete`), a widening hop is `FAIL scope_widening`, exactly as every revision of
+> this check before this fix. `examples/conformance/delegation-chain-ref/vectors.json` (the
+> fixture set this check was built for) declares `enforce_scope_narrowing: true` at the file
+> level, so its documented `narrowing-neg1-scope-widening` FAIL is unchanged by this fix. No
+> other vector in this repository depends on the old unconditional behavior: the two fixtures
+> that carry a frozen copy of the verifier (`leaf-screen-halt/`, `revoked-ancestor/`) have no
+> vector that exercises a hop-to-hop widening violation — their own negative cases are
+> `scope_mismatch_at_leaf` (a different, base invariant) and a revocation differential (scope
+> constant across all hops), respectively, so neither is affected either way.
+
+A verifier that does opt in SHOULD apply the same rule the reference verifier does:
+`hops[i].scope` equals `hops[i-1].scope`, or `hops[i-1].scope` ends in `:*` and `hops[i].scope`
+falls under that prefix, or `hops[i].scope` starts with `hops[i-1].scope + ":"`. See
+`scope_is_narrower_or_equal()` and `examples/conformance/delegation-chain-ref/vectors.json`'s
+`narrowing_rule` field for the same statement in the reference verifier's own words.
 
 ---
 
