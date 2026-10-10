@@ -1,7 +1,8 @@
 {
   "spec_version": "delegation-chain-ref-v1",
-  "description": "Conformance vectors for monotonic scope narrowing invariant. Each hop scope MUST be equal to or a strict subset of its parent hop scope. Scope narrowing is verified by checking that each hop[i].scope is a prefix match (sub-namespace) of hop[i-1].scope, where ':' is the namespace separator.",
+  "description": "Conformance vectors for monotonic scope narrowing. This is a policy-level, opt-in check (delegation-chain-ref.md:15: 'It does not constrain scope narrowing between hops -- that is the implementer's policy'; the hop.scope field table says 'Implementers SHOULD verify...'), not a base invariant -- see verify.py's module docstring, point 5, and its 2026-10-10 erratum. This file declares enforce_scope_narrowing (below) to demonstrate the check as this fixture set's own chosen policy; a verifier that never enables it is still fully conformant.",
   "narrowing_rule": "hops[i].scope must equal hops[i-1].scope OR start with hops[i-1].scope + ':'. The wildcard '*' at the end of a scope matches any sub-namespace.",
+  "enforce_scope_narrowing": true,
   "vectors": [
     {
       "id": "narrowing-positive-001",
