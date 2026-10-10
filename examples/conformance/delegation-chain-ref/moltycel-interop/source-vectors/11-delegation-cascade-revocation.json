@@ -1,0 +1,34 @@
+{
+  "id": "aae-vector-11",
+  "name": "Delegation cascade revocation \u2014 revoked parent invalidates child",
+  "description": "Depth-1 delegated AAE whose parent (root) AAE is revoked at its revocation endpoint.",
+  "section_ref": "draft-kroehl-agentic-trust-aae-00 \u00a76.5 (Delegation Revocation), \u00a75 step 9 (+ step 8 per ancestor)",
+  "input": {
+    "secured_aae": "eyJhbGciOiJFZERTQSIsImN0eSI6ImFhZStqc29uIiwia2lkIjoiZGlkOndlYjpleGFtcGxlLmNvbTphZ2VudC1hI2tleS0xIn0.eyJAY29udGV4dCI6WyJodHRwczovL3d3dy53My5vcmcvbnMvY3JlZGVudGlhbHMvdjIiLCJodHRwczovL21vbHRydXN0LmNoL2NvbnRleHRzL2FhZS92MSJdLCJ0eXBlIjpbIlZlcmlmaWFibGVDcmVkZW50aWFsIiwiQWdlbnRBdXRob3JpemF0aW9uRW52ZWxvcGUiXSwiaWQiOiJ1cm46dXVpZDowMDAwMDAwYi0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwYjEiLCJpc3N1ZXIiOiJkaWQ6d2ViOmV4YW1wbGUuY29tOmFnZW50LWEiLCJ2YWxpZEZyb20iOiIyMDI2LTA1LTIwVDA4OjAwOjAwWiIsImNyZWRlbnRpYWxTdWJqZWN0Ijp7ImlkIjoiZGlkOndlYjpleGFtcGxlLmNvbTphZ2VudC1iIiwiYWFlIjp7Im1hbmRhdGUiOnsiYWN0aW9ucyI6WyJyZWFkIl0sImRlbGVnYXRpb24iOnsiZGVsZWdhdG9yX2RpZCI6ImRpZDp3ZWI6ZXhhbXBsZS5jb206YWdlbnQtYSIsImRlbGVnYXRvcl9hYWVfaWQiOiJ1cm46dXVpZDowMDAwMDAwYi0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwYTAiLCJkZWxlZ2F0b3JfYWFlX3VyaSI6Imh0dHBzOi8vYWFlLmV4YW1wbGUvcC91cm46dXVpZDowMDAwMDAwYi0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwYTAiLCJkZWxlZ2F0b3JfYWFlX2hhc2giOiJzaGEtMjU2OmM5VTFvVnpKeUMtbzdwT0ItekptZE5qcWk0Tk5CMWxYYmJ5VFhram1rMFEiLCJkZXB0aCI6MSwibWF4X2RlcHRoIjoyfX0sImNvbnN0cmFpbnRzIjp7Im1heF90cmFuc2FjdGlvbl92YWx1ZSI6eyJ2YWx1ZSI6MzAwLCJjdXJyZW5jeSI6IlVTRCIsInJlcXVpcmVkIjp0cnVlfX0sInZhbGlkaXR5Ijp7Im5vdF9iZWZvcmUiOiIyMDI2LTA1LTIwVDA4OjAwOjAwWiIsIm5vdF9hZnRlciI6IjIwMjYtMDUtMjBUMTY6MDA6MDBaIiwic2luZ2xlX3VzZSI6ZmFsc2V9fX19.vsoTrPxr0g2GAH78V7QSIV09MYAnOI7PNrIgiT9Y2kWu9Wdv0jy_quAGbS9LJfv4q_VLkq3Evhz6T9uHA8p5Bg",
+    "context": {
+      "current_time": "2026-05-20T12:00:00Z",
+      "requested_action": "read",
+      "action_context": {
+        "amount": 50,
+        "currency": "USD"
+      },
+      "subject_binding": {
+        "challenge_response_valid": true
+      },
+      "delegation_chain": [
+        "eyJhbGciOiJFZERTQSIsImN0eSI6ImFhZStqc29uIiwia2lkIjoiZGlkOndlYjpleGFtcGxlLmNvbTpyZWdpc3RyeSNrZXktMSJ9.eyJAY29udGV4dCI6WyJodHRwczovL3d3dy53My5vcmcvbnMvY3JlZGVudGlhbHMvdjIiLCJodHRwczovL21vbHRydXN0LmNoL2NvbnRleHRzL2FhZS92MSJdLCJ0eXBlIjpbIlZlcmlmaWFibGVDcmVkZW50aWFsIiwiQWdlbnRBdXRob3JpemF0aW9uRW52ZWxvcGUiXSwiaWQiOiJ1cm46dXVpZDowMDAwMDAwYi0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwYTAiLCJpc3N1ZXIiOiJkaWQ6d2ViOmV4YW1wbGUuY29tOnJlZ2lzdHJ5IiwidmFsaWRGcm9tIjoiMjAyNi0wNS0yMFQwODowMDowMFoiLCJjcmVkZW50aWFsU3ViamVjdCI6eyJpZCI6ImRpZDp3ZWI6ZXhhbXBsZS5jb206YWdlbnQtYSIsImFhZSI6eyJtYW5kYXRlIjp7ImFjdGlvbnMiOlsicmVhZCIsImJvb2siXSwicHVycG9zZSI6IkJ1c2luZXNzIHRyYXZlbCBib29raW5nIiwic2NvcGUiOiJ0cmF2ZWwtdmVydGljYWwiLCJwcmluY2lwYWxfZGlkIjoiZGlkOndlYjpleGFtcGxlLmNvbTplbnRlcnByaXNlLWNvcnAiLCJkZWxlZ2F0aW9uX3BvbGljeSI6eyJtYXhfZGVwdGgiOjJ9fSwiY29uc3RyYWludHMiOnsibWF4X3RyYW5zYWN0aW9uX3ZhbHVlIjp7InZhbHVlIjo1MDAsImN1cnJlbmN5IjoiVVNEIiwicmVxdWlyZWQiOnRydWV9fSwidmFsaWRpdHkiOnsibm90X2JlZm9yZSI6IjIwMjYtMDUtMjBUMDg6MDA6MDBaIiwibm90X2FmdGVyIjoiMjAyNi0wNS0yMFQxNjowMDowMFoiLCJzaW5nbGVfdXNlIjpmYWxzZSwicmV2b2NhdGlvbl9jaGVjayI6Imh0dHBzOi8vYXBpLmV4YW1wbGUuY29tL2FhZS9yZXZvY2F0aW9uL3tpZH0ifX19fQ.tA92dlzOUZwfuvvY5GX-Stf0W5YsJSt_gCPWPmrH4O2-9ZKrX0Fjz53K7sw6BH8I3Iri8DwHNGlOx-_KzIgLDw"
+      ],
+      "revocation_responses": {
+        "urn:uuid:0000000b-0000-4000-8000-0000000000a0": {
+          "revoked": true
+        }
+      }
+    }
+  },
+  "expected": {
+    "result": "REJECT",
+    "verification_step": 9,
+    "rejection_reason": "ancestor_revoked"
+  },
+  "rationale": "Section 5 step 9 applies the revocation check to each ancestor AAE, and \u00a76.5 states a relying party that determines a parent AAE has been revoked SHOULD treat all descendants as invalid. The parent endpoint reports revoked:true, so the descendant is rejected at step 9."
+}
