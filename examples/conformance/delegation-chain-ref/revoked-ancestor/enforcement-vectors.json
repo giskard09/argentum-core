@@ -1,0 +1,62 @@
+{
+  "spec_version": "delegation-chain-ref-v1 + AAE-02 §7.5 (enforcement layer)",
+  "description": "Two verdict models over the same chains. default = structural verdict only (no revocation read). 7.5 = structural AND enforcement: a known-revoked hop invalidates its descendants and the leaf action under them. The structural verdict must be identical under both models (checked by verify_enforcement.py).",
+  "cases": [
+    {
+      "id": "ev-001-default-no-revocation",
+      "source": "chain-revoked-ancestor-001-baseline",
+      "known_revocations": "none",
+      "model": "default",
+      "expected": "PASS"
+    },
+    {
+      "id": "ev-002-default-mid-hop-revoked",
+      "source": "chain-revoked-ancestor-001-with-revocation",
+      "known_revocations": "revocation_artifact",
+      "model": "default",
+      "expected": "PASS"
+    },
+    {
+      "id": "ev-003-7.5-no-revocation",
+      "source": "chain-revoked-ancestor-001-baseline",
+      "known_revocations": "none",
+      "model": "7.5",
+      "expected": "PASS"
+    },
+    {
+      "id": "ev-004-7.5-mid-hop-revoked",
+      "source": "chain-revoked-ancestor-001-with-revocation",
+      "known_revocations": "revocation_artifact",
+      "model": "7.5",
+      "expected": "FAIL"
+    },
+    {
+      "id": "ev-005-7.5-root-revoked-synthetic",
+      "source": "chain-revoked-ancestor-001-baseline",
+      "known_revocations": [
+        {
+          "revoked_action_ref": "e7a936ee9b30fceae7239df32ecb593b60b109f05463f3048740c8bc45f9824a",
+          "version": "revocation-ref-v1",
+          "revoked_at": "2026-08-15T09:00:00.000Z",
+          "scope": "mycelium:payment"
+        }
+      ],
+      "model": "7.5",
+      "expected": "FAIL"
+    },
+    {
+      "id": "ev-006-default-root-revoked-synthetic",
+      "source": "chain-revoked-ancestor-001-baseline",
+      "known_revocations": [
+        {
+          "revoked_action_ref": "e7a936ee9b30fceae7239df32ecb593b60b109f05463f3048740c8bc45f9824a",
+          "version": "revocation-ref-v1",
+          "revoked_at": "2026-08-15T09:00:00.000Z",
+          "scope": "mycelium:payment"
+        }
+      ],
+      "model": "default",
+      "expected": "PASS"
+    }
+  ]
+}
