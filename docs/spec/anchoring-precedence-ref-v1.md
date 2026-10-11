@@ -126,6 +126,16 @@ The terminal record traces back to the proposed action that originated the trail
 
 ---
 
+## Multiple mechanisms for one trail (non-normative)
+
+Nothing in the five invariants requires exactly one envelope per `trail_id`. A trail MAY be anchored by more than one mechanism: each envelope is self-contained (own `mechanism`, own `anchor_block_time`, same `trail_id`) and independently verifiable against all five invariants, so a second envelope with a different mechanism was always checkable — this section only writes down the composition pattern, it does not change any invariant.
+
+This is useful because mechanisms fail in different ways. A trusted-timestamp (RFC 3161) commitment depends on one TSA key that can age or be revoked. A Bitcoin OTS commitment depends on no signing key, but inherits the miner-claimed-timestamp caveat under invariant 4 (`anchoring_precedence`) above. Carrying both means a verifier is not forced to trust a single aging or caveated commitment.
+
+How many envelopes must pass, and whether a renewal is required once one ages out, is a policy decision outside this profile's scope — the same separation of invariant (what this profile checks) from mechanism (what satisfies it) that governs one envelope governs a set of them. A system embedding `anchoring_precedence_ref` envelopes inside a larger format (e.g. a dispute-evidence pack with its own digest boundary) needs its own rule for where multiple envelopes live relative to that boundary — this profile does not prescribe one.
+
+---
+
 ## Relationship to other refs
 
 | Ref | What it answers |
