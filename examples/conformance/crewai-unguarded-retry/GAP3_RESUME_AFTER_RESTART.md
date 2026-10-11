@@ -73,6 +73,39 @@ call independently reads `effect_store` (never window_ms, never "the
 record survived" as its own evidence) and promotes the record to
 `COMMITTED` with the real `effect_id`. `effect_count == 1`.
 
+## Concurrent first attempts against the same SQLite database
+
+Persistence alone does not reserve an action: two guard connections can
+both read no row before either writes PENDING. The durable guard now uses
+`INSERT ... ON CONFLICT DO NOTHING` for the initial reservation. Only the
+connection that inserts the row may call the effect function, after its
+reservation commits. A losing connection reads the existing PENDING or
+COMMITTED state without replacing it; a stale empty read therefore cannot
+overwrite an already committed effect ID. SQL or commit failure prevents
+dispatch, and a missing record or unexpected status after a lost reservation fails
+closed.
+
+`tests/test_durable_idempotency_guard.py` exercises two independently owned
+SQLite guard connections, synchronizing their first actual empty reads.
+The native `EffectStore` runs in its own thread; fresh reads check its
+effect rows and counter after both attempts finish. The cases cover the
+same reference, different references, and a stale empty read resumed only
+after the other attempt commits. Further cases check committed PENDING
+visibility before dispatch, exceptions before and after an effect, fresh
+instance replay, and reconciliation against the independent effect store.
+Run without CrewAI or a provider connection:
+
+```sh
+python -m pytest tests/test_durable_idempotency_guard.py -q
+```
+
+This is an atomic initial-reservation check for the local worked example,
+not a claim of provider-side exactly-once execution. It does not cover
+concurrent `reset=True`, deletion or recycling of records, concurrent
+reconciliation, or multi-host database/filesystem behavior. Exception and
+fresh-instance cases are not OS process-kill tests. `PROVENANCE.md` and
+its anchored evidence remain unchanged.
+
 ## What this does not claim
 
 - Not a fix proposal against `crewAIInc/crewAI` — the restart happens

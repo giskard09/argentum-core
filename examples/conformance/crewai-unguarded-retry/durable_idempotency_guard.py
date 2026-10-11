@@ -68,8 +68,24 @@ class DurableIdempotencyGuard:
         )
         self._conn.commit()
 
+    def _reserve(self, idempotency_ref: str) -> bool:
+        # The primary key arbitrates concurrent first attempts. Commit before
+        # dispatch; the context manager also rolls back if INSERT/commit fails.
+        with self._conn:
+            inserted = self._conn.execute(
+                "INSERT INTO guard_records (idempotency_ref, trail_status, effect_id) "
+                "VALUES (?, 'PENDING', NULL) ON CONFLICT(idempotency_ref) DO NOTHING",
+                (idempotency_ref,),
+            ).rowcount
+        return inserted == 1
+
     def guard(self, idempotency_ref: str, attempt_no: int, real_effect_fn):
         existing = self._read(idempotency_ref)
+        reserved = existing is None and self._reserve(idempotency_ref)
+        if existing is None and not reserved:
+            # Another connection reserved after our read. Observe its state
+            # without replacing PENDING or a result it has already committed.
+            existing = self._read(idempotency_ref)
 
         if existing is not None and existing["trail_status"] == "COMMITTED":
             self.events.append(
@@ -89,7 +105,8 @@ class DurableIdempotencyGuard:
             # already committed the effect. Refuse, do not re-run.
             return None, "PENDING_GUARD"
 
-        self._write(idempotency_ref, {"trail_status": "PENDING", "effect_id": None})
+        if not reserved:
+            raise RuntimeError("reservation has no valid PENDING or COMMITTED record")
         try:
             effect_id = real_effect_fn()
         except Exception:
