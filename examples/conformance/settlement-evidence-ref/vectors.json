@@ -1,7 +1,7 @@
 {
   "spec_version": "settlement-evidence-ref-v1",
-  "description": "Conformance vectors for settlement-evidence-ref-v1 (docs/spec/settlement-evidence-ref.md). Three checks: ledger_recomputed (payer_debit/payee_credit read from the rail's own transaction data, never accepted as a bare facilitator success flag), debit_credit_paired (both sides present, not just one), matches_offer (when offer_identity_ref is present, the settled amount/asset/payee match what the offer required). A verifier that accepts a facilitator's success:true alone, without independently recomputed debit/credit, silently passes facilitator-assertion-only-001 — this is R5's central prohibition.",
-  "comparator_rule": "PASS requires SHA-256(JCS(settlement_artifact)) == declared settlement_evidence_ref AND checks.ledger_recomputed==true AND checks.debit_credit_paired==true AND checks.matches_offer==true (when offer_identity_ref is present and a referenced_offer is supplied for comparison).",
+  "description": "Conformance vectors for settlement-evidence-ref-v1 (docs/spec/settlement-evidence-ref.md). Four checks: ledger_recomputed (payer_debit/payee_credit read from the rail's own transaction data, never accepted as a bare facilitator success flag), debit_credit_paired (both sides present, not just one), matches_offer (when offer_identity_ref is present, the settled amount/asset/payee match what the offer required), transaction_present (settlement_artifact.transaction is a non-empty string — the same field x402#2887 found left as '' in a production receipt despite the settlement hash existing). A verifier that accepts a facilitator's success:true alone, without independently recomputed debit/credit, silently passes facilitator-assertion-only-001 — this is R5's central prohibition.",
+  "comparator_rule": "PASS requires SHA-256(JCS(settlement_artifact)) == declared settlement_evidence_ref AND checks.ledger_recomputed==true AND checks.debit_credit_paired==true AND checks.matches_offer==true (when offer_identity_ref is present and a referenced_offer is supplied for comparison) AND checks.transaction_present==true.",
   "vectors": [
     {
       "id": "settlement-matched-001",
@@ -17,7 +17,7 @@
       },
       "settlement_evidence_ref": "e061c6a77d1a3d7ae934b0869592b1b9dd518583f357763b76f73007f865f0c0",
       "referenced_offer": {"maxAmountRequired": "10000", "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e", "payTo": "0x209693Bc6afc0C5328bA36FaF03C514EF312287C"},
-      "checks": {"ledger_recomputed": true, "debit_credit_paired": true, "matches_offer": true}
+      "checks": {"ledger_recomputed": true, "debit_credit_paired": true, "matches_offer": true, "transaction_present": true}
     },
     {
       "id": "facilitator-assertion-only-001",
@@ -35,7 +35,7 @@
       },
       "settlement_evidence_ref": "b468ad1891785b7166926af959ce80807f8982085574bb8f20f4e1b5ea776dde",
       "referenced_offer": {"maxAmountRequired": "10000", "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e", "payTo": "0x209693Bc6afc0C5328bA36FaF03C514EF312287C"},
-      "checks": {"ledger_recomputed": false, "debit_credit_paired": false, "matches_offer": false}
+      "checks": {"ledger_recomputed": false, "debit_credit_paired": false, "matches_offer": false, "transaction_present": true}
     },
     {
       "id": "settlement-amount-mismatch-vs-offer-001",
@@ -53,7 +53,25 @@
       },
       "settlement_evidence_ref": "0e412c3d5c1e3404f0678e1b19acbe869594bc29cadfbf0e413a673c2c7f6782",
       "referenced_offer": {"maxAmountRequired": "10000", "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e", "payTo": "0x209693Bc6afc0C5328bA36FaF03C514EF312287C"},
-      "checks": {"ledger_recomputed": true, "debit_credit_paired": true, "matches_offer": false}
+      "checks": {"ledger_recomputed": true, "debit_credit_paired": true, "matches_offer": false, "transaction_present": true}
+    },
+    {
+      "id": "settlement-transaction-missing-001",
+      "description": "T4 negative: payer_debit and payee_credit are both independently recomputed from the rail (ledger_recomputed=true, declared, exactly as in settlement-matched-001) and both sides are paired and match the referenced offer — but settlement_artifact.transaction is an empty string. Same shape as x402-foundation/x402#2887 / issue #3824: enrichExtensions overwrote the extension declaration instead of merging it, so includeTxHash:true never reached enrichSettlementResponse and the signed receipt kept transaction:\"\" even though the settlement already had a real hash. ledger_recomputed/debit_credit_paired/matches_offer being true does not make the transaction reference optional — T4 names network+transaction as required fields independent of the other three checks.",
+      "expected": "FAIL",
+      "failure_mode": "transaction_missing_or_empty",
+      "failure_detail": "settlement_artifact.transaction is \"\" — no transaction reference, even though ledger_recomputed/debit_credit_paired/matches_offer are all true",
+      "settlement_artifact": {
+        "network": "base-sepolia",
+        "transaction": "",
+        "offer_identity_ref": "0df1f6792f5aa482568ff3b6cb39568d5fe0b5f29b7dc7148b5dba400451d4c4",
+        "payer_debit":  {"address": "0xA11ce00000000000000000000000000000000001", "amount": "10000", "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e"},
+        "payee_credit": {"address": "0x209693Bc6afc0C5328bA36FaF03C514EF312287C", "amount": "10000", "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e"},
+        "version": "settlement-evidence-ref-v1"
+      },
+      "settlement_evidence_ref": "f909081a79e81d6f5b3f914cf74c96cb51c764722bad012278d70b31f582c8a1",
+      "referenced_offer": {"maxAmountRequired": "10000", "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e", "payTo": "0x209693Bc6afc0C5328bA36FaF03C514EF312287C"},
+      "checks": {"ledger_recomputed": true, "debit_credit_paired": true, "matches_offer": true, "transaction_present": false}
     }
   ],
   "provenance": {

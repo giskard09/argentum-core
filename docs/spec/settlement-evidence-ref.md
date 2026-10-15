@@ -132,6 +132,20 @@ what was offered is `checks.debit_credit_paired: true` (both sides are internall
 with each other) but `checks.matches_offer: false` — a distinguishable state, not collapsed
 into either a hash-mismatch or a pass.
 
+**6. transaction reference must be present and non-empty**
+
+`transaction` is a required field (see Derivation, above, and T4 below) independent of
+`ledger_recomputed`/`debit_credit_paired`/`matches_offer`: a `settlement_artifact` with both
+sides recomputed, paired and matching the offer, but `transaction: ""`, still fails —
+`checks.transaction_present` MUST be `true`. This is structurally the same failure as
+x402-foundation/x402#2887 (issue #3824): `enrichExtensions` overwrote the extension
+declaration instead of merging it, so `includeTxHash: true` never reached
+`enrichSettlementResponse` and the signed receipt kept `transaction: ""` even though the
+settlement already had a real hash — two otherwise-identical payments became distinguishable
+only by a one-second difference in `issuedAt`. A reference verifier that only checked
+`debit_credit_paired`/`ledger_recomputed`/`matches_offer` would have accepted that artifact;
+`transaction_present` closes that gap.
+
 ---
 
 ## Position in the envelope

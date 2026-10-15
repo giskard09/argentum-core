@@ -1,7 +1,7 @@
 """
 Verifier for settlement-evidence-ref-v1 conformance vectors.
 
-Four checks per spec (docs/spec/settlement-evidence-ref.md):
+Five checks per spec (docs/spec/settlement-evidence-ref.md):
   1. canonical_settlement — SHA-256(JCS(settlement_artifact)) matches the
      declared settlement_evidence_ref.
   2. ledger_recomputed — payer_debit/payee_credit were independently read
@@ -15,6 +15,14 @@ Four checks per spec (docs/spec/settlement-evidence-ref.md):
   4. matches_offer — when offer_identity_ref is present and a
      referenced_offer is supplied, the settled amount/asset/payee match
      what the offer required.
+  5. transaction_present — `artifact["transaction"]` is a non-empty string.
+     The spec already names `transaction` as a required field (T4), but
+     until this check existed no vector enforced it structurally: a
+     settlement_artifact with `transaction: ""` and both sides otherwise
+     paired/recomputed would pass. This is the same shape as x402#2887's
+     production bug (a signed receipt left with `transaction: ""` because
+     the hash never reached the response) landing undetected in our own
+     reference verifier.
 """
 
 import hashlib
@@ -37,6 +45,11 @@ def check_debit_credit_paired(artifact: dict) -> bool:
     return all(debit.get(k) is not None for k in ("address", "amount", "asset")) and all(
         credit.get(k) is not None for k in ("address", "amount", "asset")
     )
+
+
+def check_transaction_present(artifact: dict) -> bool:
+    tx = artifact.get("transaction")
+    return isinstance(tx, str) and tx != ""
 
 
 def check_matches_offer(artifact: dict, referenced_offer: dict | None) -> bool:
@@ -92,6 +105,18 @@ def verify_vector(vector: dict) -> tuple[bool, list[str]]:
         )
     if not computed_matches:
         failures.append("matches_offer: false — settled amount/asset/payee diverge from offer")
+
+    # 5. transaction_present
+    computed_tx_present = check_transaction_present(artifact)
+    declared_tx_present = checks.get("transaction_present", True)
+    if computed_tx_present != declared_tx_present:
+        failures.append(
+            f"transaction_present: computed {computed_tx_present} != declared {declared_tx_present}"
+        )
+    if not computed_tx_present:
+        failures.append(
+            "transaction_present: false — settlement_artifact.transaction is missing or empty"
+        )
 
     return len(failures) == 0, failures
 
