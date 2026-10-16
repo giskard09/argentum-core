@@ -1,0 +1,66 @@
+{
+  "scenario": "ip-licensing-worked-example-v1",
+  "precedence": {
+    "envelope": {
+      "trail_id": "ip-reg:thermal-exchanger-v2:lucia-reyes",
+      "anchor_block_time": 1756728000,
+      "mechanism": "on-chain",
+      "outcome_ts_ms": 1758369600000,
+      "version": "anchoring-precedence-ref-v1"
+    },
+    "anchoring_precedence_ref": "446b345180f931bc9ae8df754bfd4f3032d04b9d5b6906e1763ccfdef23e1f96"
+  },
+  "custody_chain": {
+    "hop_artifacts": [
+      {
+        "delegator": "ip:lucia-reyes",
+        "delegatee": "manufacturing-co",
+        "capability": "manufacture",
+        "scope": "license:manufacture:thermal-exchanger-v2",
+        "expires_at": "2027-09-01T00:00:00.000Z",
+        "policy_version": "pil-v1",
+        "version": "delegation-ref-v1"
+      },
+      {
+        "delegator": "manufacturing-co",
+        "delegatee": "regional-fab-co",
+        "capability": "manufacture",
+        "scope": "license:manufacture:thermal-exchanger-v2:region=LATAM",
+        "expires_at": "2027-09-01T00:00:00.000Z",
+        "policy_version": "pil-v1",
+        "version": "delegation-ref-v1"
+      }
+    ],
+    "chain_artifact": {
+      "chain_id": "chain:thermal-exchanger-v2:lucia-to-regionalfab",
+      "hops": [
+        {
+          "delegator": "ip:lucia-reyes",
+          "delegatee": "manufacturing-co",
+          "delegation_ref": "9c9fce4c590bffac68c042e35144b2f794292e2dd64000f0e3cd09484acc66fe",
+          "scope": "license:manufacture:thermal-exchanger-v2"
+        },
+        {
+          "delegator": "manufacturing-co",
+          "delegatee": "regional-fab-co",
+          "delegation_ref": "8ccccc06b3d2af48584f7f0e31c8d8a0d0d5435b1524e648e1b1d917b8dee28e",
+          "scope": "license:manufacture:thermal-exchanger-v2:region=LATAM"
+        }
+      ],
+      "leaf_action_ref": "f8f761587c191b428cde7b8abbe7ec6d4cd4d9ac17ddb11b4692e3e4b970f671",
+      "root_delegator": "ip:lucia-reyes",
+      "scope": "license:manufacture:thermal-exchanger-v2",
+      "version": "delegation-chain-ref-v1"
+    },
+    "delegation_chain_ref": "9385571bd19cef962722c5c09f72f3406bd7e4b85c321063b86678331373fd81"
+  },
+  "settlement": {
+    "preimage": {
+      "agent_id": "regional-fab-co",
+      "action_type": "royalty:settle",
+      "scope": "license:manufacture:thermal-exchanger-v2:region=LATAM:q3-2026",
+      "timestamp": "2026-10-01T00:00:00.000Z"
+    },
+    "action_ref": "f8f761587c191b428cde7b8abbe7ec6d4cd4d9ac17ddb11b4692e3e4b970f671"
+  }
+}
