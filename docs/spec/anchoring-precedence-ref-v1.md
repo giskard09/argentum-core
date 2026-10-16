@@ -134,6 +134,8 @@ This is useful because mechanisms fail in different ways. A trusted-timestamp (R
 
 How many envelopes must pass, and whether a renewal is required once one ages out, is a policy decision outside this profile's scope — the same separation of invariant (what this profile checks) from mechanism (what satisfies it) that governs one envelope governs a set of them. A system embedding `anchoring_precedence_ref` envelopes inside a larger format (e.g. a dispute-evidence pack with its own digest boundary) needs its own rule for where multiple envelopes live relative to that boundary — this profile does not prescribe one.
 
+**Real-world example (credit: Roberto Locatelli).** `ap2-evidence-pack` v1.5.0 composes exactly this shape inside its own digest boundary: an `anchors` list sits outside the pack's digest, each entry is closed per `mechanism`, and how many must pass (`--min-anchors`) is a policy kept at the relying party rather than decided by the pack — the same split this section describes. See [SPEC §3.3 at the pinned commit](https://github.com/robertolocatelli81-dev/ap2-evidence-pack/blob/9608b3211e4103fe87be60f4487280aef52db9db/SPEC_AP2_EVIDENCE.md#33-additional-time-anchors-anchors-normative-150).
+
 ---
 
 ## Relationship to other refs
