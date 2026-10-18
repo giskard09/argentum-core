@@ -79,7 +79,7 @@ The bytes produced by `JCS(envelope)` hash to the declared `anchoring_precedence
 
 An independent signer — outside the control of the actor and the executor — verifies the same canonical hash. The signer identity must not resolve to the actor or executor controller.
 
-**Fails when:** the admitting signer is the actor, the executor, or an entity they control. Independence is the property; the identity of the signer is the evidence.
+**Fails when:** the admitting signer is the actor, the executor, or an entity they control. Independence is the property; the identity of the signer is the evidence. **Also fails (as UNRESOLVED, not a pass) when the admission commitment is absent from the record entirely** — a record that never supplies it was never checked on this axis, which is not the same claim as "admission passed." A verifier MUST NOT treat a missing admission commitment as an implicit pass; see line 70 above and [`examples/conformance/anchoring-precedence-ref/vectors.json`](../../examples/conformance/anchoring-precedence-ref/vectors.json) vector `admission-hash-absent` for a reproduction of this shape and its regression test.
 
 **Co-signer blocks MUST include the published pubkey alongside `issuer` / `kid` / `jws_signature`.** Without the pubkey in the fixture, a referee can only verify the primary admission leg without out-of-band lookup. Both JWS legs must be recomputable from the fixture alone.
 

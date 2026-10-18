@@ -1,6 +1,6 @@
 {
   "spec_version": "anchoring-precedence-ref-v1",
-  "description": "Conformance vectors for anchoring-precedence-ref-v1. Five invariants are separately recomputable: canonical_envelope, admission_invariant, anchoring_existence, anchoring_precedence, chain_invariant. A verifier that only checks existence without precedence will silently pass the two critical negative vectors (existence_only_anchor, late_commitment).",
+  "description": "Conformance vectors for anchoring-precedence-ref-v1. Five invariants are separately recomputable: canonical_envelope, admission_invariant, anchoring_existence, anchoring_precedence, chain_invariant. A verifier that only checks existence without precedence will silently pass the two critical negative vectors (existence_only_anchor, late_commitment). admission_invariant is three-way (OK / MISMATCH / UNRESOLVED) -- a vector lacking admission_hash is UNRESOLVED, never an implicit pass; see vector admission-hash-absent, which regression-tests a 2026-10-18 fix for exactly that pass-by-omission shape.",
   "precedence_rule": "anchor_block_time * 1000 < outcome_ts_ms (strict). Equality is not conformant.",
   "vectors": [
     {
@@ -52,6 +52,7 @@
         "anchoring_precedence": false,
         "chain_invariant": true
       },
+      "admission_hash": "7c48cf6d0f61f54d02a84dc7aa5703a35f849ee9feacae42a1c0bc7c736bf677",
       "mechanism_detail": {
         "anchor_ms": 1782678100000,
         "precedence": false,
@@ -79,6 +80,7 @@
         "anchoring_precedence": false,
         "chain_invariant": true
       },
+      "admission_hash": "4c74216655b24e7219b4380b63b4fc5f2c5c412ef47dc23f352c9d06af38c902",
       "mechanism_detail": {
         "anchor_ms": 1782681600000,
         "precedence": false,
@@ -105,7 +107,8 @@
         "anchoring_existence": false,
         "anchoring_precedence": false,
         "chain_invariant": true
-      }
+      },
+      "admission_hash": "542426923ec6e60b07ed0a0e78b7a2dbf5418e6f1d1e31fcfa02e5637cecf66e"
     },
     {
       "id": "admission-not-independent",
@@ -181,6 +184,35 @@
         "precedence": true,
         "margin_s": 80,
         "note": "margin is small and positive by construction — the check cannot distinguish a genuinely-early anchor from a backdated-but-consensus-valid one; this vector documents that blind spot, it is not evidence the check is broken"
+      }
+    },
+    {
+      "id": "admission-hash-absent",
+      "description": "REGRESSION (2026-10-18): proves the fix for a pass-by-omission bug. All four other invariants hold cleanly (canonical_envelope, anchoring_existence, anchoring_precedence, chain_invariant all true) -- the envelope and timing are identical in shape to precedence-positive-001. admission_hash is deliberately absent from this record entirely (not present-and-wrong -- just never supplied). Before the fix, verify.py's admission_invariant check was `if \"admission_hash\" in vector:` -- a vector lacking the key skipped the check silently, contributing zero failures, so this vector would have wrongly PASSED overall despite admission never being checked on it. Per spec: \"A verifier MUST check all five independently -- passing four while skipping one is not conformant.\" Fixed: a missing admission_hash is now UNRESOLVED, which is a failure state, never an implicit pass.",
+      "expected": "FAIL",
+      "failure_mode": "admission_invariant",
+      "failure_detail": "admission_hash key absent from the record -- admission_invariant was never checked. UNRESOLVED is not conformant, regardless of what the other four invariants show.",
+      "envelope": {
+        "anchor_block_time": 1782677500,
+        "mechanism": "on-chain",
+        "outcome_ts_ms": 1782677980000,
+        "trail_id": "neg-007-admission-hash-absent",
+        "version": "anchoring-precedence-ref-v1"
+      },
+      "anchoring_precedence_ref": "86cf7b0409281f8e39f4414016b17f2d1e580880eb62afc8dedbb2c67939b1ce",
+      "checks": {
+        "canonical_envelope": true,
+        "admission_invariant": "unresolved",
+        "anchoring_existence": true,
+        "anchoring_precedence": true,
+        "chain_invariant": true
+      },
+      "mechanism_detail": {
+        "tier": "on-chain",
+        "clock": "Arbitrum",
+        "anchor_ms": 1782677500000,
+        "precedence": true,
+        "margin_s": 480
       }
     }
   ],

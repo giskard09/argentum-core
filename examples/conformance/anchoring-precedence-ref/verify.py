@@ -3,7 +3,13 @@ Verifier for anchoring-precedence-ref-v1 conformance vectors.
 
 Five invariants checked per spec:
   1. canonical_envelope      — SHA-256(JCS(envelope)) matches declared anchoring_precedence_ref
-  2. admission_invariant     — admission_hash (if present) matches canonical_envelope_hash
+  2. admission_invariant     — admission_hash matches canonical_envelope_hash. Three-way,
+                               never silently permissive: OK (matches) / MISMATCH (present,
+                               wrong) / UNRESOLVED (absent). Spec: "A verifier MUST check all
+                               five independently — passing four while skipping one is not
+                               conformant" (anchoring-precedence-ref-v1.md §admission_invariant).
+                               A missing admission_hash is UNRESOLVED, never an implicit pass —
+                               see vector `admission-hash-absent`.
   3. anchoring_existence     — anchor_block_time is non-null
   4. anchoring_precedence    — anchor_block_time * 1000 < outcome_ts_ms (strict)
   5. chain_invariant         — checks[chain_invariant] declared true in vector
@@ -43,8 +49,15 @@ def verify_vector(vector: dict) -> tuple[bool, list[str]]:
             f"canonical_envelope: computed {computed_ref} != declared {declared_ref}"
         )
 
-    # 2. admission_invariant
-    if "admission_hash" in vector:
+    # 2. admission_invariant — three-way, never silently permissive. A vector
+    # missing admission_hash was never checked on this axis, which is not the
+    # same claim as "admission passed" (see module docstring, invariant 2).
+    if "admission_hash" not in vector:
+        failures.append(
+            "admission_invariant: admission_hash absent — invariant not checked, "
+            "not a pass (spec: passing four while skipping one is not conformant)"
+        )
+    else:
         admission = vector["admission_hash"]
         if admission != computed_ref:
             failures.append(
