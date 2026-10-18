@@ -36,7 +36,7 @@ settled amount back to what the offer actually required.
 
 **What it does not do:** `settlement_evidence_ref` does not perform the ledger lookup itself
 — like `chain_invariant` in [`anchoring-precedence-ref-v1.md`](./anchoring-precedence-ref-v1.md#5-chain_invariant)
-and `resolved_by` in [`peer-reconciliation-ref-v1.md`](./peer-reconciliation-ref-v1.md#5-supersedes_chain_integrity),
+and `resolved_by` in [`peer-reconciliation-ref-v1.md`](./peer-reconciliation-ref-v1.md#6-supersedes_chain_integrity-v11),
 this is declared-in-vector, external resolution not performed live by this reference
 verifier. What it does enforce is that the declaration says *how* it was obtained
 (`ledger_recomputed: true | false`) and treats the two cases as distinguishable, never
@@ -196,7 +196,7 @@ Per the x402 Evidence Chain RFP (R5; UC3, UC6; T2, T4):
 - `offer_identity_ref` — what the settlement is checked against: [`offer-identity-ref.md`](./offer-identity-ref.md)
 - Same "declared, external resolution not performed live" treatment:
   [`anchoring-precedence-ref-v1.md`](./anchoring-precedence-ref-v1.md#5-chain_invariant),
-  [`peer-reconciliation-ref-v1.md`](./peer-reconciliation-ref-v1.md#5-supersedes_chain_integrity)
+  [`peer-reconciliation-ref-v1.md`](./peer-reconciliation-ref-v1.md#6-supersedes_chain_integrity-v11)
 - x402 wire schema (source of truth for what `SettleResponse` does and does not carry):
   `x402-foundation/x402`, `typescript/packages/legacy/x402/src/types/verify/x402Specs.ts`
 - Conformance fixtures: [`examples/conformance/settlement-evidence-ref/`](../../examples/conformance/settlement-evidence-ref/)
