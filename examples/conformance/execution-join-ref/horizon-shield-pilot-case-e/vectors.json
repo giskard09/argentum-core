@@ -1,0 +1,162 @@
+{
+  "description": "Worked example composing execution-join-ref-v1's post_commit_consistency invariant (PR#137, 2026-10-18) onto the request_occurrence/task/execution-receipt shape frozen in ogasurfproject-jpg/horizon-shield#51 (pilot scoping, 2026-10-18) and defined in COMPANION_v0.md / PILOT_v0.md at commit 4d720ace (MIT). This is NOT an alternative implementation of authority, payment, or acceptance -- those three roles are covered by MUSUBI/APS (authority_and_payment) and babyblueviper1's work-acceptance-record (acceptance) in the pilot itself, and are declared here, not recomputed. The only invariant this worked example computes is post_commit_consistency: does a LATER, independent observation of the audited output (the JCCDB cost database snapshot, or the deliverable) still match the response_sha256 the execution-receipt committed to at settlement time? Named Case E, not Case D -- ogasurfproject-jpg's own Case D in this issue (astrogilda's: same call contents under a different request occurrence, frozen at 33c22f5a) already holds that letter. Both vectors below use the pilot's own real system outputs (task/request/responses from the actually-deployed worker, not stand-ins), per ogasurfproject-jpg's request (comment, 2026-10-18T15:34:49Z): Case A re-confirms the real, committed live_smoke record diverges from nothing when the dataset has not moved; Case E is the gap after a call settles validly and the JCCDB dataset it was audited against is corrected afterward -- exactly what already happened to this fixture between souba-db 2.2.0 and 2.3.0 on 2026-10-18, independently of this worked example.",
+  "pinned_source": {
+    "repo": "ogasurfproject-jpg/horizon-shield",
+    "commit": "4d720ace",
+    "files": [
+      "workers/hs-ledger/nenrin/musubi-v0/ca2a-companion-v0/COMPANION_v0.md",
+      "workers/hs-ledger/nenrin/musubi-v0/ca2a-companion-v0/PILOT_v0.md"
+    ],
+    "license": "MIT",
+    "issue": "ogasurfproject-jpg/horizon-shield#51"
+  },
+  "pinned_live_data": {
+    "repo": "ogasurfproject-jpg/horizon-shield",
+    "commit": "dcbdc5d2",
+    "files": [
+      "workers/hs-ledger/nenrin/musubi-v0/ca2a-companion-v0/rehearsal/fixture.json",
+      "workers/hs-ledger/nenrin/musubi-v0/ca2a-companion-v0/rehearsal/live_smoke/call.json",
+      "workers/hs-ledger/nenrin/musubi-v0/ca2a-companion-v0/rehearsal/live_smoke/receipt.json"
+    ],
+    "license": "MIT",
+    "note": "task, request_occurrence (both vectors) and Case A's execution_receipt/post_commit_observation.observed_hash are byte-identical to these committed files -- verified against GitHub's own blob SHA via git hash-object, and independently re-hashed with this repo's jcs.py against the digests ogasurfproject-jpg quoted. See NOTICE.md for the pre-correction (souba-db 2.2.0) values used in Case E, which were never committed as files (the 2.2.0 call was an unlogged smoke test) and are reproduced here only as the full, untruncated hex ogasurfproject-jpg posted directly in the issue thread."
+  },
+  "vectors": [
+    {
+      "id": "case-a-within-paid-accepted-001",
+      "description": "Analogue of the pilot's own Case A (within/paid/accepted). authority_and_payment and acceptance are declared true (out of scope for this worked example -- MUSUBI/APS and invinoveritas's job). post_commit_consistency is computed: the post_commit_observation's observed_hash matches the execution-receipt's response_sha256 exactly, demonstrating the new invariant does not break the happy path. task, request_occurrence and execution_receipt are byte-identical to the pilot's own real, committed live_smoke call (dcbdc5d2) -- not stand-ins. post_commit_observation is this worked example's own illustrative later re-check, not a second call ogasurfproject-jpg actually ran; its observed_hash and dataset_sha256 are the real values from that same commit, reused because audit_estimate is a pure function of (fixture, dataset version) for as long as the dataset does not move -- the pilot's own live_smoke/README.md states this directly: 'it gives these 1400 bytes again for as long as the dataset is 2.3.0.'",
+      "expected": "PASS",
+      "task": {
+        "type": "musubi.ca2a.task.v0",
+        "service": "estimate-audit",
+        "amount": 7000,
+        "unit": "JPY-testnet",
+        "nonce": "bf15321937fac32e9bdda4bacb1987ada9c36ea71a609589cdb512b26ea0a7df"
+      },
+      "request_occurrence": {
+        "type": "musubi.ca2a.request.v0",
+        "caller": "79f32c5178190b9cf68e4d17dba017d9c0e7a61e1fe5d314b19f3fb99110cc0a",
+        "responder": "7b1ada68cd366c70a79544b6d719d685fd37e01f26549e08bf388768cc7d0ffe",
+        "capability": "pay",
+        "lineage": [
+          "sha256:22f25070b31798fb9b1285c151342a4f8cafd5db7adf71ef461aae765ad173c6",
+          "sha256:dd8fa967dfd7d52b9aed66a43ddcc429768e59adff823bd5ba947a87c17908cb"
+        ],
+        "occurrence_id": "live-smoke-0",
+        "task_sha256": "218c938f9d94e13f8a3fff1f084b0dd36b1867baa5691e1f0add99e44a78d7b0"
+      },
+      "execution_receipt": {
+        "type": "musubi.ca2a.execution-receipt.v0",
+        "caller": "79f32c5178190b9cf68e4d17dba017d9c0e7a61e1fe5d314b19f3fb99110cc0a",
+        "responder": "7b1ada68cd366c70a79544b6d719d685fd37e01f26549e08bf388768cc7d0ffe",
+        "capability": "pay",
+        "lineage": [
+          "sha256:22f25070b31798fb9b1285c151342a4f8cafd5db7adf71ef461aae765ad173c6",
+          "sha256:dd8fa967dfd7d52b9aed66a43ddcc429768e59adff823bd5ba947a87c17908cb"
+        ],
+        "request_sha256": "69546501c86296c2029de4f2325f6e561b66efa89fe27fdbfe9f4510104d3d01",
+        "seen_block": {
+          "height": 971984,
+          "hash": "000000000000000000018afcad81ac70dc8cb1c38a05fd22abca5fcb8941d319"
+        },
+        "outcome": {
+          "kind": "result",
+          "stage": "audited",
+          "response_sha256": "c2920477d95a8e48f16cc2df49ec58a02cd9b422db491206446e7a5be21937f5"
+        },
+        "attestation_sha256": null,
+        "signature": "c3c0393c91e8b4c8657784a8c0e34cbbaea61a011b0135ac8a2bb87a532f48c94a4e9886928b576beafe717bfa9b9402d34af499f820f5a3092d606a6cfd1d03"
+      },
+      "post_commit_observation": {
+        "type": "execution-join-ref.post-commit-observation.v1",
+        "request_sha256": "69546501c86296c2029de4f2325f6e561b66efa89fe27fdbfe9f4510104d3d01",
+        "observed_hash": "c2920477d95a8e48f16cc2df49ec58a02cd9b422db491206446e7a5be21937f5",
+        "observed_at_ms": 1792325558000,
+        "observer_id": "argentum-core-case-e-worked-example (illustrative re-check, same dataset -- not a second real call)",
+        "dataset_sha256": "7b16600e50ed73b844ff5b2718f04a6dd4d9ace0367982fb8d139db509d023fd"
+      },
+      "declared": {
+        "authority_and_payment": true,
+        "acceptance": true
+      },
+      "checks": {
+        "canonical_envelope": true,
+        "chain_integrity": true,
+        "authority_and_payment": true,
+        "acceptance": true,
+        "post_commit_consistency": true
+      }
+    },
+    {
+      "id": "case-e-jccdb-snapshot-divergence-001",
+      "description": "Case E: the gap after a call already settled validly. Same request_occurrence and task as Case A -- the same test payer key and signed test transfer, per ogasurfproject-jpg's own words describing the second call ('the same test payer key and signed test transfer as the first one'). The execution_receipt is the FIRST real call: audited against souba-db 2.2.0, response_sha256 ccfbae3d1fc006b61642da9d240f85c8b380fc10c8694d35d9f5043ca9d45df1, seen_block.height 971954 -- the full, untruncated digest and height ogasurfproject-jpg posted directly (comment, 2026-10-18T06:50:23Z). That call was an unlogged smoke test (no file was ever committed for it), so this vector's execution_receipt omits `signature` and `seen_block.hash` rather than inventing bytes that were never published -- see NOTICE.md. The post_commit_observation is the SECOND real call: the pilot's own committed live_smoke rerun (dcbdc5d2) after souba-db 2.3.0 corrected six price ranges on the same day, observed_hash c2920477d95a8e48f16cc2df49ec58a02cd9b422db491206446e7a5be21937f5, with the new optional dataset_sha256 field (execution-join-ref-v1.2) naming the dataset it was recomputed against -- the exact field ogasurfproject-jpg asked for in the same comment. post_commit_consistency fails -- POST_COMMIT_DIVERGENCE -- while every other invariant, including the original call's own validity, remains true. Nobody misstated anything at settlement; the database the estimate was audited against was corrected afterward, and both releases are anchored (2.2.0: JIDEC entry 42, Bitcoin block 966969; 2.3.0: JIDEC entry 114).",
+      "expected": "FAIL",
+      "failure_mode": "post_commit_consistency",
+      "failure_code": "POST_COMMIT_DIVERGENCE",
+      "failure_detail": "execution_receipt.outcome.response_sha256=ccfbae3d1fc0… (committed at seen_block.height=971954, souba-db 2.2.0). post_commit_observation.observed_hash=c2920477d95a… (souba-db 2.3.0, dataset_sha256=7b16600e50ed…) for the same request_sha256=69546501c862…. The two hashes differ because the dataset the estimate was audited against was corrected between the two calls, not because either call misreported anything.",
+      "task": {
+        "type": "musubi.ca2a.task.v0",
+        "service": "estimate-audit",
+        "amount": 7000,
+        "unit": "JPY-testnet",
+        "nonce": "bf15321937fac32e9bdda4bacb1987ada9c36ea71a609589cdb512b26ea0a7df"
+      },
+      "request_occurrence": {
+        "type": "musubi.ca2a.request.v0",
+        "caller": "79f32c5178190b9cf68e4d17dba017d9c0e7a61e1fe5d314b19f3fb99110cc0a",
+        "responder": "7b1ada68cd366c70a79544b6d719d685fd37e01f26549e08bf388768cc7d0ffe",
+        "capability": "pay",
+        "lineage": [
+          "sha256:22f25070b31798fb9b1285c151342a4f8cafd5db7adf71ef461aae765ad173c6",
+          "sha256:dd8fa967dfd7d52b9aed66a43ddcc429768e59adff823bd5ba947a87c17908cb"
+        ],
+        "occurrence_id": "live-smoke-0",
+        "task_sha256": "218c938f9d94e13f8a3fff1f084b0dd36b1867baa5691e1f0add99e44a78d7b0"
+      },
+      "execution_receipt": {
+        "type": "musubi.ca2a.execution-receipt.v0",
+        "caller": "79f32c5178190b9cf68e4d17dba017d9c0e7a61e1fe5d314b19f3fb99110cc0a",
+        "responder": "7b1ada68cd366c70a79544b6d719d685fd37e01f26549e08bf388768cc7d0ffe",
+        "capability": "pay",
+        "lineage": [
+          "sha256:22f25070b31798fb9b1285c151342a4f8cafd5db7adf71ef461aae765ad173c6",
+          "sha256:dd8fa967dfd7d52b9aed66a43ddcc429768e59adff823bd5ba947a87c17908cb"
+        ],
+        "request_sha256": "69546501c86296c2029de4f2325f6e561b66efa89fe27fdbfe9f4510104d3d01",
+        "seen_block": {
+          "height": 971954
+        },
+        "outcome": {
+          "kind": "result",
+          "stage": "audited",
+          "response_sha256": "ccfbae3d1fc006b61642da9d240f85c8b380fc10c8694d35d9f5043ca9d45df1"
+        },
+        "attestation_sha256": null
+      },
+      "post_commit_observation": {
+        "type": "execution-join-ref.post-commit-observation.v1",
+        "request_sha256": "69546501c86296c2029de4f2325f6e561b66efa89fe27fdbfe9f4510104d3d01",
+        "observed_hash": "c2920477d95a8e48f16cc2df49ec58a02cd9b422db491206446e7a5be21937f5",
+        "observed_at_ms": 1792321958000,
+        "observer_id": "ogasurfproject-jpg live_smoke rerun (dcbdc5d2)",
+        "dataset_sha256": "7b16600e50ed73b844ff5b2718f04a6dd4d9ace0367982fb8d139db509d023fd"
+      },
+      "declared": {
+        "authority_and_payment": true,
+        "acceptance": true
+      },
+      "checks": {
+        "canonical_envelope": true,
+        "chain_integrity": true,
+        "authority_and_payment": true,
+        "acceptance": true,
+        "post_commit_consistency": false
+      }
+    }
+  ],
+  "provenance": {
+    "authored_by": "giskard09 (argentum-core)",
+    "verification_mode": "asserted",
+    "independently_reproduced_by": []
+  }
+}

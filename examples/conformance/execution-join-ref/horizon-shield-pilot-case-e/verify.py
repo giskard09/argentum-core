@@ -1,11 +1,23 @@
 """
-Reference verifier for the Case D worked example (see README.md).
+Reference verifier for the Case E worked example (see README.md).
+
+Named Case E, not Case D: ogasurfproject-jpg already has a Case D in this
+issue (astrogilda's, frozen at 33c22f5a) -- renamed per their request
+(comment, 2026-10-18T15:34:49Z) before this went into the comparison table.
 
 Composes execution-join-ref-v1's post_commit_consistency invariant
-(docs/spec/execution-join-ref-v1.md, "Post-commit divergence (v1.1)",
+(docs/spec/execution-join-ref-v1.md, "Post-commit divergence (v1.1/v1.2)",
 PR#137, 2026-10-18) onto the request_occurrence/task/execution-receipt
 object shapes frozen by ogasurfproject-jpg/horizon-shield#51 and defined
 in COMPANION_v0.md / PILOT_v0.md at the pinned commit (see README.md).
+Both vectors' task/request_occurrence, and Case A's execution_receipt and
+post_commit_observation.observed_hash, are the pilot's own real, committed
+live_smoke outputs (commit dcbdc5d2) -- not stand-ins. Case E's
+execution_receipt reuses the real pre-correction (souba-db 2.2.0) digest
+and seen_block.height ogasurfproject-jpg posted in full, untruncated hex;
+see NOTICE.md for why `signature` and `seen_block.hash` are absent rather
+than invented for that one record (it was an unlogged smoke test, never
+committed as a file).
 
 Five checks, three of them declared (not computed here) on purpose:
 
@@ -73,10 +85,13 @@ def verify_vector(vector: dict) -> tuple[bool, list[str]]:
 
     # 1. canonical_envelope. Note: execution_receipt.outcome.response_sha256
     # is NOT recomputed here -- it is HORIZON SHIELD's actual audit_estimate
-    # output, an external service call this worked example does not run or
-    # mock. It is treated the same way the pilot's own payment/acceptance
-    # checks are: a committed value this verifier binds against (invariant
-    # 5 below), not one it recomputes from scratch.
+    # output (real in both vectors: c2920477… and ccfbae3d… are the pilot's
+    # own real responses, independently re-hashed against the full audit
+    # object and matched during authoring -- see NOTICE.md), an external
+    # service call this worked example does not run or mock. It is treated
+    # the same way the pilot's own payment/acceptance checks are: a
+    # committed value this verifier binds against (invariant 5 below), not
+    # one it recomputes from scratch.
     task_sha256 = sha256hex(task)
     request_sha256 = sha256hex(request_occurrence)
 
@@ -127,6 +142,14 @@ def verify_vector(vector: dict) -> tuple[bool, list[str]]:
     if declared_pc is not None and declared_pc != pc_ok:
         failures.append(f"post_commit_consistency: computed {pc_ok} != declared {declared_pc}")
 
+    # post_commit_observation.dataset_sha256 (execution-join-ref-v1.2,
+    # optional, additive) is intentionally not read above: it is purely
+    # informational (which external dataset this observation was recomputed
+    # against), never part of the pc_ok computation, and never changes
+    # PASS/FAIL. See docs/spec/execution-join-ref-v1.md "Post-commit
+    # divergence" for the field itself; main() below prints it for whichever
+    # vectors carry it, same treatment as every other descriptive field.
+
     return len(failures) == 0, failures
 
 
@@ -135,7 +158,7 @@ def main():
     data = json.loads(vectors_path.read_text())
     vectors = data["vectors"]
 
-    print(f"horizon-shield-pilot-case-d — {len(vectors)} vectors\n")
+    print(f"horizon-shield-pilot-case-e — {len(vectors)} vectors\n")
 
     passed = 0
     failed = 0
@@ -148,6 +171,9 @@ def main():
         status = "PASS" if ok else "FAIL"
 
         print(f"  {marker} [{status}] {vid}")
+        dataset_sha256 = v.get("post_commit_observation", {}).get("dataset_sha256")
+        if dataset_sha256 is not None:
+            print(f"         post_commit_observation.dataset_sha256={dataset_sha256} (informational)")
         if ok and not conforms and expected == "FAIL":
             print(f"         correctly rejected ({v.get('failure_code', '?')}): {failures[0]}")
         elif not ok:

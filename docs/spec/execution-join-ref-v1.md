@@ -1,6 +1,6 @@
 # execution-join-ref-v1
 
-**Version:** 1.1
+**Version:** 1.2
 
 An execution join binds the outcome of a tool call back to the exact guardrail
 decision that authorized it. Four identifiers form a chain; each is a
@@ -16,13 +16,27 @@ finding the file no longer matches. Case 1 needed no new mechanism — it is
 `EFFECTIVE_CALL_REBINDING_FAILED` (already defined below) in a new domain;
 see `file-write-rebinding-failed-001` in the fixture. Case 2 is new: a
 seventh invariant, `post_commit_consistency`, and failure code
-`POST_COMMIT_DIVERGENCE` — see "Post-commit divergence (v1.1)" below. This
+`POST_COMMIT_DIVERGENCE` — see "Post-commit divergence (v1.1/v1.2)" below. This
 version also fixes `examples/conformance/execution-join-ref/verify.py`,
 which did not exist before this change (the fixture had never been run
 against a real verifier; `verification_mode` in vectors.json was
 `"asserted"`), and a real bug in `profiles/profile_registry.py`
 (`resolve()` called `json.loads` without importing `json` — every call
 raised `NameError`, undetected because nothing had ever called it either).
+
+**v1.2 (2026-10-18, additive):** ogasurfproject-jpg (`ogasurfproject-jpg/
+horizon-shield#51`) reviewed the worked example composing `post_commit_
+consistency` onto their pilot (see "Cross-references" below) and pointed
+out that their own real system had already produced a `POST_COMMIT_
+DIVERGENCE` on its own, between two audits of the same real call against
+two souba-db releases. They asked for one addition: a way for the
+`post_commit_observation` itself to name which external dataset it was
+recomputed against, so a reader can tell "the responder changed behavior
+on an unchanged dataset" apart from "the dataset moved (expected,
+anchored)" without the two cases looking identical. `post_commit_
+observation.dataset_sha256` (below) is that field — optional, additive,
+purely informational: it does not change the `post_commit_consistency`
+rule, which still depends only on `observed_hash` vs. `output_hash`.
 
 ## Fields
 
@@ -193,9 +207,9 @@ failure_mode:
    `file-write-rebinding-failed-001` (v1.1) for the same failure in the
    file-write domain.
 7. **post_commit_consistency** (v1.1, additive) — see "Post-commit divergence
-   (v1.1)" below. Exempt when the envelope carries no `post_commit_ref`.
+   (v1.1/v1.2)" below. Exempt when the envelope carries no `post_commit_ref`.
 
-## Post-commit divergence (v1.1)
+## Post-commit divergence (v1.1/v1.2)
 
 Everything above answers one question: was the dispatched call authorized?
 It says nothing about whether the thing the attempt produced is still the
@@ -219,7 +233,8 @@ envelope without it hashes or evaluates.
   "observed_at_ms": <integer>,
   "observer_id": "<string>",
   "result_id": "<sha256-hex>",
-  "version": "execution-join-ref-v1"
+  "version": "execution-join-ref-v1",
+  "dataset_sha256": "<sha256-hex, optional, v1.2>"
 }
 ```
 
@@ -227,6 +242,24 @@ envelope without it hashes or evaluates.
 `result_id` binds the observation to one specific terminal record — the
 same "preimage must include the thing it is binding to" pattern `proof_ref`
 and `decision_id` already use.
+
+**`dataset_sha256`** (v1.2, optional, additive) — the content hash of the
+external dataset or snapshot the observation was recomputed against, when
+the thing being observed depends on a mutable external input (a price
+table, a registry, anything outside the attempt itself). Purely
+informational: it is never read by the `post_commit_consistency` rule
+below, and its absence is not itself a finding, same as every other
+optional field in this spec. What it buys a reader: without it, "the
+responder changed what it does" and "an upstream dataset was corrected
+(expected, and the correction is itself anchored)" produce the identical
+signal — an `observed_hash` that no longer matches `output_hash`. With it,
+a reader comparing two observations of the same result_id that disagree
+can already tell, from the signed observation alone, whether `dataset_
+sha256` also changed, without fetching or trusting the full recomputed
+payload. This spec does not define a matching field on the settlement side
+(`result_id`'s own preimage does not declare which dataset the original
+attempt used) — see the "known gap" note in `examples/conformance/
+execution-join-ref/horizon-shield-pilot-case-e/README.md`.
 
 **The rule:** `post_commit_consistency` holds when `post_commit_observation
 .observed_hash` equals the `output_hash` declared in that `result_id`'s own
@@ -320,7 +353,10 @@ and remains, entirely valid. See `post-commit-divergence-001`.
   `peer-reconciliation-ref-v1.md`'s `supersedes` mechanism and tri-state
   comparator already set in this repo.
 - Composed onto a different domain's shape, same day: `examples/conformance/
-  execution-join-ref/horizon-shield-pilot-case-d/` proposes `post_commit_
+  execution-join-ref/horizon-shield-pilot-case-e/` proposes `post_commit_
   consistency` as a fourth, complementary case for the live pilot scoped in
   `ogasurfproject-jpg/horizon-shield#51` — the JCCDB cost database an
-  accepted estimate was audited against changing after acceptance.
+  accepted estimate was audited against changing after acceptance. Named
+  Case E, not D (astrogilda's case already holds that letter in the issue).
+  ogasurfproject-jpg's review of it is also what prompted `dataset_sha256`
+  above (v1.2).
