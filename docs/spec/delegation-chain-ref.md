@@ -223,6 +223,37 @@ attenuated rather than merely claimed.
   unresolved delegator key as `hop_signature_invalid`. No published vector exercised that
   path, so no earlier result changes.
 
+- **Verified hardening against known Ed25519 verification-edge-case classes
+  (2026-10-18, preventive, no vulnerability found).** `hop_signature` is this spec's only
+  *live* Ed25519 check in this repo — everywhere else a signature's validity is a
+  declared, externally-resolved fact (`peer-reconciliation-ref-v1`'s `co_signer`,
+  `anchoring-precedence-ref-v1`'s `admission_invariant`), not computed by this repo's own
+  code. That makes this the one place a weak verification library would actually matter.
+  Prompted by robertolocatelli81-dev/Noûs finding, the same day and unrelated to this
+  repo, that identity-element Ed25519 keys (`R`=identity, `S`=0) forge a signature that
+  verifies for *any* message under a naive RFC 8032 implementation, and that some
+  libraries accept non-canonically-encoded points/scalars (`x402-foundation/tsc#4`;
+  `novifinancial/ed25519-speccheck` classes 0–11). This was not assumed safe because
+  PyNaCl/libsodium is "generally known to be strict" — it was reproduced:
+  - `examples/conformance/delegation-chain-ref/small-order-key-vectors.json`,
+    `small-order-identity-key-universal-forgery-001`: a real 2-hop chain, through this
+    spec's own `hop_signing_preimage()`, where the second hop's delegator key *is* the
+    identity element and its `hop_signature` *is* the textbook universal-forgery
+    signature. `hop_signature_invalid`, correctly — confirmed through this repo's own
+    code path, not an isolated library unit test.
+  - `examples/conformance/delegation-chain-ref/ed25519-hardening/`: the full published
+    `novifinancial/ed25519-speccheck` suite (12 vectors, Apache-2.0, vendored verbatim at
+    commit `65519336fda78a3d016e947df6d82848aca0c9da`, byte-verified via `git hash-object`
+    against the GitHub blob) run against this repo's pinned PyNaCl version
+    (`requirements.txt`). 12/12 match the published LibSodium column — small-order
+    `A`/`R` (classes 0–2), out-of-range `S` (6–7), and non-canonical point encodings for
+    both `R` and `A` (8–11, the two classes Noûs named) are all rejected; only class 3
+    (a benign mixed-order edge case every major library accepts) passes, as expected.
+  - **This is a property of the pinned dependency, not of this spec's own logic** — a
+    future PyNaCl/libsodium upgrade, or a reimplementation in another language with a
+    different Ed25519 library, is not guaranteed to inherit it. `check_hardening.py`
+    exists to be rerun after any such change, not only once.
+
 ---
 
 ## Replay guard (additive, optional)
@@ -341,3 +372,7 @@ The leaf record carries both its direct `delegation_ref` (the authorization from
 - `revocation_ref` (per-hop invalidation): [`docs/spec/revocation-ref.md`](./revocation-ref.md)
 - `composition_ref` (lifecycle composition at leaf): [`docs/spec/composition-ref.md`](./composition-ref.md)
 - TrailRecord schema: [`docs/MYCELIUM_TRAILS_REFERENCE.md`](../MYCELIUM_TRAILS_REFERENCE.md)
+- `hop_signature` Ed25519 hardening source: `novifinancial/ed25519-speccheck`
+  (Apache-2.0), vendored at `examples/conformance/delegation-chain-ref/ed25519-hardening/`;
+  finding that prompted the self-audit: robertolocatelli81-dev/Noûs,
+  `x402-foundation/tsc#4`, 2026-10-18.

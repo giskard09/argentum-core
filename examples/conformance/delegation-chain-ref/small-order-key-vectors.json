@@ -1,0 +1,45 @@
+{
+  "description": "Preventive self-audit, 2026-10-18, no external trigger against this repo: robertolocatelli81-dev/Noûs found the same day, unrelated to us, that identity-element Ed25519 keys (R=identity, S=0) forge a valid signature for ANY message under naive RFC 8032 verification (x402-foundation/tsc#4). delegation-chain-ref-v1's hop_signature is this repo's only LIVE Ed25519 check (everywhere else -- peer-reconciliation-ref-v1's co_signer, anchoring-precedence-ref-v1's admission_invariant -- signature validity is a declared, externally-resolved fact, not computed by our own code). This vector constructs the real attack inside a real 2-hop chain using this repo's own hop_signing_preimage(): hop 0 is a genuine signature from a freshly generated key (legit-root-guardian); hop 1's delegator key IS the identity point and hop 1's hop_signature IS the universal-forgery signature (R=identity, S=0) -- a signature that, per the naive RFC 8032 equation, verifies for literally any message, including this repo's own hop preimage. Our pinned PyNaCl (requirements.txt) rejects it: libsodium checks that the public key is not a small-order point before the verification equation runs at all, independent of the message. See ed25519-hardening/ in this directory for the broader regression check against the full published novifinancial/ed25519-speccheck suite (12 vectors, classes 0-11, including the non-canonical point/scalar encodings -- ed25519-speccheck classes 0 and 11 -- that were the other half of what Noûs flagged).",
+  "pubkeys": {
+    "legit-root-guardian": "oMXddvJUt/4/Mk0onc5opxMDZQ2kowC+9YzWmnG08EQ=",
+    "attacker-controlled-identity-key": "AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+  },
+  "vectors": [
+    {
+      "id": "small-order-identity-key-universal-forgery-001",
+      "description": "hop 0 (legit-root-guardian -> attacker-controlled-identity-key) carries a genuine signature from a freshly generated Ed25519 keypair -- this hop is legitimate and verifies correctly on its own, confirming the rest of the vector is sound. hop 1's delegator, attacker-controlled-identity-key, is registered with the identity-element public key (0x01 followed by 31 zero bytes -- the Ed25519 neutral element), and hop 1's hop_signature is R=identity||S=0, the textbook 'universal forgery' signature that satisfies [S]B = R + [k]A for ANY message when A is the identity point, because both sides reduce to the identity regardless of k. If our verifier only checked the naive RFC 8032 equation, this hop would verify against literally any preimage. PyNaCl/libsodium instead rejects any signature over a small-order public key before reaching the verification equation, independent of the message -- confirmed here through this repo's own real hop_signing_preimage()/verify_hop_signature() code path, not an isolated crypto-library unit test.",
+      "expected": "FAIL",
+      "failure_mode": "hop_signature_invalid",
+      "failure_detail": "hop 1: delegator=attacker-controlled-identity-key's registered pubkey is the Ed25519 identity element; PyNaCl/libsodium rejects any signature against a small-order public key (BadSignatureError) regardless of the message or declared signature bytes.",
+      "chain_artifact": {
+        "chain_id": "chain-small-order-identity-key-001",
+        "hops": [
+          {
+            "delegator": "legit-root-guardian",
+            "delegatee": "attacker-controlled-identity-key",
+            "delegation_ref": "1111111111111111111111111111111111111111111111111111111111111111",
+            "scope": "mycelium:payment",
+            "hop_signature": "ncB24FLN37w1Ac/gTne0ZPooNjCKLng1RT9IXx80HtBWpCVvBAH7xcqzFpExqdJatWQfNYp16L4dV3GbaTbECw=="
+          },
+          {
+            "delegator": "attacker-controlled-identity-key",
+            "delegatee": "victim-executor",
+            "delegation_ref": "2222222222222222222222222222222222222222222222222222222222222222",
+            "scope": "mycelium:payment:refund",
+            "hop_signature": "AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=="
+          }
+        ],
+        "leaf_action_ref": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "root_delegator": "legit-root-guardian",
+        "scope": "mycelium:payment",
+        "version": "delegation-chain-ref-v1"
+      },
+      "delegation_chain_ref": "c085726b449b04d7973d9170d12118c072a46c604572e317e144b770af7cb2d2"
+    }
+  ],
+  "provenance": {
+    "authored_by": "giskard09 (argentum-core)",
+    "verification_mode": "asserted",
+    "independently_reproduced_by": []
+  }
+}

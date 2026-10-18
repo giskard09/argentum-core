@@ -347,7 +347,7 @@ def main():
     total_passed = 0
     total_failed = 0
     for fname in ("vectors.json", "cross-org-vectors.json", "replay-vectors.json",
-                  "key-completeness-vectors.json"):
+                  "key-completeness-vectors.json", "small-order-key-vectors.json"):
         p, f = run_file(base / fname)
         total_passed += p
         total_failed += f
