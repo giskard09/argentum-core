@@ -1,7 +1,7 @@
 {
-  "spec_version": "peer-reconciliation-ref-v1.1",
-  "description": "Conformance vectors for peer-reconciliation-ref-v1. Four invariants are separately recomputable: canonical_envelope, structural_validity, signature_validity, comparator_state. A verifier that treats any pair of present observations as AGREED without checking action_ref equality will silently pass disagreed-001. A verifier that defaults a missing half to AGREED will silently pass unresolved-001. v1.1 adds three optional additive checks: supersedes_chain_integrity (correction pointers), requested_at (recommended non-suppression timestamp), as_of (informational per-observation time) — none change how the five v1.0 vectors evaluate.",
-  "comparator_rule": "AGREED requires both observed=true, both signatures valid, and matching action_ref. DISAGREED requires both observed=true, both signatures valid, and differing action_ref. Anything else (missing observation, invalid signature on an observed=true party) is UNRESOLVED — never defaulted to AGREED or DISAGREED.",
+  "spec_version": "peer-reconciliation-ref-v1.2",
+  "description": "Conformance vectors for peer-reconciliation-ref-v1. Six invariants are separately recomputable: canonical_envelope, structural_validity, signature_validity, signature_binding, comparator_state, and supersedes_chain_integrity (v1.1, present only when `supersedes` is set). A verifier that treats any pair of present observations as AGREED without checking action_ref equality will silently pass disagreed-001. A verifier that defaults a missing half to AGREED will silently pass unresolved-001. A verifier that does not check what each co_signer's signed_fields actually covers will silently pass replay-001 (v1.2) as AGREED. v1.1 added three optional additive checks: supersedes_chain_integrity (correction pointers), requested_at (recommended non-suppression timestamp), as_of (informational per-observation time). v1.2 adds signature_binding and the mandatory co_signer.signed_fields field -- see 'v1.2' in the spec for why this one is not additive the way v1.1's fields were.",
+  "comparator_rule": "AGREED requires both observed=true, both signatures valid, both signatures' signed_fields covering {party_id, action_ref, interaction_id}, and matching action_ref. DISAGREED requires the same three readiness conditions with differing action_ref. Anything else (missing observation, invalid signature, or a signature that does not bind action_ref/interaction_id/party_id) is UNRESOLVED -- never defaulted to AGREED or DISAGREED.",
   "vectors": [
     {
       "id": "agreed-001",
@@ -17,7 +17,12 @@
             "issuer": "safeagent-guardian",
             "kid": "sg-key-01",
             "pubkey": "MCowBQYDK2VwAyEAqQm7VZ0X8tGxJm6QwYh3fN4dL9pRk2vC5eA1sT7uHzM=",
-            "jws_signature": "eyJhbGciOiJFZERTQSJ9.c2FmZWFnZW50LWd1YXJkaWFu.QVKz8n2Lp9wXbYr4Ht7c"
+            "jws_signature": "eyJhbGciOiJFZERTQSJ9.c2FmZWFnZW50LWd1YXJkaWFu.QVKz8n2Lp9wXbYr4Ht7c",
+            "signed_fields": [
+              "party_id",
+              "action_ref",
+              "interaction_id"
+            ]
           }
         },
         "party_b": {
@@ -28,17 +33,23 @@
             "issuer": "counterparty-guardian",
             "kid": "cg-key-01",
             "pubkey": "MCowBQYDK2VwAyEAnR3xW9vL2sKfQd6BhTz1oYc8gEj4pXm0aVn5rUw7iCk=",
-            "jws_signature": "eyJhbGciOiJFZERTQSJ9.Y291bnRlcnBhcnR5LWd1YXJkaWFu.Bt6Jd0mQx3Ny8VpFcW2r"
+            "jws_signature": "eyJhbGciOiJFZERTQSJ9.Y291bnRlcnBhcnR5LWd1YXJkaWFu.Bt6Jd0mQx3Ny8VpFcW2r",
+            "signed_fields": [
+              "party_id",
+              "action_ref",
+              "interaction_id"
+            ]
           }
         },
         "version": "peer-reconciliation-ref-v1"
       },
-      "peer_reconciliation_ref": "8555d6a080388ecc6a5d562becb01dda3c75243b9598200f9b1616e2655cf67c",
+      "peer_reconciliation_ref": "46f89af451b3c32faf485b9b1db3aea2edddaa933cb53ff553e00f37efd63751",
       "checks": {
         "canonical_envelope": true,
         "structural_validity": true,
         "signature_valid_a": true,
-        "signature_valid_b": true
+        "signature_valid_b": true,
+        "signature_binding": true
       },
       "comparator_state": "AGREED"
     },
@@ -56,7 +67,12 @@
             "issuer": "narko4u-guardian",
             "kid": "ng-key-02",
             "pubkey": "MCowBQYDK2VwAyEAeK7pQ2mN9xVfR4tLc0bYs8gHj3oDw6zA1uEi5rTn2qC=",
-            "jws_signature": "eyJhbGciOiJFZERTQSJ9.bmFya280dS1ndWFyZGlhbg.Fp3Rz9wKm6HbXd1Vt4cJ"
+            "jws_signature": "eyJhbGciOiJFZERTQSJ9.bmFya280dS1ndWFyZGlhbg.Fp3Rz9wKm6HbXd1Vt4cJ",
+            "signed_fields": [
+              "party_id",
+              "action_ref",
+              "interaction_id"
+            ]
           }
         },
         "party_b": {
@@ -67,17 +83,23 @@
             "issuer": "scopeblind-guardian",
             "kid": "sb-key-03",
             "pubkey": "MCowBQYDK2VwAyEAsY4mB1nQ7xLwK3eV9tRc2oFj6pDz0aGh8uEi5wTn4qX=",
-            "jws_signature": "eyJhbGciOiJFZERTQSJ9.c2NvcGVibGluZC1ndWFyZGlhbg.Hn5Tx2vLp8QwYc7Rd3bK"
+            "jws_signature": "eyJhbGciOiJFZERTQSJ9.c2NvcGVibGluZC1ndWFyZGlhbg.Hn5Tx2vLp8QwYc7Rd3bK",
+            "signed_fields": [
+              "party_id",
+              "action_ref",
+              "interaction_id"
+            ]
           }
         },
         "version": "peer-reconciliation-ref-v1"
       },
-      "peer_reconciliation_ref": "063ca9d07aff8a11d0312a36c0cbfda3ff207ce26ca8062fa0944efbafce6c03",
+      "peer_reconciliation_ref": "cb07a6ba05849d892015fd7b88a842e822a1f4c1e16d7d9493c6615f01410409",
       "checks": {
         "canonical_envelope": true,
         "structural_validity": true,
         "signature_valid_a": true,
-        "signature_valid_b": true
+        "signature_valid_b": true,
+        "signature_binding": true
       },
       "comparator_state": "DISAGREED"
     },
@@ -95,7 +117,12 @@
             "issuer": "astrogilda-guardian",
             "kid": "ag-key-04",
             "pubkey": "MCowBQYDK2VwAyEAxJ2nR8mQ4vLcK1eT7oWs9bYd3pGh0aFi6uEj5rTx8qZ=",
-            "jws_signature": "eyJhbGciOiJFZERTQSJ9.YXN0cm9naWxkYS1ndWFyZGlhbg.Kq7Wm4xPn9RbYd2Vt6cH"
+            "jws_signature": "eyJhbGciOiJFZERTQSJ9.YXN0cm9naWxkYS1ndWFyZGlhbg.Kq7Wm4xPn9RbYd2Vt6cH",
+            "signed_fields": [
+              "party_id",
+              "action_ref",
+              "interaction_id"
+            ]
           }
         },
         "party_b": {
@@ -106,12 +133,13 @@
         },
         "version": "peer-reconciliation-ref-v1"
       },
-      "peer_reconciliation_ref": "b709073411cedb50e4ccde67a634b1190c2a05162579800b14487d235c5e723b",
+      "peer_reconciliation_ref": "ed20dbfd82b59c7fb9795a984b99a6232d445e8bb0c4b18b4b424ab2b394a764",
       "checks": {
         "canonical_envelope": true,
         "structural_validity": true,
         "signature_valid_a": true,
-        "signature_valid_b": false
+        "signature_valid_b": false,
+        "signature_binding": true
       },
       "comparator_state": "UNRESOLVED"
     },
@@ -131,7 +159,12 @@
             "issuer": "empire-labs-guardian",
             "kid": "el-key-05",
             "pubkey": "MCowBQYDK2VwAyEAqL8nT2mR9xVcK4eW7oYs1bGd6pFj0aHi3uEk5rTz8qW=",
-            "jws_signature": "eyJhbGciOiJFZERTQSJ9.ZW1waXJlLWxhYnMtZ3VhcmRpYW4.Mn8Yz4vLq2WbXd7Rt5cJ"
+            "jws_signature": "eyJhbGciOiJFZERTQSJ9.ZW1waXJlLWxhYnMtZ3VhcmRpYW4.Mn8Yz4vLq2WbXd7Rt5cJ",
+            "signed_fields": [
+              "party_id",
+              "action_ref",
+              "interaction_id"
+            ]
           }
         },
         "party_b": {
@@ -142,17 +175,23 @@
             "issuer": "counterparty-guardian",
             "kid": "cg-key-01",
             "pubkey": "MCowBQYDK2VwAyEAnR3xW9vL2sKfQd6BhTz1oYc8gEj4pXm0aVn5rUw7iCk=",
-            "jws_signature": "eyJhbGciOiJFZERTQSJ9.Y291bnRlcnBhcnR5LWd1YXJkaWFu.Bt6Jd0mQx3Ny8VpFcW2r"
+            "jws_signature": "eyJhbGciOiJFZERTQSJ9.Y291bnRlcnBhcnR5LWd1YXJkaWFu.Bt6Jd0mQx3Ny8VpFcW2r",
+            "signed_fields": [
+              "party_id",
+              "action_ref",
+              "interaction_id"
+            ]
           }
         },
         "version": "peer-reconciliation-ref-v1"
       },
-      "peer_reconciliation_ref": "04119149929a39545628b4f98b8dd0967c71d0fa02fe140c04b80d69b8cf7333",
+      "peer_reconciliation_ref": "e02c7d6995c28385a51f37ce3af7588703d423da2fdb99ac5b3306fae4ae6b6e",
       "checks": {
         "canonical_envelope": true,
         "structural_validity": false,
         "signature_valid_a": true,
-        "signature_valid_b": true
+        "signature_valid_b": true,
+        "signature_binding": true
       },
       "comparator_state": "UNRESOLVED"
     },
@@ -172,7 +211,12 @@
             "issuer": "safeagent-guardian",
             "kid": "sg-key-01",
             "pubkey": "MCowBQYDK2VwAyEAqQm7VZ0X8tGxJm6QwYh3fN4dL9pRk2vC5eA1sT7uHzM=",
-            "jws_signature": "eyJhbGciOiJFZERTQSJ9.c2FmZWFnZW50LWd1YXJkaWFu.QVKz8n2Lp9wXbYr4Ht7c"
+            "jws_signature": "eyJhbGciOiJFZERTQSJ9.c2FmZWFnZW50LWd1YXJkaWFu.QVKz8n2Lp9wXbYr4Ht7c",
+            "signed_fields": [
+              "party_id",
+              "action_ref",
+              "interaction_id"
+            ]
           }
         },
         "party_b": {
@@ -183,7 +227,12 @@
             "issuer": "counterparty-guardian",
             "kid": "cg-key-01",
             "pubkey": "MCowBQYDK2VwAyEAnR3xW9vL2sKfQd6BhTz1oYc8gEj4pXm0aVn5rUw7iCk=",
-            "jws_signature": "eyJhbGciOiJFZERTQSJ9.Y291bnRlcnBhcnR5LWd1YXJkaWFu.Bt6Jd0mQx3Ny8VpFcW2r"
+            "jws_signature": "eyJhbGciOiJFZERTQSJ9.Y291bnRlcnBhcnR5LWd1YXJkaWFu.Bt6Jd0mQx3Ny8VpFcW2r",
+            "signed_fields": [
+              "party_id",
+              "action_ref",
+              "interaction_id"
+            ]
           }
         },
         "version": "peer-reconciliation-ref-v1"
@@ -193,7 +242,8 @@
         "canonical_envelope": false,
         "structural_validity": true,
         "signature_valid_a": true,
-        "signature_valid_b": true
+        "signature_valid_b": true,
+        "signature_binding": true
       },
       "comparator_state": "AGREED"
     },
@@ -211,7 +261,12 @@
             "issuer": "safeagent-guardian",
             "kid": "sg-key-02",
             "pubkey": "MCowBQYDK2VwAyEAqQm7VZ0X8tGxJm6QwYh3fN4dL9pRk2vC5eA1sT7uHzM=",
-            "jws_signature": "eyJhbGciOiJFZERTQSJ9.c2FmZWFnZW50LWd1YXJkaWFuLWNvcnJlY3Rpb24.Rk3Wm7xNp2QbYd9Vt1cH"
+            "jws_signature": "eyJhbGciOiJFZERTQSJ9.c2FmZWFnZW50LWd1YXJkaWFuLWNvcnJlY3Rpb24.Rk3Wm7xNp2QbYd9Vt1cH",
+            "signed_fields": [
+              "party_id",
+              "action_ref",
+              "interaction_id"
+            ]
           }
         },
         "party_b": {
@@ -222,15 +277,20 @@
             "issuer": "counterparty-guardian",
             "kid": "cg-key-01",
             "pubkey": "MCowBQYDK2VwAyEAnR3xW9vL2sKfQd6BhTz1oYc8gEj4pXm0aVn5rUw7iCk=",
-            "jws_signature": "eyJhbGciOiJFZERTQSJ9.Y291bnRlcnBhcnR5LWd1YXJkaWFuLWNvcnJlY3Rpb24.Nt4Rd2mLx8VpBc6Wq3fT"
+            "jws_signature": "eyJhbGciOiJFZERTQSJ9.Y291bnRlcnBhcnR5LWd1YXJkaWFuLWNvcnJlY3Rpb24.Nt4Rd2mLx8VpBc6Wq3fT",
+            "signed_fields": [
+              "party_id",
+              "action_ref",
+              "interaction_id"
+            ]
           }
         },
         "version": "peer-reconciliation-ref-v1",
-        "supersedes": "8555d6a080388ecc6a5d562becb01dda3c75243b9598200f9b1616e2655cf67c"
+        "supersedes": "46f89af451b3c32faf485b9b1db3aea2edddaa933cb53ff553e00f37efd63751"
       },
-      "peer_reconciliation_ref": "a1ad58d955709c2994661c7983b4aeb66d93df53789bd50dbaa34f9f1fcb3848",
+      "peer_reconciliation_ref": "11e11998e14f2a59cb8c98f0a6ff4b503845118d89d877a59ab4ab937a44c9f8",
       "known_envelopes": {
-        "8555d6a080388ecc6a5d562becb01dda3c75243b9598200f9b1616e2655cf67c": {
+        "46f89af451b3c32faf485b9b1db3aea2edddaa933cb53ff553e00f37efd63751": {
           "interaction_id": "3f9c9e2e-6b5a-4b7e-8f3e-1a2b3c4d5e6f",
           "resolved_by": "mycelium-trail-index"
         }
@@ -240,7 +300,8 @@
         "structural_validity": true,
         "signature_valid_a": true,
         "signature_valid_b": true,
-        "supersedes_chain_integrity": true
+        "supersedes_chain_integrity": true,
+        "signature_binding": true
       },
       "comparator_state": "AGREED"
     },
@@ -258,7 +319,12 @@
             "issuer": "empire-labs-guardian",
             "kid": "el-key-06",
             "pubkey": "MCowBQYDK2VwAyEAqL8nT2mR9xVcK4eW7oYs1bGd6pFj0aHi3uEk5rTz8qW=",
-            "jws_signature": "eyJhbGciOiJFZERTQSJ9.ZW1waXJlLWxhYnMtZ3VhcmRpYW4tdHM.Xy8Zn4vMq2WbTd7Rt5cJ"
+            "jws_signature": "eyJhbGciOiJFZERTQSJ9.ZW1waXJlLWxhYnMtZ3VhcmRpYW4tdHM.Xy8Zn4vMq2WbTd7Rt5cJ",
+            "signed_fields": [
+              "party_id",
+              "action_ref",
+              "interaction_id"
+            ]
           }
         },
         "party_b": {
@@ -270,12 +336,13 @@
         },
         "version": "peer-reconciliation-ref-v1"
       },
-      "peer_reconciliation_ref": "628e55e89ad3abc9bafde196aece903e915b25775c190a0df0b6b8800e0e318c",
+      "peer_reconciliation_ref": "5e540617c6eb3c73050538d153ce0bde0ecf0303d3f33dd5ab00e68a5330436c",
       "checks": {
         "canonical_envelope": true,
         "structural_validity": true,
         "signature_valid_a": true,
-        "signature_valid_b": false
+        "signature_valid_b": false,
+        "signature_binding": true
       },
       "comparator_state": "UNRESOLVED"
     },
@@ -293,7 +360,12 @@
             "issuer": "narko4u-guardian",
             "kid": "ng-key-03",
             "pubkey": "MCowBQYDK2VwAyEAeK7pQ2mN9xVfR4tLc0bYs8gHj3oDw6zA1uEi5rTn2qC=",
-            "jws_signature": "eyJhbGciOiJFZERTQSJ9.bmFya280dS1ndWFyZGlhbi1hc29m.Pq5Tz8wKm6HbXd1Vt4cJ"
+            "jws_signature": "eyJhbGciOiJFZERTQSJ9.bmFya280dS1ndWFyZGlhbi1hc29m.Pq5Tz8wKm6HbXd1Vt4cJ",
+            "signed_fields": [
+              "party_id",
+              "action_ref",
+              "interaction_id"
+            ]
           },
           "as_of": 1787650000000
         },
@@ -305,18 +377,24 @@
             "issuer": "scopeblind-guardian",
             "kid": "sb-key-04",
             "pubkey": "MCowBQYDK2VwAyEAsY4mB1nQ7xLwK3eV9tRc2oFj6pDz0aGh8uEi5wTn4qX=",
-            "jws_signature": "eyJhbGciOiJFZERTQSJ9.c2NvcGVibGluZC1ndWFyZGlhbi1hc29m.Wn5Tx2vLp8QwRc7Yd3bK"
+            "jws_signature": "eyJhbGciOiJFZERTQSJ9.c2NvcGVibGluZC1ndWFyZGlhbi1hc29m.Wn5Tx2vLp8QwRc7Yd3bK",
+            "signed_fields": [
+              "party_id",
+              "action_ref",
+              "interaction_id"
+            ]
           },
           "as_of": 1787650300000
         },
         "version": "peer-reconciliation-ref-v1"
       },
-      "peer_reconciliation_ref": "9de456bbc7526d6fe368e268367e33e284e92dcab9d690c51575566a81f3b793",
+      "peer_reconciliation_ref": "eb4e94f289010e06ca1b48c9052dc907b7248710c3d8fbb72b894413cc87aee9",
       "checks": {
         "canonical_envelope": true,
         "structural_validity": true,
         "signature_valid_a": true,
-        "signature_valid_b": true
+        "signature_valid_b": true,
+        "signature_binding": true
       },
       "comparator_state": "AGREED"
     },
@@ -336,7 +414,12 @@
             "issuer": "safeagent-guardian",
             "kid": "sg-key-02",
             "pubkey": "MCowBQYDK2VwAyEAqQm7VZ0X8tGxJm6QwYh3fN4dL9pRk2vC5eA1sT7uHzM=",
-            "jws_signature": "eyJhbGciOiJFZERTQSJ9.c2FmZWFnZW50LWd1YXJkaWFuLWNvcnJlY3Rpb24.Rk3Wm7xNp2QbYd9Vt1cH"
+            "jws_signature": "eyJhbGciOiJFZERTQSJ9.c2FmZWFnZW50LWd1YXJkaWFuLWNvcnJlY3Rpb24.Rk3Wm7xNp2QbYd9Vt1cH",
+            "signed_fields": [
+              "party_id",
+              "action_ref",
+              "interaction_id"
+            ]
           }
         },
         "party_b": {
@@ -347,20 +430,26 @@
             "issuer": "counterparty-guardian",
             "kid": "cg-key-01",
             "pubkey": "MCowBQYDK2VwAyEAnR3xW9vL2sKfQd6BhTz1oYc8gEj4pXm0aVn5rUw7iCk=",
-            "jws_signature": "eyJhbGciOiJFZERTQSJ9.Y291bnRlcnBhcnR5LWd1YXJkaWFuLWNvcnJlY3Rpb24.Nt4Rd2mLx8VpBc6Wq3fT"
+            "jws_signature": "eyJhbGciOiJFZERTQSJ9.Y291bnRlcnBhcnR5LWd1YXJkaWFuLWNvcnJlY3Rpb24.Nt4Rd2mLx8VpBc6Wq3fT",
+            "signed_fields": [
+              "party_id",
+              "action_ref",
+              "interaction_id"
+            ]
           }
         },
         "version": "peer-reconciliation-ref-v1",
         "supersedes": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
       },
-      "peer_reconciliation_ref": "461961d7e5582fd0a50143b4e9ff8a7b0ce2ebf230ea752bd685fbcd1b812ab1",
+      "peer_reconciliation_ref": "5efed58dcfd0e3d9c8838ba4ac6c42129dfcb1aed758d11cf0890924dd770dd7",
       "known_envelopes": {},
       "checks": {
         "canonical_envelope": true,
         "structural_validity": true,
         "signature_valid_a": true,
         "signature_valid_b": true,
-        "supersedes_chain_integrity": false
+        "supersedes_chain_integrity": false,
+        "signature_binding": true
       },
       "comparator_state": "AGREED"
     },
@@ -378,7 +467,12 @@
             "issuer": "safeagent-guardian",
             "kid": "sg-key-02",
             "pubkey": "MCowBQYDK2VwAyEAqQm7VZ0X8tGxJm6QwYh3fN4dL9pRk2vC5eA1sT7uHzM=",
-            "jws_signature": "eyJhbGciOiJFZERTQSJ9.c2FmZWFnZW50LWd1YXJkaWFuLWNvcnJlY3Rpb24.Rk3Wm7xNp2QbYd9Vt1cH"
+            "jws_signature": "eyJhbGciOiJFZERTQSJ9.c2FmZWFnZW50LWd1YXJkaWFuLWNvcnJlY3Rpb24.Rk3Wm7xNp2QbYd9Vt1cH",
+            "signed_fields": [
+              "party_id",
+              "action_ref",
+              "interaction_id"
+            ]
           }
         },
         "party_b": {
@@ -389,15 +483,20 @@
             "issuer": "counterparty-guardian",
             "kid": "cg-key-01",
             "pubkey": "MCowBQYDK2VwAyEAnR3xW9vL2sKfQd6BhTz1oYc8gEj4pXm0aVn5rUw7iCk=",
-            "jws_signature": "eyJhbGciOiJFZERTQSJ9.Y291bnRlcnBhcnR5LWd1YXJkaWFuLWNvcnJlY3Rpb24.Nt4Rd2mLx8VpBc6Wq3fT"
+            "jws_signature": "eyJhbGciOiJFZERTQSJ9.Y291bnRlcnBhcnR5LWd1YXJkaWFuLWNvcnJlY3Rpb24.Nt4Rd2mLx8VpBc6Wq3fT",
+            "signed_fields": [
+              "party_id",
+              "action_ref",
+              "interaction_id"
+            ]
           }
         },
         "version": "peer-reconciliation-ref-v1",
-        "supersedes": "8555d6a080388ecc6a5d562becb01dda3c75243b9598200f9b1616e2655cf67c"
+        "supersedes": "46f89af451b3c32faf485b9b1db3aea2edddaa933cb53ff553e00f37efd63751"
       },
-      "peer_reconciliation_ref": "a1ad58d955709c2994661c7983b4aeb66d93df53789bd50dbaa34f9f1fcb3848",
+      "peer_reconciliation_ref": "11e11998e14f2a59cb8c98f0a6ff4b503845118d89d877a59ab4ab937a44c9f8",
       "known_envelopes": {
-        "8555d6a080388ecc6a5d562becb01dda3c75243b9598200f9b1616e2655cf67c": {
+        "46f89af451b3c32faf485b9b1db3aea2edddaa933cb53ff553e00f37efd63751": {
           "interaction_id": "3f9c9e2e-6b5a-4b7e-8f3e-1a2b3c4d5e6f",
           "resolved_by": "safeagent-guardian"
         }
@@ -407,11 +506,63 @@
         "structural_validity": true,
         "signature_valid_a": true,
         "signature_valid_b": true,
-        "supersedes_chain_integrity": false
+        "supersedes_chain_integrity": false,
+        "signature_binding": true
       },
       "comparator_state": "AGREED",
       "failure_mode": "supersedes_chain_integrity",
       "failure_detail": "known_envelopes entry resolved_by=safeagent-guardian is one of this envelope's own parties — not an independent source"
+    },
+    {
+      "id": "replay-001",
+      "description": "CRITICAL negative, v1.2. party_a's co_signer is cryptographically valid (signature_valid_a=true, declared) but signed_fields=[\"party_id\",\"interaction_id\"] omits action_ref -- the signature attests party_a's identity and the interaction it participated in, but never binds the specific action_ref value carried alongside it. Modeled on narko4u/Empire Labs flagging the same class of bug in a different design (zhaoxinghua09-cell's verdict evidence records, GenAI-Security-Project/agent-control-standard#33 comment 6246290138, 2026-10-18): a genuine signed statement proves the signer checked *something*, not that it checked *this specific value* -- reusable to pair the same co_signer with a different action_ref. canonical_envelope and structural_validity both pass (signed_fields is present and non-empty, which is all structural_validity checks) -- only signature_binding, checked independently of shape, catches that the bound field set is incomplete. party_b's action_ref happens to equal party_a's declared action_ref: a comparator that only compared action_ref values without checking what each signature actually binds would wrongly report AGREED.",
+      "expected": "FAIL",
+      "failure_mode": "signature_binding",
+      "failure_detail": "party_a: co_signer.signed_fields=['party_id','interaction_id'] does not include 'action_ref' -- signature does not bind the value it is being presented alongside",
+      "envelope": {
+        "interaction_id": "7f6e5d4c-3b2a-4190-8e7d-6c5b4a392817",
+        "party_a": {
+          "party_id": "replay-victim-guardian",
+          "observed": true,
+          "action_ref": "d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5",
+          "co_signer": {
+            "issuer": "replay-victim-guardian",
+            "kid": "rv-key-01",
+            "pubkey": "MCowBQYDK2VwAyEAbN9wR3mQ6xLcK2eT8oYs4bGd1pFj7aHi0uEk9rTz3qM=",
+            "jws_signature": "eyJhbGciOiJFZERTQSJ9.cmVwbGF5LXZpY3RpbS1ndWFyZGlhbg.Qp2Wn5xMt8VbYd4Rc6fJ",
+            "signed_fields": [
+              "party_id",
+              "interaction_id"
+            ]
+          }
+        },
+        "party_b": {
+          "party_id": "replay-counterparty-guardian",
+          "observed": true,
+          "action_ref": "d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5",
+          "co_signer": {
+            "issuer": "replay-counterparty-guardian",
+            "kid": "rc-key-01",
+            "pubkey": "MCowBQYDK2VwAyEAeV7mT1nQ4xKfL6eW9oDs3bYc8pGh2aFj5uEi0rTz7qN=",
+            "jws_signature": "eyJhbGciOiJFZERTQSJ9.cmVwbGF5LWNvdW50ZXJwYXJ0eS1ndWFyZGlhbg.Rt4Yc8vLp2WbXd6Qm3fK",
+            "signed_fields": [
+              "party_id",
+              "action_ref",
+              "interaction_id"
+            ]
+          }
+        },
+        "version": "peer-reconciliation-ref-v1"
+      },
+      "peer_reconciliation_ref": "f71dd7a939eabbc617dd5a9065ddcbc9a47b82bffc5f55742b4d5e2d19645e0f",
+      "checks": {
+        "canonical_envelope": true,
+        "structural_validity": true,
+        "signature_valid_a": true,
+        "signature_valid_b": true,
+        "signature_binding": false
+      },
+      "comparator_state": "UNRESOLVED"
     }
   ],
   "provenance": {
