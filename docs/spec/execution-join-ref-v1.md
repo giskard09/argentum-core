@@ -319,3 +319,8 @@ and remains, entirely valid. See `post-commit-divergence-001`.
   a retroactive one" posture follows the same non-collapsing precedent
   `peer-reconciliation-ref-v1.md`'s `supersedes` mechanism and tri-state
   comparator already set in this repo.
+- Composed onto a different domain's shape, same day: `examples/conformance/
+  execution-join-ref/horizon-shield-pilot-case-d/` proposes `post_commit_
+  consistency` as a fourth, complementary case for the live pilot scoped in
+  `ogasurfproject-jpg/horizon-shield#51` — the JCCDB cost database an
+  accepted estimate was audited against changing after acceptance.

@@ -1,0 +1,137 @@
+{
+  "description": "Worked example composing execution-join-ref-v1's post_commit_consistency invariant (PR#137, 2026-10-18) onto the request_occurrence/task/execution-receipt shape frozen in ogasurfproject-jpg/horizon-shield#51 (pilot scoping, 2026-10-18) and defined in COMPANION_v0.md / PILOT_v0.md at commit 4d720ace (MIT). This is NOT an alternative implementation of authority, payment, or acceptance -- those three roles are covered by MUSUBI/APS (authority_and_payment) and babyblueviper1's work-acceptance-record (acceptance) in the pilot itself, and are declared here, not recomputed. The only invariant this worked example computes is post_commit_consistency: does a LATER, independent observation of the audited output (the JCCDB cost database snapshot, or the deliverable) still match the response_sha256 the execution-receipt committed to at settlement time? Case A (within/paid/accepted, matches the pilot's own happy path) shows the new invariant does not interfere with it. Case D (new, proposed) is the gap after A closes validly: the JCCDB snapshot the estimate was audited against changes after acceptance. The original request/execution/payment/acceptance records remain exactly as valid as they were -- nobody misstated anything at settlement time -- a separate, later post_commit_observation names the divergence without collapsing the two into one state, the same principle execution-join-ref-v1's own post-commit-divergence-001 demonstrates.",
+  "pinned_source": {
+    "repo": "ogasurfproject-jpg/horizon-shield",
+    "commit": "4d720ace",
+    "files": [
+      "workers/hs-ledger/nenrin/musubi-v0/ca2a-companion-v0/COMPANION_v0.md",
+      "workers/hs-ledger/nenrin/musubi-v0/ca2a-companion-v0/PILOT_v0.md"
+    ],
+    "license": "MIT",
+    "issue": "ogasurfproject-jpg/horizon-shield#51"
+  },
+  "vectors": [
+    {
+      "id": "case-a-within-paid-accepted-001",
+      "description": "Analogue of the pilot's own Case A (within/paid/accepted). authority_and_payment and acceptance are declared true (out of scope for this worked example -- MUSUBI/APS and invinoveritas's job). post_commit_consistency is computed: the post_commit_observation's observed_hash matches the execution-receipt's response_sha256 exactly, demonstrating the new invariant does not break the happy path.",
+      "expected": "PASS",
+      "task": {
+        "type": "musubi.ca2a.task.v0",
+        "service": "horizon-shield.estimate-audit",
+        "amount": 10,
+        "unit": "testnet-usdc-minor",
+        "nonce": "a3f1c2e9d4b7a8f0c1e2d3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4"
+      },
+      "request_occurrence": {
+        "type": "musubi.ca2a.request.v0",
+        "caller": "giskard09-pilot-caller",
+        "responder": "ogasurfproject-jpg-horizon-shield",
+        "lineage": "giskard09-pilot-root-credential",
+        "capability": "horizon-shield.estimate-audit",
+        "occurrence_id": "b1a2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2",
+        "task_sha256": "f49e7b91ff2f1240582da1d1f89430983b7743ddf1804c02642956737fe7c530"
+      },
+      "execution_receipt": {
+        "type": "musubi.ca2a.execution-receipt.v0",
+        "caller": "giskard09-pilot-caller",
+        "lineage": "giskard09-pilot-root-credential",
+        "capability": "horizon-shield.estimate-audit",
+        "request_sha256": "4edaf6c7461a7439a5af474875129c7d3f3456209700b0d6575d1473e9ef58c6",
+        "seen_block": {
+          "height": 920000,
+          "hash": "0000000000000000000000000000000000000000000000000000000000000000"
+        },
+        "outcome": {
+          "kind": "result",
+          "stage": "settled",
+          "response_sha256": "f15c6e0cd0bc7f37933cf910df361ee6e6f5bfb77ad5c97c7d1cf2d0b6946394"
+        },
+        "attestation_sha256": null
+      },
+      "post_commit_observation": {
+        "type": "execution-join-ref.post-commit-observation.v1",
+        "request_sha256": "4edaf6c7461a7439a5af474875129c7d3f3456209700b0d6575d1473e9ef58c6",
+        "observed_hash": "f15c6e0cd0bc7f37933cf910df361ee6e6f5bfb77ad5c97c7d1cf2d0b6946394",
+        "observed_at_ms": 1783300000000,
+        "observer_id": "giskard09-post-commit-monitor"
+      },
+      "post_commit_ref": "8ed53b9497d009192afeb7703199fd1dfdeb57e87afd935591fb9408c3ee92d2",
+      "declared": {
+        "authority_and_payment": true,
+        "acceptance": true
+      },
+      "checks": {
+        "canonical_envelope": true,
+        "chain_integrity": true,
+        "authority_and_payment": true,
+        "acceptance": true,
+        "post_commit_consistency": true
+      }
+    },
+    {
+      "id": "case-d-jccdb-snapshot-divergence-001",
+      "description": "Proposed Case D: the gap after Case A already closed validly. Same request_occurrence, task, and execution_receipt as Case A -- the original call was genuinely within, paid, and accepted; authority_and_payment and acceptance stay declared true, unaffected. ~24h later, an independent post_commit_observation recomputes the JCCDB cost database snapshot the estimate was audited against (same original fixture_quote_sha256, different jccdb_snapshot_sha256) and gets a different response_sha256 than the one the execution-receipt committed to at settlement. post_commit_consistency fails -- POST_COMMIT_DIVERGENCE -- while every other invariant, including the original execution-receipt's own validity, remains true. Nothing about the original call was ever false; the database it was checked against moved afterward.",
+      "expected": "FAIL",
+      "failure_mode": "post_commit_consistency",
+      "failure_code": "POST_COMMIT_DIVERGENCE",
+      "failure_detail": "execution_receipt.outcome.response_sha256=f15c6e0cd0bc… (committed at seen_block.height=920000). post_commit_observation at observed_at_ms=1783386400000 (~24h later) recomputes response_sha256=4f7cd5302242… for the same request_sha256=4edaf6c7461a… -- same fixture_quote_sha256, different jccdb_snapshot_sha256. The cost database the estimate was audited against changed after acceptance; the original acceptance was not wrong when it was made.",
+      "task": {
+        "type": "musubi.ca2a.task.v0",
+        "service": "horizon-shield.estimate-audit",
+        "amount": 10,
+        "unit": "testnet-usdc-minor",
+        "nonce": "a3f1c2e9d4b7a8f0c1e2d3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4"
+      },
+      "request_occurrence": {
+        "type": "musubi.ca2a.request.v0",
+        "caller": "giskard09-pilot-caller",
+        "responder": "ogasurfproject-jpg-horizon-shield",
+        "lineage": "giskard09-pilot-root-credential",
+        "capability": "horizon-shield.estimate-audit",
+        "occurrence_id": "b1a2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2",
+        "task_sha256": "f49e7b91ff2f1240582da1d1f89430983b7743ddf1804c02642956737fe7c530"
+      },
+      "execution_receipt": {
+        "type": "musubi.ca2a.execution-receipt.v0",
+        "caller": "giskard09-pilot-caller",
+        "lineage": "giskard09-pilot-root-credential",
+        "capability": "horizon-shield.estimate-audit",
+        "request_sha256": "4edaf6c7461a7439a5af474875129c7d3f3456209700b0d6575d1473e9ef58c6",
+        "seen_block": {
+          "height": 920000,
+          "hash": "0000000000000000000000000000000000000000000000000000000000000000"
+        },
+        "outcome": {
+          "kind": "result",
+          "stage": "settled",
+          "response_sha256": "f15c6e0cd0bc7f37933cf910df361ee6e6f5bfb77ad5c97c7d1cf2d0b6946394"
+        },
+        "attestation_sha256": null
+      },
+      "post_commit_observation": {
+        "type": "execution-join-ref.post-commit-observation.v1",
+        "request_sha256": "4edaf6c7461a7439a5af474875129c7d3f3456209700b0d6575d1473e9ef58c6",
+        "observed_hash": "4f7cd5302242f7147c9e65461664e0d3cab26acf9ba2ad9ab9dc45a0984bb1a7",
+        "observed_at_ms": 1783386400000,
+        "observer_id": "giskard09-post-commit-monitor"
+      },
+      "post_commit_ref": "50707244f134df7828556ec8802ea25f7e65f84048481fae3670767603a46243",
+      "declared": {
+        "authority_and_payment": true,
+        "acceptance": true
+      },
+      "checks": {
+        "canonical_envelope": true,
+        "chain_integrity": true,
+        "authority_and_payment": true,
+        "acceptance": true,
+        "post_commit_consistency": false
+      }
+    }
+  ],
+  "provenance": {
+    "authored_by": "giskard09 (argentum-core)",
+    "verification_mode": "asserted",
+    "independently_reproduced_by": []
+  }
+}
