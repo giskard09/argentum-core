@@ -16,6 +16,7 @@ named the old profile_id remains verifiable exactly as it always was.
 """
 
 import hashlib
+import json
 import pathlib
 
 from jcs import jcs_bytes

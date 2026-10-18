@@ -1,10 +1,18 @@
 {
-  "spec_version": "execution-join-ref-v1",
-  "description": "Conformance vectors for execution-join-ref-v1. Five invariants are separately recomputable: canonical_envelope, chain_integrity, no_duplicate_attempt, result_uniqueness, proof_binding. A sixth invariant checks effective_call_binding: the dispatched call must bind to the same action_ref the guardrail decided on. Anchoring is optional and not required for any vector here. A verifier that only checks chain_integrity will silently pass DUPLICATE_ATTEMPT, RESULT_ID_CONFLICT, and EFFECTIVE_CALL_REBINDING_FAILED.",
+  "spec_version": "execution-join-ref-v1.1",
+  "description": "Conformance vectors for execution-join-ref-v1. Five invariants are separately recomputable: canonical_envelope, chain_integrity, no_duplicate_attempt, result_uniqueness, proof_binding. A sixth invariant checks effective_call_binding: the dispatched call must bind to the same action_ref the guardrail decided on. Anchoring is optional and not required for any vector here. A verifier that only checks chain_integrity will silently pass DUPLICATE_ATTEMPT, RESULT_ID_CONFLICT, and EFFECTIVE_CALL_REBINDING_FAILED. v1.1 (additive) adds a seventh invariant, post_commit_consistency, and failure code POST_COMMIT_DIVERGENCE: a later observation of committed output diverging from output_hash, checked independently of and without retroactively affecting the other six invariants. A verifier that has no concept of post-commit observation will silently pass post-commit-divergence-001 as fully conformant forever, with no way to ever detect the divergence.",
   "chain_rule": "decision_id preimage must include action_ref. result_id preimage must include attempt_id. proof_ref preimage (if present) must include this attempt_id, not a rewrite's.",
   "canonicalization_note": "decision evidence preimage must include canonicalization_profile_id. The value is SHA-256(JCS(profile_doc)) — content-addressed. Verifier resolves the id against profiles/ before comparing any digest. Absent or unsupported profile must return a failure code distinct from DIGEST_MISMATCH.",
   "profile_registry": "profiles/ — each file is <profile_id>.json where profile_id = SHA-256(JCS(doc)). Human aliases in profiles/profile_registry.py.",
-  "failure_codes": ["AUTHORIZED_EFFECTIVE_CALL", "MALFORMED_EVIDENCE", "UNSUPPORTED_CANONICAL_PROFILE", "DIGEST_MISMATCH", "EXPIRED_POLICY_BINDING"],
+  "failure_codes": [
+    "AUTHORIZED_EFFECTIVE_CALL",
+    "MALFORMED_EVIDENCE",
+    "UNSUPPORTED_CANONICAL_PROFILE",
+    "DIGEST_MISMATCH",
+    "EXPIRED_POLICY_BINDING",
+    "EFFECTIVE_CALL_REBINDING_FAILED",
+    "POST_COMMIT_DIVERGENCE"
+  ],
   "vectors": [
     {
       "id": "execution-join-positive-001",
@@ -406,6 +414,125 @@
         "effective_call_binding": false
       },
       "note": "chain_integrity passes because action_ref→decision_id→attempt_id→result_id is internally consistent. The failure requires a verifier that separately checks effective_action_ref against the decision_id that authorized the action. This is the arg-rewrite attack surface: a guardrail that rewrites args must issue a new decision_id over the rewritten preimage before dispatch."
+    },
+    {
+      "id": "file-write-rebinding-failed-001",
+      "description": "Domain requested by astrogilda (probityai/agent-evidence#26, 2026-10-18), case 1: \"a file path changes before dispatch without a new approval\". The guardrail reviewed a write to /reports/draft-q3.pdf and issued a permit (decision_id covers action_ref). Before dispatch, the destination path was rewritten to /reports/final-q3.pdf (different input_hash, hence a different effective_action_ref) without a new decision covering it. Structurally identical to EFFECTIVE_CALL_REBINDING_FAILED (same existing failure code -- no new code needed for this case) in the file-write domain rather than Stripe. effective_call_binding fails: no decision_id in the registry covers the effective_action_ref that was actually dispatched.",
+      "expected": "FAIL",
+      "failure_mode": "effective_call_binding",
+      "failure_code": "EFFECTIVE_CALL_REBINDING_FAILED",
+      "failure_detail": "decision_id be2898bf… covers action_ref 2a65d1ea… (original path /reports/draft-q3.pdf, input_hash c1a2b3c4…). Effective call dispatched against /reports/final-q3.pdf, input_hash fade0000… → effective_action_ref 9f6e6129…. No decision_id covers 9f6e6129…. The runtime wrote a different file than the one the guardrail approved.",
+      "envelope": {
+        "version": "execution-join-ref-v1",
+        "action_ref": "2a65d1ea532045ba592a124e54d1f953da585a70589aa3e25b698a955c537a19",
+        "decision_id": "be2898bf65856e5724027ee6ffa72d897994e886b9e176cda86bb436b7a949f0",
+        "attempt_id": "9c796e94c7cbfbc898791bdafffb9f83d676820435dfdecc40899fb341f3c2bf",
+        "result_id": "121a8185d514f8458f0eee59647f9f4f7b84442c7de185680ae4e73d619e99f0",
+        "proof_ref": null,
+        "effective_action_ref": "9f6e6129c00e7091e00f4a6d5506b2da136c23f02153349014f1107309671978"
+      },
+      "preimages": {
+        "action_ref": {
+          "actor_id": "agent-report-filer-v1",
+          "input_hash": "c1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2",
+          "scope": "fs.write.create",
+          "ts_ms": 1783000000000,
+          "version": "execution-join-ref-v1"
+        },
+        "decision_id": {
+          "action_ref": "2a65d1ea532045ba592a124e54d1f953da585a70589aa3e25b698a955c537a19",
+          "outcome": "permit",
+          "policy_id": "fs-write-guardrail-v1",
+          "ts_ms": 1783000000050,
+          "version": "execution-join-ref-v1"
+        },
+        "effective_action_ref": {
+          "actor_id": "agent-report-filer-v1",
+          "input_hash": "fade0000fade0000fade0000fade0000fade0000fade0000fade0000fade0000",
+          "scope": "fs.write.create",
+          "ts_ms": 1783000000000,
+          "version": "execution-join-ref-v1"
+        }
+      },
+      "checks": {
+        "canonical_envelope": true,
+        "chain_integrity": true,
+        "no_duplicate_attempt": true,
+        "result_uniqueness": true,
+        "proof_binding": true,
+        "effective_call_binding": false
+      },
+      "note": "attempt_id/result_id reuse opaque placeholder values not challenged by this vector (no preimages supplied for them), same minimal-scope convention EFFECTIVE_CALL_REBINDING_FAILED already uses -- this vector is exclusively exercising effective_call_binding in the file-write domain."
+    },
+    {
+      "id": "post-commit-divergence-001",
+      "description": "Domain requested by astrogilda (probityai/agent-evidence#26, 2026-10-18), case 2: \"the approved write completes and someone changes the file later\". The join record itself is fully valid -- decision, attempt, and result are complete and all six existing invariants pass, same as execution-join-positive-001. One day later, an independent file-integrity monitor observes /reports/q3-final.pdf again and its content hash no longer matches result_id's declared output_hash. This is NEW failure code POST_COMMIT_DIVERGENCE (v1.1, additive invariant 7, post_commit_consistency) -- it does not retroactively invalidate the original execution (canonical_envelope/chain_integrity/etc. all remain true, exactly as declared below); it names a separate, later divergence between the committed output and a subsequent observation, without collapsing the two into one state.",
+      "expected": "FAIL",
+      "failure_mode": "post_commit_consistency",
+      "failure_code": "POST_COMMIT_DIVERGENCE",
+      "failure_detail": "result_id d61e107f… declares output_hash 0ab1c2d3… at ts_ms=1783100001200. post_commit_observation at ts_ms=1783186400000 (~24h later, fs-integrity-monitor-v1) reports observed_hash ff00aa11… for the same result_id. The two hashes differ: the file committed by the approved write no longer matches what a later check finds. The original result_id remains a valid, unmodified terminal record of what the attempt produced at completion time -- this does not retry, overwrite, or invalidate it.",
+      "envelope": {
+        "version": "execution-join-ref-v1",
+        "action_ref": "8ea9b64aa071a946fb929be51c764d43fe597066872d35ae60972cfb83f93f79",
+        "decision_id": "99ceb0c244c1aa412b2503981a5e3dc335fa2e9f53dd146e317cf5f5bf5b96cb",
+        "attempt_id": "20d4b3264dc4e2dd7a11ca93e360be162e871f5b18a7750829e5beff7446372f",
+        "result_id": "d61e107f2507d23de1d77c54f1674ae031b2087f7ba34715c84aa4e2493533fd",
+        "proof_ref": "a84b95f39f6894f7d597fb98facd1e0624cd4eacbb708fbb5fd9fde282a0ca7d",
+        "post_commit_ref": "3b9222e57682d28ca18488d78196dfad7616a1b27894ecb4f2f26680be84c2c0"
+      },
+      "preimages": {
+        "action_ref": {
+          "actor_id": "agent-report-filer-v1",
+          "input_hash": "d2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3",
+          "scope": "fs.write.create",
+          "ts_ms": 1783100000000,
+          "version": "execution-join-ref-v1"
+        },
+        "decision_id": {
+          "action_ref": "8ea9b64aa071a946fb929be51c764d43fe597066872d35ae60972cfb83f93f79",
+          "outcome": "permit",
+          "policy_id": "fs-write-guardrail-v1",
+          "ts_ms": 1783100000050,
+          "version": "execution-join-ref-v1"
+        },
+        "attempt_id": {
+          "action_ref": "8ea9b64aa071a946fb929be51c764d43fe597066872d35ae60972cfb83f93f79",
+          "attempt_seq": 1,
+          "executor_id": "runtime-node-11",
+          "ts_ms": 1783100000100,
+          "version": "execution-join-ref-v1"
+        },
+        "result_id": {
+          "attempt_id": "20d4b3264dc4e2dd7a11ca93e360be162e871f5b18a7750829e5beff7446372f",
+          "outcome": "completed",
+          "output_hash": "0ab1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1",
+          "ts_ms": 1783100001200,
+          "version": "execution-join-ref-v1"
+        },
+        "proof_ref": {
+          "attempt_id": "20d4b3264dc4e2dd7a11ca93e360be162e871f5b18a7750829e5beff7446372f",
+          "evidence_type": "fs_write_confirmation",
+          "external_ref": "fswrite-evt-7f2c9a1e",
+          "ts_ms": 1783100002000,
+          "version": "execution-join-ref-v1"
+        },
+        "post_commit_observation": {
+          "observed_hash": "ff00aa11bb22cc33dd44ee55ff66aa77bb88cc99dd00ee11ff22aa33bb44cc55",
+          "observed_at_ms": 1783186400000,
+          "observer_id": "fs-integrity-monitor-v1",
+          "result_id": "d61e107f2507d23de1d77c54f1674ae031b2087f7ba34715c84aa4e2493533fd",
+          "version": "execution-join-ref-v1"
+        }
+      },
+      "checks": {
+        "canonical_envelope": true,
+        "chain_integrity": true,
+        "no_duplicate_attempt": true,
+        "result_uniqueness": true,
+        "proof_binding": true,
+        "effective_call_binding": true,
+        "post_commit_consistency": false
+      }
     }
   ],
   "provenance": {
