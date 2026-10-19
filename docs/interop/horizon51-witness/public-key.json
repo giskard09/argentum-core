@@ -1,0 +1,9 @@
+{
+  "algorithm": "Ed25519",
+  "public_key_hex": "cf3fba883807e4af50522e7d2d80d923445323cee30ef1021002f52f3ec209a1",
+  "purpose": "musubi.ca2a.witness-ack.v0",
+  "log_id": "nenrin:ca2a-companion:pilot51",
+  "maintainer": "giskard09",
+  "repository": "https://github.com/giskard09/argentum-core",
+  "note": "Dedicated key generated solely for the horizon-shield#51 pilot run; offered as an optional additional witness alongside the already-agreed threshold-2 configuration (astrogilda, Poke-nushi)."
+}
