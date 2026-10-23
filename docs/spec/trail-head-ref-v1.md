@@ -54,6 +54,20 @@ checkpoint_digest = SHA-256(JCS(checkpoint))
 
 A checkpoint MUST be emitted for every period, **including periods in which the agent recorded nothing**: it then repeats `seq` and `head` with a later `period_end`. Because a checkpoint is expected every period, a missing one is itself evidence (the log stopped being witnessed), instead of being indistinguishable from an idle agent.
 
+## Cadence ceiling
+
+The period length is a deployment parameter (see above), and the checkpoint rule above does not constrain it: an operator can declare an hour-long period, or a year-long one, and still satisfy "a checkpoint MUST be emitted for every period." A longer period does not break anything already specified — it only widens the window in which a tail cut is undetectable (see [What this does NOT prove](#what-this-does-not-prove)).
+
+A consumer that needs an upper bound on that window declares one, `declared_max_period_s`, and checks it against the checkpoint stream:
+
+```
+verify_checkpoint_cadence(checkpoints, declared_max_period_s) -> ok | period_exceeds_declared_maximum
+```
+
+The check compares consecutive `period_end` values, sorted, against `declared_max_period_s`; a gap larger than the ceiling fails with `period_exceeds_declared_maximum`, independent of whether the checkpoints on either side of the gap are individually well formed. The ceiling is a consumer-side policy, not a property of the checkpoint itself: two consumers with different ceilings can disagree on the same stream, and both are right under their own bound.
+
+*Added 2026-10-23*, following an independent implementation of this exact check against the gap named above ([google-agentic-commerce/AP2#290](https://github.com/google-agentic-commerce/AP2/issues/290), nmatt1). Not yet in the reference module: `plugins/agt_evidence_anchor/trail_head.py` does not enforce a ceiling today.
+
 ## Sealing a period
 
 All checkpoints of one period are sorted by `agent_id` and committed under one Merkle root with the construction of [batch-anchor.md](batch-anchor.md) (leaves are `checkpoint_digest` values; `plugins/agt_evidence_anchor/merkle.py`, unchanged). The root is anchored with `AnchorRegistry.anchor(bytes32)`, like any other root. One checkpoint per agent per period; all checkpoints in a seal share one `period_end`.
@@ -130,6 +144,10 @@ The caller declares the window (`from_seq = k`). A verifier never infers it from
 Optional extra input: an **anchor**, a checkpoint at seq k-1 with its Merkle proof and period root. It is checked like the completeness checkpoint (shape, agent, inclusion; check 2e), and the caller takes it from the anchor stream, as for any checkpoint, never from whoever presents the window. It must be at seq k-1 exactly (`anchor_not_adjacent` otherwise) and the first record's `prev_head` must equal its `head` (`anchor_mismatch`, `prev_head_differs_from_anchor`).
 
 Continuity (checks 2a-2d) runs from seq k. `agent_seq`, if present, must be contiguous inside the window; its starting value is not checked, since the anchor does not carry it. Every result that reaches check 4 reports its scope: `from_seq` and `window_anchor`, one of `genesis` (k = 1), `certified` (an anchor was checked) or `uncertified` (a window without an anchor).
+
+`window_anchor: "uncertified"` is a warning state, not a weak pass: it says the window's start could not be certified at all, not that it was certified to a lesser degree. A consumer that reads only `completeness: "continuity_only"` and pattern-matches on "continuity" can mistake the pair for an acceptable result; both fields have to be read together, and `uncertified` on its own is a reason to withhold trust in the start, not to grant it.
+
+*Clarified 2026-10-23* ([google-agentic-commerce/AP2#290](https://github.com/google-agentic-commerce/AP2/issues/290), nmatt1): a forged window without an anchor returns exactly this pair, and the verdict string alone could otherwise read as a pass to a consumer that only checks `continuity_only`.
 
 | Input | Completeness result |
 |-------|---------------------|
