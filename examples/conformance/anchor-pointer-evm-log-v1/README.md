@@ -26,7 +26,7 @@ independently, without reading ours.
 
 The positive vector is a real anchor: the gt-v2.1 release-statement custody
 record AXES (magentixai) requested in
-[axes#3](https://github.com/x402-foundation/axes/issues/3), sent 2026-10-23,
+[axes#3](https://github.com/magentixai/axes/issues/3), sent 2026-10-23,
 re-verified independently against `eth_getTransactionReceipt` on
 `https://mainnet.base.org` while building this file (not taken from any
 script printout). Every field in every vector -- including which real,
