@@ -207,7 +207,12 @@ def verify_checkpoint_cadence(checkpoints: list[dict], declared_max_period_s) ->
 
     checkpoints: one agent's checkpoint stream, any order. Compared pairwise
       after sorting by `period_end`. Fewer than 2 checkpoints has no gap to
-      measure and is always "ok".
+      measure and is always "ok". Mixed `agent_id` values are rejected as
+      "malformed"/"agent_mixed" (same verdict `verify_trail` uses for the
+      same class of input) rather than silently compared together: an
+      interleaved stream of two agents can mask a per-agent breach, since
+      the gap each agent actually left can fall under the ceiling once
+      the other agent's checkpoints are sorted in between.
     declared_max_period_s: the ceiling, in seconds. Must be a positive
       number.
 
@@ -223,6 +228,9 @@ def verify_checkpoint_cadence(checkpoints: list[dict], declared_max_period_s) ->
         return {"verdict": "malformed", "reason": "not_a_list"}
     if len(checkpoints) < 2:
         return {"verdict": "ok"}
+    agent_ids = {c.get("agent_id") if isinstance(c, dict) else None for c in checkpoints}
+    if len(agent_ids) > 1:
+        return {"verdict": "malformed", "reason": "agent_mixed"}
     try:
         ordered = sorted(checkpoints, key=lambda c: _parse_ts(c["period_end"]))
     except (KeyError, TypeError, ValueError):

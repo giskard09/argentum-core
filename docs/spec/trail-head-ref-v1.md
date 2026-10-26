@@ -66,7 +66,9 @@ verify_checkpoint_cadence(checkpoints, declared_max_period_s) -> ok | period_exc
 
 The check compares consecutive `period_end` values, sorted, against `declared_max_period_s`; a gap larger than the ceiling fails with `period_exceeds_declared_maximum`, independent of whether the checkpoints on either side of the gap are individually well formed. The ceiling is a consumer-side policy, not a property of the checkpoint itself: two consumers with different ceilings can disagree on the same stream, and both are right under their own bound.
 
-*Added 2026-10-23*, following an independent implementation of this exact check against the gap named above ([google-agentic-commerce/AP2#290](https://github.com/google-agentic-commerce/AP2/issues/290), nmatt1). Not yet in the reference module: `plugins/agt_evidence_anchor/trail_head.py` does not enforce a ceiling today.
+*Added 2026-10-23*, following an independent implementation of this exact check against the gap named above ([google-agentic-commerce/AP2#290](https://github.com/google-agentic-commerce/AP2/issues/290), nmatt1).
+
+*Updated 2026-10-26*: the same nmatt1, differential-testing their implementation against this one, found that the check never verified its own precondition — "one agent's checkpoint stream" — so an interleaved stream from two agents could each breach the ceiling alone while the merged, sorted gaps stayed under it. `verify_checkpoint_cadence` now rejects mixed `agent_id` values as `malformed`/`agent_mixed`, the same verdict `verify_trail` already uses for this class of input, before comparing any gaps.
 
 ## Sealing a period
 

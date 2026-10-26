@@ -489,3 +489,28 @@ def test_cadence_declared_max_period_must_be_positive(bad):
     cps = [make_checkpoint(AGENT, T1, log), make_checkpoint(AGENT, T2, log)]
     with pytest.raises(ValueError):
         verify_checkpoint_cadence(cps, bad)
+
+
+def test_cadence_agent_mixed_is_malformed():
+    log = _log(2)
+    cps = [make_checkpoint(AGENT, T1, log), make_checkpoint(OTHER, T2, log)]
+    assert verify_checkpoint_cadence(cps, HOUR) == {"verdict": "malformed", "reason": "agent_mixed"}
+
+
+def test_cadence_interleaved_agents_cannot_mask_a_breach():
+    """AP2#290 (nmatt1, 2026-10-26): A seals 00:00/02:00 (2h gap) and B seals
+    01:00/03:00 (2h gap) each breach a 1h ceiling alone, but presented
+    together and sorted by period_end the consecutive gaps are all 1h — the
+    unguarded check returned "ok" for both agents' breaches at once."""
+    t_00 = "2026-09-23T00:00:00.000Z"
+    t_01 = "2026-09-23T01:00:00.000Z"
+    t_02 = "2026-09-23T02:00:00.000Z"
+    t_03 = "2026-09-23T03:00:00.000Z"
+    log_a, log_b = _log(2), _log(2, OTHER)
+    cp_a = [make_checkpoint(AGENT, t_00, log_a), make_checkpoint(AGENT, t_02, log_a)]
+    cp_b = [make_checkpoint(OTHER, t_01, log_b), make_checkpoint(OTHER, t_03, log_b)]
+    mixed = [cp_a[0], cp_b[0], cp_a[1], cp_b[1]]  # presented order [A, B, A, B]
+    assert verify_checkpoint_cadence(mixed, HOUR) == {"verdict": "malformed", "reason": "agent_mixed"}
+    # each agent alone does breach the 1h ceiling, confirming this isn't a false alarm
+    assert verify_checkpoint_cadence(cp_a, HOUR)["verdict"] == "period_exceeds_declared_maximum"
+    assert verify_checkpoint_cadence(cp_b, HOUR)["verdict"] == "period_exceeds_declared_maximum"
