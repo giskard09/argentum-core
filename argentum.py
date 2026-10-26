@@ -1353,9 +1353,27 @@ async def payg_webhook_lightning(request: Request):
         return {"status": "ignored"}
     _, api_key, trails_str = parts
     trails = int(trails_str)
+
+    # phoenixd, like most webhook senders, redelivers on retry (timeout, non-2xx,
+    # network blip) -- the same payment_received notification can arrive more
+    # than once. paymentHash identifies the underlying Lightning payment, so it's
+    # the key to dedupe on: same convention /payment/webhook already uses
+    # (existence check before applying the side effect), reusing the same nonce
+    # table /nexus/trail uses for action_ref replay protection.
+    payment_hash = data.get("paymentHash", "")
+    if payment_hash and mycelium_trails.has_external_nonce(TRAILS_DB, payment_hash):
+        acct = mycelium_trails.get_payg_account(TRAILS_DB, api_key)
+        return {
+            "status": "already_processed",
+            "api_key": api_key,
+            "balance": acct["credit_trails"] if acct else None,
+        }
+
     result = mycelium_trails.topup_payg(TRAILS_DB, api_key, trails)
     if result is None:
         raise HTTPException(404, "api_key not found")
+    if payment_hash:
+        mycelium_trails.record_external_nonce(TRAILS_DB, payment_hash, api_key)
     if _SMTP_OK:
         acct = mycelium_trails.get_payg_account(TRAILS_DB, api_key)
         _smtp.notify_payg_topup(

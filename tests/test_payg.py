@@ -1,6 +1,7 @@
 """Tests para billing PAYG — tier free, tier payg, créditos, 402."""
 import os
 import sys
+import threading
 import time
 import uuid
 
@@ -91,6 +92,34 @@ def test_payg_free_account_cannot_consume(db):
     api_key = mycelium_trails.create_payg_account(db, "agent-free")
     # tier='free', no topup → consume_payg_credit debe retornar False
     assert mycelium_trails.consume_payg_credit(db, api_key) is False
+
+
+def test_payg_consume_is_atomic_under_real_concurrency(db):
+    """DEUDA_INTERNA 2026-10-20/26: the old SELECT-then-UPDATE read the balance
+    and wrote it back as two separate statements, so two real threads racing
+    the same api_key could both read the same balance before either wrote,
+    both pass the >0 check, and both decrement -- granting double service for
+    one credit. 20 threads race a single credit: exactly one must win."""
+    api_key = mycelium_trails.create_payg_account(db, "agent-race")
+    mycelium_trails.topup_payg(db, api_key, 1)
+
+    results = []
+    barrier = threading.Barrier(20)
+
+    def _consume():
+        barrier.wait()
+        results.append(mycelium_trails.consume_payg_credit(db, api_key))
+
+    threads = [threading.Thread(target=_consume) for _ in range(20)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+
+    assert results.count(True) == 1
+    assert results.count(False) == 19
+    account = mycelium_trails.get_payg_account(db, api_key)
+    assert account["credit_trails"] == 0
 
 
 # ── Rotate api_key ─────────────────────────────────────────────────────────────

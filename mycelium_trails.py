@@ -777,21 +777,25 @@ def topup_payg(db_path: str, api_key: str, trails: int) -> Optional[dict]:
 
 
 def consume_payg_credit(db_path: str, api_key: str) -> bool:
-    """Descuenta 1 crédito. Retorna True si había créditos, False si no."""
+    """Descuenta 1 crédito, atómico. Retorna True si había créditos, False si no.
+
+    The check (credit_trails > 0) and the decrement are one SQL statement, not
+    a SELECT followed by a separate UPDATE: two concurrent callers racing the
+    old two-step version could both read the same balance before either wrote
+    back, both pass the check, and both decrement -- granting one credit's
+    worth of service twice. The WHERE clause makes the check part of the same
+    atomic write, so a second caller arriving after the first's UPDATE commits
+    sees the already-decremented balance.
+    """
     ts = int(time.time())
     conn = _connect(db_path)
     try:
-        row = conn.execute(
-            "SELECT credit_trails FROM payg_accounts WHERE api_key=? AND tier='payg'",
-            (api_key,),
-        ).fetchone()
-        if not row or row["credit_trails"] <= 0:
-            return False
-        conn.execute(
-            "UPDATE payg_accounts SET credit_trails = credit_trails - 1, updated_at = ? WHERE api_key=?",
+        cur = conn.execute(
+            "UPDATE payg_accounts SET credit_trails = credit_trails - 1, updated_at = ? "
+            "WHERE api_key=? AND tier='payg' AND credit_trails > 0",
             (ts, api_key),
         )
-        return True
+        return cur.rowcount > 0
     finally:
         conn.close()
 
