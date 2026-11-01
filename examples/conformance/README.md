@@ -9,7 +9,7 @@ This directory contains conformance fixtures for the action-ref-v1 spec and Myce
 5. **CTEF vectors** — cross-extension matrix fixtures for `urn:mycelium:trail` (CTEF v0.3.3 row #2).
 6. **memory provenance** — `action_type: "memory_write"` + `scope: <memory_key>` pattern for content-addressed receipts per write. Covers OWASP ASI06 gap class #2. See commit [de7dd7e](https://github.com/giskard09/argentum-core/commit/de7dd7e0c09365f465d2c14c62817b1d19e4adef) and `docs/spec/action-ref.md` (memory provenance section).
 7. **near-miss vectors** — failure-mode boundary fixtures (`AMBIGUOUS_ISSUER_BINDING`, `RESCOPED_REPLAY`, `SEMANTIC_DRIFT`). Source: [AgentAvow/AgentAvow](https://github.com/AgentAvow/AgentAvow) @ `a07cdf8`.
-8. **recompute-drift vectors** - recomputation-property fixtures: 4 positive baselines (basic, unicode, `.000` / `.999` millisecond edges) plus 9 negatives across four drift families (field order, timestamp form, casing, payload). Standalone stdlib runner included. See [`recompute-drift-v1/`](./recompute-drift-v1/).
+8. **recompute-drift vectors** - recomputation-property fixtures: 3 positive baselines (basic, `.000` / `.999` millisecond edges) plus 9 negatives across four drift families (field order, timestamp form, casing, payload). Standalone stdlib runner included. See [`recompute-drift-v1/`](./recompute-drift-v1/).
 
 ---
 
@@ -239,7 +239,7 @@ mismatch, with no preimage retries, no coercion, and no normalization.
 
 | File | Vectors | What it holds |
 |------|---------|---------------|
-| `recompute-drift-v1-positive.fixture.json` | 4 | Tuples that recompute byte-identical (basic, unicode, `.000` / `.999` ms edges) |
+| `recompute-drift-v1-positive.fixture.json` | 3 | Tuples that recompute byte-identical (basic, `.000` / `.999` ms edges) |
 | `recompute-drift-v1-negative.fixture.json` | 9 | Real digests over drifted byte forms (field order, timestamp form, casing, payload drift) that MUST be rejected |
 
 Standalone runner: `python3 recompute-drift-v1/verify.py` (stdlib only,

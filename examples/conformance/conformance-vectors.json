@@ -1,9 +1,9 @@
 {
   "export_version": "conformance-vectors-v1",
-  "generated_at": "2026-09-28T15:36:36.000Z",
+  "generated_at": "2026-11-01T22:06:08.000Z",
   "generated_by": "examples/conformance/build_export.py",
   "source_repo": "giskard09/argentum-core",
-  "set_count": 71,
+  "set_count": 73,
   "sets": {
     "action-ref-v1-baseline.fixture": {
       "path": "examples/conformance/action-ref-v1-baseline.fixture.json",
@@ -736,6 +736,228 @@
         }
       }
     },
+    "anchor-pointer-evm-log-v1": {
+      "path": "examples/conformance/anchor-pointer-evm-log-v1/",
+      "files": {
+        "vectors.json": {
+          "spec_version": "anchor-pointer-evm-log-v1",
+          "license": "CC0-1.0",
+          "description": "Conformance vectors for the EVM-log anchor-pointer mechanism requested by Tetsurohhori (aos-standard/catalog) in aeoess/agent-governance-vocabulary#217: {chain, contract, tx, log_index, height} resolved against a live EVM node, with anchored_digest checked against the indexed topic of the Anchored event at that exact log position. No proof blob is pinned -- for EVM, the chain itself is the proof, queried live. These vectors carry no code: an independent reader is expected to resolve each one against a real Base-mainnet (and, for two negatives, Arbitrum-mainnet) RPC endpoint.",
+          "mechanism": {
+            "event_signature": "Anchored(bytes32 indexed ref, address indexed anchoredBy, uint256 timestamp)",
+            "event_topic0": "0xfe2289542f7a0110ac112c3a4d712afdcaaf2900a1326f4e6f340b563a0e8734",
+            "contract": "AnchorRegistry, permissionless, single function anchor(bytes32 ref). Canonical CREATE2 address, identical on Base (8453), Arbitrum One (42161) and Ink (57073): 0x49fEcA52bC634a9Ab773226D16619deC547794aa.",
+            "resolution": "Fetch the transaction receipt for `tx` on `chain`. Find the log in receipt.logs whose logIndex == `log_index`. Verify: log.address == `contract` (case-insensitive); log.blockNumber == `height`; log.topics[0] == event_topic0; log.topics[1] == `anchored_digest` (case-insensitive). anchoredBy (topics[2]) and timestamp (data) are informational, not checked by this vector set.",
+            "note_on_proof": "No `proof` field is required for this mechanism -- the live receipt lookup above IS the proof. A vector may carry `proof: null` to confirm a reader does not wrongly require it."
+          },
+          "primary_source": {
+            "note": "The positive vector is a real anchor, independently re-verified against eth_getTransactionReceipt on https://mainnet.base.org on 2026-10-23 (not taken from any script printout or prior write-up). It anchors the gt-v2.1 release-statement digest that AXES (magentixai, axes#18) requested in axes#3 as a custody record -- the anchored_digest below is a byte-exact match against the calldata AXES supplied, confirmed independently before this file was built. The preimage behind that digest is AXES's write_once_store construction, out of scope here: this vector set tests only the EVM anchor-pointer mechanism, not the digest's own preimage spec.",
+            "tx": "0x4d4b45f7ddb970bf37a640d651f24bc0e26a4acdb2e14285c19a9f3f95c720f7",
+            "chain": "Base mainnet, eip155:8453",
+            "block": 52987624,
+            "block_timestamp_utc": "2026-10-23T14:09:55Z"
+          },
+          "vectors": [
+            {
+              "id": "anchor-pointer-evm-positive-001",
+              "description": "Baseline: the real gt-v2.1 custody anchor, all fields exactly as returned by eth_getTransactionReceipt. No proof field.",
+              "expected": "PASS",
+              "input": {
+                "chain": "eip155:8453",
+                "contract": "0x49fEcA52bC634a9Ab773226D16619deC547794aa",
+                "tx": "0x4d4b45f7ddb970bf37a640d651f24bc0e26a4acdb2e14285c19a9f3f95c720f7",
+                "log_index": 59,
+                "height": 52987624,
+                "anchored_digest": "0xd8b6a69f57ba2209561fb551443c096c47fcb0cb6db37005fd0713690de88299"
+              }
+            },
+            {
+              "id": "anchor-pointer-evm-positive-002-contract-case",
+              "description": "Same real anchor; contract address given lowercase, no EIP-55 checksum casing. EVM addresses are case-insensitive -- a reader that requires exact checksum casing on this field is over-strict.",
+              "expected": "PASS",
+              "input": {
+                "chain": "eip155:8453",
+                "contract": "0x49feca52bc634a9ab773226d16619dec547794aa",
+                "tx": "0x4d4b45f7ddb970bf37a640d651f24bc0e26a4acdb2e14285c19a9f3f95c720f7",
+                "log_index": 59,
+                "height": 52987624,
+                "anchored_digest": "0xd8b6a69f57ba2209561fb551443c096c47fcb0cb6db37005fd0713690de88299"
+              }
+            },
+            {
+              "id": "anchor-pointer-evm-positive-003-txhash-case",
+              "description": "Same real anchor; tx hash given with an uppercase hex body. Hex is case-insensitive -- a reader that lowercases before RPC lookup (or treats the RPC's own case-insensitivity as sufficient) should still resolve this.",
+              "expected": "PASS",
+              "input": {
+                "chain": "eip155:8453",
+                "contract": "0x49fEcA52bC634a9Ab773226D16619deC547794aa",
+                "tx": "0x4D4B45F7DDB970BF37A640D651F24BC0E26A4ACDB2E14285C19A9F3F95C720F7",
+                "log_index": 59,
+                "height": 52987624,
+                "anchored_digest": "0xd8b6a69f57ba2209561fb551443c096c47fcb0cb6db37005fd0713690de88299"
+              }
+            },
+            {
+              "id": "anchor-pointer-evm-positive-004-explicit-null-proof",
+              "description": "Same real anchor, with an explicit `proof: null` field present. Confirms proof is optional-by-mechanism for EVM (the chain query is the proof) and must not be required or treated as a failure when absent or null.",
+              "expected": "PASS",
+              "input": {
+                "chain": "eip155:8453",
+                "contract": "0x49fEcA52bC634a9Ab773226D16619deC547794aa",
+                "tx": "0x4d4b45f7ddb970bf37a640d651f24bc0e26a4acdb2e14285c19a9f3f95c720f7",
+                "log_index": 59,
+                "height": 52987624,
+                "anchored_digest": "0xd8b6a69f57ba2209561fb551443c096c47fcb0cb6db37005fd0713690de88299",
+                "proof": null
+              }
+            },
+            {
+              "id": "anchor-pointer-evm-negative-contract-001",
+              "description": "Real chain, real confirmed tx -- but `contract` names a different real, live contract on Base (USDC: 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913, 1852 bytes of deployed code, confirmed via eth_getCode 2026-10-23), not AnchorRegistry. The log at log_index 59 of this tx is emitted by AnchorRegistry's address, not the declared contract.",
+              "expected": "FAIL",
+              "failure_mode": "contract_mismatch",
+              "input": {
+                "chain": "eip155:8453",
+                "contract": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+                "tx": "0x4d4b45f7ddb970bf37a640d651f24bc0e26a4acdb2e14285c19a9f3f95c720f7",
+                "log_index": 59,
+                "height": 52987624,
+                "anchored_digest": "0xd8b6a69f57ba2209561fb551443c096c47fcb0cb6db37005fd0713690de88299"
+              }
+            },
+            {
+              "id": "anchor-pointer-evm-negative-chain-001",
+              "description": "Correct tx hash, but `chain` declares Arbitrum One (eip155:42161) instead of Base. This exact tx hash does not exist on Arbitrum -- confirmed live via eth_getTransactionReceipt on https://arb1.arbitrum.io/rpc on 2026-10-23, result: null. AnchorRegistry is deployed at the same address on both chains, which is exactly why the chain field must be checked and not inferred from the contract address alone.",
+              "expected": "FAIL",
+              "failure_mode": "tx_not_found_on_chain",
+              "input": {
+                "chain": "eip155:42161",
+                "contract": "0x49fEcA52bC634a9Ab773226D16619deC547794aa",
+                "tx": "0x4d4b45f7ddb970bf37a640d651f24bc0e26a4acdb2e14285c19a9f3f95c720f7",
+                "log_index": 59,
+                "height": 52987624,
+                "anchored_digest": "0xd8b6a69f57ba2209561fb551443c096c47fcb0cb6db37005fd0713690de88299"
+              }
+            },
+            {
+              "id": "anchor-pointer-evm-negative-chain-002-malformed",
+              "description": "Chain id given as a bare number without the CAIP-2 'eip155:' namespace. Format-level rejection, not a chain-resolution failure -- a reader should reject this before attempting any RPC call.",
+              "expected": "FAIL",
+              "failure_mode": "malformed_chain_id",
+              "input": {
+                "chain": "8453",
+                "contract": "0x49fEcA52bC634a9Ab773226D16619deC547794aa",
+                "tx": "0x4d4b45f7ddb970bf37a640d651f24bc0e26a4acdb2e14285c19a9f3f95c720f7",
+                "log_index": 59,
+                "height": 52987624,
+                "anchored_digest": "0xd8b6a69f57ba2209561fb551443c096c47fcb0cb6db37005fd0713690de88299"
+              }
+            },
+            {
+              "id": "anchor-pointer-evm-negative-txhash-001-not-found",
+              "description": "Syntactically well-formed 32-byte tx hash that does not correspond to any transaction on Base. Confirmed live via eth_getTransactionReceipt on https://mainnet.base.org on 2026-10-23, result: null.",
+              "expected": "FAIL",
+              "failure_mode": "tx_not_found",
+              "input": {
+                "chain": "eip155:8453",
+                "contract": "0x49fEcA52bC634a9Ab773226D16619deC547794aa",
+                "tx": "0x0000000000000000000000000000000000000000000000000000000000000001",
+                "log_index": 0,
+                "height": 52987624,
+                "anchored_digest": "0xd8b6a69f57ba2209561fb551443c096c47fcb0cb6db37005fd0713690de88299"
+              }
+            },
+            {
+              "id": "anchor-pointer-evm-negative-destination-001",
+              "description": "Real, confirmed Base tx (status 0x1), same block (52987624) as the positive vector -- but its `to` is 0x4200000000000000000000000000000000000015 (the L1Block predeploy), not AnchorRegistry, and it emits no logs at all. Confirmed live via eth_getTransactionReceipt on 2026-10-23.",
+              "expected": "FAIL",
+              "failure_mode": "destination_mismatch",
+              "input": {
+                "chain": "eip155:8453",
+                "contract": "0x49fEcA52bC634a9Ab773226D16619deC547794aa",
+                "tx": "0x476f2ccddf586dd7f2a1cb66f1aed5cc17e76984272810716a8f946b803b7a41",
+                "log_index": 59,
+                "height": 52987624,
+                "anchored_digest": "0xd8b6a69f57ba2209561fb551443c096c47fcb0cb6db37005fd0713690de88299"
+              }
+            },
+            {
+              "id": "anchor-pointer-evm-negative-logindex-001",
+              "description": "Real tx, real contract, real digest -- but `log_index` is 0. This tx's receipt has exactly one log, at logIndex 59 (0x3b); there is no log at index 0 belonging to this tx. (This tx has only one log in total, confirmed live 2026-10-23, so there is no second real log to point at instead -- log_index 0 stands in for 'declared index does not resolve to this tx's Anchored log.')",
+              "expected": "FAIL",
+              "failure_mode": "log_index_mismatch",
+              "input": {
+                "chain": "eip155:8453",
+                "contract": "0x49fEcA52bC634a9Ab773226D16619deC547794aa",
+                "tx": "0x4d4b45f7ddb970bf37a640d651f24bc0e26a4acdb2e14285c19a9f3f95c720f7",
+                "log_index": 0,
+                "height": 52987624,
+                "anchored_digest": "0xd8b6a69f57ba2209561fb551443c096c47fcb0cb6db37005fd0713690de88299"
+              }
+            },
+            {
+              "id": "anchor-pointer-evm-negative-height-001-wrong",
+              "description": "Real tx, but `height` declares 52986624 (1000 blocks earlier -- itself a real, already-mined Base block, not a nonsense number) instead of the tx's actual block, 52987624.",
+              "expected": "FAIL",
+              "failure_mode": "height_mismatch",
+              "input": {
+                "chain": "eip155:8453",
+                "contract": "0x49fEcA52bC634a9Ab773226D16619deC547794aa",
+                "tx": "0x4d4b45f7ddb970bf37a640d651f24bc0e26a4acdb2e14285c19a9f3f95c720f7",
+                "log_index": 59,
+                "height": 52986624,
+                "anchored_digest": "0xd8b6a69f57ba2209561fb551443c096c47fcb0cb6db37005fd0713690de88299"
+              }
+            },
+            {
+              "id": "anchor-pointer-evm-negative-height-002-unreachable",
+              "description": "Real tx, but `height` declares 999999999999 -- far beyond Base's current chain head (52987624 at anchor time; ~53007902 when this file was built, 2026-10-23). Distinct failure class from -height-001: here the declared height cannot yet be real at all, versus a real-but-wrong block.",
+              "expected": "FAIL",
+              "failure_mode": "height_unreachable",
+              "input": {
+                "chain": "eip155:8453",
+                "contract": "0x49fEcA52bC634a9Ab773226D16619deC547794aa",
+                "tx": "0x4d4b45f7ddb970bf37a640d651f24bc0e26a4acdb2e14285c19a9f3f95c720f7",
+                "log_index": 59,
+                "height": 999999999999,
+                "anchored_digest": "0xd8b6a69f57ba2209561fb551443c096c47fcb0cb6db37005fd0713690de88299"
+              }
+            },
+            {
+              "id": "anchor-pointer-evm-negative-digest-001-nibble-flip",
+              "description": "Real tx/contract/chain/height/log_index, but `anchored_digest` has its last hex nibble flipped (…de88299 -> …de88298) relative to the real topics[1] value.",
+              "expected": "FAIL",
+              "failure_mode": "digest_mismatch",
+              "input": {
+                "chain": "eip155:8453",
+                "contract": "0x49fEcA52bC634a9Ab773226D16619deC547794aa",
+                "tx": "0x4d4b45f7ddb970bf37a640d651f24bc0e26a4acdb2e14285c19a9f3f95c720f7",
+                "log_index": 59,
+                "height": 52987624,
+                "anchored_digest": "0xd8b6a69f57ba2209561fb551443c096c47fcb0cb6db37005fd0713690de88298"
+              }
+            },
+            {
+              "id": "anchor-pointer-evm-negative-digest-002-real-but-wrong-anchor",
+              "description": "Harder variant of -digest-001: `anchored_digest` is not nonsense, it is itself a real, validly anchored 32-byte ref in the same AnchorRegistry contract -- just from a different anchor (giskard09/dapr-history-anchor, tx 0x8702287dca01fb5faa76ec8c95b67322d2f685e634747ba9177082bd72c50a39, Base block 48545657, re-verified live via eth_getTransactionReceipt on 2026-10-23). It is not the ref emitted by THIS tx's log. Tests that a reader checks the digest against the specific (tx, log_index) pointed to, not against 'any ref this registry has ever anchored.'",
+              "expected": "FAIL",
+              "failure_mode": "digest_mismatch",
+              "input": {
+                "chain": "eip155:8453",
+                "contract": "0x49fEcA52bC634a9Ab773226D16619deC547794aa",
+                "tx": "0x4d4b45f7ddb970bf37a640d651f24bc0e26a4acdb2e14285c19a9f3f95c720f7",
+                "log_index": 59,
+                "height": 52987624,
+                "anchored_digest": "0xe2883741562df2096aec27ce2ffa26e157d2898ac9ec444d245b39b6c8f0efea"
+              }
+            }
+          ],
+          "omitted_by_design": {
+            "reorg_finality": "No reorg/finality vector is included in this draft. A static JSON fixture cannot encode 'chain state changed between read and verify' -- that is a property of how a live reader handles confirmations/finality tags on its own RPC calls, not something a fixed (chain, tx, log_index, height, digest) tuple can represent. Flagging this as a possible follow-on if useful, not building it speculatively."
+          }
+        }
+      }
+    },
     "anchor-self-certify-ref": {
       "path": "examples/conformance/anchor-self-certify-ref/",
       "files": {
@@ -884,7 +1106,7 @@
       "files": {
         "vectors.json": {
           "spec_version": "anchoring-precedence-ref-v1",
-          "description": "Conformance vectors for anchoring-precedence-ref-v1. Five invariants are separately recomputable: canonical_envelope, admission_invariant, anchoring_existence, anchoring_precedence, chain_invariant. A verifier that only checks existence without precedence will silently pass the two critical negative vectors (existence_only_anchor, late_commitment).",
+          "description": "Conformance vectors for anchoring-precedence-ref-v1. Five invariants are separately recomputable: canonical_envelope, admission_invariant, anchoring_existence, anchoring_precedence, chain_invariant. A verifier that only checks existence without precedence will silently pass the two critical negative vectors (existence_only_anchor, late_commitment). admission_invariant is three-way (OK / MISMATCH / UNRESOLVED) -- a vector lacking admission_hash is UNRESOLVED, never an implicit pass; see vector admission-hash-absent, which regression-tests a 2026-10-18 fix for exactly that pass-by-omission shape.",
           "precedence_rule": "anchor_block_time * 1000 < outcome_ts_ms (strict). Equality is not conformant.",
           "vectors": [
             {
@@ -936,6 +1158,7 @@
                 "anchoring_precedence": false,
                 "chain_invariant": true
               },
+              "admission_hash": "7c48cf6d0f61f54d02a84dc7aa5703a35f849ee9feacae42a1c0bc7c736bf677",
               "mechanism_detail": {
                 "anchor_ms": 1782678100000,
                 "precedence": false,
@@ -963,6 +1186,7 @@
                 "anchoring_precedence": false,
                 "chain_invariant": true
               },
+              "admission_hash": "4c74216655b24e7219b4380b63b4fc5f2c5c412ef47dc23f352c9d06af38c902",
               "mechanism_detail": {
                 "anchor_ms": 1782681600000,
                 "precedence": false,
@@ -989,7 +1213,8 @@
                 "anchoring_existence": false,
                 "anchoring_precedence": false,
                 "chain_invariant": true
-              }
+              },
+              "admission_hash": "542426923ec6e60b07ed0a0e78b7a2dbf5418e6f1d1e31fcfa02e5637cecf66e"
             },
             {
               "id": "admission-not-independent",
@@ -1065,6 +1290,35 @@
                 "precedence": true,
                 "margin_s": 80,
                 "note": "margin is small and positive by construction — the check cannot distinguish a genuinely-early anchor from a backdated-but-consensus-valid one; this vector documents that blind spot, it is not evidence the check is broken"
+              }
+            },
+            {
+              "id": "admission-hash-absent",
+              "description": "REGRESSION (2026-10-18): proves the fix for a pass-by-omission bug. All four other invariants hold cleanly (canonical_envelope, anchoring_existence, anchoring_precedence, chain_invariant all true) -- the envelope and timing are identical in shape to precedence-positive-001. admission_hash is deliberately absent from this record entirely (not present-and-wrong -- just never supplied). Before the fix, verify.py's admission_invariant check was `if \"admission_hash\" in vector:` -- a vector lacking the key skipped the check silently, contributing zero failures, so this vector would have wrongly PASSED overall despite admission never being checked on it. Per spec: \"A verifier MUST check all five independently -- passing four while skipping one is not conformant.\" Fixed: a missing admission_hash is now UNRESOLVED, which is a failure state, never an implicit pass.",
+              "expected": "FAIL",
+              "failure_mode": "admission_invariant",
+              "failure_detail": "admission_hash key absent from the record -- admission_invariant was never checked. UNRESOLVED is not conformant, regardless of what the other four invariants show.",
+              "envelope": {
+                "anchor_block_time": 1782677500,
+                "mechanism": "on-chain",
+                "outcome_ts_ms": 1782677980000,
+                "trail_id": "neg-007-admission-hash-absent",
+                "version": "anchoring-precedence-ref-v1"
+              },
+              "anchoring_precedence_ref": "86cf7b0409281f8e39f4414016b17f2d1e580880eb62afc8dedbb2c67939b1ce",
+              "checks": {
+                "canonical_envelope": true,
+                "admission_invariant": "unresolved",
+                "anchoring_existence": true,
+                "anchoring_precedence": true,
+                "chain_invariant": true
+              },
+              "mechanism_detail": {
+                "tier": "on-chain",
+                "clock": "Arbitrum",
+                "anchor_ms": 1782677500000,
+                "precedence": true,
+                "margin_s": 480
               }
             }
           ],
@@ -3247,6 +3501,68 @@
             "independently_reproduced_by": []
           }
         },
+        "ed25519-hardening/novifinancial-ed25519-speccheck-cases.json": [
+          {
+            "message": "8c93255d71dcab10e8f379c26200f3c7bd5f09d9bc3068d3ef4edeb4853022b6",
+            "pub_key": "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac03fa",
+            "signature": "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac037a0000000000000000000000000000000000000000000000000000000000000000"
+          },
+          {
+            "message": "9bd9f44f4dcc75bd531b56b2cd280b0bb38fc1cd6d1230e14861d861de092e79",
+            "pub_key": "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac03fa",
+            "signature": "f7badec5b8abeaf699583992219b7b223f1df3fbbea919844e3f7c554a43dd43a5bb704786be79fc476f91d3f3f89b03984d8068dcf1bb7dfc6637b45450ac04"
+          },
+          {
+            "message": "aebf3f2601a0c8c5d39cc7d8911642f740b78168218da8471772b35f9d35b9ab",
+            "pub_key": "f7badec5b8abeaf699583992219b7b223f1df3fbbea919844e3f7c554a43dd43",
+            "signature": "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac03fa8c4bd45aecaca5b24fb97bc10ac27ac8751a7dfe1baff8b953ec9f5833ca260e"
+          },
+          {
+            "message": "9bd9f44f4dcc75bd531b56b2cd280b0bb38fc1cd6d1230e14861d861de092e79",
+            "pub_key": "cdb267ce40c5cd45306fa5d2f29731459387dbf9eb933b7bd5aed9a765b88d4d",
+            "signature": "9046a64750444938de19f227bb80485e92b83fdb4b6506c160484c016cc1852f87909e14428a7a1d62e9f22f3d3ad7802db02eb2e688b6c52fcd6648a98bd009"
+          },
+          {
+            "message": "e47d62c63f830dc7a6851a0b1f33ae4bb2f507fb6cffec4011eaccd55b53f56c",
+            "pub_key": "cdb267ce40c5cd45306fa5d2f29731459387dbf9eb933b7bd5aed9a765b88d4d",
+            "signature": "160a1cb0dc9c0258cd0a7d23e94d8fa878bcb1925f2c64246b2dee1796bed5125ec6bc982a269b723e0668e540911a9a6a58921d6925e434ab10aa7940551a09"
+          },
+          {
+            "message": "e47d62c63f830dc7a6851a0b1f33ae4bb2f507fb6cffec4011eaccd55b53f56c",
+            "pub_key": "cdb267ce40c5cd45306fa5d2f29731459387dbf9eb933b7bd5aed9a765b88d4d",
+            "signature": "21122a84e0b5fca4052f5b1235c80a537878b38f3142356b2c2384ebad4668b7e40bc836dac0f71076f9abe3a53f9c03c1ceeeddb658d0030494ace586687405"
+          },
+          {
+            "message": "85e241a07d148b41e47d62c63f830dc7a6851a0b1f33ae4bb2f507fb6cffec40",
+            "pub_key": "442aad9f089ad9e14647b1ef9099a1ff4798d78589e66f28eca69c11f582a623",
+            "signature": "e96f66be976d82e60150baecff9906684aebb1ef181f67a7189ac78ea23b6c0e547f7690a0e2ddcd04d87dbc3490dc19b3b3052f7ff0538cb68afb369ba3a514"
+          },
+          {
+            "message": "85e241a07d148b41e47d62c63f830dc7a6851a0b1f33ae4bb2f507fb6cffec40",
+            "pub_key": "442aad9f089ad9e14647b1ef9099a1ff4798d78589e66f28eca69c11f582a623",
+            "signature": "8ce5b96c8f26d0ab6c47958c9e68b937104cd36e13c33566acd2fe8d38aa19427e71f98a473474f2f13f06f97c20d58cc3f54b8bd0d272f42b695dd7e89a8c22"
+          },
+          {
+            "message": "9bedc267423725d473888631ebf45988bad3db83851ee85c85e241a07d148b41",
+            "pub_key": "f7badec5b8abeaf699583992219b7b223f1df3fbbea919844e3f7c554a43dd43",
+            "signature": "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff03be9678ac102edcd92b0210bb34d7428d12ffc5df5f37e359941266a4e35f0f"
+          },
+          {
+            "message": "9bedc267423725d473888631ebf45988bad3db83851ee85c85e241a07d148b41",
+            "pub_key": "f7badec5b8abeaf699583992219b7b223f1df3fbbea919844e3f7c554a43dd43",
+            "signature": "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffca8c5b64cd208982aa38d4936621a4775aa233aa0505711d8fdcfdaa943d4908"
+          },
+          {
+            "message": "e96b7021eb39c1a163b6da4e3093dcd3f21387da4cc4572be588fafae23c155b",
+            "pub_key": "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+            "signature": "a9d55260f765261eb9b84e106f665e00b867287a761990d7135963ee0a7d59dca5bb704786be79fc476f91d3f3f89b03984d8068dcf1bb7dfc6637b45450ac04"
+          },
+          {
+            "message": "39a591f5321bbe07fd5a23dc2f39d025d74526615746727ceefd6e82ae65c06f",
+            "pub_key": "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+            "signature": "a9d55260f765261eb9b84e106f665e00b867287a761990d7135963ee0a7d59dca5bb704786be79fc476f91d3f3f89b03984d8068dcf1bb7dfc6637b45450ac04"
+          }
+        ],
         "key-completeness-vectors.json": {
           "spec_version": "delegation-chain-ref-v1",
           "description": "Key completeness. A delegator with no key in the given key set leaves that hop's signature unchecked: NOT_ASSESSED when the caller has not declared the key set complete, FAIL delegator_key_not_in_complete_key_set (a policy rejection, not a bad signature) when it has. One vector per form, plus a mixed vector where an unresolved key sits next to a signature that does not verify: the adverse finding decides, FAIL. Every vector carries its own pubkeys; keys_are_complete is set only where declared.",
@@ -3502,6 +3818,732 @@
             "independently_reproduced_by": []
           }
         },
+        "mid-hop-revocation/vectors.json": {
+          "spec_version": "delegation-chain-ref-v1",
+          "description": "Mid-hop revocation, structural differential. The same chain_artifact and leaf_preimage are verified twice, with and without a revocation_artifact for the mid-chain hop (hops[1]); both PASS. A broken-continuity control is verified the same two ways; both FAIL with the same single failure. Each vector runs against a fresh replay registry. The revocation artifact targets the hop with revoked_delegation_ref (revocation-ref.md, merged in argentum-core#112 at c277309b); it carries no revoked_action_ref. This set asserts only that revocation metadata does not change the reference verifier's structural verdict. It asserts nothing about present authority, cascade rejection or future-use blocking, and does not cover parent_delegation_ref resolution.",
+          "scope_agreed_at": "https://github.com/x402-foundation/x402/issues/2332#issuecomment-5890759053",
+          "field_definition_pin": {
+            "field": "revoked_delegation_ref",
+            "spec": "docs/spec/revocation-ref.md",
+            "commit": "c277309b0d51dd3dca87d3c7c07688a80021a467",
+            "pull_request": "https://github.com/giskard09/argentum-core/pull/112"
+          },
+          "revoked_hop_index": 1,
+          "pairs": [
+            {
+              "baseline": "mid-hop-revocation-001-baseline",
+              "with_revocation": "mid-hop-revocation-001-with-revocation",
+              "expected": "PASS"
+            },
+            {
+              "baseline": "mid-hop-revocation-002-broken-continuity-baseline",
+              "with_revocation": "mid-hop-revocation-002-broken-continuity-with-revocation",
+              "expected": "FAIL"
+            }
+          ],
+          "vectors": [
+            {
+              "id": "mid-hop-revocation-001-baseline",
+              "description": "Continuous 3-hop chain (agent-a -> agent-b -> agent-c -> agent-d), mycelium:payment narrowing to mycelium:payment:route at the leaf hop. No revocation artifact submitted. Fresh replay registry.",
+              "expected": "PASS",
+              "chain_artifact": {
+                "chain_id": "chain-mid-hop-revocation-001",
+                "hops": [
+                  {
+                    "delegatee": "agent-b",
+                    "delegator": "agent-a",
+                    "delegation_ref": "ef1e99301dd5be210963cdd33fe96db7add5480463b990fc7686d500f7fb9eee",
+                    "scope": "mycelium:payment"
+                  },
+                  {
+                    "delegatee": "agent-c",
+                    "delegator": "agent-b",
+                    "delegation_ref": "d026354ff6c2c50119f6cb874bcd3ea3684228918d6a5d4153c96c2af5f2f974",
+                    "scope": "mycelium:payment"
+                  },
+                  {
+                    "delegatee": "agent-d",
+                    "delegator": "agent-c",
+                    "delegation_ref": "5dd43a1a84296cf018137bb89a5891bb9254d3a03a14a272080b2d6291007ef4",
+                    "scope": "mycelium:payment:route"
+                  }
+                ],
+                "leaf_action_ref": "9965cf231935c3ede01365933a6cd7b0b66e60cc07eef3cbd09e42f08647b4e4",
+                "root_delegator": "agent-a",
+                "scope": "mycelium:payment",
+                "version": "delegation-chain-ref-v1"
+              },
+              "delegation_artifacts": [
+                {
+                  "capability": "delegate",
+                  "delegatee": "agent-b",
+                  "delegator": "agent-a",
+                  "expires_at": "2026-12-31T00:00:00.000Z",
+                  "policy_version": "2026-10-01",
+                  "scope": "mycelium:payment",
+                  "version": "delegation-ref-v1"
+                },
+                {
+                  "capability": "delegate",
+                  "delegatee": "agent-c",
+                  "delegator": "agent-b",
+                  "expires_at": "2026-12-31T00:00:00.000Z",
+                  "parent_delegation_ref": "ef1e99301dd5be210963cdd33fe96db7add5480463b990fc7686d500f7fb9eee",
+                  "policy_version": "2026-10-01",
+                  "scope": "mycelium:payment",
+                  "version": "delegation-ref-v1"
+                },
+                {
+                  "capability": "payment.route",
+                  "delegatee": "agent-d",
+                  "delegator": "agent-c",
+                  "expires_at": "2026-12-31T00:00:00.000Z",
+                  "parent_delegation_ref": "d026354ff6c2c50119f6cb874bcd3ea3684228918d6a5d4153c96c2af5f2f974",
+                  "policy_version": "2026-10-01",
+                  "scope": "mycelium:payment:route",
+                  "version": "delegation-ref-v1"
+                }
+              ],
+              "leaf_preimage": {
+                "agent_id": "agent-d",
+                "action_type": "payment.route",
+                "scope": "mycelium:payment:route",
+                "timestamp": "2026-10-05T12:00:00.000Z"
+              },
+              "delegation_chain_ref": "b8298aad76e70366cc78ca6f6e77fab844e912501caa6a9e623b3ae8490dde5d"
+            },
+            {
+              "id": "mid-hop-revocation-001-with-revocation",
+              "description": "Byte-identical chain_artifact and leaf_preimage to the baseline. The vector additionally carries a revocation_artifact whose revoked_delegation_ref is hops[1].delegation_ref (agent-b's grant to agent-c), revoked at 2026-10-03T09:00:00.000Z, before the leaf action at 2026-10-05T12:00:00.000Z. The reference verifier's structural verdict is expected to be identical to the baseline: none of its checks reads revocation_artifact, revocation_ref or revoked_delegation_ref. Fresh replay registry.",
+              "expected": "PASS",
+              "chain_artifact": {
+                "chain_id": "chain-mid-hop-revocation-001",
+                "hops": [
+                  {
+                    "delegatee": "agent-b",
+                    "delegator": "agent-a",
+                    "delegation_ref": "ef1e99301dd5be210963cdd33fe96db7add5480463b990fc7686d500f7fb9eee",
+                    "scope": "mycelium:payment"
+                  },
+                  {
+                    "delegatee": "agent-c",
+                    "delegator": "agent-b",
+                    "delegation_ref": "d026354ff6c2c50119f6cb874bcd3ea3684228918d6a5d4153c96c2af5f2f974",
+                    "scope": "mycelium:payment"
+                  },
+                  {
+                    "delegatee": "agent-d",
+                    "delegator": "agent-c",
+                    "delegation_ref": "5dd43a1a84296cf018137bb89a5891bb9254d3a03a14a272080b2d6291007ef4",
+                    "scope": "mycelium:payment:route"
+                  }
+                ],
+                "leaf_action_ref": "9965cf231935c3ede01365933a6cd7b0b66e60cc07eef3cbd09e42f08647b4e4",
+                "root_delegator": "agent-a",
+                "scope": "mycelium:payment",
+                "version": "delegation-chain-ref-v1"
+              },
+              "delegation_artifacts": [
+                {
+                  "capability": "delegate",
+                  "delegatee": "agent-b",
+                  "delegator": "agent-a",
+                  "expires_at": "2026-12-31T00:00:00.000Z",
+                  "policy_version": "2026-10-01",
+                  "scope": "mycelium:payment",
+                  "version": "delegation-ref-v1"
+                },
+                {
+                  "capability": "delegate",
+                  "delegatee": "agent-c",
+                  "delegator": "agent-b",
+                  "expires_at": "2026-12-31T00:00:00.000Z",
+                  "parent_delegation_ref": "ef1e99301dd5be210963cdd33fe96db7add5480463b990fc7686d500f7fb9eee",
+                  "policy_version": "2026-10-01",
+                  "scope": "mycelium:payment",
+                  "version": "delegation-ref-v1"
+                },
+                {
+                  "capability": "payment.route",
+                  "delegatee": "agent-d",
+                  "delegator": "agent-c",
+                  "expires_at": "2026-12-31T00:00:00.000Z",
+                  "parent_delegation_ref": "d026354ff6c2c50119f6cb874bcd3ea3684228918d6a5d4153c96c2af5f2f974",
+                  "policy_version": "2026-10-01",
+                  "scope": "mycelium:payment:route",
+                  "version": "delegation-ref-v1"
+                }
+              ],
+              "leaf_preimage": {
+                "agent_id": "agent-d",
+                "action_type": "payment.route",
+                "scope": "mycelium:payment:route",
+                "timestamp": "2026-10-05T12:00:00.000Z"
+              },
+              "delegation_chain_ref": "b8298aad76e70366cc78ca6f6e77fab844e912501caa6a9e623b3ae8490dde5d",
+              "revocation_artifact": {
+                "reason": "grant_withdrawn",
+                "revocation_key": "rev_mid_hop_001",
+                "revoked_at": "2026-10-03T09:00:00.000Z",
+                "revoked_delegation_ref": "d026354ff6c2c50119f6cb874bcd3ea3684228918d6a5d4153c96c2af5f2f974",
+                "revoker": "agent-b",
+                "scope": "mycelium:payment",
+                "version": "revocation-ref-v1"
+              },
+              "revocation_ref": "104e8760a63f32ab123ae25c7d345bdeb0d5aaa2d91f845c65ee2f78a336f942",
+              "revocation_action_preimage": {
+                "action_type": "authorization.revoke",
+                "agent_id": "agent-b",
+                "scope": "mycelium:payment",
+                "timestamp": "2026-10-03T09:00:00.000Z"
+              },
+              "revocation_action_ref": "db2cfd63a5d132c8171bddd6b0e33358d607ff34ee0ef4687b55913ae5f1b9d9"
+            },
+            {
+              "id": "mid-hop-revocation-002-broken-continuity-baseline",
+              "description": "Control. hops[0] and hops[1] are byte-identical to chain 001; hops[2] is granted by agent-x, not by hops[1].delegatee agent-c, so chain_continuity breaks at hop 1. delegation_chain_ref is recomputed over this artifact, so chain_break is the only failure. No revocation artifact. Fresh replay registry.",
+              "expected": "FAIL",
+              "failure_mode": "chain_break at hop 1",
+              "chain_artifact": {
+                "chain_id": "chain-mid-hop-revocation-002",
+                "hops": [
+                  {
+                    "delegatee": "agent-b",
+                    "delegator": "agent-a",
+                    "delegation_ref": "ef1e99301dd5be210963cdd33fe96db7add5480463b990fc7686d500f7fb9eee",
+                    "scope": "mycelium:payment"
+                  },
+                  {
+                    "delegatee": "agent-c",
+                    "delegator": "agent-b",
+                    "delegation_ref": "d026354ff6c2c50119f6cb874bcd3ea3684228918d6a5d4153c96c2af5f2f974",
+                    "scope": "mycelium:payment"
+                  },
+                  {
+                    "delegatee": "agent-d",
+                    "delegator": "agent-x",
+                    "delegation_ref": "ffb7ee1bc5c118775381e7728b40aa794b0aac7367ea2d164035c1cbb84c991e",
+                    "scope": "mycelium:payment:route"
+                  }
+                ],
+                "leaf_action_ref": "9965cf231935c3ede01365933a6cd7b0b66e60cc07eef3cbd09e42f08647b4e4",
+                "root_delegator": "agent-a",
+                "scope": "mycelium:payment",
+                "version": "delegation-chain-ref-v1"
+              },
+              "delegation_artifacts": [
+                {
+                  "capability": "delegate",
+                  "delegatee": "agent-b",
+                  "delegator": "agent-a",
+                  "expires_at": "2026-12-31T00:00:00.000Z",
+                  "policy_version": "2026-10-01",
+                  "scope": "mycelium:payment",
+                  "version": "delegation-ref-v1"
+                },
+                {
+                  "capability": "delegate",
+                  "delegatee": "agent-c",
+                  "delegator": "agent-b",
+                  "expires_at": "2026-12-31T00:00:00.000Z",
+                  "parent_delegation_ref": "ef1e99301dd5be210963cdd33fe96db7add5480463b990fc7686d500f7fb9eee",
+                  "policy_version": "2026-10-01",
+                  "scope": "mycelium:payment",
+                  "version": "delegation-ref-v1"
+                },
+                {
+                  "capability": "payment.route",
+                  "delegatee": "agent-d",
+                  "delegator": "agent-x",
+                  "expires_at": "2026-12-31T00:00:00.000Z",
+                  "parent_delegation_ref": "d026354ff6c2c50119f6cb874bcd3ea3684228918d6a5d4153c96c2af5f2f974",
+                  "policy_version": "2026-10-01",
+                  "scope": "mycelium:payment:route",
+                  "version": "delegation-ref-v1"
+                }
+              ],
+              "leaf_preimage": {
+                "agent_id": "agent-d",
+                "action_type": "payment.route",
+                "scope": "mycelium:payment:route",
+                "timestamp": "2026-10-05T12:00:00.000Z"
+              },
+              "delegation_chain_ref": "1468129dcc0f7a4de524f7885936759197e80dec318c28a47c77100534b3352c"
+            },
+            {
+              "id": "mid-hop-revocation-002-broken-continuity-with-revocation",
+              "description": "Control, byte-identical chain_artifact and leaf_preimage to 002-broken-continuity-baseline, submitted with the same revocation_artifact as 001-with-revocation (hops[1] is the same hop in both chains). Expected to FAIL for the same single reason, chain_break at hop 1: revocation metadata neither changes a passing structural verdict nor masks a failing one. Fresh replay registry.",
+              "expected": "FAIL",
+              "failure_mode": "chain_break at hop 1",
+              "chain_artifact": {
+                "chain_id": "chain-mid-hop-revocation-002",
+                "hops": [
+                  {
+                    "delegatee": "agent-b",
+                    "delegator": "agent-a",
+                    "delegation_ref": "ef1e99301dd5be210963cdd33fe96db7add5480463b990fc7686d500f7fb9eee",
+                    "scope": "mycelium:payment"
+                  },
+                  {
+                    "delegatee": "agent-c",
+                    "delegator": "agent-b",
+                    "delegation_ref": "d026354ff6c2c50119f6cb874bcd3ea3684228918d6a5d4153c96c2af5f2f974",
+                    "scope": "mycelium:payment"
+                  },
+                  {
+                    "delegatee": "agent-d",
+                    "delegator": "agent-x",
+                    "delegation_ref": "ffb7ee1bc5c118775381e7728b40aa794b0aac7367ea2d164035c1cbb84c991e",
+                    "scope": "mycelium:payment:route"
+                  }
+                ],
+                "leaf_action_ref": "9965cf231935c3ede01365933a6cd7b0b66e60cc07eef3cbd09e42f08647b4e4",
+                "root_delegator": "agent-a",
+                "scope": "mycelium:payment",
+                "version": "delegation-chain-ref-v1"
+              },
+              "delegation_artifacts": [
+                {
+                  "capability": "delegate",
+                  "delegatee": "agent-b",
+                  "delegator": "agent-a",
+                  "expires_at": "2026-12-31T00:00:00.000Z",
+                  "policy_version": "2026-10-01",
+                  "scope": "mycelium:payment",
+                  "version": "delegation-ref-v1"
+                },
+                {
+                  "capability": "delegate",
+                  "delegatee": "agent-c",
+                  "delegator": "agent-b",
+                  "expires_at": "2026-12-31T00:00:00.000Z",
+                  "parent_delegation_ref": "ef1e99301dd5be210963cdd33fe96db7add5480463b990fc7686d500f7fb9eee",
+                  "policy_version": "2026-10-01",
+                  "scope": "mycelium:payment",
+                  "version": "delegation-ref-v1"
+                },
+                {
+                  "capability": "payment.route",
+                  "delegatee": "agent-d",
+                  "delegator": "agent-x",
+                  "expires_at": "2026-12-31T00:00:00.000Z",
+                  "parent_delegation_ref": "d026354ff6c2c50119f6cb874bcd3ea3684228918d6a5d4153c96c2af5f2f974",
+                  "policy_version": "2026-10-01",
+                  "scope": "mycelium:payment:route",
+                  "version": "delegation-ref-v1"
+                }
+              ],
+              "leaf_preimage": {
+                "agent_id": "agent-d",
+                "action_type": "payment.route",
+                "scope": "mycelium:payment:route",
+                "timestamp": "2026-10-05T12:00:00.000Z"
+              },
+              "delegation_chain_ref": "1468129dcc0f7a4de524f7885936759197e80dec318c28a47c77100534b3352c",
+              "revocation_artifact": {
+                "reason": "grant_withdrawn",
+                "revocation_key": "rev_mid_hop_001",
+                "revoked_at": "2026-10-03T09:00:00.000Z",
+                "revoked_delegation_ref": "d026354ff6c2c50119f6cb874bcd3ea3684228918d6a5d4153c96c2af5f2f974",
+                "revoker": "agent-b",
+                "scope": "mycelium:payment",
+                "version": "revocation-ref-v1"
+              },
+              "revocation_ref": "104e8760a63f32ab123ae25c7d345bdeb0d5aaa2d91f845c65ee2f78a336f942",
+              "revocation_action_preimage": {
+                "action_type": "authorization.revoke",
+                "agent_id": "agent-b",
+                "scope": "mycelium:payment",
+                "timestamp": "2026-10-03T09:00:00.000Z"
+              },
+              "revocation_action_ref": "db2cfd63a5d132c8171bddd6b0e33358d607ff34ee0ef4687b55913ae5f1b9d9"
+            }
+          ],
+          "provenance": {
+            "authored_by": "TKCollective (Tanilo)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": [
+              {
+                "party": "babyblueviper1",
+                "where": "giskard09/argentum-core#123 comment 6047862394; script and transcript at babyblueviper1/preaction-governance-conformance@08966cf",
+                "when": "2026-10-07T22:10:41Z"
+              }
+            ]
+          }
+        },
+        "moltycel-interop/source-vectors/05-single-use-replay.json": {
+          "id": "aae-vector-05",
+          "name": "Single-use replay — id already consumed",
+          "description": "AAE with single_use:true presented after a prior successful authorization recorded its id.",
+          "section_ref": "draft-kroehl-agentic-trust-aae-00 §2.4 (single_use), §5 step 5",
+          "input": {
+            "secured_aae": "eyJhbGciOiJFZERTQSIsImN0eSI6ImFhZStqc29uIiwia2lkIjoiZGlkOndlYjpleGFtcGxlLmNvbTpyZWdpc3RyeSNrZXktMSJ9.eyJAY29udGV4dCI6WyJodHRwczovL3d3dy53My5vcmcvbnMvY3JlZGVudGlhbHMvdjIiLCJodHRwczovL21vbHRydXN0LmNoL2NvbnRleHRzL2FhZS92MSJdLCJ0eXBlIjpbIlZlcmlmaWFibGVDcmVkZW50aWFsIiwiQWdlbnRBdXRob3JpemF0aW9uRW52ZWxvcGUiXSwiaWQiOiJ1cm46dXVpZDowMDAwMDAwNS0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwMDUiLCJpc3N1ZXIiOiJkaWQ6d2ViOmV4YW1wbGUuY29tOnJlZ2lzdHJ5IiwidmFsaWRGcm9tIjoiMjAyNi0wNS0yMFQwODowMDowMFoiLCJjcmVkZW50aWFsU3ViamVjdCI6eyJpZCI6ImRpZDp3ZWI6ZXhhbXBsZS5jb206YWdlbnQtMDAxIiwiYWFlIjp7Im1hbmRhdGUiOnsiYWN0aW9ucyI6WyJyZWFkIiwiYm9vayIsInBheSJdLCJwdXJwb3NlIjoiQnVzaW5lc3MgdHJhdmVsIGJvb2tpbmciLCJzY29wZSI6InRyYXZlbC12ZXJ0aWNhbCIsInByaW5jaXBhbF9kaWQiOiJkaWQ6d2ViOmV4YW1wbGUuY29tOmVudGVycHJpc2UtY29ycCJ9LCJjb25zdHJhaW50cyI6eyJtYXhfdHJhbnNhY3Rpb25fdmFsdWUiOnsidmFsdWUiOjUwMCwiY3VycmVuY3kiOiJVU0QiLCJyZXF1aXJlZCI6dHJ1ZX19LCJ2YWxpZGl0eSI6eyJub3RfYmVmb3JlIjoiMjAyNi0wNS0yMFQwODowMDowMFoiLCJub3RfYWZ0ZXIiOiIyMDI2LTA1LTIwVDE2OjAwOjAwWiIsInNpbmdsZV91c2UiOnRydWV9fX19.lByZcgj4KKx19o91SlF5umYn-uleSVE8iBtPSVDBrEnOw5lrnW1rDRQhAol_CwPackhnZb5y-ZkEwsLTVrZsDw",
+            "context": {
+              "current_time": "2026-05-20T12:00:00Z",
+              "requested_action": "book",
+              "action_context": {
+                "amount": 300,
+                "currency": "USD"
+              },
+              "subject_binding": {
+                "challenge_response_valid": true
+              },
+              "consumed_ids": [
+                "urn:uuid:00000005-0000-4000-8000-000000000005"
+              ]
+            }
+          },
+          "expected": {
+            "result": "REJECT",
+            "verification_step": 5,
+            "rejection_reason": "single_use_already_consumed"
+          },
+          "rationale": "Section 2.4 and §5 step 5 require an atomic check-and-record keyed by the VC id when single_use is true; an id already recorded MUST be rejected. The context marks this id as already consumed, so the replay is rejected at step 5."
+        },
+        "moltycel-interop/source-vectors/11-delegation-cascade-revocation.json": {
+          "id": "aae-vector-11",
+          "name": "Delegation cascade revocation — revoked parent invalidates child",
+          "description": "Depth-1 delegated AAE whose parent (root) AAE is revoked at its revocation endpoint.",
+          "section_ref": "draft-kroehl-agentic-trust-aae-00 §6.5 (Delegation Revocation), §5 step 9 (+ step 8 per ancestor)",
+          "input": {
+            "secured_aae": "eyJhbGciOiJFZERTQSIsImN0eSI6ImFhZStqc29uIiwia2lkIjoiZGlkOndlYjpleGFtcGxlLmNvbTphZ2VudC1hI2tleS0xIn0.eyJAY29udGV4dCI6WyJodHRwczovL3d3dy53My5vcmcvbnMvY3JlZGVudGlhbHMvdjIiLCJodHRwczovL21vbHRydXN0LmNoL2NvbnRleHRzL2FhZS92MSJdLCJ0eXBlIjpbIlZlcmlmaWFibGVDcmVkZW50aWFsIiwiQWdlbnRBdXRob3JpemF0aW9uRW52ZWxvcGUiXSwiaWQiOiJ1cm46dXVpZDowMDAwMDAwYi0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwYjEiLCJpc3N1ZXIiOiJkaWQ6d2ViOmV4YW1wbGUuY29tOmFnZW50LWEiLCJ2YWxpZEZyb20iOiIyMDI2LTA1LTIwVDA4OjAwOjAwWiIsImNyZWRlbnRpYWxTdWJqZWN0Ijp7ImlkIjoiZGlkOndlYjpleGFtcGxlLmNvbTphZ2VudC1iIiwiYWFlIjp7Im1hbmRhdGUiOnsiYWN0aW9ucyI6WyJyZWFkIl0sImRlbGVnYXRpb24iOnsiZGVsZWdhdG9yX2RpZCI6ImRpZDp3ZWI6ZXhhbXBsZS5jb206YWdlbnQtYSIsImRlbGVnYXRvcl9hYWVfaWQiOiJ1cm46dXVpZDowMDAwMDAwYi0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwYTAiLCJkZWxlZ2F0b3JfYWFlX3VyaSI6Imh0dHBzOi8vYWFlLmV4YW1wbGUvcC91cm46dXVpZDowMDAwMDAwYi0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwYTAiLCJkZWxlZ2F0b3JfYWFlX2hhc2giOiJzaGEtMjU2OmM5VTFvVnpKeUMtbzdwT0ItekptZE5qcWk0Tk5CMWxYYmJ5VFhram1rMFEiLCJkZXB0aCI6MSwibWF4X2RlcHRoIjoyfX0sImNvbnN0cmFpbnRzIjp7Im1heF90cmFuc2FjdGlvbl92YWx1ZSI6eyJ2YWx1ZSI6MzAwLCJjdXJyZW5jeSI6IlVTRCIsInJlcXVpcmVkIjp0cnVlfX0sInZhbGlkaXR5Ijp7Im5vdF9iZWZvcmUiOiIyMDI2LTA1LTIwVDA4OjAwOjAwWiIsIm5vdF9hZnRlciI6IjIwMjYtMDUtMjBUMTY6MDA6MDBaIiwic2luZ2xlX3VzZSI6ZmFsc2V9fX19.vsoTrPxr0g2GAH78V7QSIV09MYAnOI7PNrIgiT9Y2kWu9Wdv0jy_quAGbS9LJfv4q_VLkq3Evhz6T9uHA8p5Bg",
+            "context": {
+              "current_time": "2026-05-20T12:00:00Z",
+              "requested_action": "read",
+              "action_context": {
+                "amount": 50,
+                "currency": "USD"
+              },
+              "subject_binding": {
+                "challenge_response_valid": true
+              },
+              "delegation_chain": [
+                "eyJhbGciOiJFZERTQSIsImN0eSI6ImFhZStqc29uIiwia2lkIjoiZGlkOndlYjpleGFtcGxlLmNvbTpyZWdpc3RyeSNrZXktMSJ9.eyJAY29udGV4dCI6WyJodHRwczovL3d3dy53My5vcmcvbnMvY3JlZGVudGlhbHMvdjIiLCJodHRwczovL21vbHRydXN0LmNoL2NvbnRleHRzL2FhZS92MSJdLCJ0eXBlIjpbIlZlcmlmaWFibGVDcmVkZW50aWFsIiwiQWdlbnRBdXRob3JpemF0aW9uRW52ZWxvcGUiXSwiaWQiOiJ1cm46dXVpZDowMDAwMDAwYi0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwYTAiLCJpc3N1ZXIiOiJkaWQ6d2ViOmV4YW1wbGUuY29tOnJlZ2lzdHJ5IiwidmFsaWRGcm9tIjoiMjAyNi0wNS0yMFQwODowMDowMFoiLCJjcmVkZW50aWFsU3ViamVjdCI6eyJpZCI6ImRpZDp3ZWI6ZXhhbXBsZS5jb206YWdlbnQtYSIsImFhZSI6eyJtYW5kYXRlIjp7ImFjdGlvbnMiOlsicmVhZCIsImJvb2siXSwicHVycG9zZSI6IkJ1c2luZXNzIHRyYXZlbCBib29raW5nIiwic2NvcGUiOiJ0cmF2ZWwtdmVydGljYWwiLCJwcmluY2lwYWxfZGlkIjoiZGlkOndlYjpleGFtcGxlLmNvbTplbnRlcnByaXNlLWNvcnAiLCJkZWxlZ2F0aW9uX3BvbGljeSI6eyJtYXhfZGVwdGgiOjJ9fSwiY29uc3RyYWludHMiOnsibWF4X3RyYW5zYWN0aW9uX3ZhbHVlIjp7InZhbHVlIjo1MDAsImN1cnJlbmN5IjoiVVNEIiwicmVxdWlyZWQiOnRydWV9fSwidmFsaWRpdHkiOnsibm90X2JlZm9yZSI6IjIwMjYtMDUtMjBUMDg6MDA6MDBaIiwibm90X2FmdGVyIjoiMjAyNi0wNS0yMFQxNjowMDowMFoiLCJzaW5nbGVfdXNlIjpmYWxzZSwicmV2b2NhdGlvbl9jaGVjayI6Imh0dHBzOi8vYXBpLmV4YW1wbGUuY29tL2FhZS9yZXZvY2F0aW9uL3tpZH0ifX19fQ.tA92dlzOUZwfuvvY5GX-Stf0W5YsJSt_gCPWPmrH4O2-9ZKrX0Fjz53K7sw6BH8I3Iri8DwHNGlOx-_KzIgLDw"
+              ],
+              "revocation_responses": {
+                "urn:uuid:0000000b-0000-4000-8000-0000000000a0": {
+                  "revoked": true
+                }
+              }
+            }
+          },
+          "expected": {
+            "result": "REJECT",
+            "verification_step": 9,
+            "rejection_reason": "ancestor_revoked"
+          },
+          "rationale": "Section 5 step 9 applies the revocation check to each ancestor AAE, and §6.5 states a relying party that determines a parent AAE has been revoked SHOULD treat all descendants as invalid. The parent endpoint reports revoked:true, so the descendant is rejected at step 9."
+        },
+        "partial-chain-recovery/vectors.json": {
+          "spec_version": "delegation-chain-ref-v1",
+          "description": "Partial-chain recovery: restoration of missing chain bytes under the original delegation_chain_ref, followed by the replay check. Vectors MUST be run in order against one initially empty replay registry (state carries across the file). The middle hop of a valid 3-hop chain is omitted while the reference is held fixed: FAIL (digest mismatch, broken continuity); a substituted hop in the right position: FAIL (digest mismatch only); the exact hop in the wrong position: FAIL; the exact hop restored in its original position: PASS; a further submission of the restored chain: FAIL replay_detected. Failed attempts are not recorded, per the reference verifier's recording-order rule. This set tests byte restoration and failed-attempt replay handling. It does not test recovery of authority, automatic retrieval of missing artifacts, renewed authority after revocation, or parent_delegation_ref resolution, which remains a separate open question.",
+          "scope_agreed_at": "https://github.com/x402-foundation/x402/issues/2332#issuecomment-5890759053",
+          "missing_hop_index": 1,
+          "original_chain_artifact": {
+            "chain_id": "chain-partial-chain-recovery-001",
+            "hops": [
+              {
+                "delegatee": "agent-b",
+                "delegator": "agent-a",
+                "delegation_ref": "ef1e99301dd5be210963cdd33fe96db7add5480463b990fc7686d500f7fb9eee",
+                "scope": "mycelium:payment"
+              },
+              {
+                "delegatee": "agent-c",
+                "delegator": "agent-b",
+                "delegation_ref": "d026354ff6c2c50119f6cb874bcd3ea3684228918d6a5d4153c96c2af5f2f974",
+                "scope": "mycelium:payment"
+              },
+              {
+                "delegatee": "agent-d",
+                "delegator": "agent-c",
+                "delegation_ref": "5dd43a1a84296cf018137bb89a5891bb9254d3a03a14a272080b2d6291007ef4",
+                "scope": "mycelium:payment:route"
+              }
+            ],
+            "leaf_action_ref": "9965cf231935c3ede01365933a6cd7b0b66e60cc07eef3cbd09e42f08647b4e4",
+            "root_delegator": "agent-a",
+            "scope": "mycelium:payment",
+            "version": "delegation-chain-ref-v1"
+          },
+          "delegation_chain_ref": "89b3d386856f9bf5de561f4d6f4eaaa07917d7fd06ef7874df46c802b8763b14",
+          "delegation_artifacts": [
+            {
+              "capability": "delegate",
+              "delegatee": "agent-b",
+              "delegator": "agent-a",
+              "expires_at": "2026-12-31T00:00:00.000Z",
+              "policy_version": "2026-10-01",
+              "scope": "mycelium:payment",
+              "version": "delegation-ref-v1"
+            },
+            {
+              "capability": "delegate",
+              "delegatee": "agent-c",
+              "delegator": "agent-b",
+              "expires_at": "2026-12-31T00:00:00.000Z",
+              "parent_delegation_ref": "ef1e99301dd5be210963cdd33fe96db7add5480463b990fc7686d500f7fb9eee",
+              "policy_version": "2026-10-01",
+              "scope": "mycelium:payment",
+              "version": "delegation-ref-v1"
+            },
+            {
+              "capability": "payment.route",
+              "delegatee": "agent-d",
+              "delegator": "agent-c",
+              "expires_at": "2026-12-31T00:00:00.000Z",
+              "parent_delegation_ref": "d026354ff6c2c50119f6cb874bcd3ea3684228918d6a5d4153c96c2af5f2f974",
+              "policy_version": "2026-10-01",
+              "scope": "mycelium:payment:route",
+              "version": "delegation-ref-v1"
+            }
+          ],
+          "vectors": [
+            {
+              "id": "recovery-001-missing-hop",
+              "description": "hops[1] (agent-b -> agent-c) is absent from chain_artifact; hops[0] and hops[2] are the original bytes and delegation_chain_ref is the original reference, held fixed. Expected FAIL for two reasons: the recomputed digest does not match the fixed reference, and chain_continuity breaks at hop 0 (agent-b != agent-c). The failed submission must not be recorded in the replay registry.",
+              "expected": "FAIL",
+              "failure_mode": "delegation_chain_ref mismatch",
+              "additional_failure_modes": [
+                "chain_break at hop 0"
+              ],
+              "expected_registry_after": {
+                "chain_ids": 0,
+                "delegation_refs": 0
+              },
+              "chain_artifact": {
+                "chain_id": "chain-partial-chain-recovery-001",
+                "hops": [
+                  {
+                    "delegatee": "agent-b",
+                    "delegator": "agent-a",
+                    "delegation_ref": "ef1e99301dd5be210963cdd33fe96db7add5480463b990fc7686d500f7fb9eee",
+                    "scope": "mycelium:payment"
+                  },
+                  {
+                    "delegatee": "agent-d",
+                    "delegator": "agent-c",
+                    "delegation_ref": "5dd43a1a84296cf018137bb89a5891bb9254d3a03a14a272080b2d6291007ef4",
+                    "scope": "mycelium:payment:route"
+                  }
+                ],
+                "leaf_action_ref": "9965cf231935c3ede01365933a6cd7b0b66e60cc07eef3cbd09e42f08647b4e4",
+                "root_delegator": "agent-a",
+                "scope": "mycelium:payment",
+                "version": "delegation-chain-ref-v1"
+              },
+              "leaf_preimage": {
+                "agent_id": "agent-d",
+                "action_type": "payment.route",
+                "scope": "mycelium:payment:route",
+                "timestamp": "2026-10-05T12:00:00.000Z"
+              },
+              "delegation_chain_ref": "89b3d386856f9bf5de561f4d6f4eaaa07917d7fd06ef7874df46c802b8763b14"
+            },
+            {
+              "id": "recovery-002-substituted-hop-control",
+              "description": "Control. A hop with the same delegator, delegatee and scope as the missing one but a different delegation_ref (a re-issued grant, policy_version 2026-10-02, see substitute_delegation_artifact) is placed in position 1. chain_continuity is satisfied again, so this must NOT fail with chain_break; it still FAILs because the recomputed digest does not match the fixed reference. Restoration has to be the exact bytes, not a hop that merely satisfies continuity. Not recorded in the replay registry.",
+              "expected": "FAIL",
+              "failure_mode": "delegation_chain_ref mismatch",
+              "must_not_fail_with": [
+                "chain_break"
+              ],
+              "expected_registry_after": {
+                "chain_ids": 0,
+                "delegation_refs": 0
+              },
+              "chain_artifact": {
+                "chain_id": "chain-partial-chain-recovery-001",
+                "hops": [
+                  {
+                    "delegatee": "agent-b",
+                    "delegator": "agent-a",
+                    "delegation_ref": "ef1e99301dd5be210963cdd33fe96db7add5480463b990fc7686d500f7fb9eee",
+                    "scope": "mycelium:payment"
+                  },
+                  {
+                    "delegatee": "agent-c",
+                    "delegator": "agent-b",
+                    "delegation_ref": "b0ea4bdae647fa41d161a3f2f65ec4ff2fcb9bbfd72f5c73634534ab4945a640",
+                    "scope": "mycelium:payment"
+                  },
+                  {
+                    "delegatee": "agent-d",
+                    "delegator": "agent-c",
+                    "delegation_ref": "5dd43a1a84296cf018137bb89a5891bb9254d3a03a14a272080b2d6291007ef4",
+                    "scope": "mycelium:payment:route"
+                  }
+                ],
+                "leaf_action_ref": "9965cf231935c3ede01365933a6cd7b0b66e60cc07eef3cbd09e42f08647b4e4",
+                "root_delegator": "agent-a",
+                "scope": "mycelium:payment",
+                "version": "delegation-chain-ref-v1"
+              },
+              "leaf_preimage": {
+                "agent_id": "agent-d",
+                "action_type": "payment.route",
+                "scope": "mycelium:payment:route",
+                "timestamp": "2026-10-05T12:00:00.000Z"
+              },
+              "delegation_chain_ref": "89b3d386856f9bf5de561f4d6f4eaaa07917d7fd06ef7874df46c802b8763b14",
+              "substitute_delegation_artifact": {
+                "capability": "delegate",
+                "delegatee": "agent-c",
+                "delegator": "agent-b",
+                "expires_at": "2026-12-31T00:00:00.000Z",
+                "parent_delegation_ref": "ef1e99301dd5be210963cdd33fe96db7add5480463b990fc7686d500f7fb9eee",
+                "policy_version": "2026-10-02",
+                "scope": "mycelium:payment",
+                "version": "delegation-ref-v1"
+              }
+            },
+            {
+              "id": "recovery-003-misplaced-hop-control",
+              "description": "Control. The exact missing hop is supplied, but appended after hops[2] instead of restored at position 1. hops order is semantic (delegation-chain-ref.md, HOPS_REORDERED), so the digest does not match the fixed reference and chain_continuity breaks at hop 0; other invariants fail as well. Not recorded in the replay registry.",
+              "expected": "FAIL",
+              "failure_mode": "delegation_chain_ref mismatch",
+              "additional_failure_modes": [
+                "chain_break at hop 0"
+              ],
+              "expected_registry_after": {
+                "chain_ids": 0,
+                "delegation_refs": 0
+              },
+              "chain_artifact": {
+                "chain_id": "chain-partial-chain-recovery-001",
+                "hops": [
+                  {
+                    "delegatee": "agent-b",
+                    "delegator": "agent-a",
+                    "delegation_ref": "ef1e99301dd5be210963cdd33fe96db7add5480463b990fc7686d500f7fb9eee",
+                    "scope": "mycelium:payment"
+                  },
+                  {
+                    "delegatee": "agent-d",
+                    "delegator": "agent-c",
+                    "delegation_ref": "5dd43a1a84296cf018137bb89a5891bb9254d3a03a14a272080b2d6291007ef4",
+                    "scope": "mycelium:payment:route"
+                  },
+                  {
+                    "delegatee": "agent-c",
+                    "delegator": "agent-b",
+                    "delegation_ref": "d026354ff6c2c50119f6cb874bcd3ea3684228918d6a5d4153c96c2af5f2f974",
+                    "scope": "mycelium:payment"
+                  }
+                ],
+                "leaf_action_ref": "9965cf231935c3ede01365933a6cd7b0b66e60cc07eef3cbd09e42f08647b4e4",
+                "root_delegator": "agent-a",
+                "scope": "mycelium:payment",
+                "version": "delegation-chain-ref-v1"
+              },
+              "leaf_preimage": {
+                "agent_id": "agent-d",
+                "action_type": "payment.route",
+                "scope": "mycelium:payment:route",
+                "timestamp": "2026-10-05T12:00:00.000Z"
+              },
+              "delegation_chain_ref": "89b3d386856f9bf5de561f4d6f4eaaa07917d7fd06ef7874df46c802b8763b14"
+            },
+            {
+              "id": "recovery-004-exact-restoration",
+              "description": "The exact missing hop restored in its original position; chain_artifact is byte-identical to original_chain_artifact. Expected PASS under the original delegation_chain_ref. The three failed attempts above did not consume replay state, so this first valid submission is accepted and now recorded (chain_id plus all three hop delegation_ref values).",
+              "expected": "PASS",
+              "expected_registry_after": {
+                "chain_ids": 1,
+                "delegation_refs": 3
+              },
+              "chain_artifact": {
+                "chain_id": "chain-partial-chain-recovery-001",
+                "hops": [
+                  {
+                    "delegatee": "agent-b",
+                    "delegator": "agent-a",
+                    "delegation_ref": "ef1e99301dd5be210963cdd33fe96db7add5480463b990fc7686d500f7fb9eee",
+                    "scope": "mycelium:payment"
+                  },
+                  {
+                    "delegatee": "agent-c",
+                    "delegator": "agent-b",
+                    "delegation_ref": "d026354ff6c2c50119f6cb874bcd3ea3684228918d6a5d4153c96c2af5f2f974",
+                    "scope": "mycelium:payment"
+                  },
+                  {
+                    "delegatee": "agent-d",
+                    "delegator": "agent-c",
+                    "delegation_ref": "5dd43a1a84296cf018137bb89a5891bb9254d3a03a14a272080b2d6291007ef4",
+                    "scope": "mycelium:payment:route"
+                  }
+                ],
+                "leaf_action_ref": "9965cf231935c3ede01365933a6cd7b0b66e60cc07eef3cbd09e42f08647b4e4",
+                "root_delegator": "agent-a",
+                "scope": "mycelium:payment",
+                "version": "delegation-chain-ref-v1"
+              },
+              "leaf_preimage": {
+                "agent_id": "agent-d",
+                "action_type": "payment.route",
+                "scope": "mycelium:payment:route",
+                "timestamp": "2026-10-05T12:00:00.000Z"
+              },
+              "delegation_chain_ref": "89b3d386856f9bf5de561f4d6f4eaaa07917d7fd06ef7874df46c802b8763b14"
+            },
+            {
+              "id": "recovery-005-resubmission-after-restoration",
+              "description": "Byte-identical resubmission of the restored chain. Every per-vector invariant still passes; only the replay guard, holding the state recorded by 004, rejects it as replay_detected. Registry unchanged.",
+              "expected": "FAIL",
+              "failure_mode": "replay_detected",
+              "expected_registry_after": {
+                "chain_ids": 1,
+                "delegation_refs": 3
+              },
+              "chain_artifact": {
+                "chain_id": "chain-partial-chain-recovery-001",
+                "hops": [
+                  {
+                    "delegatee": "agent-b",
+                    "delegator": "agent-a",
+                    "delegation_ref": "ef1e99301dd5be210963cdd33fe96db7add5480463b990fc7686d500f7fb9eee",
+                    "scope": "mycelium:payment"
+                  },
+                  {
+                    "delegatee": "agent-c",
+                    "delegator": "agent-b",
+                    "delegation_ref": "d026354ff6c2c50119f6cb874bcd3ea3684228918d6a5d4153c96c2af5f2f974",
+                    "scope": "mycelium:payment"
+                  },
+                  {
+                    "delegatee": "agent-d",
+                    "delegator": "agent-c",
+                    "delegation_ref": "5dd43a1a84296cf018137bb89a5891bb9254d3a03a14a272080b2d6291007ef4",
+                    "scope": "mycelium:payment:route"
+                  }
+                ],
+                "leaf_action_ref": "9965cf231935c3ede01365933a6cd7b0b66e60cc07eef3cbd09e42f08647b4e4",
+                "root_delegator": "agent-a",
+                "scope": "mycelium:payment",
+                "version": "delegation-chain-ref-v1"
+              },
+              "leaf_preimage": {
+                "agent_id": "agent-d",
+                "action_type": "payment.route",
+                "scope": "mycelium:payment:route",
+                "timestamp": "2026-10-05T12:00:00.000Z"
+              },
+              "delegation_chain_ref": "89b3d386856f9bf5de561f4d6f4eaaa07917d7fd06ef7874df46c802b8763b14"
+            }
+          ],
+          "provenance": {
+            "authored_by": "TKCollective (Tanilo)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": [
+              {
+                "party": "babyblueviper1",
+                "where": "giskard09/argentum-core#123 comment 6047862394; script and transcript at babyblueviper1/preaction-governance-conformance@08966cf",
+                "when": "2026-10-07T22:10:41Z"
+              }
+            ]
+          }
+        },
         "replay-vectors.json": {
           "spec_version": "delegation-chain-ref-v1",
           "description": "Replay guard conformance vectors. A chain_id (and each hop's delegation_ref) MUST NOT be accepted twice by the same verifier instance -- resubmitting an already-seen chain_id is a replay, even if the resubmitted artifact is byte-identical and would otherwise verify. An artifact that fails for any other reason MUST NOT be recorded, so a later, genuinely valid, submission of that same chain_id is not misreported as a replay (see replay-003/004). Vectors MUST be run in order (registry state carries across vectors within this file).",
@@ -3659,6 +4701,68 @@
             "verification_mode": "asserted",
             "independently_reproduced_by": []
           }
+        },
+        "revoked-ancestor/enforcement-vectors.json": {
+          "spec_version": "delegation-chain-ref-v1 + AAE-02 §7.5 (enforcement layer)",
+          "description": "Two verdict models over the same chains. default = structural verdict only (no revocation read). 7.5 = structural AND enforcement: a known-revoked hop invalidates its descendants and the leaf action under them. The structural verdict must be identical under both models (checked by verify_enforcement.py).",
+          "cases": [
+            {
+              "id": "ev-001-default-no-revocation",
+              "source": "chain-revoked-ancestor-001-baseline",
+              "known_revocations": "none",
+              "model": "default",
+              "expected": "PASS"
+            },
+            {
+              "id": "ev-002-default-mid-hop-revoked",
+              "source": "chain-revoked-ancestor-001-with-revocation",
+              "known_revocations": "revocation_artifact",
+              "model": "default",
+              "expected": "PASS"
+            },
+            {
+              "id": "ev-003-7.5-no-revocation",
+              "source": "chain-revoked-ancestor-001-baseline",
+              "known_revocations": "none",
+              "model": "7.5",
+              "expected": "PASS"
+            },
+            {
+              "id": "ev-004-7.5-mid-hop-revoked",
+              "source": "chain-revoked-ancestor-001-with-revocation",
+              "known_revocations": "revocation_artifact",
+              "model": "7.5",
+              "expected": "FAIL"
+            },
+            {
+              "id": "ev-005-7.5-root-revoked-synthetic",
+              "source": "chain-revoked-ancestor-001-baseline",
+              "known_revocations": [
+                {
+                  "revoked_action_ref": "e7a936ee9b30fceae7239df32ecb593b60b109f05463f3048740c8bc45f9824a",
+                  "version": "revocation-ref-v1",
+                  "revoked_at": "2026-08-15T09:00:00.000Z",
+                  "scope": "mycelium:payment"
+                }
+              ],
+              "model": "7.5",
+              "expected": "FAIL"
+            },
+            {
+              "id": "ev-006-default-root-revoked-synthetic",
+              "source": "chain-revoked-ancestor-001-baseline",
+              "known_revocations": [
+                {
+                  "revoked_action_ref": "e7a936ee9b30fceae7239df32ecb593b60b109f05463f3048740c8bc45f9824a",
+                  "version": "revocation-ref-v1",
+                  "revoked_at": "2026-08-15T09:00:00.000Z",
+                  "scope": "mycelium:payment"
+                }
+              ],
+              "model": "default",
+              "expected": "PASS"
+            }
+          ]
         },
         "revoked-ancestor/vectors.json": {
           "spec_version": "delegation-chain-ref-v1",
@@ -3822,10 +4926,56 @@
             "independently_reproduced_by": []
           }
         },
+        "small-order-key-vectors.json": {
+          "description": "Preventive self-audit, 2026-10-18, no external trigger against this repo: robertolocatelli81-dev/Noûs found the same day, unrelated to us, that identity-element Ed25519 keys (R=identity, S=0) forge a valid signature for ANY message under naive RFC 8032 verification (x402-foundation/tsc#4). delegation-chain-ref-v1's hop_signature is this repo's only LIVE Ed25519 check (everywhere else -- peer-reconciliation-ref-v1's co_signer, anchoring-precedence-ref-v1's admission_invariant -- signature validity is a declared, externally-resolved fact, not computed by our own code). This vector constructs the real attack inside a real 2-hop chain using this repo's own hop_signing_preimage(): hop 0 is a genuine signature from a freshly generated key (legit-root-guardian); hop 1's delegator key IS the identity point and hop 1's hop_signature IS the universal-forgery signature (R=identity, S=0) -- a signature that, per the naive RFC 8032 equation, verifies for literally any message, including this repo's own hop preimage. Our pinned PyNaCl (requirements.txt) rejects it: libsodium checks that the public key is not a small-order point before the verification equation runs at all, independent of the message. See ed25519-hardening/ in this directory for the broader regression check against the full published novifinancial/ed25519-speccheck suite (12 vectors, classes 0-11, including the non-canonical point/scalar encodings -- ed25519-speccheck classes 0 and 11 -- that were the other half of what Noûs flagged).",
+          "pubkeys": {
+            "legit-root-guardian": "oMXddvJUt/4/Mk0onc5opxMDZQ2kowC+9YzWmnG08EQ=",
+            "attacker-controlled-identity-key": "AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+          },
+          "vectors": [
+            {
+              "id": "small-order-identity-key-universal-forgery-001",
+              "description": "hop 0 (legit-root-guardian -> attacker-controlled-identity-key) carries a genuine signature from a freshly generated Ed25519 keypair -- this hop is legitimate and verifies correctly on its own, confirming the rest of the vector is sound. hop 1's delegator, attacker-controlled-identity-key, is registered with the identity-element public key (0x01 followed by 31 zero bytes -- the Ed25519 neutral element), and hop 1's hop_signature is R=identity||S=0, the textbook 'universal forgery' signature that satisfies [S]B = R + [k]A for ANY message when A is the identity point, because both sides reduce to the identity regardless of k. If our verifier only checked the naive RFC 8032 equation, this hop would verify against literally any preimage. PyNaCl/libsodium instead rejects any signature over a small-order public key before reaching the verification equation, independent of the message -- confirmed here through this repo's own real hop_signing_preimage()/verify_hop_signature() code path, not an isolated crypto-library unit test.",
+              "expected": "FAIL",
+              "failure_mode": "hop_signature_invalid",
+              "failure_detail": "hop 1: delegator=attacker-controlled-identity-key's registered pubkey is the Ed25519 identity element; PyNaCl/libsodium rejects any signature against a small-order public key (BadSignatureError) regardless of the message or declared signature bytes.",
+              "chain_artifact": {
+                "chain_id": "chain-small-order-identity-key-001",
+                "hops": [
+                  {
+                    "delegator": "legit-root-guardian",
+                    "delegatee": "attacker-controlled-identity-key",
+                    "delegation_ref": "1111111111111111111111111111111111111111111111111111111111111111",
+                    "scope": "mycelium:payment",
+                    "hop_signature": "ncB24FLN37w1Ac/gTne0ZPooNjCKLng1RT9IXx80HtBWpCVvBAH7xcqzFpExqdJatWQfNYp16L4dV3GbaTbECw=="
+                  },
+                  {
+                    "delegator": "attacker-controlled-identity-key",
+                    "delegatee": "victim-executor",
+                    "delegation_ref": "2222222222222222222222222222222222222222222222222222222222222222",
+                    "scope": "mycelium:payment:refund",
+                    "hop_signature": "AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=="
+                  }
+                ],
+                "leaf_action_ref": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+                "root_delegator": "legit-root-guardian",
+                "scope": "mycelium:payment",
+                "version": "delegation-chain-ref-v1"
+              },
+              "delegation_chain_ref": "c085726b449b04d7973d9170d12118c072a46c604572e317e144b770af7cb2d2"
+            }
+          ],
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
+        },
         "vectors.json": {
           "spec_version": "delegation-chain-ref-v1",
-          "description": "Conformance vectors for monotonic scope narrowing invariant. Each hop scope MUST be equal to or a strict subset of its parent hop scope. Scope narrowing is verified by checking that each hop[i].scope is a prefix match (sub-namespace) of hop[i-1].scope, where ':' is the namespace separator.",
+          "description": "Conformance vectors for monotonic scope narrowing. This is a policy-level, opt-in check (delegation-chain-ref.md:15: 'It does not constrain scope narrowing between hops -- that is the implementer's policy'; the hop.scope field table says 'Implementers SHOULD verify...'), not a base invariant -- see verify.py's module docstring, point 5, and its 2026-10-10 erratum. This file declares enforce_scope_narrowing (below) to demonstrate the check as this fixture set's own chosen policy; a verifier that never enables it is still fully conformant.",
           "narrowing_rule": "hops[i].scope must equal hops[i-1].scope OR start with hops[i-1].scope + ':'. The wildcard '*' at the end of a scope matches any sub-namespace.",
+          "enforce_scope_narrowing": true,
           "vectors": [
             {
               "id": "narrowing-positive-001",
@@ -4747,9 +5897,171 @@
     "execution-join-ref": {
       "path": "examples/conformance/execution-join-ref/",
       "files": {
+        "horizon-shield-pilot-case-e/vectors.json": {
+          "description": "Worked example composing execution-join-ref-v1's post_commit_consistency invariant (PR#137, 2026-10-18) onto the request_occurrence/task/execution-receipt shape frozen in ogasurfproject-jpg/horizon-shield#51 (pilot scoping, 2026-10-18) and defined in COMPANION_v0.md / PILOT_v0.md at commit 4d720ace (MIT). This is NOT an alternative implementation of authority, payment, or acceptance -- those three roles are covered by MUSUBI/APS (authority_and_payment) and babyblueviper1's work-acceptance-record (acceptance) in the pilot itself, and are declared here, not recomputed. The only invariant this worked example computes is post_commit_consistency: does a LATER, independent observation of the audited output (the JCCDB cost database snapshot, or the deliverable) still match the response_sha256 the execution-receipt committed to at settlement time? Named Case E, not Case D -- ogasurfproject-jpg's own Case D in this issue (astrogilda's: same call contents under a different request occurrence, frozen at 33c22f5a) already holds that letter. Both vectors below use the pilot's own real system outputs (task/request/responses from the actually-deployed worker, not stand-ins), per ogasurfproject-jpg's request (comment, 2026-10-18T15:34:49Z): Case A re-confirms the real, committed live_smoke record diverges from nothing when the dataset has not moved; Case E is the gap after a call settles validly and the JCCDB dataset it was audited against is corrected afterward -- exactly what already happened to this fixture between souba-db 2.2.0 and 2.3.0 on 2026-10-18, independently of this worked example.",
+          "pinned_source": {
+            "repo": "ogasurfproject-jpg/horizon-shield",
+            "commit": "4d720ace",
+            "files": [
+              "workers/hs-ledger/nenrin/musubi-v0/ca2a-companion-v0/COMPANION_v0.md",
+              "workers/hs-ledger/nenrin/musubi-v0/ca2a-companion-v0/PILOT_v0.md"
+            ],
+            "license": "MIT",
+            "issue": "ogasurfproject-jpg/horizon-shield#51"
+          },
+          "pinned_live_data": {
+            "repo": "ogasurfproject-jpg/horizon-shield",
+            "commit": "dcbdc5d2",
+            "files": [
+              "workers/hs-ledger/nenrin/musubi-v0/ca2a-companion-v0/rehearsal/fixture.json",
+              "workers/hs-ledger/nenrin/musubi-v0/ca2a-companion-v0/rehearsal/live_smoke/call.json",
+              "workers/hs-ledger/nenrin/musubi-v0/ca2a-companion-v0/rehearsal/live_smoke/receipt.json"
+            ],
+            "license": "MIT",
+            "note": "task, request_occurrence (both vectors) and Case A's execution_receipt/post_commit_observation.observed_hash are byte-identical to these committed files -- verified against GitHub's own blob SHA via git hash-object, and independently re-hashed with this repo's jcs.py against the digests ogasurfproject-jpg quoted. See NOTICE.md for the pre-correction (souba-db 2.2.0) values used in Case E, which were never committed as files (the 2.2.0 call was an unlogged smoke test) and are reproduced here only as the full, untruncated hex ogasurfproject-jpg posted directly in the issue thread."
+          },
+          "vectors": [
+            {
+              "id": "case-a-within-paid-accepted-001",
+              "description": "Analogue of the pilot's own Case A (within/paid/accepted). authority_and_payment and acceptance are declared true (out of scope for this worked example -- MUSUBI/APS and invinoveritas's job). post_commit_consistency is computed: the post_commit_observation's observed_hash matches the execution-receipt's response_sha256 exactly, demonstrating the new invariant does not break the happy path. task, request_occurrence and execution_receipt are byte-identical to the pilot's own real, committed live_smoke call (dcbdc5d2) -- not stand-ins. post_commit_observation is this worked example's own illustrative later re-check, not a second call ogasurfproject-jpg actually ran; its observed_hash and dataset_sha256 are the real values from that same commit, reused because audit_estimate is a pure function of (fixture, dataset version) for as long as the dataset does not move -- the pilot's own live_smoke/README.md states this directly: 'it gives these 1400 bytes again for as long as the dataset is 2.3.0.'",
+              "expected": "PASS",
+              "task": {
+                "type": "musubi.ca2a.task.v0",
+                "service": "estimate-audit",
+                "amount": 7000,
+                "unit": "JPY-testnet",
+                "nonce": "bf15321937fac32e9bdda4bacb1987ada9c36ea71a609589cdb512b26ea0a7df"
+              },
+              "request_occurrence": {
+                "type": "musubi.ca2a.request.v0",
+                "caller": "79f32c5178190b9cf68e4d17dba017d9c0e7a61e1fe5d314b19f3fb99110cc0a",
+                "responder": "7b1ada68cd366c70a79544b6d719d685fd37e01f26549e08bf388768cc7d0ffe",
+                "capability": "pay",
+                "lineage": [
+                  "sha256:22f25070b31798fb9b1285c151342a4f8cafd5db7adf71ef461aae765ad173c6",
+                  "sha256:dd8fa967dfd7d52b9aed66a43ddcc429768e59adff823bd5ba947a87c17908cb"
+                ],
+                "occurrence_id": "live-smoke-0",
+                "task_sha256": "218c938f9d94e13f8a3fff1f084b0dd36b1867baa5691e1f0add99e44a78d7b0"
+              },
+              "execution_receipt": {
+                "type": "musubi.ca2a.execution-receipt.v0",
+                "caller": "79f32c5178190b9cf68e4d17dba017d9c0e7a61e1fe5d314b19f3fb99110cc0a",
+                "responder": "7b1ada68cd366c70a79544b6d719d685fd37e01f26549e08bf388768cc7d0ffe",
+                "capability": "pay",
+                "lineage": [
+                  "sha256:22f25070b31798fb9b1285c151342a4f8cafd5db7adf71ef461aae765ad173c6",
+                  "sha256:dd8fa967dfd7d52b9aed66a43ddcc429768e59adff823bd5ba947a87c17908cb"
+                ],
+                "request_sha256": "69546501c86296c2029de4f2325f6e561b66efa89fe27fdbfe9f4510104d3d01",
+                "seen_block": {
+                  "height": 971984,
+                  "hash": "000000000000000000018afcad81ac70dc8cb1c38a05fd22abca5fcb8941d319"
+                },
+                "outcome": {
+                  "kind": "result",
+                  "stage": "audited",
+                  "response_sha256": "c2920477d95a8e48f16cc2df49ec58a02cd9b422db491206446e7a5be21937f5"
+                },
+                "attestation_sha256": null,
+                "signature": "c3c0393c91e8b4c8657784a8c0e34cbbaea61a011b0135ac8a2bb87a532f48c94a4e9886928b576beafe717bfa9b9402d34af499f820f5a3092d606a6cfd1d03"
+              },
+              "post_commit_observation": {
+                "type": "execution-join-ref.post-commit-observation.v1",
+                "request_sha256": "69546501c86296c2029de4f2325f6e561b66efa89fe27fdbfe9f4510104d3d01",
+                "observed_hash": "c2920477d95a8e48f16cc2df49ec58a02cd9b422db491206446e7a5be21937f5",
+                "observed_at_ms": 1792325558000,
+                "observer_id": "argentum-core-case-e-worked-example (illustrative re-check, same dataset -- not a second real call)",
+                "dataset_sha256": "7b16600e50ed73b844ff5b2718f04a6dd4d9ace0367982fb8d139db509d023fd"
+              },
+              "declared": {
+                "authority_and_payment": true,
+                "acceptance": true
+              },
+              "checks": {
+                "canonical_envelope": true,
+                "chain_integrity": true,
+                "authority_and_payment": true,
+                "acceptance": true,
+                "post_commit_consistency": true
+              }
+            },
+            {
+              "id": "case-e-jccdb-snapshot-divergence-001",
+              "description": "Case E: the gap after a call already settled validly. Same request_occurrence and task as Case A -- the same test payer key and signed test transfer, per ogasurfproject-jpg's own words describing the second call ('the same test payer key and signed test transfer as the first one'). The execution_receipt is the FIRST real call: audited against souba-db 2.2.0, response_sha256 ccfbae3d1fc006b61642da9d240f85c8b380fc10c8694d35d9f5043ca9d45df1, seen_block.height 971954 -- the full, untruncated digest and height ogasurfproject-jpg posted directly (comment, 2026-10-18T06:50:23Z). That call was an unlogged smoke test (no file was ever committed for it), so this vector's execution_receipt omits `signature` and `seen_block.hash` rather than inventing bytes that were never published -- see NOTICE.md. The post_commit_observation is the SECOND real call: the pilot's own committed live_smoke rerun (dcbdc5d2) after souba-db 2.3.0 corrected six price ranges on the same day, observed_hash c2920477d95a8e48f16cc2df49ec58a02cd9b422db491206446e7a5be21937f5, with the new optional dataset_sha256 field (execution-join-ref-v1.2) naming the dataset it was recomputed against -- the exact field ogasurfproject-jpg asked for in the same comment. post_commit_consistency fails -- POST_COMMIT_DIVERGENCE -- while every other invariant, including the original call's own validity, remains true. Nobody misstated anything at settlement; the database the estimate was audited against was corrected afterward, and both releases are anchored (2.2.0: JIDEC entry 42, Bitcoin block 966969; 2.3.0: JIDEC entry 114).",
+              "expected": "FAIL",
+              "failure_mode": "post_commit_consistency",
+              "failure_code": "POST_COMMIT_DIVERGENCE",
+              "failure_detail": "execution_receipt.outcome.response_sha256=ccfbae3d1fc0… (committed at seen_block.height=971954, souba-db 2.2.0). post_commit_observation.observed_hash=c2920477d95a… (souba-db 2.3.0, dataset_sha256=7b16600e50ed…) for the same request_sha256=69546501c862…. The two hashes differ because the dataset the estimate was audited against was corrected between the two calls, not because either call misreported anything.",
+              "task": {
+                "type": "musubi.ca2a.task.v0",
+                "service": "estimate-audit",
+                "amount": 7000,
+                "unit": "JPY-testnet",
+                "nonce": "bf15321937fac32e9bdda4bacb1987ada9c36ea71a609589cdb512b26ea0a7df"
+              },
+              "request_occurrence": {
+                "type": "musubi.ca2a.request.v0",
+                "caller": "79f32c5178190b9cf68e4d17dba017d9c0e7a61e1fe5d314b19f3fb99110cc0a",
+                "responder": "7b1ada68cd366c70a79544b6d719d685fd37e01f26549e08bf388768cc7d0ffe",
+                "capability": "pay",
+                "lineage": [
+                  "sha256:22f25070b31798fb9b1285c151342a4f8cafd5db7adf71ef461aae765ad173c6",
+                  "sha256:dd8fa967dfd7d52b9aed66a43ddcc429768e59adff823bd5ba947a87c17908cb"
+                ],
+                "occurrence_id": "live-smoke-0",
+                "task_sha256": "218c938f9d94e13f8a3fff1f084b0dd36b1867baa5691e1f0add99e44a78d7b0"
+              },
+              "execution_receipt": {
+                "type": "musubi.ca2a.execution-receipt.v0",
+                "caller": "79f32c5178190b9cf68e4d17dba017d9c0e7a61e1fe5d314b19f3fb99110cc0a",
+                "responder": "7b1ada68cd366c70a79544b6d719d685fd37e01f26549e08bf388768cc7d0ffe",
+                "capability": "pay",
+                "lineage": [
+                  "sha256:22f25070b31798fb9b1285c151342a4f8cafd5db7adf71ef461aae765ad173c6",
+                  "sha256:dd8fa967dfd7d52b9aed66a43ddcc429768e59adff823bd5ba947a87c17908cb"
+                ],
+                "request_sha256": "69546501c86296c2029de4f2325f6e561b66efa89fe27fdbfe9f4510104d3d01",
+                "seen_block": {
+                  "height": 971954
+                },
+                "outcome": {
+                  "kind": "result",
+                  "stage": "audited",
+                  "response_sha256": "ccfbae3d1fc006b61642da9d240f85c8b380fc10c8694d35d9f5043ca9d45df1"
+                },
+                "attestation_sha256": null
+              },
+              "post_commit_observation": {
+                "type": "execution-join-ref.post-commit-observation.v1",
+                "request_sha256": "69546501c86296c2029de4f2325f6e561b66efa89fe27fdbfe9f4510104d3d01",
+                "observed_hash": "c2920477d95a8e48f16cc2df49ec58a02cd9b422db491206446e7a5be21937f5",
+                "observed_at_ms": 1792321958000,
+                "observer_id": "ogasurfproject-jpg live_smoke rerun (dcbdc5d2)",
+                "dataset_sha256": "7b16600e50ed73b844ff5b2718f04a6dd4d9ace0367982fb8d139db509d023fd"
+              },
+              "declared": {
+                "authority_and_payment": true,
+                "acceptance": true
+              },
+              "checks": {
+                "canonical_envelope": true,
+                "chain_integrity": true,
+                "authority_and_payment": true,
+                "acceptance": true,
+                "post_commit_consistency": false
+              }
+            }
+          ],
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
+        },
         "vectors.json": {
-          "spec_version": "execution-join-ref-v1",
-          "description": "Conformance vectors for execution-join-ref-v1. Five invariants are separately recomputable: canonical_envelope, chain_integrity, no_duplicate_attempt, result_uniqueness, proof_binding. A sixth invariant checks effective_call_binding: the dispatched call must bind to the same action_ref the guardrail decided on. Anchoring is optional and not required for any vector here. A verifier that only checks chain_integrity will silently pass DUPLICATE_ATTEMPT, RESULT_ID_CONFLICT, and EFFECTIVE_CALL_REBINDING_FAILED.",
+          "spec_version": "execution-join-ref-v1.2",
+          "description": "Conformance vectors for execution-join-ref-v1. Five invariants are separately recomputable: canonical_envelope, chain_integrity, no_duplicate_attempt, result_uniqueness, proof_binding. A sixth invariant checks effective_call_binding: the dispatched call must bind to the same action_ref the guardrail decided on. Anchoring is optional and not required for any vector here. A verifier that only checks chain_integrity will silently pass DUPLICATE_ATTEMPT, RESULT_ID_CONFLICT, and EFFECTIVE_CALL_REBINDING_FAILED. v1.1 (additive) adds a seventh invariant, post_commit_consistency, and failure code POST_COMMIT_DIVERGENCE: a later observation of committed output diverging from output_hash, checked independently of and without retroactively affecting the other six invariants. A verifier that has no concept of post-commit observation will silently pass post-commit-divergence-001 as fully conformant forever, with no way to ever detect the divergence. v1.2 (additive) adds an optional, informational dataset_sha256 field to post_commit_observation (ogasurfproject-jpg/horizon-shield#51, 2026-10-18) -- it does not change the post_commit_consistency rule and no vector here is required to carry it; see examples/conformance/execution-join-ref/horizon-shield-pilot-case-e/ for a worked example that does.",
           "chain_rule": "decision_id preimage must include action_ref. result_id preimage must include attempt_id. proof_ref preimage (if present) must include this attempt_id, not a rewrite's.",
           "canonicalization_note": "decision evidence preimage must include canonicalization_profile_id. The value is SHA-256(JCS(profile_doc)) — content-addressed. Verifier resolves the id against profiles/ before comparing any digest. Absent or unsupported profile must return a failure code distinct from DIGEST_MISMATCH.",
           "profile_registry": "profiles/ — each file is <profile_id>.json where profile_id = SHA-256(JCS(doc)). Human aliases in profiles/profile_registry.py.",
@@ -4758,7 +6070,9 @@
             "MALFORMED_EVIDENCE",
             "UNSUPPORTED_CANONICAL_PROFILE",
             "DIGEST_MISMATCH",
-            "EXPIRED_POLICY_BINDING"
+            "EXPIRED_POLICY_BINDING",
+            "EFFECTIVE_CALL_REBINDING_FAILED",
+            "POST_COMMIT_DIVERGENCE"
           ],
           "vectors": [
             {
@@ -5161,6 +6475,297 @@
                 "effective_call_binding": false
               },
               "note": "chain_integrity passes because action_ref→decision_id→attempt_id→result_id is internally consistent. The failure requires a verifier that separately checks effective_action_ref against the decision_id that authorized the action. This is the arg-rewrite attack surface: a guardrail that rewrites args must issue a new decision_id over the rewritten preimage before dispatch."
+            },
+            {
+              "id": "file-write-rebinding-failed-001",
+              "description": "Domain requested by astrogilda (probityai/agent-evidence#26, 2026-10-18), case 1: \"a file path changes before dispatch without a new approval\". The guardrail reviewed a write to /reports/draft-q3.pdf and issued a permit (decision_id covers action_ref). Before dispatch, the destination path was rewritten to /reports/final-q3.pdf (different input_hash, hence a different effective_action_ref) without a new decision covering it. Structurally identical to EFFECTIVE_CALL_REBINDING_FAILED (same existing failure code -- no new code needed for this case) in the file-write domain rather than Stripe. effective_call_binding fails: no decision_id in the registry covers the effective_action_ref that was actually dispatched.",
+              "expected": "FAIL",
+              "failure_mode": "effective_call_binding",
+              "failure_code": "EFFECTIVE_CALL_REBINDING_FAILED",
+              "failure_detail": "decision_id be2898bf… covers action_ref 2a65d1ea… (original path /reports/draft-q3.pdf, input_hash c1a2b3c4…). Effective call dispatched against /reports/final-q3.pdf, input_hash fade0000… → effective_action_ref 9f6e6129…. No decision_id covers 9f6e6129…. The runtime wrote a different file than the one the guardrail approved.",
+              "envelope": {
+                "version": "execution-join-ref-v1",
+                "action_ref": "2a65d1ea532045ba592a124e54d1f953da585a70589aa3e25b698a955c537a19",
+                "decision_id": "be2898bf65856e5724027ee6ffa72d897994e886b9e176cda86bb436b7a949f0",
+                "attempt_id": "9c796e94c7cbfbc898791bdafffb9f83d676820435dfdecc40899fb341f3c2bf",
+                "result_id": "121a8185d514f8458f0eee59647f9f4f7b84442c7de185680ae4e73d619e99f0",
+                "proof_ref": null,
+                "effective_action_ref": "9f6e6129c00e7091e00f4a6d5506b2da136c23f02153349014f1107309671978"
+              },
+              "preimages": {
+                "action_ref": {
+                  "actor_id": "agent-report-filer-v1",
+                  "input_hash": "c1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2",
+                  "scope": "fs.write.create",
+                  "ts_ms": 1783000000000,
+                  "version": "execution-join-ref-v1"
+                },
+                "decision_id": {
+                  "action_ref": "2a65d1ea532045ba592a124e54d1f953da585a70589aa3e25b698a955c537a19",
+                  "outcome": "permit",
+                  "policy_id": "fs-write-guardrail-v1",
+                  "ts_ms": 1783000000050,
+                  "version": "execution-join-ref-v1"
+                },
+                "effective_action_ref": {
+                  "actor_id": "agent-report-filer-v1",
+                  "input_hash": "fade0000fade0000fade0000fade0000fade0000fade0000fade0000fade0000",
+                  "scope": "fs.write.create",
+                  "ts_ms": 1783000000000,
+                  "version": "execution-join-ref-v1"
+                }
+              },
+              "checks": {
+                "canonical_envelope": true,
+                "chain_integrity": true,
+                "no_duplicate_attempt": true,
+                "result_uniqueness": true,
+                "proof_binding": true,
+                "effective_call_binding": false
+              },
+              "note": "attempt_id/result_id reuse opaque placeholder values not challenged by this vector (no preimages supplied for them), same minimal-scope convention EFFECTIVE_CALL_REBINDING_FAILED already uses -- this vector is exclusively exercising effective_call_binding in the file-write domain."
+            },
+            {
+              "id": "post-commit-divergence-001",
+              "description": "Domain requested by astrogilda (probityai/agent-evidence#26, 2026-10-18), case 2: \"the approved write completes and someone changes the file later\". The join record itself is fully valid -- decision, attempt, and result are complete and all six existing invariants pass, same as execution-join-positive-001. One day later, an independent file-integrity monitor observes /reports/q3-final.pdf again and its content hash no longer matches result_id's declared output_hash. This is NEW failure code POST_COMMIT_DIVERGENCE (v1.1, additive invariant 7, post_commit_consistency) -- it does not retroactively invalidate the original execution (canonical_envelope/chain_integrity/etc. all remain true, exactly as declared below); it names a separate, later divergence between the committed output and a subsequent observation, without collapsing the two into one state.",
+              "expected": "FAIL",
+              "failure_mode": "post_commit_consistency",
+              "failure_code": "POST_COMMIT_DIVERGENCE",
+              "failure_detail": "result_id d61e107f… declares output_hash 0ab1c2d3… at ts_ms=1783100001200. post_commit_observation at ts_ms=1783186400000 (~24h later, fs-integrity-monitor-v1) reports observed_hash ff00aa11… for the same result_id. The two hashes differ: the file committed by the approved write no longer matches what a later check finds. The original result_id remains a valid, unmodified terminal record of what the attempt produced at completion time -- this does not retry, overwrite, or invalidate it.",
+              "envelope": {
+                "version": "execution-join-ref-v1",
+                "action_ref": "8ea9b64aa071a946fb929be51c764d43fe597066872d35ae60972cfb83f93f79",
+                "decision_id": "99ceb0c244c1aa412b2503981a5e3dc335fa2e9f53dd146e317cf5f5bf5b96cb",
+                "attempt_id": "20d4b3264dc4e2dd7a11ca93e360be162e871f5b18a7750829e5beff7446372f",
+                "result_id": "d61e107f2507d23de1d77c54f1674ae031b2087f7ba34715c84aa4e2493533fd",
+                "proof_ref": "a84b95f39f6894f7d597fb98facd1e0624cd4eacbb708fbb5fd9fde282a0ca7d",
+                "post_commit_ref": "3b9222e57682d28ca18488d78196dfad7616a1b27894ecb4f2f26680be84c2c0"
+              },
+              "preimages": {
+                "action_ref": {
+                  "actor_id": "agent-report-filer-v1",
+                  "input_hash": "d2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3",
+                  "scope": "fs.write.create",
+                  "ts_ms": 1783100000000,
+                  "version": "execution-join-ref-v1"
+                },
+                "decision_id": {
+                  "action_ref": "8ea9b64aa071a946fb929be51c764d43fe597066872d35ae60972cfb83f93f79",
+                  "outcome": "permit",
+                  "policy_id": "fs-write-guardrail-v1",
+                  "ts_ms": 1783100000050,
+                  "version": "execution-join-ref-v1"
+                },
+                "attempt_id": {
+                  "action_ref": "8ea9b64aa071a946fb929be51c764d43fe597066872d35ae60972cfb83f93f79",
+                  "attempt_seq": 1,
+                  "executor_id": "runtime-node-11",
+                  "ts_ms": 1783100000100,
+                  "version": "execution-join-ref-v1"
+                },
+                "result_id": {
+                  "attempt_id": "20d4b3264dc4e2dd7a11ca93e360be162e871f5b18a7750829e5beff7446372f",
+                  "outcome": "completed",
+                  "output_hash": "0ab1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1",
+                  "ts_ms": 1783100001200,
+                  "version": "execution-join-ref-v1"
+                },
+                "proof_ref": {
+                  "attempt_id": "20d4b3264dc4e2dd7a11ca93e360be162e871f5b18a7750829e5beff7446372f",
+                  "evidence_type": "fs_write_confirmation",
+                  "external_ref": "fswrite-evt-7f2c9a1e",
+                  "ts_ms": 1783100002000,
+                  "version": "execution-join-ref-v1"
+                },
+                "post_commit_observation": {
+                  "observed_hash": "ff00aa11bb22cc33dd44ee55ff66aa77bb88cc99dd00ee11ff22aa33bb44cc55",
+                  "observed_at_ms": 1783186400000,
+                  "observer_id": "fs-integrity-monitor-v1",
+                  "result_id": "d61e107f2507d23de1d77c54f1674ae031b2087f7ba34715c84aa4e2493533fd",
+                  "version": "execution-join-ref-v1"
+                }
+              },
+              "checks": {
+                "canonical_envelope": true,
+                "chain_integrity": true,
+                "no_duplicate_attempt": true,
+                "result_uniqueness": true,
+                "proof_binding": true,
+                "effective_call_binding": true,
+                "post_commit_consistency": false
+              }
+            },
+            {
+              "id": "effective-call-binding-covering-deny-001",
+              "description": "Mutation-testing regression (astrogilda/probityai, probityai/agent-evidence#26, 2026-10-23): same envelope as AUTHORIZED_EFFECTIVE_CALL, but the covering decision's outcome is 'deny' instead of permit, decision_id rehashed to match. A decision that structurally recomputes and binds to the effective ref but does not permit it authorizes nothing -- same observable consequence as no covering decision at all. Reuses EFFECTIVE_CALL_REBINDING_FAILED (the spec defines no separate code for \"covers but doesn't permit\"). Same fix already applied in execution-join-ref-remora-bridge (COVERING-DENY, commit 2cc79c9, 2026-10-10) -- ported to this domain, not reinvented.",
+              "expected": "FAIL",
+              "failure_mode": "effective_call_binding",
+              "failure_code": "EFFECTIVE_CALL_REBINDING_FAILED",
+              "failure_detail": "decision_id cf27fa37… recomputes correctly and binds to action_ref 53138a33… (the effective ref here, no rewrite), but its outcome is 'deny', not 'permit'. A decision that denies or defers the call it covers provides no authorization for it.",
+              "envelope": {
+                "version": "execution-join-ref-v1",
+                "action_ref": "53138a338b70ac7cb54165e4175f5432384b44092f2968329212a1661f973b02",
+                "decision_id": "cf27fa37d7d4d8f625e4c114b38ca02576ebf5457e8664ec3ef4002e2565a1ff",
+                "attempt_id": "9c796e94c7cbfbc898791bdafffb9f83d676820435dfdecc40899fb341f3c2bf",
+                "result_id": "121a8185d514f8458f0eee59647f9f4f7b84442c7de185680ae4e73d619e99f0",
+                "proof_ref": null
+              },
+              "preimages": {
+                "decision_id": {
+                  "action_ref": "53138a338b70ac7cb54165e4175f5432384b44092f2968329212a1661f973b02",
+                  "outcome": "deny",
+                  "policy_id": "stripe-payment-guardrail-v2",
+                  "ts_ms": 1782900000050,
+                  "version": "execution-join-ref-v1"
+                }
+              },
+              "checks": {
+                "canonical_envelope": true,
+                "chain_integrity": true,
+                "effective_call_binding": false
+              }
+            },
+            {
+              "id": "effective-call-binding-covering-defer-001",
+              "description": "Mutation-testing regression (astrogilda/probityai, probityai/agent-evidence#26, 2026-10-23): same envelope as AUTHORIZED_EFFECTIVE_CALL, but the covering decision's outcome is 'defer' instead of permit, decision_id rehashed to match. A decision that structurally recomputes and binds to the effective ref but does not permit it authorizes nothing -- same observable consequence as no covering decision at all. Reuses EFFECTIVE_CALL_REBINDING_FAILED (the spec defines no separate code for \"covers but doesn't permit\"). Same fix already applied in execution-join-ref-remora-bridge (COVERING-DENY, commit 2cc79c9, 2026-10-10) -- ported to this domain, not reinvented.",
+              "expected": "FAIL",
+              "failure_mode": "effective_call_binding",
+              "failure_code": "EFFECTIVE_CALL_REBINDING_FAILED",
+              "failure_detail": "decision_id 562e4348… recomputes correctly and binds to action_ref 53138a33… (the effective ref here, no rewrite), but its outcome is 'defer', not 'permit'. A decision that denies or defers the call it covers provides no authorization for it.",
+              "envelope": {
+                "version": "execution-join-ref-v1",
+                "action_ref": "53138a338b70ac7cb54165e4175f5432384b44092f2968329212a1661f973b02",
+                "decision_id": "562e43487d1eee99e7c16157e63b84cd38ca02e5d8e6a2a5e3f75a9d6be8bc0c",
+                "attempt_id": "9c796e94c7cbfbc898791bdafffb9f83d676820435dfdecc40899fb341f3c2bf",
+                "result_id": "121a8185d514f8458f0eee59647f9f4f7b84442c7de185680ae4e73d619e99f0",
+                "proof_ref": null
+              },
+              "preimages": {
+                "decision_id": {
+                  "action_ref": "53138a338b70ac7cb54165e4175f5432384b44092f2968329212a1661f973b02",
+                  "outcome": "defer",
+                  "policy_id": "stripe-payment-guardrail-v2",
+                  "ts_ms": 1782900000050,
+                  "version": "execution-join-ref-v1"
+                }
+              },
+              "checks": {
+                "canonical_envelope": true,
+                "chain_integrity": true,
+                "effective_call_binding": false
+              }
+            },
+            {
+              "id": "file-write-rebinding-fixed-001",
+              "description": "Regression companion to file-write-rebinding-failed-001 (astrogilda/probityai, probityai/agent-evidence#26, 2026-10-23, mutation testing): same guardrail permit over /reports/draft-q3.pdf, but the dispatched write now targets that same path -- the defect (effective path != approved path) is removed. effective_action_ref recomputes to the same digest as action_ref, and the original decision_id legitimately covers it. Confirms the verifier does not keep reporting EFFECTIVE_CALL_REBINDING_FAILED once the rewrite that caused it is undone.",
+              "expected": "PASS",
+              "envelope": {
+                "version": "execution-join-ref-v1",
+                "action_ref": "2a65d1ea532045ba592a124e54d1f953da585a70589aa3e25b698a955c537a19",
+                "decision_id": "be2898bf65856e5724027ee6ffa72d897994e886b9e176cda86bb436b7a949f0",
+                "attempt_id": "9c796e94c7cbfbc898791bdafffb9f83d676820435dfdecc40899fb341f3c2bf",
+                "result_id": "121a8185d514f8458f0eee59647f9f4f7b84442c7de185680ae4e73d619e99f0",
+                "proof_ref": null,
+                "effective_action_ref": "2a65d1ea532045ba592a124e54d1f953da585a70589aa3e25b698a955c537a19"
+              },
+              "preimages": {
+                "action_ref": {
+                  "actor_id": "agent-report-filer-v1",
+                  "input_hash": "c1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2",
+                  "scope": "fs.write.create",
+                  "ts_ms": 1783000000000,
+                  "version": "execution-join-ref-v1"
+                },
+                "decision_id": {
+                  "action_ref": "2a65d1ea532045ba592a124e54d1f953da585a70589aa3e25b698a955c537a19",
+                  "outcome": "permit",
+                  "policy_id": "fs-write-guardrail-v1",
+                  "ts_ms": 1783000000050,
+                  "version": "execution-join-ref-v1"
+                },
+                "effective_action_ref": {
+                  "actor_id": "agent-report-filer-v1",
+                  "input_hash": "c1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2",
+                  "scope": "fs.write.create",
+                  "ts_ms": 1783000000000,
+                  "version": "execution-join-ref-v1"
+                }
+              },
+              "checks": {
+                "canonical_envelope": true,
+                "chain_integrity": true,
+                "no_duplicate_attempt": true,
+                "result_uniqueness": true,
+                "proof_binding": true,
+                "effective_call_binding": true
+              }
+            },
+            {
+              "id": "post-commit-consistency-confirmed-001",
+              "description": "Regression companion to post-commit-divergence-001 (astrogilda/probityai, probityai/agent-evidence#26, 2026-10-23, mutation testing): same join record, but the later fs-integrity-monitor observation now reports the same hash the approved write originally committed -- the divergence is gone. post_commit_consistency recomputes true. Confirms the verifier does not keep reporting POST_COMMIT_DIVERGENCE once the content the observation reports actually matches.",
+              "expected": "PASS",
+              "envelope": {
+                "version": "execution-join-ref-v1",
+                "action_ref": "8ea9b64aa071a946fb929be51c764d43fe597066872d35ae60972cfb83f93f79",
+                "decision_id": "99ceb0c244c1aa412b2503981a5e3dc335fa2e9f53dd146e317cf5f5bf5b96cb",
+                "attempt_id": "20d4b3264dc4e2dd7a11ca93e360be162e871f5b18a7750829e5beff7446372f",
+                "result_id": "d61e107f2507d23de1d77c54f1674ae031b2087f7ba34715c84aa4e2493533fd",
+                "proof_ref": "a84b95f39f6894f7d597fb98facd1e0624cd4eacbb708fbb5fd9fde282a0ca7d",
+                "post_commit_ref": "df974fda8fddaec971666820d672b6f0c93728639d232ffae593919501ca8fa3"
+              },
+              "preimages": {
+                "action_ref": {
+                  "actor_id": "agent-report-filer-v1",
+                  "input_hash": "d2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3",
+                  "scope": "fs.write.create",
+                  "ts_ms": 1783100000000,
+                  "version": "execution-join-ref-v1"
+                },
+                "decision_id": {
+                  "action_ref": "8ea9b64aa071a946fb929be51c764d43fe597066872d35ae60972cfb83f93f79",
+                  "outcome": "permit",
+                  "policy_id": "fs-write-guardrail-v1",
+                  "ts_ms": 1783100000050,
+                  "version": "execution-join-ref-v1"
+                },
+                "attempt_id": {
+                  "action_ref": "8ea9b64aa071a946fb929be51c764d43fe597066872d35ae60972cfb83f93f79",
+                  "attempt_seq": 1,
+                  "executor_id": "runtime-node-11",
+                  "ts_ms": 1783100000100,
+                  "version": "execution-join-ref-v1"
+                },
+                "result_id": {
+                  "attempt_id": "20d4b3264dc4e2dd7a11ca93e360be162e871f5b18a7750829e5beff7446372f",
+                  "outcome": "completed",
+                  "output_hash": "0ab1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1",
+                  "ts_ms": 1783100001200,
+                  "version": "execution-join-ref-v1"
+                },
+                "proof_ref": {
+                  "attempt_id": "20d4b3264dc4e2dd7a11ca93e360be162e871f5b18a7750829e5beff7446372f",
+                  "evidence_type": "fs_write_confirmation",
+                  "external_ref": "fswrite-evt-7f2c9a1e",
+                  "ts_ms": 1783100002000,
+                  "version": "execution-join-ref-v1"
+                },
+                "post_commit_observation": {
+                  "observed_hash": "0ab1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1",
+                  "observed_at_ms": 1783186400000,
+                  "observer_id": "fs-integrity-monitor-v1",
+                  "result_id": "d61e107f2507d23de1d77c54f1674ae031b2087f7ba34715c84aa4e2493533fd",
+                  "version": "execution-join-ref-v1"
+                }
+              },
+              "checks": {
+                "canonical_envelope": true,
+                "chain_integrity": true,
+                "no_duplicate_attempt": true,
+                "result_uniqueness": true,
+                "proof_binding": true,
+                "effective_call_binding": true,
+                "post_commit_consistency": true
+              }
             }
           ],
           "provenance": {
@@ -7201,9 +8806,9 @@
       "path": "examples/conformance/peer-reconciliation-ref/",
       "files": {
         "vectors.json": {
-          "spec_version": "peer-reconciliation-ref-v1.1",
-          "description": "Conformance vectors for peer-reconciliation-ref-v1. Four invariants are separately recomputable: canonical_envelope, structural_validity, signature_validity, comparator_state. A verifier that treats any pair of present observations as AGREED without checking action_ref equality will silently pass disagreed-001. A verifier that defaults a missing half to AGREED will silently pass unresolved-001. v1.1 adds three optional additive checks: supersedes_chain_integrity (correction pointers), requested_at (recommended non-suppression timestamp), as_of (informational per-observation time) — none change how the five v1.0 vectors evaluate.",
-          "comparator_rule": "AGREED requires both observed=true, both signatures valid, and matching action_ref. DISAGREED requires both observed=true, both signatures valid, and differing action_ref. Anything else (missing observation, invalid signature on an observed=true party) is UNRESOLVED — never defaulted to AGREED or DISAGREED.",
+          "spec_version": "peer-reconciliation-ref-v1.2",
+          "description": "Conformance vectors for peer-reconciliation-ref-v1. Six invariants are separately recomputable: canonical_envelope, structural_validity, signature_validity, signature_binding, comparator_state, and supersedes_chain_integrity (v1.1, present only when `supersedes` is set). A verifier that treats any pair of present observations as AGREED without checking action_ref equality will silently pass disagreed-001. A verifier that defaults a missing half to AGREED will silently pass unresolved-001. A verifier that does not check what each co_signer's signed_fields actually covers will silently pass replay-001 (v1.2) as AGREED. v1.1 added three optional additive checks: supersedes_chain_integrity (correction pointers), requested_at (recommended non-suppression timestamp), as_of (informational per-observation time). v1.2 adds signature_binding and the mandatory co_signer.signed_fields field -- see 'v1.2' in the spec for why this one is not additive the way v1.1's fields were.",
+          "comparator_rule": "AGREED requires both observed=true, both signatures valid, both signatures' signed_fields covering {party_id, action_ref, interaction_id}, and matching action_ref. DISAGREED requires the same three readiness conditions with differing action_ref. Anything else (missing observation, invalid signature, or a signature that does not bind action_ref/interaction_id/party_id) is UNRESOLVED -- never defaulted to AGREED or DISAGREED.",
           "vectors": [
             {
               "id": "agreed-001",
@@ -7219,7 +8824,12 @@
                     "issuer": "safeagent-guardian",
                     "kid": "sg-key-01",
                     "pubkey": "MCowBQYDK2VwAyEAqQm7VZ0X8tGxJm6QwYh3fN4dL9pRk2vC5eA1sT7uHzM=",
-                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.c2FmZWFnZW50LWd1YXJkaWFu.QVKz8n2Lp9wXbYr4Ht7c"
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.c2FmZWFnZW50LWd1YXJkaWFu.QVKz8n2Lp9wXbYr4Ht7c",
+                    "signed_fields": [
+                      "party_id",
+                      "action_ref",
+                      "interaction_id"
+                    ]
                   }
                 },
                 "party_b": {
@@ -7230,17 +8840,23 @@
                     "issuer": "counterparty-guardian",
                     "kid": "cg-key-01",
                     "pubkey": "MCowBQYDK2VwAyEAnR3xW9vL2sKfQd6BhTz1oYc8gEj4pXm0aVn5rUw7iCk=",
-                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.Y291bnRlcnBhcnR5LWd1YXJkaWFu.Bt6Jd0mQx3Ny8VpFcW2r"
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.Y291bnRlcnBhcnR5LWd1YXJkaWFu.Bt6Jd0mQx3Ny8VpFcW2r",
+                    "signed_fields": [
+                      "party_id",
+                      "action_ref",
+                      "interaction_id"
+                    ]
                   }
                 },
                 "version": "peer-reconciliation-ref-v1"
               },
-              "peer_reconciliation_ref": "8555d6a080388ecc6a5d562becb01dda3c75243b9598200f9b1616e2655cf67c",
+              "peer_reconciliation_ref": "46f89af451b3c32faf485b9b1db3aea2edddaa933cb53ff553e00f37efd63751",
               "checks": {
                 "canonical_envelope": true,
                 "structural_validity": true,
                 "signature_valid_a": true,
-                "signature_valid_b": true
+                "signature_valid_b": true,
+                "signature_binding": true
               },
               "comparator_state": "AGREED"
             },
@@ -7258,7 +8874,12 @@
                     "issuer": "narko4u-guardian",
                     "kid": "ng-key-02",
                     "pubkey": "MCowBQYDK2VwAyEAeK7pQ2mN9xVfR4tLc0bYs8gHj3oDw6zA1uEi5rTn2qC=",
-                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.bmFya280dS1ndWFyZGlhbg.Fp3Rz9wKm6HbXd1Vt4cJ"
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.bmFya280dS1ndWFyZGlhbg.Fp3Rz9wKm6HbXd1Vt4cJ",
+                    "signed_fields": [
+                      "party_id",
+                      "action_ref",
+                      "interaction_id"
+                    ]
                   }
                 },
                 "party_b": {
@@ -7269,17 +8890,23 @@
                     "issuer": "scopeblind-guardian",
                     "kid": "sb-key-03",
                     "pubkey": "MCowBQYDK2VwAyEAsY4mB1nQ7xLwK3eV9tRc2oFj6pDz0aGh8uEi5wTn4qX=",
-                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.c2NvcGVibGluZC1ndWFyZGlhbg.Hn5Tx2vLp8QwYc7Rd3bK"
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.c2NvcGVibGluZC1ndWFyZGlhbg.Hn5Tx2vLp8QwYc7Rd3bK",
+                    "signed_fields": [
+                      "party_id",
+                      "action_ref",
+                      "interaction_id"
+                    ]
                   }
                 },
                 "version": "peer-reconciliation-ref-v1"
               },
-              "peer_reconciliation_ref": "063ca9d07aff8a11d0312a36c0cbfda3ff207ce26ca8062fa0944efbafce6c03",
+              "peer_reconciliation_ref": "cb07a6ba05849d892015fd7b88a842e822a1f4c1e16d7d9493c6615f01410409",
               "checks": {
                 "canonical_envelope": true,
                 "structural_validity": true,
                 "signature_valid_a": true,
-                "signature_valid_b": true
+                "signature_valid_b": true,
+                "signature_binding": true
               },
               "comparator_state": "DISAGREED"
             },
@@ -7297,7 +8924,12 @@
                     "issuer": "astrogilda-guardian",
                     "kid": "ag-key-04",
                     "pubkey": "MCowBQYDK2VwAyEAxJ2nR8mQ4vLcK1eT7oWs9bYd3pGh0aFi6uEj5rTx8qZ=",
-                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.YXN0cm9naWxkYS1ndWFyZGlhbg.Kq7Wm4xPn9RbYd2Vt6cH"
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.YXN0cm9naWxkYS1ndWFyZGlhbg.Kq7Wm4xPn9RbYd2Vt6cH",
+                    "signed_fields": [
+                      "party_id",
+                      "action_ref",
+                      "interaction_id"
+                    ]
                   }
                 },
                 "party_b": {
@@ -7308,12 +8940,13 @@
                 },
                 "version": "peer-reconciliation-ref-v1"
               },
-              "peer_reconciliation_ref": "b709073411cedb50e4ccde67a634b1190c2a05162579800b14487d235c5e723b",
+              "peer_reconciliation_ref": "ed20dbfd82b59c7fb9795a984b99a6232d445e8bb0c4b18b4b424ab2b394a764",
               "checks": {
                 "canonical_envelope": true,
                 "structural_validity": true,
                 "signature_valid_a": true,
-                "signature_valid_b": false
+                "signature_valid_b": false,
+                "signature_binding": true
               },
               "comparator_state": "UNRESOLVED"
             },
@@ -7333,7 +8966,12 @@
                     "issuer": "empire-labs-guardian",
                     "kid": "el-key-05",
                     "pubkey": "MCowBQYDK2VwAyEAqL8nT2mR9xVcK4eW7oYs1bGd6pFj0aHi3uEk5rTz8qW=",
-                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.ZW1waXJlLWxhYnMtZ3VhcmRpYW4.Mn8Yz4vLq2WbXd7Rt5cJ"
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.ZW1waXJlLWxhYnMtZ3VhcmRpYW4.Mn8Yz4vLq2WbXd7Rt5cJ",
+                    "signed_fields": [
+                      "party_id",
+                      "action_ref",
+                      "interaction_id"
+                    ]
                   }
                 },
                 "party_b": {
@@ -7344,17 +8982,23 @@
                     "issuer": "counterparty-guardian",
                     "kid": "cg-key-01",
                     "pubkey": "MCowBQYDK2VwAyEAnR3xW9vL2sKfQd6BhTz1oYc8gEj4pXm0aVn5rUw7iCk=",
-                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.Y291bnRlcnBhcnR5LWd1YXJkaWFu.Bt6Jd0mQx3Ny8VpFcW2r"
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.Y291bnRlcnBhcnR5LWd1YXJkaWFu.Bt6Jd0mQx3Ny8VpFcW2r",
+                    "signed_fields": [
+                      "party_id",
+                      "action_ref",
+                      "interaction_id"
+                    ]
                   }
                 },
                 "version": "peer-reconciliation-ref-v1"
               },
-              "peer_reconciliation_ref": "04119149929a39545628b4f98b8dd0967c71d0fa02fe140c04b80d69b8cf7333",
+              "peer_reconciliation_ref": "e02c7d6995c28385a51f37ce3af7588703d423da2fdb99ac5b3306fae4ae6b6e",
               "checks": {
                 "canonical_envelope": true,
                 "structural_validity": false,
                 "signature_valid_a": true,
-                "signature_valid_b": true
+                "signature_valid_b": true,
+                "signature_binding": true
               },
               "comparator_state": "UNRESOLVED"
             },
@@ -7374,7 +9018,12 @@
                     "issuer": "safeagent-guardian",
                     "kid": "sg-key-01",
                     "pubkey": "MCowBQYDK2VwAyEAqQm7VZ0X8tGxJm6QwYh3fN4dL9pRk2vC5eA1sT7uHzM=",
-                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.c2FmZWFnZW50LWd1YXJkaWFu.QVKz8n2Lp9wXbYr4Ht7c"
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.c2FmZWFnZW50LWd1YXJkaWFu.QVKz8n2Lp9wXbYr4Ht7c",
+                    "signed_fields": [
+                      "party_id",
+                      "action_ref",
+                      "interaction_id"
+                    ]
                   }
                 },
                 "party_b": {
@@ -7385,7 +9034,12 @@
                     "issuer": "counterparty-guardian",
                     "kid": "cg-key-01",
                     "pubkey": "MCowBQYDK2VwAyEAnR3xW9vL2sKfQd6BhTz1oYc8gEj4pXm0aVn5rUw7iCk=",
-                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.Y291bnRlcnBhcnR5LWd1YXJkaWFu.Bt6Jd0mQx3Ny8VpFcW2r"
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.Y291bnRlcnBhcnR5LWd1YXJkaWFu.Bt6Jd0mQx3Ny8VpFcW2r",
+                    "signed_fields": [
+                      "party_id",
+                      "action_ref",
+                      "interaction_id"
+                    ]
                   }
                 },
                 "version": "peer-reconciliation-ref-v1"
@@ -7395,7 +9049,8 @@
                 "canonical_envelope": false,
                 "structural_validity": true,
                 "signature_valid_a": true,
-                "signature_valid_b": true
+                "signature_valid_b": true,
+                "signature_binding": true
               },
               "comparator_state": "AGREED"
             },
@@ -7413,7 +9068,12 @@
                     "issuer": "safeagent-guardian",
                     "kid": "sg-key-02",
                     "pubkey": "MCowBQYDK2VwAyEAqQm7VZ0X8tGxJm6QwYh3fN4dL9pRk2vC5eA1sT7uHzM=",
-                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.c2FmZWFnZW50LWd1YXJkaWFuLWNvcnJlY3Rpb24.Rk3Wm7xNp2QbYd9Vt1cH"
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.c2FmZWFnZW50LWd1YXJkaWFuLWNvcnJlY3Rpb24.Rk3Wm7xNp2QbYd9Vt1cH",
+                    "signed_fields": [
+                      "party_id",
+                      "action_ref",
+                      "interaction_id"
+                    ]
                   }
                 },
                 "party_b": {
@@ -7424,15 +9084,20 @@
                     "issuer": "counterparty-guardian",
                     "kid": "cg-key-01",
                     "pubkey": "MCowBQYDK2VwAyEAnR3xW9vL2sKfQd6BhTz1oYc8gEj4pXm0aVn5rUw7iCk=",
-                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.Y291bnRlcnBhcnR5LWd1YXJkaWFuLWNvcnJlY3Rpb24.Nt4Rd2mLx8VpBc6Wq3fT"
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.Y291bnRlcnBhcnR5LWd1YXJkaWFuLWNvcnJlY3Rpb24.Nt4Rd2mLx8VpBc6Wq3fT",
+                    "signed_fields": [
+                      "party_id",
+                      "action_ref",
+                      "interaction_id"
+                    ]
                   }
                 },
                 "version": "peer-reconciliation-ref-v1",
-                "supersedes": "8555d6a080388ecc6a5d562becb01dda3c75243b9598200f9b1616e2655cf67c"
+                "supersedes": "46f89af451b3c32faf485b9b1db3aea2edddaa933cb53ff553e00f37efd63751"
               },
-              "peer_reconciliation_ref": "a1ad58d955709c2994661c7983b4aeb66d93df53789bd50dbaa34f9f1fcb3848",
+              "peer_reconciliation_ref": "11e11998e14f2a59cb8c98f0a6ff4b503845118d89d877a59ab4ab937a44c9f8",
               "known_envelopes": {
-                "8555d6a080388ecc6a5d562becb01dda3c75243b9598200f9b1616e2655cf67c": {
+                "46f89af451b3c32faf485b9b1db3aea2edddaa933cb53ff553e00f37efd63751": {
                   "interaction_id": "3f9c9e2e-6b5a-4b7e-8f3e-1a2b3c4d5e6f",
                   "resolved_by": "mycelium-trail-index"
                 }
@@ -7442,7 +9107,8 @@
                 "structural_validity": true,
                 "signature_valid_a": true,
                 "signature_valid_b": true,
-                "supersedes_chain_integrity": true
+                "supersedes_chain_integrity": true,
+                "signature_binding": true
               },
               "comparator_state": "AGREED"
             },
@@ -7460,7 +9126,12 @@
                     "issuer": "empire-labs-guardian",
                     "kid": "el-key-06",
                     "pubkey": "MCowBQYDK2VwAyEAqL8nT2mR9xVcK4eW7oYs1bGd6pFj0aHi3uEk5rTz8qW=",
-                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.ZW1waXJlLWxhYnMtZ3VhcmRpYW4tdHM.Xy8Zn4vMq2WbTd7Rt5cJ"
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.ZW1waXJlLWxhYnMtZ3VhcmRpYW4tdHM.Xy8Zn4vMq2WbTd7Rt5cJ",
+                    "signed_fields": [
+                      "party_id",
+                      "action_ref",
+                      "interaction_id"
+                    ]
                   }
                 },
                 "party_b": {
@@ -7472,12 +9143,13 @@
                 },
                 "version": "peer-reconciliation-ref-v1"
               },
-              "peer_reconciliation_ref": "628e55e89ad3abc9bafde196aece903e915b25775c190a0df0b6b8800e0e318c",
+              "peer_reconciliation_ref": "5e540617c6eb3c73050538d153ce0bde0ecf0303d3f33dd5ab00e68a5330436c",
               "checks": {
                 "canonical_envelope": true,
                 "structural_validity": true,
                 "signature_valid_a": true,
-                "signature_valid_b": false
+                "signature_valid_b": false,
+                "signature_binding": true
               },
               "comparator_state": "UNRESOLVED"
             },
@@ -7495,7 +9167,12 @@
                     "issuer": "narko4u-guardian",
                     "kid": "ng-key-03",
                     "pubkey": "MCowBQYDK2VwAyEAeK7pQ2mN9xVfR4tLc0bYs8gHj3oDw6zA1uEi5rTn2qC=",
-                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.bmFya280dS1ndWFyZGlhbi1hc29m.Pq5Tz8wKm6HbXd1Vt4cJ"
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.bmFya280dS1ndWFyZGlhbi1hc29m.Pq5Tz8wKm6HbXd1Vt4cJ",
+                    "signed_fields": [
+                      "party_id",
+                      "action_ref",
+                      "interaction_id"
+                    ]
                   },
                   "as_of": 1787650000000
                 },
@@ -7507,18 +9184,24 @@
                     "issuer": "scopeblind-guardian",
                     "kid": "sb-key-04",
                     "pubkey": "MCowBQYDK2VwAyEAsY4mB1nQ7xLwK3eV9tRc2oFj6pDz0aGh8uEi5wTn4qX=",
-                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.c2NvcGVibGluZC1ndWFyZGlhbi1hc29m.Wn5Tx2vLp8QwRc7Yd3bK"
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.c2NvcGVibGluZC1ndWFyZGlhbi1hc29m.Wn5Tx2vLp8QwRc7Yd3bK",
+                    "signed_fields": [
+                      "party_id",
+                      "action_ref",
+                      "interaction_id"
+                    ]
                   },
                   "as_of": 1787650300000
                 },
                 "version": "peer-reconciliation-ref-v1"
               },
-              "peer_reconciliation_ref": "9de456bbc7526d6fe368e268367e33e284e92dcab9d690c51575566a81f3b793",
+              "peer_reconciliation_ref": "eb4e94f289010e06ca1b48c9052dc907b7248710c3d8fbb72b894413cc87aee9",
               "checks": {
                 "canonical_envelope": true,
                 "structural_validity": true,
                 "signature_valid_a": true,
-                "signature_valid_b": true
+                "signature_valid_b": true,
+                "signature_binding": true
               },
               "comparator_state": "AGREED"
             },
@@ -7538,7 +9221,12 @@
                     "issuer": "safeagent-guardian",
                     "kid": "sg-key-02",
                     "pubkey": "MCowBQYDK2VwAyEAqQm7VZ0X8tGxJm6QwYh3fN4dL9pRk2vC5eA1sT7uHzM=",
-                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.c2FmZWFnZW50LWd1YXJkaWFuLWNvcnJlY3Rpb24.Rk3Wm7xNp2QbYd9Vt1cH"
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.c2FmZWFnZW50LWd1YXJkaWFuLWNvcnJlY3Rpb24.Rk3Wm7xNp2QbYd9Vt1cH",
+                    "signed_fields": [
+                      "party_id",
+                      "action_ref",
+                      "interaction_id"
+                    ]
                   }
                 },
                 "party_b": {
@@ -7549,20 +9237,26 @@
                     "issuer": "counterparty-guardian",
                     "kid": "cg-key-01",
                     "pubkey": "MCowBQYDK2VwAyEAnR3xW9vL2sKfQd6BhTz1oYc8gEj4pXm0aVn5rUw7iCk=",
-                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.Y291bnRlcnBhcnR5LWd1YXJkaWFuLWNvcnJlY3Rpb24.Nt4Rd2mLx8VpBc6Wq3fT"
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.Y291bnRlcnBhcnR5LWd1YXJkaWFuLWNvcnJlY3Rpb24.Nt4Rd2mLx8VpBc6Wq3fT",
+                    "signed_fields": [
+                      "party_id",
+                      "action_ref",
+                      "interaction_id"
+                    ]
                   }
                 },
                 "version": "peer-reconciliation-ref-v1",
                 "supersedes": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
               },
-              "peer_reconciliation_ref": "461961d7e5582fd0a50143b4e9ff8a7b0ce2ebf230ea752bd685fbcd1b812ab1",
+              "peer_reconciliation_ref": "5efed58dcfd0e3d9c8838ba4ac6c42129dfcb1aed758d11cf0890924dd770dd7",
               "known_envelopes": {},
               "checks": {
                 "canonical_envelope": true,
                 "structural_validity": true,
                 "signature_valid_a": true,
                 "signature_valid_b": true,
-                "supersedes_chain_integrity": false
+                "supersedes_chain_integrity": false,
+                "signature_binding": true
               },
               "comparator_state": "AGREED"
             },
@@ -7580,7 +9274,12 @@
                     "issuer": "safeagent-guardian",
                     "kid": "sg-key-02",
                     "pubkey": "MCowBQYDK2VwAyEAqQm7VZ0X8tGxJm6QwYh3fN4dL9pRk2vC5eA1sT7uHzM=",
-                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.c2FmZWFnZW50LWd1YXJkaWFuLWNvcnJlY3Rpb24.Rk3Wm7xNp2QbYd9Vt1cH"
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.c2FmZWFnZW50LWd1YXJkaWFuLWNvcnJlY3Rpb24.Rk3Wm7xNp2QbYd9Vt1cH",
+                    "signed_fields": [
+                      "party_id",
+                      "action_ref",
+                      "interaction_id"
+                    ]
                   }
                 },
                 "party_b": {
@@ -7591,15 +9290,20 @@
                     "issuer": "counterparty-guardian",
                     "kid": "cg-key-01",
                     "pubkey": "MCowBQYDK2VwAyEAnR3xW9vL2sKfQd6BhTz1oYc8gEj4pXm0aVn5rUw7iCk=",
-                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.Y291bnRlcnBhcnR5LWd1YXJkaWFuLWNvcnJlY3Rpb24.Nt4Rd2mLx8VpBc6Wq3fT"
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.Y291bnRlcnBhcnR5LWd1YXJkaWFuLWNvcnJlY3Rpb24.Nt4Rd2mLx8VpBc6Wq3fT",
+                    "signed_fields": [
+                      "party_id",
+                      "action_ref",
+                      "interaction_id"
+                    ]
                   }
                 },
                 "version": "peer-reconciliation-ref-v1",
-                "supersedes": "8555d6a080388ecc6a5d562becb01dda3c75243b9598200f9b1616e2655cf67c"
+                "supersedes": "46f89af451b3c32faf485b9b1db3aea2edddaa933cb53ff553e00f37efd63751"
               },
-              "peer_reconciliation_ref": "a1ad58d955709c2994661c7983b4aeb66d93df53789bd50dbaa34f9f1fcb3848",
+              "peer_reconciliation_ref": "11e11998e14f2a59cb8c98f0a6ff4b503845118d89d877a59ab4ab937a44c9f8",
               "known_envelopes": {
-                "8555d6a080388ecc6a5d562becb01dda3c75243b9598200f9b1616e2655cf67c": {
+                "46f89af451b3c32faf485b9b1db3aea2edddaa933cb53ff553e00f37efd63751": {
                   "interaction_id": "3f9c9e2e-6b5a-4b7e-8f3e-1a2b3c4d5e6f",
                   "resolved_by": "safeagent-guardian"
                 }
@@ -7609,11 +9313,63 @@
                 "structural_validity": true,
                 "signature_valid_a": true,
                 "signature_valid_b": true,
-                "supersedes_chain_integrity": false
+                "supersedes_chain_integrity": false,
+                "signature_binding": true
               },
               "comparator_state": "AGREED",
               "failure_mode": "supersedes_chain_integrity",
               "failure_detail": "known_envelopes entry resolved_by=safeagent-guardian is one of this envelope's own parties — not an independent source"
+            },
+            {
+              "id": "replay-001",
+              "description": "CRITICAL negative, v1.2. party_a's co_signer is cryptographically valid (signature_valid_a=true, declared) but signed_fields=[\"party_id\",\"interaction_id\"] omits action_ref -- the signature attests party_a's identity and the interaction it participated in, but never binds the specific action_ref value carried alongside it. Modeled on narko4u/Empire Labs flagging the same class of bug in a different design (zhaoxinghua09-cell's verdict evidence records, GenAI-Security-Project/agent-control-standard#33 comment 6246290138, 2026-10-18): a genuine signed statement proves the signer checked *something*, not that it checked *this specific value* -- reusable to pair the same co_signer with a different action_ref. canonical_envelope and structural_validity both pass (signed_fields is present and non-empty, which is all structural_validity checks) -- only signature_binding, checked independently of shape, catches that the bound field set is incomplete. party_b's action_ref happens to equal party_a's declared action_ref: a comparator that only compared action_ref values without checking what each signature actually binds would wrongly report AGREED.",
+              "expected": "FAIL",
+              "failure_mode": "signature_binding",
+              "failure_detail": "party_a: co_signer.signed_fields=['party_id','interaction_id'] does not include 'action_ref' -- signature does not bind the value it is being presented alongside",
+              "envelope": {
+                "interaction_id": "7f6e5d4c-3b2a-4190-8e7d-6c5b4a392817",
+                "party_a": {
+                  "party_id": "replay-victim-guardian",
+                  "observed": true,
+                  "action_ref": "d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5",
+                  "co_signer": {
+                    "issuer": "replay-victim-guardian",
+                    "kid": "rv-key-01",
+                    "pubkey": "MCowBQYDK2VwAyEAbN9wR3mQ6xLcK2eT8oYs4bGd1pFj7aHi0uEk9rTz3qM=",
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.cmVwbGF5LXZpY3RpbS1ndWFyZGlhbg.Qp2Wn5xMt8VbYd4Rc6fJ",
+                    "signed_fields": [
+                      "party_id",
+                      "interaction_id"
+                    ]
+                  }
+                },
+                "party_b": {
+                  "party_id": "replay-counterparty-guardian",
+                  "observed": true,
+                  "action_ref": "d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5",
+                  "co_signer": {
+                    "issuer": "replay-counterparty-guardian",
+                    "kid": "rc-key-01",
+                    "pubkey": "MCowBQYDK2VwAyEAeV7mT1nQ4xKfL6eW9oDs3bYc8pGh2aFj5uEi0rTz7qN=",
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.cmVwbGF5LWNvdW50ZXJwYXJ0eS1ndWFyZGlhbg.Rt4Yc8vLp2WbXd6Qm3fK",
+                    "signed_fields": [
+                      "party_id",
+                      "action_ref",
+                      "interaction_id"
+                    ]
+                  }
+                },
+                "version": "peer-reconciliation-ref-v1"
+              },
+              "peer_reconciliation_ref": "f71dd7a939eabbc617dd5a9065ddcbc9a47b82bffc5f55742b4d5e2d19645e0f",
+              "checks": {
+                "canonical_envelope": true,
+                "structural_validity": true,
+                "signature_valid_a": true,
+                "signature_valid_b": true,
+                "signature_binding": false
+              },
+              "comparator_state": "UNRESOLVED"
             }
           ],
           "provenance": {
@@ -8940,32 +10696,6 @@
               "action_ref": "de7d7f40147b9b7f41134b14752aa36e3435bda89c51938ba358a69be04dccf6"
             },
             {
-              "id": "0002-unicode-fields",
-              "description": "Non-ASCII BMP characters in agent_id and scope (no surrogate pairs). JCS RFC 8785 emits the raw UTF-8 code points without escaping; an implementation that ASCII-escapes produces a different digest and is non-conformant.",
-              "preimage": {
-                "action_type": "negotiation.accept",
-                "agent_id": "agentur-zürich-07",
-                "scope": "mycelium:übergabe:été",
-                "timestamp": "2026-06-11T10:15:00.500Z"
-              },
-              "jcs_payload": "{\"action_type\":\"negotiation.accept\",\"agent_id\":\"agentur-zürich-07\",\"scope\":\"mycelium:übergabe:été\",\"timestamp\":\"2026-06-11T10:15:00.500Z\"}",
-              "preimage_canonical_bytes_hex": "7b22616374696f6e5f74797065223a226e65676f74696174696f6e2e616363657074222c226167656e745f6964223a226167656e7475722d7ac3bc726963682d3037222c2273636f7065223a226d7963656c69756d3ac3bc626572676162653ac3a974c3a9222c2274696d657374616d70223a22323032362d30362d31315431303a31353a30302e3530305a227d",
-              "action_ref": "a5c0ec37b01673b6ca9d593d4dba6e6f40dafdfc25fde3ad3673dceb79b72cc4"
-            },
-            {
-              "id": "0003-empty-scope",
-              "description": "Empty-string scope, valid per the spec field table (pass \"\" if not applicable). The empty string still occupies its JCS position; omitting the key instead produces a different digest.",
-              "preimage": {
-                "action_type": "oracle.signal",
-                "agent_id": "recompute-agent-001",
-                "scope": "",
-                "timestamp": "2026-06-11T10:30:00.250Z"
-              },
-              "jcs_payload": "{\"action_type\":\"oracle.signal\",\"agent_id\":\"recompute-agent-001\",\"scope\":\"\",\"timestamp\":\"2026-06-11T10:30:00.250Z\"}",
-              "preimage_canonical_bytes_hex": "7b22616374696f6e5f74797065223a226f7261636c652e7369676e616c222c226167656e745f6964223a227265636f6d707574652d6167656e742d303031222c2273636f7065223a22222c2274696d657374616d70223a22323032362d30362d31315431303a33303a30302e3235305a227d",
-              "action_ref": "8a5e53417ae5a4e1cdfc1659980ece6518611d7610c173ccf7d14121924b241e"
-            },
-            {
               "id": "0004-ms-floor",
               "description": "Millisecond floor edge: fractional part .000. Trailing-zero suppression (emitting .0, or no fractional part) changes the bytes and the digest; exactly three digits are required.",
               "preimage": {
@@ -9685,8 +11415,8 @@
       "files": {
         "vectors.json": {
           "spec_version": "settlement-evidence-ref-v1",
-          "description": "Conformance vectors for settlement-evidence-ref-v1 (docs/spec/settlement-evidence-ref.md). Three checks: ledger_recomputed (payer_debit/payee_credit read from the rail's own transaction data, never accepted as a bare facilitator success flag), debit_credit_paired (both sides present, not just one), matches_offer (when offer_identity_ref is present, the settled amount/asset/payee match what the offer required). A verifier that accepts a facilitator's success:true alone, without independently recomputed debit/credit, silently passes facilitator-assertion-only-001 — this is R5's central prohibition.",
-          "comparator_rule": "PASS requires SHA-256(JCS(settlement_artifact)) == declared settlement_evidence_ref AND checks.ledger_recomputed==true AND checks.debit_credit_paired==true AND checks.matches_offer==true (when offer_identity_ref is present and a referenced_offer is supplied for comparison).",
+          "description": "Conformance vectors for settlement-evidence-ref-v1 (docs/spec/settlement-evidence-ref.md). Four checks: ledger_recomputed (payer_debit/payee_credit read from the rail's own transaction data, never accepted as a bare facilitator success flag), debit_credit_paired (both sides present, not just one), matches_offer (when offer_identity_ref is present, the settled amount/asset/payee match what the offer required), transaction_present (settlement_artifact.transaction is a non-empty string — the same field x402#2887 found left as '' in a production receipt despite the settlement hash existing). A verifier that accepts a facilitator's success:true alone, without independently recomputed debit/credit, silently passes facilitator-assertion-only-001 — this is R5's central prohibition.",
+          "comparator_rule": "PASS requires SHA-256(JCS(settlement_artifact)) == declared settlement_evidence_ref AND checks.ledger_recomputed==true AND checks.debit_credit_paired==true AND checks.matches_offer==true (when offer_identity_ref is present and a referenced_offer is supplied for comparison) AND checks.transaction_present==true.",
           "vectors": [
             {
               "id": "settlement-matched-001",
@@ -9717,7 +11447,8 @@
               "checks": {
                 "ledger_recomputed": true,
                 "debit_credit_paired": true,
-                "matches_offer": true
+                "matches_offer": true,
+                "transaction_present": true
               }
             },
             {
@@ -9751,7 +11482,8 @@
               "checks": {
                 "ledger_recomputed": false,
                 "debit_credit_paired": false,
-                "matches_offer": false
+                "matches_offer": false,
+                "transaction_present": true
               }
             },
             {
@@ -9785,7 +11517,43 @@
               "checks": {
                 "ledger_recomputed": true,
                 "debit_credit_paired": true,
-                "matches_offer": false
+                "matches_offer": false,
+                "transaction_present": true
+              }
+            },
+            {
+              "id": "settlement-transaction-missing-001",
+              "description": "T4 negative: payer_debit and payee_credit are both independently recomputed from the rail (ledger_recomputed=true, declared, exactly as in settlement-matched-001) and both sides are paired and match the referenced offer — but settlement_artifact.transaction is an empty string. Same shape as x402-foundation/x402#2887 / issue #3824: enrichExtensions overwrote the extension declaration instead of merging it, so includeTxHash:true never reached enrichSettlementResponse and the signed receipt kept transaction:\"\" even though the settlement already had a real hash. ledger_recomputed/debit_credit_paired/matches_offer being true does not make the transaction reference optional — T4 names network+transaction as required fields independent of the other three checks.",
+              "expected": "FAIL",
+              "failure_mode": "transaction_missing_or_empty",
+              "failure_detail": "settlement_artifact.transaction is \"\" — no transaction reference, even though ledger_recomputed/debit_credit_paired/matches_offer are all true",
+              "settlement_artifact": {
+                "network": "base-sepolia",
+                "transaction": "",
+                "offer_identity_ref": "0df1f6792f5aa482568ff3b6cb39568d5fe0b5f29b7dc7148b5dba400451d4c4",
+                "payer_debit": {
+                  "address": "0xA11ce00000000000000000000000000000000001",
+                  "amount": "10000",
+                  "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e"
+                },
+                "payee_credit": {
+                  "address": "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+                  "amount": "10000",
+                  "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e"
+                },
+                "version": "settlement-evidence-ref-v1"
+              },
+              "settlement_evidence_ref": "f909081a79e81d6f5b3f914cf74c96cb51c764722bad012278d70b31f582c8a1",
+              "referenced_offer": {
+                "maxAmountRequired": "10000",
+                "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+                "payTo": "0x209693Bc6afc0C5328bA36FaF03C514EF312287C"
+              },
+              "checks": {
+                "ledger_recomputed": true,
+                "debit_credit_paired": true,
+                "matches_offer": true,
+                "transaction_present": false
               }
             }
           ],
@@ -10122,6 +11890,60 @@
             "verification_mode": "asserted",
             "independently_reproduced_by": []
           }
+        }
+      }
+    },
+    "timestamp-grammar-negative-v1": {
+      "path": "examples/conformance/timestamp-grammar-negative-v1/",
+      "files": {
+        "timestamp-grammar-negative-v1.fixture.json": {
+          "fixture_id": "timestamp-grammar-negative-v1",
+          "version": "v1",
+          "spec": "docs/spec/action-ref.md",
+          "hash_algo": "sha256",
+          "preimage_format": "jcs-rfc8785-v1",
+          "generated_at": "2026-10-04",
+          "purpose": "Negative vectors for the action-ref timestamp grammar gate. A conformant verifier MUST reject any timestamp that is not canonical RFC 3339 UTC written with ASCII digits [0-9], three fractional digits and a mandatory Z, before any hashing. A timestamp that uses non-ASCII decimal digits is not a valid form even when it looks like one.",
+          "validation_rule": "The grammar gate runs before canonicalization. A timestamp that fails the gate is a terminal failure before invocation. A verifier that accepts any vector in this file has a conformance bug.",
+          "reserved_slots": [
+            {
+              "slot": "0001",
+              "status": "filled",
+              "owner": "aeoess (follow-up to PR #115)",
+              "requirement": "A negative vector whose timestamp uses non-ASCII decimal digits in place of [0-9] in an otherwise canonical RFC 3339 string. Must be rejected at the grammar gate.",
+              "note": "Filled by the contributed vector neg-0001-arabic-indic-digits.",
+              "vector_id": "neg-0001-arabic-indic-digits"
+            }
+          ],
+          "vectors": [
+            {
+              "id": "neg-0001-arabic-indic-digits",
+              "slot": "0001",
+              "failure_mode": "timestamp_digit_class_drift",
+              "description": "The invocation payload carries the canonical RFC 3339 instant written with Arabic-Indic digits (U+0660 to U+0669) in place of ASCII [0-9]. A grammar written with \\d accepts it, because Python's \\d matches any Unicode decimal digit. The claimed action_ref is the real digest of that payload, so a verifier that skips the grammar gate and hashes verbatim would see a match. A conformant verifier rejects the timestamp at the grammar gate before hashing and never normalizes the digits to retry.",
+              "timestamp": "٢٠٢٦-٠٦-١١T٠٨:٣٠:٠٠.١٢٣Z",
+              "timestamp_codepoints": "U+0662 U+0660 U+0662 U+0666 U+002D U+0660 U+0666 U+002D U+0661 U+0661 U+0054 U+0660 U+0668 U+003A U+0663 U+0660 U+003A U+0660 U+0660 U+002E U+0661 U+0662 U+0663 U+005A",
+              "invocation_payload": {
+                "action_type": "oracle.signal",
+                "agent_id": "nexus-agent-xa12.onrender.com",
+                "scope": "BTC",
+                "timestamp": "٢٠٢٦-٠٦-١١T٠٨:٣٠:٠٠.١٢٣Z"
+              },
+              "drifted_jcs_payload": "{\"action_type\":\"oracle.signal\",\"agent_id\":\"nexus-agent-xa12.onrender.com\",\"scope\":\"BTC\",\"timestamp\":\"٢٠٢٦-٠٦-١١T٠٨:٣٠:٠٠.١٢٣Z\"}",
+              "drifted_bytes_hex": "7b22616374696f6e5f74797065223a226f7261636c652e7369676e616c222c226167656e745f6964223a226e657875732d6167656e742d786131322e6f6e72656e6465722e636f6d222c2273636f7065223a22425443222c2274696d657374616d70223a22d9a2d9a0d9a2d9a62dd9a0d9a62dd9a1d9a154d9a0d9a83ad9a3d9a03ad9a0d9a02ed9a1d9a2d9a35a227d",
+              "claimed_action_ref": "68b81475017d4dedb17679f4a99f7645b91a5065c206e49dd7aa300dfe8e44fb",
+              "canonical_form_payload": {
+                "action_type": "oracle.signal",
+                "agent_id": "nexus-agent-xa12.onrender.com",
+                "scope": "BTC",
+                "timestamp": "2026-06-11T08:30:00.123Z"
+              },
+              "canonical_jcs_payload": "{\"action_type\":\"oracle.signal\",\"agent_id\":\"nexus-agent-xa12.onrender.com\",\"scope\":\"BTC\",\"timestamp\":\"2026-06-11T08:30:00.123Z\"}",
+              "correct_action_ref": "d461626a9ef4b3ab7fe59f2c5392d24143efc98306720bfa1f41373ce2326e10",
+              "expected": "rejected at the timestamp grammar gate, before canonicalization or hashing",
+              "provenance": "contributed by aeoess (Agent Passport System), follow-up to PR #115. Same tuple as recompute-drift-v1 neg-b01 with the timestamp digits replaced"
+            }
+          ]
         }
       }
     },

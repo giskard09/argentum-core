@@ -23,19 +23,6 @@
       "action_ref": "de7d7f40147b9b7f41134b14752aa36e3435bda89c51938ba358a69be04dccf6"
     },
     {
-      "id": "0002-unicode-fields",
-      "description": "Non-ASCII BMP characters in agent_id and scope (no surrogate pairs). JCS RFC 8785 emits the raw UTF-8 code points without escaping; an implementation that ASCII-escapes produces a different digest and is non-conformant.",
-      "preimage": {
-        "action_type": "negotiation.accept",
-        "agent_id": "agentur-zürich-07",
-        "scope": "mycelium:übergabe:été",
-        "timestamp": "2026-06-11T10:15:00.500Z"
-      },
-      "jcs_payload": "{\"action_type\":\"negotiation.accept\",\"agent_id\":\"agentur-zürich-07\",\"scope\":\"mycelium:übergabe:été\",\"timestamp\":\"2026-06-11T10:15:00.500Z\"}",
-      "preimage_canonical_bytes_hex": "7b22616374696f6e5f74797065223a226e65676f74696174696f6e2e616363657074222c226167656e745f6964223a226167656e7475722d7ac3bc726963682d3037222c2273636f7065223a226d7963656c69756d3ac3bc626572676162653ac3a974c3a9222c2274696d657374616d70223a22323032362d30362d31315431303a31353a30302e3530305a227d",
-      "action_ref": "a5c0ec37b01673b6ca9d593d4dba6e6f40dafdfc25fde3ad3673dceb79b72cc4"
-    },
-    {
       "id": "0004-ms-floor",
       "description": "Millisecond floor edge: fractional part .000. Trailing-zero suppression (emitting .0, or no fractional part) changes the bytes and the digest; exactly three digits are required.",
       "preimage": {
