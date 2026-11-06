@@ -25,6 +25,8 @@ Five checks per spec (docs/spec/settlement-evidence-ref.md):
      reference verifier.
 """
 
+from __future__ import annotations
+
 import hashlib
 import json
 import sys
