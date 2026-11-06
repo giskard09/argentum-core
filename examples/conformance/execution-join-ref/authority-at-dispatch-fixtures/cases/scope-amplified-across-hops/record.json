@@ -1,0 +1,51 @@
+{
+  "approvedAction": {
+    "approvedAt": "2026-10-03T11:55:00Z",
+    "payloadSha256": "881f8088cb1c39e383485cc8d0adf03e510cae2e5594e2ab6cf414d5c30b297e",
+    "target": "queue/support",
+    "tool": "ticket.create"
+  },
+  "attempt": {
+    "attemptId": "scope-amplified-across-hops",
+    "runId": "run-2026-10-03-a"
+  },
+  "authorityEvidence": {
+    "evidenceAgeSeconds": 30,
+    "maxAgeSeconds": 180,
+    "observedAt": "2026-10-03T11:59:30Z",
+    "revision": "status-snapshot-41",
+    "revokedGrants": [],
+    "source": "signed-status-snapshot"
+  },
+  "contractId": "https://probityai.github.io/agent-evidence-observer/contract/authority-at-dispatch/v1",
+  "decisionTime": "2026-10-03T12:00:00Z",
+  "delegation": [
+    {
+      "expiresAt": "2026-10-03T13:00:00Z",
+      "grantId": "grant-1",
+      "grantee": "agent:planner",
+      "grantor": "human:approver-1",
+      "notBefore": "2026-10-03T11:50:00Z",
+      "scope": [
+        "ticket.create",
+        "ticket.read"
+      ]
+    },
+    {
+      "expiresAt": "2026-10-03T13:00:00Z",
+      "grantId": "grant-2",
+      "grantee": "agent:dispatcher",
+      "grantor": "agent:planner",
+      "notBefore": "2026-10-03T11:50:00Z",
+      "scope": [
+        "ticket.create",
+        "ticket.delete"
+      ]
+    }
+  ],
+  "dispatch": {
+    "payloadFile": "dispatched.bin",
+    "target": "queue/support",
+    "tool": "ticket.create"
+  }
+}

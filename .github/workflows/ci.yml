@@ -81,6 +81,10 @@ jobs:
         run: |
           python tools/check_vector_keys.py
 
+      - name: Authority-at-dispatch denied cases — map onto execution-join-ref-v1
+        run: |
+          python examples/conformance/execution-join-ref/map_authority_at_dispatch.py
+
       - name: Secret scan — gitleaks
         uses: gitleaks/gitleaks-action@v2
         env:
