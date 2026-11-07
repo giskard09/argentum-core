@@ -35,28 +35,33 @@ repo's PROVENANCE.md). This script reports each of those 7 explicitly,
 by name, as out of scope -- never silently skipped, never silently
 "passed".
 
-HOW THE PIN IS ACTUALLY EXERCISED, NOT JUST DECLARED: this script asks
-the INSTALLED `agent_evidence_vectors.authoritydispatch` module's own
-reference reader (`verify()`) for its live decision+reason on each
-vendored record, and treats a disagreement with what the vendored
-MANIFEST excerpt expects as a reported failure (upstream drift), not a
-silently-absorbed difference. A Dependabot bump to a later
-agent-evidence-vectors release therefore re-exercises real package
-logic against these fixtures on every CI run of this file, not merely a
-version string in requirements.txt.
-
-WHY THE RECORD/BYTE FIXTURES ARE VENDORED HERE RATHER THAN READ FROM THE
-INSTALLED PACKAGE AT RUNTIME: `authoritydispatch.ROOT`'s own fallback
-logic (checking for a sibling `corpora/` directory next to the installed
-module, or two directories up) shows even this package is not confident
-its wheel reliably ships `corpora/vectors-authority-at-dispatch/cases/`
-at a fixed, discoverable path across installs. Rather than depend on
-that, the 10 deny cases' `record.json` and `dispatched.bin` are vendored
-under `authority-at-dispatch-fixtures/`, copied byte-for-byte from the
-pinned `agent-evidence-vectors==0.35.0` sdist (verified via `diff` at
-vendor time), with `MANIFEST.json` here an explicitly-labeled EXCERPT
-(10 of the real 14 entries, deny only) -- not a claim that it is the
-upstream file or that its `corpusDigest` validates against it.
+HOW THE PIN IS ACTUALLY EXERCISED, NOT JUST DECLARED: this script reads
+the deny entries straight out of the INSTALLED package's own corpus
+(`authoritydispatch.ROOT`, see below) and asks that same package's
+reference reader (`verify()`) for its live decision+reason on each one,
+treating a disagreement with what `MANIFEST.json` declares as a reported
+failure (upstream drift), not a silently-absorbed difference. A
+Dependabot bump to a later agent-evidence-vectors release therefore
+re-exercises real package logic on every CI run of this file -- AND, since
+nothing here is vendored, against whatever cases that release actually
+ships (new deny reasons, edited edge cases, a changed count), not a
+frozen snapshot of today's 10. Corrected per astrogilda's review
+(probityai/agent-evidence-vectors#349): an earlier version of this
+docstring claimed the package's own `ROOT` fallback (checking a sibling
+`corpora/` next to the installed module, or two directories up) meant
+the package itself didn't trust its wheel to ship the corpus at a fixed
+path, and vendored copies of the 10 deny cases here as a result. That
+claim was never checked against the actual wheels and was wrong: in both
+pinned releases (0.35.0, 0.36.3) the primary branch of `ROOT` resolves
+to `corpora/vectors-authority-at-dispatch` inside the installed package,
+with `cases/` and `MANIFEST.json` right there -- confirmed by unzipping
+both wheels and inspecting the path directly, not by running installed
+code. Reading live from `ROOT` is strictly better for what this script
+is actually for (tracking the upstream corpus via Dependabot), so the
+vendored `record.json`/`dispatched.bin` copies are gone; `check_case_
+integrity()` below still checks each installed case's files against
+`MANIFEST.json`'s own declared digests, now as a guard against a
+corrupted/partial install rather than a vendoring correctness claim.
 """
 from __future__ import annotations
 
@@ -81,7 +86,7 @@ except ImportError:
     print("agent-evidence-vectors is not installed -- see requirements.txt in this directory")
     sys.exit(2)
 
-FIXTURES = _HERE / "authority-at-dispatch-fixtures"
+FIXTURES = authoritydispatch.ROOT
 VERSION = "execution-join-ref-v1"
 MAPPED_REASON = "dispatch_not_approved"
 
@@ -102,11 +107,11 @@ def ref(preimage: dict) -> str:
     return sha256_hex(jcs.jcs_bytes(preimage, ensure_ascii=False))
 
 
-def check_fixture_integrity(entry: dict, case_dir: Path) -> str | None:
+def check_case_integrity(entry: dict, case_dir: Path) -> str | None:
     for name, expected_digest in entry["files"].items():
         actual = sha256_hex((case_dir / name).read_bytes())
         if actual != expected_digest:
-            return f"{name}: vendored file does not match its own recorded digest ({actual} != {expected_digest})"
+            return f"{name}: installed file does not match MANIFEST.json's own recorded digest ({actual} != {expected_digest})"
     return None
 
 
@@ -176,16 +181,17 @@ def build_vector(record: dict, dispatched_bytes: bytes) -> dict:
 
 def main() -> None:
     manifest = json.loads((FIXTURES / "MANIFEST.json").read_text())
+    deny_entries = [e for e in manifest["vectors"] if e["expected"]["decision"] == "deny"]
 
     mapped = 0
     out_of_scope: list[str] = []
     problems: list[str] = []
 
-    for entry in manifest["vectors"]:
+    for entry in deny_entries:
         case_dir = FIXTURES / "cases" / entry["id"]
         record_path = case_dir / "record.json"
 
-        integrity_problem = check_fixture_integrity(entry, case_dir)
+        integrity_problem = check_case_integrity(entry, case_dir)
         if integrity_problem:
             problems.append(f"{entry['id']}: {integrity_problem}")
             continue
