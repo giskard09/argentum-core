@@ -293,6 +293,25 @@ def verify_vector(vector: dict) -> tuple[bool, list[str], dict]:
             pc_ok = pc_ref_ok and binds_this_result and matches_output
             _check("post_commit_consistency", pc_ok, declared, computed, failures)
 
+    # 8. authority_check_order (v1.3, additive) -- exempt when decision_id's
+    # preimage carries neither authority_verified_at_ms nor
+    # revocation_check_at_ms. Checks temporal coherence only -- see the spec's
+    # "Gap -- delegation, revocation and freshness" for why this cannot
+    # resolve revocation or staleness itself.
+    if decision_pre is not None:
+        avm = decision_pre.get("authority_verified_at_ms")
+        rcm = decision_pre.get("revocation_check_at_ms")
+        if avm is not None or rcm is not None:
+            ts_ms = decision_pre.get("ts_ms")
+            order_ok = True
+            if avm is not None and ts_ms is not None and avm > ts_ms:
+                order_ok = False
+            if rcm is not None and ts_ms is not None and rcm > ts_ms:
+                order_ok = False
+            if avm is not None and rcm is not None and avm > rcm:
+                order_ok = False
+            _check("authority_check_order", order_ok, declared, computed, failures)
+
     return (len(failures) == 0), failures, computed
 
 
