@@ -1,0 +1,12 @@
+version: 2
+updates:
+  # map_authority_at_dispatch.py (examples/conformance/execution-join-ref/)
+  # cross-checks authority-at-dispatch/v1's live reference reader against
+  # execution-join-ref-v1's own verify.py, see that script's module
+  # docstring for astrogilda's ask on probityai/agent-evidence-vectors#349.
+  # A bump here re-exercises real package logic in CI (ci.yml's "Run tests"
+  # step), not just a version string -- see map_authority_at_dispatch.py.
+  - package-ecosystem: "pip"
+    directory: "/examples/conformance/execution-join-ref"
+    schedule:
+      interval: "weekly"
