@@ -18,22 +18,26 @@ whose own ref differs and lacks a SEPARATE covering decision for the
 rewritten ref fails invariant 6, reported as
 `EFFECTIVE_CALL_REBINDING_FAILED`.
 
-WHAT IS DELIBERATELY NOT MAPPED, AND WHY: the other 7 denied reasons
-(`grant_revoked`, `grant_expired`, `scope_amplified`, `authority_evidence_
-stale`, `evidence_age_inconsistent`, `contract_id_missing`,
-`contract_id_unknown`) are all properties of a MULTI-HOP DELEGATION CHAIN
-and FRESHNESS WINDOW that execution-join-ref-v1's own preimage shapes
-(action_ref / decision_id / attempt_id / result_id -- see this
-directory's verify.py, REQUIRED_FIELDS) do not carry any field for at
-all: no delegation hops, no revocation list, no evidence-age window.
-Forcing any of them through `effective_call_binding` -- the only
-invariant that could even be coerced to fire -- would be exactly the
-overclaim this repo's own execution-join-ref-remora-bridge companion
-already refused to make for its AR-04 case (policy/context changed,
-reported `NOT_MODELED`, never forced through invariant 6, see that
-repo's PROVENANCE.md). This script reports each of those 7 explicitly,
-by name, as out of scope -- never silently skipped, never silently
-"passed".
+WHAT HAPPENED TO THE OTHER 7 (v1.3, astrogilda's follow-up on #349): none
+of them map onto `effective_call_binding` -- forcing any of them through
+it would be the overclaim this repo's execution-join-ref-remora-bridge
+companion already refused for its AR-04 case (NOT_MODELED, never forced
+through invariant 6, see that repo's PROVENANCE.md). Three of the seven
+(`grant_revoked`, `authority_evidence_stale`, `evidence_age_inconsistent`)
+now map onto invariant 8 (`authority_check_order`, v1.3) instead, via
+`decision_id`'s new optional `authority_verified_at_ms`/`revocation_check_
+at_ms`/`revocation_authority_ref` fields, built below from each case's own
+`authorityEvidence`. That invariant does NOT resolve revocation or
+staleness itself -- see the spec's "Gap -- delegation, revocation and
+freshness" -- it only confirms the record's claimed order of events is
+coherent and binds the check to a named, independently-checkable
+authority (`authorityEvidence.source`/`.revision`), which is strictly
+more than NOT_MODELED's "no field exists at all." The remaining four
+(`grant_expired`, `scope_amplified`, `contract_id_missing`,
+`contract_id_unknown`) are reported below exactly as the spec table
+describes them -- PARTIALLY_MODELED or still NOT_MODELED, never silently
+skipped, never silently "passed", and never stretched into a mapping the
+spec doesn't actually make.
 
 HOW THE PIN IS ACTUALLY EXERCISED, NOT JUST DECLARED: this script reads
 the deny entries straight out of the INSTALLED package's own corpus
@@ -89,6 +93,10 @@ except ImportError:
 FIXTURES = authoritydispatch.ROOT
 VERSION = "execution-join-ref-v1"
 MAPPED_REASON = "dispatch_not_approved"
+AUTHORITY_CHECK_REASONS = frozenset({
+    "grant_revoked", "authority_evidence_stale", "evidence_age_inconsistent",
+})
+PARTIALLY_MODELED_REASONS = frozenset({"grant_expired", "scope_amplified"})
 
 
 def iso_to_ms(iso: str) -> int:
@@ -179,11 +187,68 @@ def build_vector(record: dict, dispatched_bytes: bytes) -> dict:
     }
 
 
+def build_authority_check_vector(record: dict) -> dict:
+    """Maps ONE grant_revoked/authority_evidence_stale/evidence_age_
+    inconsistent record onto decision_id's v1.3 fields. `authority_verified_
+    at_ms` comes straight from `authorityEvidence.observedAt` -- the moment
+    the evidence was current -- and `revocation_check_at_ms` from
+    `decisionTime` -- the moment that evidence was actually relied on. Both
+    are real timestamps already in the record, not invented for this
+    mapping. `revocation_authority_ref` binds to the record's own named
+    snapshot (`authorityEvidence.source`/`.revision`) -- the specific thing
+    a verifier holding that snapshot could check, same shape as this spec's
+    own worked example in action-ref.md, not a generic/empty placeholder.
+
+    Deliberately does NOT reuse build_vector()'s action_ref (that one is
+    keyed to approvedAction/dispatch, which these records' denial has
+    nothing to do with) -- the action under review here is the decision
+    itself, so action_ref is built straight from the approval, with no
+    effective_action_ref at all (this is not a dispatch-binding question)."""
+    approved = record["approvedAction"]
+    decided_ms = iso_to_ms(record["decisionTime"])
+    evidence = record["authorityEvidence"]
+
+    action_preimage = {
+        "actor_id": record["delegation"][0]["grantee"],
+        "input_hash": approved["payloadSha256"],
+        "scope": f'{approved["tool"]}:{approved["target"]}',
+        "ts_ms": iso_to_ms(approved["approvedAt"]),
+        "version": VERSION,
+    }
+    action_ref = ref(action_preimage)
+
+    authority_descriptor = {
+        "authority_id": f'{evidence["source"]}:{evidence["revision"]}',
+        "authority_type": "third-party-oracle",
+        "version": "revocation-authority-ref-v1",
+    }
+
+    decision_preimage = {
+        "action_ref": action_ref,
+        "outcome": "permit",
+        "policy_id": f'delegation:{record["delegation"][0]["grantId"]}',
+        "ts_ms": decided_ms,
+        "version": VERSION,
+        "authority_verified_at_ms": iso_to_ms(evidence["observedAt"]),
+        "revocation_check_at_ms": decided_ms,
+        "revocation_authority_ref": ref(authority_descriptor),
+    }
+    decision_id = ref(decision_preimage)
+
+    return {
+        "id": f"authority-at-dispatch/{record['attempt']['attemptId']}",
+        "envelope": {"action_ref": action_ref, "decision_id": decision_id},
+        "preimages": {"action_ref": action_preimage, "decision_id": decision_preimage},
+    }
+
+
 def main() -> None:
     manifest = json.loads((FIXTURES / "MANIFEST.json").read_text())
     deny_entries = [e for e in manifest["vectors"] if e["expected"]["decision"] == "deny"]
 
     mapped = 0
+    auditable = 0
+    partial: list[str] = []
     out_of_scope: list[str] = []
     problems: list[str] = []
 
@@ -210,31 +275,62 @@ def main() -> None:
             )
             continue
 
-        if live["reason"] != MAPPED_REASON:
-            out_of_scope.append(
-                f"{entry['id']} ({live['reason']}): NOT_MODELED -- execution-join-ref-v1's "
-                "preimage carries no delegation, revocation, scope-chain or evidence-"
-                "freshness field to check this against"
+        reason = live["reason"]
+
+        if reason == MAPPED_REASON:
+            vector = build_vector(record, dispatched_bytes)
+            conforms, failures, computed = verify_vector(vector)
+            ok = (not conforms) and computed.get("effective_call_binding") is False
+            print(f"  {'[OK]' if ok else '[FAIL]'} {entry['id']}: dispatch_not_approved -> "
+                  f"effective_call_binding={computed.get('effective_call_binding')} "
+                  f"({'EFFECTIVE_CALL_REBINDING_FAILED' if ok else failures})")
+            if ok:
+                mapped += 1
+            else:
+                problems.append(
+                    f"{entry['id']}: expected EFFECTIVE_CALL_REBINDING_FAILED "
+                    f"(effective_call_binding=False), got conforms={conforms} "
+                    f"computed={computed} failures={failures}"
+                )
+            continue
+
+        if reason in AUTHORITY_CHECK_REASONS:
+            vector = build_authority_check_vector(record)
+            conforms, failures, computed = verify_vector(vector)
+            order_ok = computed.get("authority_check_order")
+            ok = order_ok is True
+            print(f"  {'[OK]' if ok else '[FAIL]'} {entry['id']}: {reason} -> "
+                  f"authority_check_order={order_ok} (AUDITABLE_VIA_NAMED_AUTHORITY"
+                  f"{'' if ok else f', {failures}'})")
+            if ok:
+                auditable += 1
+            else:
+                problems.append(
+                    f"{entry['id']}: expected authority_check_order=True, got "
+                    f"conforms={conforms} computed={computed} failures={failures}"
+                )
+            continue
+
+        if reason in PARTIALLY_MODELED_REASONS:
+            partial.append(
+                f"{entry['id']} ({reason}): PARTIALLY_MODELED -- see execution-join-ref-v1.md "
+                "'Gap -- delegation, revocation and freshness' table for exactly what this "
+                "covers and what it still does not"
             )
             continue
 
-        vector = build_vector(record, dispatched_bytes)
-        conforms, failures, computed = verify_vector(vector)
-        ok = (not conforms) and computed.get("effective_call_binding") is False
-        print(f"  {'[OK]' if ok else '[FAIL]'} {entry['id']}: dispatch_not_approved -> "
-              f"effective_call_binding={computed.get('effective_call_binding')} "
-              f"({'EFFECTIVE_CALL_REBINDING_FAILED' if ok else failures})")
-        if ok:
-            mapped += 1
-        else:
-            problems.append(
-                f"{entry['id']}: expected EFFECTIVE_CALL_REBINDING_FAILED "
-                f"(effective_call_binding=False), got conforms={conforms} "
-                f"computed={computed} failures={failures}"
-            )
+        out_of_scope.append(
+            f"{entry['id']} ({reason}): NOT_MODELED -- genuinely out of scope, not a stretch-fit "
+            "(see execution-join-ref-v1.md's table: this checks the governing contract/policy "
+            "framework, not a revocation authority)"
+        )
 
     print(f"\n{mapped} dispatch_not_approved case(s) mapped and confirmed EFFECTIVE_CALL_REBINDING_FAILED")
-    print(f"{len(out_of_scope)} other real denied-dispatch reason(s) explicitly NOT_MODELED:")
+    print(f"{auditable} case(s) moved to AUDITABLE_VIA_NAMED_AUTHORITY (invariant 8, v1.3):")
+    print(f"{len(partial)} case(s) PARTIALLY_MODELED:")
+    for line in partial:
+        print(f"  - {line}")
+    print(f"{len(out_of_scope)} case(s) remain genuinely NOT_MODELED:")
     for line in out_of_scope:
         print(f"  - {line}")
 
