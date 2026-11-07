@@ -204,8 +204,9 @@ def main() -> None:
         live = authoritydispatch.verify(record_path)
         if live != entry["expected"]:
             problems.append(
-                f"{entry['id']}: vendored fixture expects {entry['expected']}, installed "
-                f"agent-evidence-vectors says {live} -- upstream drift, not a mapping bug"
+                f"{entry['id']}: MANIFEST.json declares {entry['expected']}, installed "
+                f"agent-evidence-vectors' own verify() says {live} -- upstream drift "
+                f"within the package itself, not a mapping bug"
             )
             continue
 
