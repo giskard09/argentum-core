@@ -705,6 +705,74 @@
         "effective_call_binding": true,
         "post_commit_consistency": true
       }
+    },
+    {
+      "id": "AUTHORITY_CHECK_ORDER_CONFIRMED",
+      "description": "v1.3. decision_id's preimage carries authority_verified_at_ms and revocation_check_at_ms, both before ts_ms and in order (authority_verified_at_ms <= revocation_check_at_ms). Invariant 8 passes. Does not itself prove the grant was unrevoked or fresh -- only that the record's claimed order of events is coherent; see the spec's 'Gap -- delegation, revocation and freshness'.",
+      "expected": "PASS",
+      "failure_code": "AUTHORIZED_EFFECTIVE_CALL",
+      "envelope": {
+        "version": "execution-join-ref-v1",
+        "action_ref": "53138a338b70ac7cb54165e4175f5432384b44092f2968329212a1661f973b02",
+        "decision_id": "a11faeb239dce250c2b75c12a5e47dedb149a23a2b77b4f80c36868bb9959452",
+        "attempt_id": "9c796e94c7cbfbc898791bdafffb9f83d676820435dfdecc40899fb341f3c2bf",
+        "result_id": "121a8185d514f8458f0eee59647f9f4f7b84442c7de185680ae4e73d619e99f0",
+        "proof_ref": null
+      },
+      "preimages": {
+        "decision_id": {
+          "action_ref": "53138a338b70ac7cb54165e4175f5432384b44092f2968329212a1661f973b02",
+          "outcome": "permit",
+          "policy_id": "stripe-payment-guardrail-v2",
+          "ts_ms": 1782900000050,
+          "version": "execution-join-ref-v1",
+          "authority_verified_at_ms": 1782899990000,
+          "revocation_check_at_ms": 1782900000000,
+          "revocation_authority_ref": "6715df92abbc5adef5dce788e6b64d4fd280f16c6a077d4cf959be5f127a675b"
+        }
+      },
+      "checks": {
+        "canonical_envelope": true,
+        "chain_integrity": true,
+        "no_duplicate_attempt": true,
+        "result_uniqueness": true,
+        "effective_call_binding": true,
+        "authority_check_order": true
+      }
+    },
+    {
+      "id": "AUTHORITY_CHECK_ORDER_INVALID",
+      "description": "v1.3. decision_id's preimage carries revocation_check_at_ms earlier than authority_verified_at_ms -- a revocation check claimed to precede the authority verification it depends on. Invariant 8 fails. Same action_ref/attempt_id/result_id as AUTHORITY_CHECK_ORDER_CONFIRMED; only decision_id's preimage timestamps differ, which changes decision_id itself (the hash binds the order, not just the values).",
+      "expected": "FAIL",
+      "failure_code": "AUTHORITY_CHECK_ORDER_INVALID",
+      "envelope": {
+        "version": "execution-join-ref-v1",
+        "action_ref": "53138a338b70ac7cb54165e4175f5432384b44092f2968329212a1661f973b02",
+        "decision_id": "102dfbd20cf11fed38c9c58cbba3caff3d82b2243174437616b76d56fc4eeb69",
+        "attempt_id": "9c796e94c7cbfbc898791bdafffb9f83d676820435dfdecc40899fb341f3c2bf",
+        "result_id": "121a8185d514f8458f0eee59647f9f4f7b84442c7de185680ae4e73d619e99f0",
+        "proof_ref": null
+      },
+      "preimages": {
+        "decision_id": {
+          "action_ref": "53138a338b70ac7cb54165e4175f5432384b44092f2968329212a1661f973b02",
+          "outcome": "permit",
+          "policy_id": "stripe-payment-guardrail-v2",
+          "ts_ms": 1782900000050,
+          "version": "execution-join-ref-v1",
+          "authority_verified_at_ms": 1782900000000,
+          "revocation_check_at_ms": 1782899990000,
+          "revocation_authority_ref": "6715df92abbc5adef5dce788e6b64d4fd280f16c6a077d4cf959be5f127a675b"
+        }
+      },
+      "checks": {
+        "canonical_envelope": true,
+        "chain_integrity": true,
+        "no_duplicate_attempt": true,
+        "result_uniqueness": true,
+        "effective_call_binding": true,
+        "authority_check_order": false
+      }
     }
   ],
   "provenance": {

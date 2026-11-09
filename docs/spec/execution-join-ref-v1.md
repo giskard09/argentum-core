@@ -1,11 +1,26 @@
 # execution-join-ref-v1
 
-**Version:** 1.2
+**Version:** 1.3
 
 An execution join binds the outcome of a tool call back to the exact guardrail
 decision that authorized it. Four identifiers form a chain; each is a
 SHA-256(JCS(canonical preimage)) computed at the moment described, not at
 record time.
+
+**v1.3 (2026-11-07, additive):** astrogilda/Sankalp ran `probityai/
+agent-evidence-vectors`' `authority-at-dispatch/v1` corpus (8 ordered checks,
+`agent_evidence_vectors.authoritydispatch.CHECKS`) through this spec's own
+`map_authority_at_dispatch.py` and named the gap directly
+(`probityai/agent-evidence-vectors#349`): of the corpus's 10 denied records,
+7 fail for a reason `decision_id`'s preimage carries no field for at all —
+`grant_revoked`, `grant_expired`, `scope_amplified`, `authority_evidence_
+stale`, `evidence_age_inconsistent`, `contract_id_missing`,
+`contract_id_unknown` — reported `NOT_MODELED`, never forced through
+`effective_call_binding`. See "Gap — delegation, revocation and freshness"
+below for the four new optional fields this adds to `decision_id`'s preimage,
+and the honest, case-by-case accounting of which of the 7 move, partially
+move, or stay `NOT_MODELED` — re-run against the real corpus, not asserted
+in prose.
 
 **v1.1 (2026-10-18, additive):** built in response to astrogilda/Sankalp
 (Open Evidence Lab) asking directly for two file-write-domain cases
@@ -83,9 +98,18 @@ attempt's bytes is a binding failure even if the proof itself is valid.
   "outcome": "permit | deny | defer",
   "policy_id": "<string>",
   "ts_ms": <integer>,
-  "version": "execution-join-ref-v1"
+  "version": "execution-join-ref-v1",
+  "authority_verified_at_ms": <integer, optional, v1.3>,
+  "revocation_check_at_ms": <integer, optional, v1.3>,
+  "revocation_authority_ref": "<sha256-hex, optional, v1.3>",
+  "delegation_chain_ref": "<sha256-hex, optional, v1.3>"
 }
 ```
+
+The four v1.3 fields are optional and enter the hash only when present — a
+`decision_id` without them hashes exactly as it did under v1.2. See "Gap —
+delegation, revocation and freshness" below for what each one does and does
+not prove.
 
 `canonicalization_profile_id` is a required field in the decision evidence
 object. The verifier reads it before comparing any digests. If the field is
@@ -152,6 +176,69 @@ above resolve to the current docs.
 }
 ```
 
+## Gap — delegation, revocation and freshness (v1.3)
+
+Everything above answers one question: was the dispatched call covered by
+a decision that permits it? It says nothing about the authority behind
+that decision — whether the agent's delegated grant was still unrevoked,
+still inside its validity window, and checked against evidence that was
+still fresh, at the moment the decision was made. `policy_id` is an opaque
+string; a verifier holding it cannot tell whether the delegation chain
+behind it was sound.
+
+### Four fields, reused not redefined
+
+- **`authority_verified_at_ms`** (integer, optional) — same field, same
+  meaning, as [`action-ref.md`](./action-ref.md#two-fields-that-close-this-gap):
+  the timestamp at which the delegation authority behind this decision was
+  last confirmed current.
+- **`revocation_check_at_ms`** (integer, optional) — same field as
+  `action-ref.md`: the timestamp of the last non-revocation check performed
+  before this decision.
+- **`revocation_authority_ref`** (string, optional) — same field as
+  `action-ref.md`: `SHA-256(JCS(authority_descriptor))`, naming the specific,
+  independently-identifiable authority consulted — never the raw check
+  result itself.
+- **`delegation_chain_ref`** (string, optional) — the field defined in
+  [`delegation-chain-ref.md`](./delegation-chain-ref.md): a pointer to the
+  multi-hop delegation artifact (`hops`, each with `delegatee`, `delegator`,
+  `delegation_ref`, `scope`) that authorized the acting agent.
+
+None of the four enters any invariant below as a resolved true/false claim
+about revocation, expiry, or staleness — that would require the external
+registry or chain artifact these fields point at, which this spec does not
+inline, for the same reason `revocation_authority_ref` doesn't inline
+revocation status in `action-ref.md`: a pointer a third party can check
+independently is a stronger claim than a self-reported boolean. What the
+fields buy is narrower and verifiable from the preimage bytes alone:
+**invariant 8** below checks that, when present, they are temporally
+ordered against each other and against `ts_ms` — the one thing a verifier
+*can* confirm without the external material.
+
+### What this does and does not close — the honest accounting
+
+astrogilda's `map_authority_at_dispatch.py` run against `probityai/
+agent-evidence-vectors==0.35.0`'s real corpus (`authority-at-dispatch/v1`,
+10 denied cases) named 7 reasons this spec had no field for. Re-run after
+this change, with `decision_id`'s preimage populated from each case's own
+`authorityEvidence`/`delegation`/`contractId` fields:
+
+| corpus reason | after v1.3 | why |
+|---|---|---|
+| `grant_revoked` | **AUDITABLE_VIA_NAMED_AUTHORITY** | `revocation_check_at_ms` (from `decisionTime`) + `revocation_authority_ref` (binding `authorityEvidence.source`/`.revision`) make the decision point at a specific, named revocation snapshot. A third party holding that snapshot can check whether the grant was revoked before the bound timestamp. This spec's own verifier still cannot — it has no access to the snapshot's contents, only the pointer, same posture as `action-ref.md`'s `revocation_authority_ref`. |
+| `authority_evidence_stale` | **AUDITABLE_VIA_NAMED_AUTHORITY** | `authority_verified_at_ms` (from `authorityEvidence.observedAt`) lets any verifier recompute the real age (`ts_ms - authority_verified_at_ms`) directly. The staleness *threshold* (`maxAgeSeconds` in the corpus) is not a field this spec defines — same as `expires_at` in `delegation-ref.md`, checking currency against the threshold is the integrator's policy, not a spec invariant. |
+| `evidence_age_inconsistent` | **CLOSED** | this check exists only to catch a record whose self-declared age doesn't match its own timestamps. With `authority_verified_at_ms` in the hashed preimage, there is no separate declared-age value to diverge from the real one — the inconsistency this check detects cannot occur by construction, not merely "mapped to a new code." |
+| `grant_expired` | **PARTIALLY MODELED** | `delegation_chain_ref`'s hops each carry a `delegation_ref` pointer, and `delegation-ref.md`'s artifact includes `expires_at`. A verifier with the full chain artifact (not just the hash) can check the upper bound. There is no `notBefore` field anywhere in this spec family — the corpus's two-sided window (`notBefore` ≤ decision time < `expiresAt`) is only half-coverable. |
+| `contract_id_missing` / `contract_id_unknown` | **NOT_MODELED, unchanged** | these check which governing contract the whole decision is read under — not a revocation authority specifically. Stretching `revocation_authority_ref`'s `authority_id` to also mean "the policy framework for this decision" would be exactly the kind of forced-fit overclaim this spec has refused elsewhere (see `EFFECTIVE_CALL_REBINDING_FAILED`'s note on not forcing unrelated cases through one invariant). Genuinely out of scope until a field for that is designed on its own terms. |
+| `scope_amplified` | **NOT MODELED AS AN INVARIANT, data now available** | `delegation_chain_ref`'s `hops` already carry each hop's `scope` — an implementer holding the chain artifact could write this check themselves. `delegation-chain-ref.md` is explicit that it does not constrain scope narrowing as part of the spec's own invariants; this is unchanged, and this spec adds no invariant for it either. |
+
+Three of seven move to something checkable by a third party holding the
+named authority (not resolved by this verifier alone); one collapses
+entirely; one is half-covered; two stay genuinely out of scope. Reported
+this way, by `map_authority_at_dispatch.py`, rather than as a blanket "7
+move" — the corpus's own checks (`authoritydispatch.CHECKS`) distinguish
+these for a reason, and this spec's fields don't erase that distinction.
+
 ## Anchoring
 
 Optional. rpelevin's framing: join contract first, anchors after. A
@@ -172,6 +259,7 @@ All verifier results map to exactly one of these codes:
 | `DIGEST_MISMATCH` | profile is supported, preimage is within domain, all fields are present, but recomputed digest does not match the claimed ref |
 | `EXPIRED_POLICY_BINDING` | decision evidence is structurally valid but `policy_id` was not in force at `ts_ms` |
 | `POST_COMMIT_DIVERGENCE` (v1.1) | invariants 1-6 all pass — the join record is fully valid — but a `post_commit_observation` reports a content hash for the same `result_id` that does not match the original `output_hash`. Does not retroactively change any other invariant's result. |
+| `AUTHORITY_CHECK_ORDER_INVALID` (v1.3) | one or more of `authority_verified_at_ms`, `revocation_check_at_ms` is present in `decision_id`'s preimage, but the temporal order `authority_verified_at_ms ≤ revocation_check_at_ms ≤ ts_ms` does not hold. Does not resolve revocation or staleness itself — see "Gap — delegation, revocation and freshness" above. |
 
 `VERIFIER_OFFLINE` remains a distinct code when the verifier cannot access the
 preimage material needed to recompute any ref. It does not collapse into
@@ -208,6 +296,12 @@ failure_mode:
    file-write domain.
 7. **post_commit_consistency** (v1.1, additive) — see "Post-commit divergence
    (v1.1/v1.2)" below. Exempt when the envelope carries no `post_commit_ref`.
+8. **authority_check_order** (v1.3, additive) — when `decision_id`'s preimage
+   carries `authority_verified_at_ms` and/or `revocation_check_at_ms`, each
+   present field must be ≤ `ts_ms`, and if both are present,
+   `authority_verified_at_ms` ≤ `revocation_check_at_ms`. Exempt when neither
+   field is present. See "Gap — delegation, revocation and freshness" above
+   for what this does and does not prove.
 
 ## Post-commit divergence (v1.1/v1.2)
 
@@ -325,6 +419,14 @@ across domains: see `file-write-rebinding-failed-001` (v1.1) for the file
 path case astrogilda/Sankalp asked about directly
 (`probityai/agent-evidence-vectors#26`, 2026-10-18) — no new mechanism, the
 same failure in a new domain.
+
+**AUTHORITY_CHECK_ORDER_INVALID** (v1.3) — `decision_id`'s preimage carries
+`revocation_check_at_ms` earlier than `authority_verified_at_ms`, or either
+field later than `ts_ms`. A revocation check cannot precede the authority
+verification it depends on, and neither can happen after the decision they
+claim to support. Invariant 8 fails. Does not resolve whether the
+underlying grant was actually revoked or stale — only that the record's own
+claimed order of events is incoherent.
 
 **POST_COMMIT_DIVERGENCE** (v1.1) — decision, attempt, and result are all
 present, complete, and mutually consistent; invariants 1-6 all pass. A
