@@ -1,4 +1,4 @@
-[![CI](https://github.com/giskard09/argentum-core/actions/workflows/ci.yml/badge.svg)](https://github.com/giskard09/argentum-core/actions) [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE) · [Independent conformance receipt](https://verify.crestsystems.ai/argentum-core-substrate-v0.json) (Crest Verification Service, 5/5 PASS)
+[![CI](https://github.com/giskard09/argentum-core/actions/workflows/ci.yml/badge.svg)](https://github.com/giskard09/argentum-core/actions) [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
 # Mycelium Trails — Accountability Protocol for Autonomous Agents
 
@@ -22,7 +22,7 @@ This is not a feature. It is a structural property of the protocol.
 
 **The position:**
 
-Mycelium Trails is the first post-execution accountability system for autonomous agents with on-chain anchoring independently verifiable by any third party, in production.
+Mycelium Trails records what an autonomous agent did after it acted and anchors a hash of that record on-chain (Base and Arbitrum), so any third party can check, using the public vectors and verifiers in this repository, that the record existed at a given time and was not altered.
 
 The timestamps are public. The contract is on Arbitrum. The production trails exist. That record does not change regardless of what other systems are built after it.
 
@@ -70,7 +70,7 @@ Pioneer Agent runs under Giskard's supervision. Actions taken by a sub-agent are
 
 The protocol spec (`docs/spec/action-ref.md`) is the reference implementation recognized in the [CTEF v0.3.3 cross-extension matrix](https://github.com/AgentAvow/AgentAvow/pull/20) (`urn:mycelium:trail`, row #2, CONFIRMED) — CTEF is maintained by [AgentAvow](https://github.com/AgentAvow/AgentAvow) (ex-AgentGraph). Independent implementations: SafeAgent, APS, Nobulex, SINT, Agent OS. Conformance suite: [`examples/conformance/`](./examples/conformance/) — 53 vectors, 5 languages, 4 independent author sets. `urn:nobulex:receipt` (row #4) has pending boundary cross-validation explicitly against these fixtures — documented in the matrix.
 
-See [ADOPTERS.md](./ADOPTERS.md) for verified production integrations.
+See [ADOPTERS.md](./ADOPTERS.md) for verified production integrations and [RECORD.md](./RECORD.md) for what third parties have published about this work.
 
 ---
 
