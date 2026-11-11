@@ -1,0 +1,626 @@
+{
+  "binding_vectors": [
+    {
+      "description": "Two separate calls, same amount, same asset, same payTo. Declared binding is amount+payTo, so the two records are not distinguishable: the binding is not unique.",
+      "expected": {
+        "binding_strength": "amount_payto",
+        "distinguishable": false,
+        "verdict": "BINDING_NOT_UNIQUE"
+      },
+      "id": "B1-amount-payto-cannot-tell-two-same-price-calls-apart",
+      "input": {
+        "record_a": {
+          "binding": {
+            "kind": "amount_payto"
+          },
+          "payment": {
+            "amount": "10.00",
+            "asset": "USDC",
+            "pay_to": "0x00000000000000000000000000000000000000aa"
+          },
+          "record_id": "call-1"
+        },
+        "record_b": {
+          "binding": {
+            "kind": "amount_payto"
+          },
+          "payment": {
+            "amount": "10.00",
+            "asset": "USDC",
+            "pay_to": "0x00000000000000000000000000000000000000aa"
+          },
+          "record_id": "call-2"
+        }
+      },
+      "kind": "negative",
+      "synthetic": true
+    },
+    {
+      "description": "Same two calls, same amount and payTo. Declared binding is the authorization's one-time nonce (bytes32); distinct values distinguish them.",
+      "expected": {
+        "binding_strength": "authorization_nonce",
+        "distinguishable": true,
+        "verdict": "DISTINGUISHED"
+      },
+      "id": "B2-authorization-nonce-distinguishes-same-price-calls",
+      "input": {
+        "record_a": {
+          "binding": {
+            "kind": "authorization_nonce",
+            "value": "0xa1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+          },
+          "payment": {
+            "amount": "10.00",
+            "asset": "USDC",
+            "pay_to": "0x00000000000000000000000000000000000000aa"
+          },
+          "record_id": "call-1"
+        },
+        "record_b": {
+          "binding": {
+            "kind": "authorization_nonce",
+            "value": "0xa2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2"
+          },
+          "payment": {
+            "amount": "10.00",
+            "asset": "USDC",
+            "pay_to": "0x00000000000000000000000000000000000000aa"
+          },
+          "record_id": "call-2"
+        }
+      },
+      "kind": "positive",
+      "synthetic": true
+    },
+    {
+      "description": "Same two calls bound by transaction hash. Distinguishable, and the declared strength is tx_hash, which is weaker than authorization_nonce in this vector set's ordering.",
+      "expected": {
+        "binding_strength": "tx_hash",
+        "distinguishable": true,
+        "verdict": "DISTINGUISHED"
+      },
+      "id": "B3-tx-hash-distinguishes-but-is-declared-weaker",
+      "input": {
+        "record_a": {
+          "binding": {
+            "kind": "tx_hash",
+            "value": "0xb1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1"
+          },
+          "payment": {
+            "amount": "10.00",
+            "asset": "USDC",
+            "pay_to": "0x00000000000000000000000000000000000000aa"
+          },
+          "record_id": "call-1"
+        },
+        "record_b": {
+          "binding": {
+            "kind": "tx_hash",
+            "value": "0xb2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2"
+          },
+          "payment": {
+            "amount": "10.00",
+            "asset": "USDC",
+            "pay_to": "0x00000000000000000000000000000000000000aa"
+          },
+          "record_id": "call-2"
+        }
+      },
+      "kind": "positive",
+      "synthetic": true
+    },
+    {
+      "description": "Two records declare the same authorization nonce: same binding, not two distinct calls.",
+      "expected": {
+        "binding_strength": "authorization_nonce",
+        "distinguishable": false,
+        "verdict": "SAME_BINDING"
+      },
+      "id": "B4-same-nonce-is-same-binding",
+      "input": {
+        "record_a": {
+          "binding": {
+            "kind": "authorization_nonce",
+            "value": "0xa1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+          },
+          "payment": {
+            "amount": "10.00",
+            "asset": "USDC",
+            "pay_to": "0x00000000000000000000000000000000000000aa"
+          },
+          "record_id": "call-1"
+        },
+        "record_b": {
+          "binding": {
+            "kind": "authorization_nonce",
+            "value": "0xa1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+          },
+          "payment": {
+            "amount": "10.00",
+            "asset": "USDC",
+            "pay_to": "0x00000000000000000000000000000000000000aa"
+          },
+          "record_id": "call-2"
+        }
+      },
+      "kind": "negative",
+      "synthetic": true
+    },
+    {
+      "description": "Record carries payment fields but declares no binding kind. The verifier does not infer one.",
+      "expected": {
+        "binding_strength": null,
+        "distinguishable": false,
+        "verdict": "BINDING_UNDECLARED"
+      },
+      "id": "B5-undeclared-binding-is-not-inferred",
+      "input": {
+        "record_a": {
+          "payment": {
+            "amount": "10.00",
+            "asset": "USDC",
+            "pay_to": "0x00000000000000000000000000000000000000aa"
+          },
+          "record_id": "call-1"
+        },
+        "record_b": {
+          "binding": {
+            "kind": "authorization_nonce",
+            "value": "0xa2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2"
+          },
+          "payment": {
+            "amount": "10.00",
+            "asset": "USDC",
+            "pay_to": "0x00000000000000000000000000000000000000aa"
+          },
+          "record_id": "call-2"
+        }
+      },
+      "kind": "negative",
+      "synthetic": true
+    },
+    {
+      "description": "Declared kind authorization_nonce but the value is not a 0x + 64 hex bytes32.",
+      "expected": {
+        "binding_strength": null,
+        "distinguishable": false,
+        "verdict": "BINDING_VALUE_INVALID"
+      },
+      "id": "B6-declared-nonce-with-invalid-value",
+      "input": {
+        "record_a": {
+          "binding": {
+            "kind": "authorization_nonce",
+            "value": "0x1234"
+          },
+          "payment": {
+            "amount": "10.00",
+            "asset": "USDC",
+            "pay_to": "0x00000000000000000000000000000000000000aa"
+          },
+          "record_id": "call-1"
+        },
+        "record_b": {
+          "binding": {
+            "kind": "authorization_nonce",
+            "value": "0xa2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2"
+          },
+          "payment": {
+            "amount": "10.00",
+            "asset": "USDC",
+            "pay_to": "0x00000000000000000000000000000000000000aa"
+          },
+          "record_id": "call-2"
+        }
+      },
+      "kind": "negative",
+      "synthetic": true
+    },
+    {
+      "description": "One record binds by nonce, the other by tx hash: strengths differ, the pair is not compared.",
+      "expected": {
+        "binding_strength": null,
+        "distinguishable": false,
+        "verdict": "BINDING_KINDS_DIFFER"
+      },
+      "id": "B7-different-declared-kinds-are-not-comparable",
+      "input": {
+        "record_a": {
+          "binding": {
+            "kind": "authorization_nonce",
+            "value": "0xa1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+          },
+          "payment": {
+            "amount": "10.00",
+            "asset": "USDC",
+            "pay_to": "0x00000000000000000000000000000000000000aa"
+          },
+          "record_id": "call-1"
+        },
+        "record_b": {
+          "binding": {
+            "kind": "tx_hash",
+            "value": "0xb2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2"
+          },
+          "payment": {
+            "amount": "10.00",
+            "asset": "USDC",
+            "pay_to": "0x00000000000000000000000000000000000000aa"
+          },
+          "record_id": "call-2"
+        }
+      },
+      "kind": "negative",
+      "synthetic": true
+    }
+  ],
+  "constants": {
+    "event": "Anchored(bytes32 indexed ref, address indexed anchoredBy, uint256 timestamp)",
+    "event_topic0": "0xfe2289542f7a0110ac112c3a4d712afdcaaf2900a1326f4e6f340b563a0e8734",
+    "not_established": [
+      "declared_time_is_true",
+      "key_uncompromised_at_bound",
+      "set_of_actions_complete"
+    ],
+    "registry": "0x49fEcA52bC634a9Ab773226D16619deC547794aa (same CREATE2 address on Base, Arbitrum One, Ink)"
+  },
+  "description": "Vector pairs that keep a signer-declared timestamp separate from an existence bound that the emitter does not control, and that make the binding identifier a DECLARED field with a stated strength. Consistency under the evidence given here; no claim of independence, adoption or endorsement by any third party.",
+  "existence_vectors": [
+    {
+      "description": "Valid action_ref, no anchor. The timestamp is a signer-declared claim; there is no existence bound.",
+      "expected": {
+        "verdict": "DECLARED_ONLY"
+      },
+      "id": "P1-declared-only-no-anchor",
+      "input": {
+        "anchor_evidence": null,
+        "claimed_action_ref": "c78eb8513c6f43a19d15e6cb22f9b939131026f08de3441fb3f25b244f4aa9ce",
+        "preimage": {
+          "action_type": "commerce.delivery_receipt_confirmed",
+          "agent_id": "worked-example.delivery-receipt-anchor",
+          "scope": "x402:order:worked-order-0001:settlement:worked-settlement-0001",
+          "timestamp": "2026-09-15T12:00:00.000Z"
+        }
+      },
+      "kind": "positive"
+    },
+    {
+      "description": "REAL anchor (Base mainnet). The digest existed by block time 2026-09-15T13:40:35Z. The declared timestamp (12:00:00.000Z) is 6035 s earlier than that bound; nothing in this evidence says whether the declared time is true. Key validity at the bound is not established.",
+      "expected": {
+        "existed_by_utc": "2026-09-15T13:40:35Z",
+        "verdict": "EXISTENCE_BOUND_ESTABLISHED"
+      },
+      "id": "P2-anchored-existence-established",
+      "input": {
+        "anchor_evidence": {
+          "block_hash": "0xda301bf6664819ad8f8be2b296de2f47b6dbacadd8557026d142fbe42f6a855b",
+          "block_number": 51345144,
+          "block_timestamp": 1789479635,
+          "captured_from": "eth_getTransactionReceipt + eth_getBlockByNumber on https://mainnet.base.org, 2026-11-11",
+          "chain": "eip155:8453",
+          "log": {
+            "address": "0x49feca52bc634a9ab773226d16619dec547794aa",
+            "data": "0x000000000000000000000000000000000000000000000000000000006aa94ad3",
+            "log_index": 259,
+            "topics": [
+              "0xfe2289542f7a0110ac112c3a4d712afdcaaf2900a1326f4e6f340b563a0e8734",
+              "0xc78eb8513c6f43a19d15e6cb22f9b939131026f08de3441fb3f25b244f4aa9ce",
+              "0x000000000000000000000000dcc84e9798e8eb1b1b48a31b8f35e5aa7b83dbf4"
+            ]
+          },
+          "status": "0x1",
+          "tx": "0xb1144ee8777262b0d3ac2cd6ea342f14daa300cb5a4401f082e070ae18aed125"
+        },
+        "claimed_action_ref": "c78eb8513c6f43a19d15e6cb22f9b939131026f08de3441fb3f25b244f4aa9ce",
+        "preimage": {
+          "action_type": "commerce.delivery_receipt_confirmed",
+          "agent_id": "worked-example.delivery-receipt-anchor",
+          "scope": "x402:order:worked-order-0001:settlement:worked-settlement-0001",
+          "timestamp": "2026-09-15T12:00:00.000Z"
+        }
+      },
+      "kind": "positive"
+    },
+    {
+      "description": "Changing the declared timestamp by one millisecond gives a different action_ref, so the real anchor no longer matches. The anchor binds the timestamp AS DECLARED, it does not verify it.",
+      "expected": {
+        "verdict": "ANCHOR_DIGEST_MISMATCH"
+      },
+      "id": "N1-declared-time-changed-breaks-digest-link",
+      "input": {
+        "anchor_evidence": {
+          "block_hash": "0xda301bf6664819ad8f8be2b296de2f47b6dbacadd8557026d142fbe42f6a855b",
+          "block_number": 51345144,
+          "block_timestamp": 1789479635,
+          "captured_from": "eth_getTransactionReceipt + eth_getBlockByNumber on https://mainnet.base.org, 2026-11-11",
+          "chain": "eip155:8453",
+          "log": {
+            "address": "0x49feca52bc634a9ab773226d16619dec547794aa",
+            "data": "0x000000000000000000000000000000000000000000000000000000006aa94ad3",
+            "log_index": 259,
+            "topics": [
+              "0xfe2289542f7a0110ac112c3a4d712afdcaaf2900a1326f4e6f340b563a0e8734",
+              "0xc78eb8513c6f43a19d15e6cb22f9b939131026f08de3441fb3f25b244f4aa9ce",
+              "0x000000000000000000000000dcc84e9798e8eb1b1b48a31b8f35e5aa7b83dbf4"
+            ]
+          },
+          "status": "0x1",
+          "tx": "0xb1144ee8777262b0d3ac2cd6ea342f14daa300cb5a4401f082e070ae18aed125"
+        },
+        "claimed_action_ref": "973a6ab99e1cf0e3f693487bc6b8a08502d55344b464a3405afdd6b1b7f2557c",
+        "preimage": {
+          "action_type": "commerce.delivery_receipt_confirmed",
+          "agent_id": "worked-example.delivery-receipt-anchor",
+          "scope": "x402:order:worked-order-0001:settlement:worked-settlement-0001",
+          "timestamp": "2026-09-15T11:59:59.999Z"
+        }
+      },
+      "kind": "negative"
+    },
+    {
+      "description": "Claimed action_ref is the real one but the preimage was altered: recomputation fails before any anchor is read.",
+      "expected": {
+        "verdict": "ACTION_REF_MISMATCH"
+      },
+      "id": "N2-claimed-ref-does-not-match-preimage",
+      "input": {
+        "anchor_evidence": {
+          "block_hash": "0xda301bf6664819ad8f8be2b296de2f47b6dbacadd8557026d142fbe42f6a855b",
+          "block_number": 51345144,
+          "block_timestamp": 1789479635,
+          "captured_from": "eth_getTransactionReceipt + eth_getBlockByNumber on https://mainnet.base.org, 2026-11-11",
+          "chain": "eip155:8453",
+          "log": {
+            "address": "0x49feca52bc634a9ab773226d16619dec547794aa",
+            "data": "0x000000000000000000000000000000000000000000000000000000006aa94ad3",
+            "log_index": 259,
+            "topics": [
+              "0xfe2289542f7a0110ac112c3a4d712afdcaaf2900a1326f4e6f340b563a0e8734",
+              "0xc78eb8513c6f43a19d15e6cb22f9b939131026f08de3441fb3f25b244f4aa9ce",
+              "0x000000000000000000000000dcc84e9798e8eb1b1b48a31b8f35e5aa7b83dbf4"
+            ]
+          },
+          "status": "0x1",
+          "tx": "0xb1144ee8777262b0d3ac2cd6ea342f14daa300cb5a4401f082e070ae18aed125"
+        },
+        "claimed_action_ref": "c78eb8513c6f43a19d15e6cb22f9b939131026f08de3441fb3f25b244f4aa9ce",
+        "preimage": {
+          "action_type": "commerce.delivery_receipt_confirmed",
+          "agent_id": "worked-example.delivery-receipt-anchor",
+          "scope": "x402:order:worked-order-0001:settlement:worked-settlement-0001",
+          "timestamp": "2026-09-15T11:59:59.999Z"
+        }
+      },
+      "kind": "negative"
+    },
+    {
+      "description": "SYNTHETIC tamper of the capture: log emitted by an address that is not the AnchorRegistry.",
+      "expected": {
+        "verdict": "ANCHOR_WRONG_REGISTRY"
+      },
+      "id": "N3-wrong-registry-address",
+      "input": {
+        "anchor_evidence": {
+          "block_hash": "0xda301bf6664819ad8f8be2b296de2f47b6dbacadd8557026d142fbe42f6a855b",
+          "block_number": 51345144,
+          "block_timestamp": 1789479635,
+          "captured_from": "eth_getTransactionReceipt + eth_getBlockByNumber on https://mainnet.base.org, 2026-11-11",
+          "chain": "eip155:8453",
+          "log": {
+            "address": "0x0000000000000000000000000000000000000001",
+            "data": "0x000000000000000000000000000000000000000000000000000000006aa94ad3",
+            "log_index": 259,
+            "topics": [
+              "0xfe2289542f7a0110ac112c3a4d712afdcaaf2900a1326f4e6f340b563a0e8734",
+              "0xc78eb8513c6f43a19d15e6cb22f9b939131026f08de3441fb3f25b244f4aa9ce",
+              "0x000000000000000000000000dcc84e9798e8eb1b1b48a31b8f35e5aa7b83dbf4"
+            ]
+          },
+          "status": "0x1",
+          "tx": "0xb1144ee8777262b0d3ac2cd6ea342f14daa300cb5a4401f082e070ae18aed125"
+        },
+        "claimed_action_ref": "c78eb8513c6f43a19d15e6cb22f9b939131026f08de3441fb3f25b244f4aa9ce",
+        "preimage": {
+          "action_type": "commerce.delivery_receipt_confirmed",
+          "agent_id": "worked-example.delivery-receipt-anchor",
+          "scope": "x402:order:worked-order-0001:settlement:worked-settlement-0001",
+          "timestamp": "2026-09-15T12:00:00.000Z"
+        }
+      },
+      "kind": "negative"
+    },
+    {
+      "description": "SYNTHETIC tamper of the capture: topic0 is not the Anchored event.",
+      "expected": {
+        "verdict": "ANCHOR_WRONG_EVENT"
+      },
+      "id": "N4-wrong-event-topic",
+      "input": {
+        "anchor_evidence": {
+          "block_hash": "0xda301bf6664819ad8f8be2b296de2f47b6dbacadd8557026d142fbe42f6a855b",
+          "block_number": 51345144,
+          "block_timestamp": 1789479635,
+          "captured_from": "eth_getTransactionReceipt + eth_getBlockByNumber on https://mainnet.base.org, 2026-11-11",
+          "chain": "eip155:8453",
+          "log": {
+            "address": "0x49feca52bc634a9ab773226d16619dec547794aa",
+            "data": "0x000000000000000000000000000000000000000000000000000000006aa94ad3",
+            "log_index": 259,
+            "topics": [
+              "0x1111111111111111111111111111111111111111111111111111111111111111",
+              "0xc78eb8513c6f43a19d15e6cb22f9b939131026f08de3441fb3f25b244f4aa9ce",
+              "0x000000000000000000000000dcc84e9798e8eb1b1b48a31b8f35e5aa7b83dbf4"
+            ]
+          },
+          "status": "0x1",
+          "tx": "0xb1144ee8777262b0d3ac2cd6ea342f14daa300cb5a4401f082e070ae18aed125"
+        },
+        "claimed_action_ref": "c78eb8513c6f43a19d15e6cb22f9b939131026f08de3441fb3f25b244f4aa9ce",
+        "preimage": {
+          "action_type": "commerce.delivery_receipt_confirmed",
+          "agent_id": "worked-example.delivery-receipt-anchor",
+          "scope": "x402:order:worked-order-0001:settlement:worked-settlement-0001",
+          "timestamp": "2026-09-15T12:00:00.000Z"
+        }
+      },
+      "kind": "negative"
+    },
+    {
+      "description": "SYNTHETIC tamper of the capture: receipt status 0x0.",
+      "expected": {
+        "verdict": "ANCHOR_TX_NOT_SUCCESSFUL"
+      },
+      "id": "N5-anchor-tx-not-successful",
+      "input": {
+        "anchor_evidence": {
+          "block_hash": "0xda301bf6664819ad8f8be2b296de2f47b6dbacadd8557026d142fbe42f6a855b",
+          "block_number": 51345144,
+          "block_timestamp": 1789479635,
+          "captured_from": "eth_getTransactionReceipt + eth_getBlockByNumber on https://mainnet.base.org, 2026-11-11",
+          "chain": "eip155:8453",
+          "log": {
+            "address": "0x49feca52bc634a9ab773226d16619dec547794aa",
+            "data": "0x000000000000000000000000000000000000000000000000000000006aa94ad3",
+            "log_index": 259,
+            "topics": [
+              "0xfe2289542f7a0110ac112c3a4d712afdcaaf2900a1326f4e6f340b563a0e8734",
+              "0xc78eb8513c6f43a19d15e6cb22f9b939131026f08de3441fb3f25b244f4aa9ce",
+              "0x000000000000000000000000dcc84e9798e8eb1b1b48a31b8f35e5aa7b83dbf4"
+            ]
+          },
+          "status": "0x0",
+          "tx": "0xb1144ee8777262b0d3ac2cd6ea342f14daa300cb5a4401f082e070ae18aed125"
+        },
+        "claimed_action_ref": "c78eb8513c6f43a19d15e6cb22f9b939131026f08de3441fb3f25b244f4aa9ce",
+        "preimage": {
+          "action_type": "commerce.delivery_receipt_confirmed",
+          "agent_id": "worked-example.delivery-receipt-anchor",
+          "scope": "x402:order:worked-order-0001:settlement:worked-settlement-0001",
+          "timestamp": "2026-09-15T12:00:00.000Z"
+        }
+      },
+      "kind": "negative"
+    },
+    {
+      "description": "SYNTHETIC tamper of the capture: the event timestamp and the block timestamp disagree.",
+      "expected": {
+        "verdict": "EVIDENCE_INTERNAL_MISMATCH"
+      },
+      "id": "N6-evidence-internal-mismatch",
+      "input": {
+        "anchor_evidence": {
+          "block_hash": "0xda301bf6664819ad8f8be2b296de2f47b6dbacadd8557026d142fbe42f6a855b",
+          "block_number": 51345144,
+          "block_timestamp": 1789479636,
+          "captured_from": "eth_getTransactionReceipt + eth_getBlockByNumber on https://mainnet.base.org, 2026-11-11",
+          "chain": "eip155:8453",
+          "log": {
+            "address": "0x49feca52bc634a9ab773226d16619dec547794aa",
+            "data": "0x000000000000000000000000000000000000000000000000000000006aa94ad3",
+            "log_index": 259,
+            "topics": [
+              "0xfe2289542f7a0110ac112c3a4d712afdcaaf2900a1326f4e6f340b563a0e8734",
+              "0xc78eb8513c6f43a19d15e6cb22f9b939131026f08de3441fb3f25b244f4aa9ce",
+              "0x000000000000000000000000dcc84e9798e8eb1b1b48a31b8f35e5aa7b83dbf4"
+            ]
+          },
+          "status": "0x1",
+          "tx": "0xb1144ee8777262b0d3ac2cd6ea342f14daa300cb5a4401f082e070ae18aed125"
+        },
+        "claimed_action_ref": "c78eb8513c6f43a19d15e6cb22f9b939131026f08de3441fb3f25b244f4aa9ce",
+        "preimage": {
+          "action_type": "commerce.delivery_receipt_confirmed",
+          "agent_id": "worked-example.delivery-receipt-anchor",
+          "scope": "x402:order:worked-order-0001:settlement:worked-settlement-0001",
+          "timestamp": "2026-09-15T12:00:00.000Z"
+        }
+      },
+      "kind": "negative"
+    },
+    {
+      "description": "Declared timestamp is later than the anchor's block time: the digest cannot have existed before it was declared. Uses a SYNTHETIC preimage and a SYNTHETIC capture whose block time was set earlier than the declared time, with the log data changed to match (internally consistent, false).",
+      "expected": {
+        "verdict": "DECLARED_AFTER_EXISTENCE_BOUND"
+      },
+      "id": "N7-declared-after-existence-bound",
+      "input": {
+        "anchor_evidence": {
+          "block_hash": "0xda301bf6664819ad8f8be2b296de2f47b6dbacadd8557026d142fbe42f6a855b",
+          "block_number": 51345144,
+          "block_timestamp": 1789476035,
+          "captured_from": "eth_getTransactionReceipt + eth_getBlockByNumber on https://mainnet.base.org, 2026-11-11",
+          "chain": "eip155:8453",
+          "log": {
+            "address": "0x49feca52bc634a9ab773226d16619dec547794aa",
+            "data": "0x000000000000000000000000000000000000000000000000000000006aa93cc3",
+            "log_index": 259,
+            "topics": [
+              "0xfe2289542f7a0110ac112c3a4d712afdcaaf2900a1326f4e6f340b563a0e8734",
+              "0xef3daf5623a31a6ceb7293be05aa512d60d8ab69d9949d7a81abf04d315399bb",
+              "0x000000000000000000000000dcc84e9798e8eb1b1b48a31b8f35e5aa7b83dbf4"
+            ]
+          },
+          "status": "0x1",
+          "tx": "0xb1144ee8777262b0d3ac2cd6ea342f14daa300cb5a4401f082e070ae18aed125"
+        },
+        "claimed_action_ref": "ef3daf5623a31a6ceb7293be05aa512d60d8ab69d9949d7a81abf04d315399bb",
+        "preimage": {
+          "action_type": "commerce.delivery_receipt_confirmed",
+          "agent_id": "worked-example.delivery-receipt-anchor",
+          "scope": "x402:order:worked-order-0001:settlement:worked-settlement-0001",
+          "timestamp": "2026-09-15T14:00:00.000Z"
+        }
+      },
+      "kind": "negative"
+    },
+    {
+      "description": "KNOWN LIMIT. A capture whose block time was moved earlier and whose log data was changed to match is internally consistent, so offline verification of the capture alone accepts it as an existence bound. Only a chain read of {tx, block hash} detects it. This is why anchor checking cannot be 'bytes plus a standard-library verifier' and must be an optional layer or a carve-out. SYNTHETIC tamper.",
+      "expected": {
+        "existed_by_utc": "2026-09-15T12:40:35Z",
+        "verdict": "EXISTENCE_BOUND_ESTABLISHED"
+      },
+      "id": "K1-fabricated-capture-passes-offline",
+      "input": {
+        "anchor_evidence": {
+          "block_hash": "0xda301bf6664819ad8f8be2b296de2f47b6dbacadd8557026d142fbe42f6a855b",
+          "block_number": 51345144,
+          "block_timestamp": 1789476035,
+          "captured_from": "eth_getTransactionReceipt + eth_getBlockByNumber on https://mainnet.base.org, 2026-11-11",
+          "chain": "eip155:8453",
+          "log": {
+            "address": "0x49feca52bc634a9ab773226d16619dec547794aa",
+            "data": "0x000000000000000000000000000000000000000000000000000000006aa93cc3",
+            "log_index": 259,
+            "topics": [
+              "0xfe2289542f7a0110ac112c3a4d712afdcaaf2900a1326f4e6f340b563a0e8734",
+              "0xc78eb8513c6f43a19d15e6cb22f9b939131026f08de3441fb3f25b244f4aa9ce",
+              "0x000000000000000000000000dcc84e9798e8eb1b1b48a31b8f35e5aa7b83dbf4"
+            ]
+          },
+          "status": "0x1",
+          "tx": "0xb1144ee8777262b0d3ac2cd6ea342f14daa300cb5a4401f082e070ae18aed125"
+        },
+        "claimed_action_ref": "c78eb8513c6f43a19d15e6cb22f9b939131026f08de3441fb3f25b244f4aa9ce",
+        "preimage": {
+          "action_type": "commerce.delivery_receipt_confirmed",
+          "agent_id": "worked-example.delivery-receipt-anchor",
+          "scope": "x402:order:worked-order-0001:settlement:worked-settlement-0001",
+          "timestamp": "2026-09-15T12:00:00.000Z"
+        }
+      },
+      "kind": "known_limit"
+    }
+  ],
+  "license": "CC0-1.0",
+  "real_vs_synthetic": {
+    "real": [
+      "P1 preimage and P2 anchor evidence (Base mainnet block 51345144, tx 0xb1144ee8...d125)"
+    ],
+    "synthetic": [
+      "N3-N7 and K1 tampered captures",
+      "every binding vector and its nonces/tx hashes/addresses"
+    ]
+  },
+  "spec_version": "declared-vs-anchored-existence-v1",
+  "tension_declared": "Verifying an anchor needs a chain read. verify.py's offline mode only checks the captured evidence for internal consistency (see K1); `verify.py --live` re-reads the chain. Anchor checking is therefore an optional layer or an explicit carve-out from a 'bytes plus standard library' bar, not part of it."
+}
