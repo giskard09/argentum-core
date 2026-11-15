@@ -1,0 +1,39 @@
+name: Farley receipt-signature corpus
+
+# Replays probityai/agent-evidence-vectors' `vectors-receipt-signature` corpus
+# (29 vectors, each judged with and without key validity windows) through
+# examples/conformance/farley-receipt-signature/vector_verifier.py, using the
+# corpus owner's Action, pinned by commit (tag v0.36.3). The verifier was written from the text
+# of draft-farley-acta-signed-receipts-03 and checked against the corpus; the
+# run is directed, not blind. It certifies nothing. See that directory's README.
+
+on:
+  pull_request:
+    paths:
+      - 'examples/conformance/farley-receipt-signature/**'
+      - 'jcs.py'
+      - '.github/workflows/farley-receipt-signature-corpus.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  corpus:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install verifier dependency
+        run: pip install pynacl==1.6.2
+
+      - name: Replay vectors-receipt-signature through the verifier
+        uses: probityai/agent-evidence-vectors@13247ea551e470fb57413fdfab4f2738147613a1 # v0.36.3
+        with:
+          corpus: vectors-receipt-signature
+          verifier: python3 examples/conformance/farley-receipt-signature/vector_verifier.py
