@@ -1,1 +1,1 @@
-agent-evidence-vectors==0.35.0
+agent-evidence-vectors==0.36.3
