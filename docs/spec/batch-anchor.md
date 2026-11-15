@@ -90,6 +90,18 @@ No new signing path, no new contract ABI, no new environment variable.
   included in *this* rollup (same non-overclaim discipline as
   `guarantee-model.md`'s trail-status table: a missing signal is a missing
   signal, not a negative result).
+- **It does not authenticate the leaf's position or the batch size.**
+  `verify_inclusion(action_ref, proof, root)` takes no position or size
+  argument, and sibling pairs are hashed in sorted order with no direction
+  bits, so a valid proof shows membership and nothing more: not which index
+  the leaf held, and not how many leaves the batch had. A proof's length
+  does not reveal the size either (an odd node is carried up unhashed, so
+  the last leaf of a 5-leaf batch has the same one-sibling proof as a leaf
+  of a 2-leaf batch). A verifier that needs the position or the size must
+  bind them by another means, for example a signed claim or a signed
+  checkpoint that includes them. This is not a defect of the root, but it
+  is not a guarantee either. Frozen in
+  `plugins/agt_evidence_anchor/tests/test_merkle.py` (membership-only tests).
 - **It does not retroactively date the individual action.** The batch root's
   on-chain timestamp bounds when the rollup was anchored, not when any
   individual leaf's underlying action occurred — that timing claim, if

@@ -35,6 +35,35 @@ CI runs `tests/test_farley_receipt_vectors.py`. It checks six things:
 - the SHOULD vectors pass in both runs, only they carry `expected_if_not_honoured`, and a verifier that skips the windows while the run declares them honoured still fails, on `superseded-key.reject` only;
 - `verify.py` refuses mutated receipts: wrong envelope shape, `alg`, a signature inside the signing input, tampering, missing field, bad encoding, and a mismatch between `kid` and `issuer_id`.
 
+## vector_verifier.py: the 29-vector corpus of probityai/agent-evidence-vectors
+
+`vector_verifier.py` answers `<cmd> <receipt>` in the contract of the `vectors-receipt-signature` corpus
+(`AEV_RECEIPT_JWKS`, optional `AEV_RECEIPT_CONTEXT`; last stdout line is `{"verdict", "code"}`; exit 0/1/2).
+Its CI job, `.github/workflows/farley-receipt-signature-corpus.yml`, replays the corpus through it with
+`probityai/agent-evidence-vectors`, pinned by commit `13247ea` (tag v0.36.3).
+
+What it is: a verifier of `draft-farley-acta-signed-receipts-03` (envelope shape) written from the text of the draft and
+the corpus's requirements table, then checked against the corpus. Only `jcs.py` is shared with this repository, and no
+code of the corpus's reference reader is imported or copied. The result is **directed**, not blind: the expected verdicts
+were visible while it was written.
+
+Result with `agent-evidence-vectors==0.36.3`: 29 of 29 pass; 0 SHOULD not honoured; 0 gaps closed; 0 fail.
+The 29 include the 4 `SHOULD` members (key validity window) and the 2 `gap` members (`RS-G-001` revocation, `RS-G-002`
+commitment time), which the draft does not decide: they are answered as the draft does, valid.
+
+Where the draft does not decide, it chooses (and the corpus's `rs-c-3` asks for the same): a key's `valid_until` is outside
+its window and `valid_from` inside (RFC 7519 `nbf`/`exp`). It does not read `revoked_at` or a commitment's logging time.
+It answers the flat receipt shape `undecidable` (`unsupported_shape`); the corpus has no flat member.
+
+What it is not: not the corpus's reference reader, not an independent implementation in the sense of the
+independence method (the expected outcomes were known), and not a certification of anything. The test keys are public.
+
+`tests/test_farley_vector_verifier.py` pins rules the corpus has no member for (unsupported `alg`, unknown `kid`, a
+receipt at chain position 2 with no link, uppercase hex in a link) and a fifth, a link or `issued_at` with a trailing
+LF or CRLF, which must be refused (a `$`-anchored pattern accepts it). The corpus has no member for any of them; the trailing-LF
+case was caught by this repository's own regex sweep (`tests/test_regex_anchor_sweep.py`), not by the corpus. Mutating the
+verifier to skip any of them is not detected by the corpus; it is by these tests.
+
 ## Observed: @veritasacta/verify 0.10.19
 
 Run with `--jwks ./jwks.json --mode receipt` (0.10.19 was the latest npm release on 2026-09-23):
