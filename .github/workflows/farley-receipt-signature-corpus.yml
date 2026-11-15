@@ -29,11 +29,15 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install verifier dependency
-        run: pip install pynacl==1.6.2
+      # The Action installs its own Python after this job's, so `python3` on its
+      # PATH is not this one. The verifier runs from its own venv instead.
+      - name: Install verifier dependency (own venv)
+        run: |
+          python -m venv .verifier-venv
+          .verifier-venv/bin/pip install pynacl==1.6.2
 
       - name: Replay vectors-receipt-signature through the verifier
         uses: probityai/agent-evidence-vectors@13247ea551e470fb57413fdfab4f2738147613a1 # v0.36.3
         with:
           corpus: vectors-receipt-signature
-          verifier: python3 examples/conformance/farley-receipt-signature/vector_verifier.py
+          verifier: .verifier-venv/bin/python examples/conformance/farley-receipt-signature/vector_verifier.py
