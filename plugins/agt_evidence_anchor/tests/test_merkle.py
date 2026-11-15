@@ -92,3 +92,56 @@ def test_build_merkle_tree_rejects_empty_list():
 def test_build_merkle_tree_rejects_malformed_ref():
     with pytest.raises(ValueError):
         build_merkle_tree(["not-64-hex-chars"])
+
+
+# ── Solo membresía: ni posición ni tamaño del lote quedan autenticados ──────
+# Congela la propiedad declarada en docs/spec/batch-anchor.md ("does NOT
+# authenticate the leaf's position or the batch size"). Documenta el
+# comportamiento actual; no lo cambia.
+
+def test_verify_inclusion_takes_no_position_or_size():
+    """The verifier's only inputs are (action_ref, proof, root)."""
+    import inspect
+    params = list(inspect.signature(verify_inclusion).parameters)
+    assert params == ["action_ref", "proof", "root"]
+
+
+def test_position_is_not_authenticated():
+    """[a, b] and [b, a] give the same root, and the same proof verifies the
+    leaf at index 0 or index 1: the proof carries no position."""
+    a, b = _refs(2)
+    t_ab = build_merkle_tree([a, b])
+    t_ba = build_merkle_tree([b, a])
+    assert t_ab.root == t_ba.root
+    proof_a_at_0 = get_proof(a, t_ab)
+    proof_a_at_1 = get_proof(a, t_ba)
+    assert proof_a_at_0 == proof_a_at_1
+    assert verify_inclusion(a, proof_a_at_0, t_ab.root) is True
+    assert verify_inclusion(a, proof_a_at_1, t_ba.root) is True
+
+
+def test_batch_size_is_not_authenticated_by_proof_length():
+    """A one-sibling proof is valid both in a 2-leaf batch and for the last
+    leaf of a 5-leaf batch (odd node carried up): proof shape does not reveal
+    batch size, and verify_inclusion has no size input to check against."""
+    refs2, refs5 = _refs(2), _refs(5)
+    t2, t5 = build_merkle_tree(refs2), build_merkle_tree(refs5)
+    p2 = get_proof(refs2[0], t2)
+    p5 = get_proof(refs5[-1], t5)
+    assert len(p2) == len(p5) == 1
+    assert verify_inclusion(refs2[0], p2, t2.root) is True
+    assert verify_inclusion(refs5[-1], p5, t5.root) is True
+    assert t2.root != t5.root
+
+
+def test_membership_only_rejects_leaf_not_in_batch():
+    """Membership is still enforced: a leaf that is not in the batch is
+    rejected, even when given another leaf's valid proof."""
+    refs = _refs(5)
+    tree = build_merkle_tree(refs)
+    outsider = compute_action_ref("agent-outsider", "batch.test", "batch-anchor-test",
+                                  "2026-07-31T00:00:00.000Z")
+    assert outsider not in refs
+    for ref in refs:
+        assert verify_inclusion(outsider, get_proof(ref, tree), tree.root) is False
+    assert verify_inclusion(outsider, [], tree.root) is False
