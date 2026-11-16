@@ -16,13 +16,13 @@ EXPECTED = {
     "Foundry cast not installed": (1, "ERC-8274 cross-check with Foundry cast: ci.yml does not install Foundry"),
     "set ERC8274_LIVE=1": (1, "ERC-8274 live receipt on Base mainnet: opt-in, needs network"),
 }
-LINE = re.compile(r"^SKIPPED \[(\d+)\] (\S+?):(\d+): (.*)$")
+LINE = re.compile(r"SKIPPED \[(\d+)\] (\S+?):(\d+): (.*)")   # used with fullmatch (repo rule: no $ anchors)
 
 
 def check(text: str) -> tuple[list[str], list[str]]:
     report, errors, counts = [], [], {}
     for raw in text.splitlines():
-        m = LINE.match(raw.strip())
+        m = LINE.fullmatch(raw.strip())
         if not m:
             continue
         n, path, _, reason = int(m.group(1)), m.group(2), m.group(3), m.group(4)
