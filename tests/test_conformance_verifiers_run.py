@@ -3,8 +3,10 @@
 Most corpora had no test of their own, so CI never ran them. Verifiers are
 discovered by glob, so a new corpus is covered without editing this file.
 
-The crewai-unguarded-retry verifiers need crewai installed and run in their own
-job (see DEUDA: pinned crewai CI job); they are skipped here, not silently passed.
+The crewai-unguarded-retry verifiers need crewai installed. TODAY THEY RUN IN NO CI:
+no workflow installs crewai (`grep -r crewai .github` is empty). They are reported as
+skipped here, which means not run, not passed. Open debt: a pinned crewai CI job
+(DEUDA_INTERNA 24/09), not built yet.
 
 test_flipped_expected_turns_red: for corpora whose verifier used to ignore the
 declared `expected`, flipping it in a copy of the corpus must make the verifier
@@ -46,7 +48,7 @@ def _run(directory, script):
 @pytest.mark.parametrize("rel", VERIFIERS)
 def test_verifier_exits_zero(rel):
     if rel.startswith(NEEDS_CREWAI):
-        pytest.skip("needs crewai; runs in its own job")
+        pytest.skip("needs crewai; NOT run in any CI today (DEUDA_INTERNA 24/09)")
     r = _run(os.path.join(CONF, os.path.dirname(rel)), os.path.basename(rel))
     assert r.returncode == 0, r.stdout[-2000:] + r.stderr[-2000:]
 
