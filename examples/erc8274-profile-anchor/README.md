@@ -66,6 +66,42 @@ rotation is a configuration that is in use but has no `Anchored` event (or none 
 - Single-backend formula only (as in the ERC draft). Multi-verifier composition and the pre-selection sentinel
   profile are not covered.
 
+## Composition control: anchor + retirement + consumer policy (SIMULATED)
+
+Negative control proposed by Pavlo in the trustless-ai group (Telegram, 2026-11-16): anchoring a `proofProfile`
+is not the same as authorizing that verifier to accept NEW submissions. The control, end to end and without
+touching the ERC interface: (1) anchor verifier A; (2) retire A at block B and activate verifier B; (3) a NEW
+submission by A after B is rejected although A still has a valid anchor; (4) an OLD submission by A before B stays
+verifiable historically; (5) a configuration with no anchor is rejected when the consumer's policy requires one.
+
+`composition_policy.py` is a pure function `evaluate(verifier_ref, submission_block, anchor_block, retirements,
+trusted_emitters, require_anchor) -> (accept, reason)`; reasons: `UNANCHORED`, `ANCHOR_AFTER_SUBMISSION`,
+`RETIRED_AT_OR_BEFORE_SUBMISSION`, `HISTORICAL_OK`, `ANCHORED_OK`, `ANCHOR_NOT_REQUIRED`. Tests:
+`tests/test_erc8274_composition_policy.py` (a positive and a negative case per step, plus the edges).
+
+Block conventions (chosen here, tested on both sides): a retirement at block B takes effect AT B, so a submission
+in block B is REJECTED and one in B-1 is accepted as historical; an anchor in the same block as the submission
+counts as covered, one block later does not. A block-level policy cannot order two events inside one block, so the
+retirement edge fails closed. With `require_anchor=False` the anchor's timing is not evaluated at all (design choice: no exigency, no check), so an anchor later than the submission still yields `ANCHORED_OK`. The earliest retirement from a trusted emitter governs (a later duplicate does not
+un-retire); retirements from emitters the consumer does not trust, or for another verifier, are ignored.
+
+Non-claims:
+
+- The retirement source is SIMULATED. AnchorRegistry has no retirement or revocation (no owner, no roles, a single
+  `anchor(bytes32)`), and this example does not invent one. A "retirement" here is an event the consumer reads from
+  a source it chooses to trust.
+- This test does not prove that a verifier stops accepting anything in production. It proves that a consumer
+  policy combining anchor + retirement + require-anchor gives the expected verdicts on explicit inputs.
+- An anchor proves COMMITMENT, not existence or deployment (see "What it proves"); nothing here contradicts that.
+- `docs/spec/revocation-ref.md` (revocation-ref-v1) has the same semantics Pavlo asks for in steps 3 and 4
+  (append-only, applies to future use, does not rewrite the past), but it covers delegations
+  (`revoked_action_ref` / `revoked_delegation_ref`), NOT the retirement of a verifier profile, and its `revoked_at`
+  is an ISO timestamp declared by the revoker, not a block number. This is a gap; it is not covered by that spec.
+- Reorgs and finality: block numbers are inputs already read at the finality the consumer's policy requires (see
+  "What it proves").
+- Not covered: who is a trustworthy retirement emitter, how a consumer discovers retirements, and multi-verifier
+  composition.
+
 ## Limits of this example
 
 - The `first-seen` mode (log scan) is implemented but has NO test against a real RPC: no free public RPC answered
@@ -80,6 +116,7 @@ rotation is a configuration that is in use but has no `Anchored` event (or none 
 
 ## Files and how to check it
 
+- `composition_policy.py`: consumer policy over simulated anchor/retirement inputs (see the section above).
 - `profile_anchor.py`: `ref` computation and a log reader (stdlib + pycryptodome, which `web3` already pulls in).
 - `tests/test_erc8274_profile_anchor.py` (run from the repo root, `pytest -q`):
   - pinned `ref` for a synthetic configuration, computed with Foundry `cast`; recomputed with `cast` when it is
