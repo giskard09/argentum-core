@@ -48,6 +48,8 @@ def load_reference_verifier():
 def integrity_problems(data, ref):
     problems = []
     by_id = {v["id"]: v for v in data["vectors"]}
+    if not by_id:
+        sys.exit("ZERO_CASES: no vectors loaded; refusing to report success on nothing")
     original = data["original_chain_artifact"]
     fixed = data["delegation_chain_ref"]
     idx = data["missing_hop_index"]

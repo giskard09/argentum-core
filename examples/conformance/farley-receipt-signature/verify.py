@@ -75,6 +75,8 @@ def run(key_windows=True):
     jwks = load_jwks()
     with open(os.path.join(HERE, "index.json")) as f:
         vectors = json.load(f)["vectors"]
+    if not vectors:
+        sys.exit("ZERO_CASES: index.json vectors is empty; refusing to report success on nothing")
     results = []
     for v in vectors:
         with open(os.path.join(HERE, v["file"])) as f:

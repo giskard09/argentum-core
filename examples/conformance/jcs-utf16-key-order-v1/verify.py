@@ -43,6 +43,8 @@ def failure_cause(obj, declared):
 
 def main(path=None):
     data = json.loads(Path(path or Path(__file__).parent / "vectors.json").read_text())
+    if not data["vectors"]:
+        sys.exit("ZERO_CASES: vectors is empty; refusing to report success on nothing")
     passed = failed = 0
     for v in data["vectors"]:
         vid, obj = v["id"], v["input"]

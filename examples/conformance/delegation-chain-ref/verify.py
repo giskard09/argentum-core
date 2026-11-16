@@ -302,6 +302,8 @@ def run_file(vectors_path: Path):
     expected FAIL also has to fail for its `failure_mode`."""
     data = json.loads(vectors_path.read_text())
     vectors = data["vectors"]
+    if not vectors:
+        sys.exit("ZERO_CASES: " + vectors_path.name + " is empty; refusing to report success on nothing")
     seen_registry = SeenRegistry()
     passed = 0
     failed = 0

@@ -31,6 +31,8 @@ def policy_action(reason, verify_mode):
 
 vectors_path = Path(__file__).parent / "vectors.json"
 data = json.loads(vectors_path.read_text())
+if not data["vectors"]:
+    sys.exit("ZERO_CASES: vectors is empty; refusing to report success on nothing")
 
 passed = 0
 failed = 0
