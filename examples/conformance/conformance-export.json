@@ -1,10 +1,10 @@
 {
   "export_version": "conformance-export-v0-draft",
-  "generated_at": "2026-11-01T22:06:08.000Z",
+  "generated_at": "2026-11-16T07:34:55.000Z",
   "generated_by": "examples/conformance/build_export.py",
   "source_repo": "giskard09/argentum-core",
   "note": "Draft aggregation of every conformance vector set in this repo. Public discovery route and final field-naming convention are deliberately NOT decided here — pending convergence with Kenneives/CTEF (agentgraph.co/.well-known/cte-test-vectors.json pattern, A2A#1628) so the ecosystem doesn't end up with two competing conventions. Each set's `files` map preserves the original vectors.json/fixture.json bytes unmodified.",
-  "set_count": 73,
+  "set_count": 74,
   "sets": {
     "action-ref-v1-baseline.fixture": {
       "path": "examples/conformance/action-ref-v1-baseline.fixture.json",
@@ -2893,6 +2893,209 @@
             "verification_mode": "asserted",
             "independently_reproduced_by": []
           }
+        }
+      }
+    },
+    "correctover-tool-binding-v1": {
+      "path": "examples/conformance/correctover-tool-binding-v1/",
+      "files": {
+        "correctover-tool-binding-v1-vectors.json": {
+          "suite": "correctover-tool-binding-v1",
+          "spec": "draft-etcheverry-action-ref-05 (preimage four-field + receipt envelope optional fields)",
+          "derivation": "Each anchor is a fixed runtime tool-binding case. Inputs: authorized_tool (tool identity declared at approval time), dispatched_tool (tool identity actually resolved at execution time), action_type (semantic label carried in the preimage), effective_args (dispatched parameters), effective_args_digest (SHA-256 over JCS of effective_args, per the -05 receipt envelope; every anchor carries its real digest, so each REFUSES verdict below is a case a digest-only pipeline would accept), authority_verified_at_ms / revocation_check_at_ms (freshness-layer optional fields), policy_scope_max (bound ceiling where applicable). Expected verdicts: BINDS = the settlement-time check required by the payments extension (Company verifies the delegated principal equals the operation's approved subject, and the dispatched tool/params equal the approved declaration) passes; REFUSES = it must fail closed with the stated reason class.",
+          "author_set": "Correctover (github.com/DSHCorrectover) — computed with an independent verifier written from draft-etcheverry-action-ref-05 alone, with no reference to the trail, agentavow or agentgraph canonicalizer implementations. verify.py in this directory is that verifier; it is dependency-free and reproduces every verdict below. Every anchor carries a real SHA-256(JCS(effective_args)) digest, and verify.py reports alongside each verdict what a digest-only pipeline would have concluded for the same record — the four REFUSES anchors are accepted by digest-only and rejected by binding. A second independently written verifier (verifier-two) is being added under the same corpus; the zero-disagreement requirement is part of the author-set discipline.",
+          "failure_modes": {
+            "fails-open-label": "action_type label matches but dispatched tool identity differs. A relying party that checks only the semantic label sees a match that is not there.",
+            "fails-open-params": "Tool identity matches but dispatched args exceed the approved declaration. The digest verifies against the dispatched args, so integrity alone cannot catch widening — only a comparison against the approved declaration can.",
+            "fails-open-stale": "Tool and params match but authority/revocation timestamps fall outside the policy window at settlement time.",
+            "refuses": "The binding check rejects and produces a reason class; no BINDS verdict is representable through these paths.",
+            "fails-open-delegation": "Delegation chain is well-formed and the digest verifies, but the preimage agent_id names an intermediate hop instead of the chain tail. Every record looks internally consistent; only resolving the chain shows the executing subject is not the bound subject."
+          },
+          "purpose": "Runtime tool-binding cases that a digest-only pipeline cannot decide. The preimage/anchor layer proves the record was not tampered with; this suite proves the tool identity and parameter set behind the record still bind to the approved declaration at settlement time.",
+          "anchors": [
+            {
+              "name": "b3-exact-tool-and-params",
+              "note": "Happy path: dispatched tool equals approved tool, effective_args_digest recomputes from effective_args, freshness fields inside window.",
+              "authorized_tool": "payments.send",
+              "dispatched_tool": "payments.send",
+              "action_type": "payment.send",
+              "effective_args": {
+                "amount": 100,
+                "currency": "USD",
+                "to": "acct_7k"
+              },
+              "effective_args_digest": "fa123b5b955460102d0b086d0d402d705678a87b5b71aabca080c6ecae9b64f1",
+              "approved_params": {
+                "amount_max": 100,
+                "currency": "USD",
+                "to": "acct_7k"
+              },
+              "authority_verified_at_ms": 1763280000000,
+              "revocation_check_at_ms": 1763280000000,
+              "settlement_at_ms": 1763280000500,
+              "policy_scope_max": 100,
+              "expected_verdict": "BINDS",
+              "expected_reason": "tool-identity + params-bound + fresh"
+            },
+            {
+              "name": "b3-tool-substitution-same-prefix",
+              "note": "Semantic label carried in the preimage still says payment.send, but the dispatched tool is payments.refund. A digest-only pipeline passes this case; a binding check must not.",
+              "authorized_tool": "payments.send",
+              "dispatched_tool": "payments.refund",
+              "action_type": "payment.send",
+              "effective_args": {
+                "amount": 100,
+                "currency": "USD",
+                "to": "acct_7k"
+              },
+              "approved_params": {
+                "amount_max": 100,
+                "currency": "USD",
+                "to": "acct_7k"
+              },
+              "authority_verified_at_ms": 1763280000000,
+              "revocation_check_at_ms": 1763280000000,
+              "settlement_at_ms": 1763280000500,
+              "policy_scope_max": 100,
+              "expected_verdict": "REFUSES",
+              "expected_reason": "tool-identity",
+              "effective_args_digest": "fa123b5b955460102d0b086d0d402d705678a87b5b71aabca080c6ecae9b64f1"
+            },
+            {
+              "name": "b3-label-case-variant",
+              "note": "Label differs from the approved action_type only by case. action_type is an exact-match string in the -05 preimage table; no normalization is defined, so fail closed.",
+              "authorized_tool": "payments.send",
+              "dispatched_tool": "payments.send",
+              "action_type": "Payment.Send",
+              "approved_action_type": "payment.send",
+              "effective_args": {
+                "amount": 100,
+                "currency": "USD",
+                "to": "acct_7k"
+              },
+              "approved_params": {
+                "amount_max": 100,
+                "currency": "USD",
+                "to": "acct_7k"
+              },
+              "authority_verified_at_ms": 1763280000000,
+              "revocation_check_at_ms": 1763280000000,
+              "settlement_at_ms": 1763280000500,
+              "policy_scope_max": 100,
+              "expected_verdict": "REFUSES",
+              "expected_reason": "label-integrity",
+              "effective_args_digest": "fa123b5b955460102d0b086d0d402d705678a87b5b71aabca080c6ecae9b64f1"
+            },
+            {
+              "name": "b3-param-widening-amount",
+              "note": "Tool identity matches and the receipt digest verifies against the dispatched args, but the dispatched amount exceeds both the approved amount_max and the policy scope ceiling. A digest-only pipeline passes this record; only a comparison against the approved declaration catches it.",
+              "authorized_tool": "payments.send",
+              "dispatched_tool": "payments.send",
+              "action_type": "payment.send",
+              "effective_args": {
+                "amount": 250,
+                "currency": "USD",
+                "to": "acct_7k"
+              },
+              "approved_params": {
+                "amount_max": 100,
+                "currency": "USD",
+                "to": "acct_7k"
+              },
+              "authority_verified_at_ms": 1763280000000,
+              "revocation_check_at_ms": 1763280000000,
+              "settlement_at_ms": 1763280000500,
+              "policy_scope_max": 100,
+              "expected_verdict": "REFUSES",
+              "expected_reason": "param-widening",
+              "effective_args_digest": "96ac8d87c41653aa979a982cee0718b41a9aa5296c3714d4a1c4486df9dd649a"
+            },
+            {
+              "name": "b3-stale-authority-at-settlement",
+              "note": "Tool and params bound, but authority_verified_at_ms falls outside the freshness window at settlement. Exercises the freshness-layer optional fields as a settlement-time MUST.",
+              "authorized_tool": "payments.send",
+              "dispatched_tool": "payments.send",
+              "action_type": "payment.send",
+              "effective_args": {
+                "amount": 100,
+                "currency": "USD",
+                "to": "acct_7k"
+              },
+              "approved_params": {
+                "amount_max": 100,
+                "currency": "USD",
+                "to": "acct_7k"
+              },
+              "authority_verified_at_ms": 1763270000000,
+              "revocation_check_at_ms": 1763270000000,
+              "settlement_at_ms": 1763280000500,
+              "freshness_window_ms": 3600000,
+              "policy_scope_max": 100,
+              "expected_verdict": "REFUSES",
+              "expected_reason": "stale-authority",
+              "effective_args_digest": "fa123b5b955460102d0b086d0d402d705678a87b5b71aabca080c6ecae9b64f1"
+            },
+            {
+              "name": "b3-delegated-subject-in-scope",
+              "note": "Delegation chain A->B->C; agent_id in the preimage is C after full delegation resolution (preimage agent_id is the chain tail per -05 delegation-resolution section); C dispatches the approved tool within scope. Per -05 section on delegation resolution, BINDS.",
+              "authorized_tool": "payments.send",
+              "dispatched_tool": "payments.send",
+              "action_type": "payment.send",
+              "agent_id_preimage": "agent-C",
+              "delegation_chain": [
+                "agent-A",
+                "agent-B",
+                "agent-C"
+              ],
+              "effective_args": {
+                "amount": 100,
+                "currency": "USD",
+                "to": "acct_7k"
+              },
+              "approved_params": {
+                "amount_max": 100,
+                "currency": "USD",
+                "to": "acct_7k"
+              },
+              "authority_verified_at_ms": 1763280000000,
+              "revocation_check_at_ms": 1763280000000,
+              "settlement_at_ms": 1763280000500,
+              "policy_scope_max": 100,
+              "expected_verdict": "BINDS",
+              "expected_reason": "delegation-resolved + tool-identity + params-bound + fresh",
+              "effective_args_digest": "fa123b5b955460102d0b086d0d402d705678a87b5b71aabca080c6ecae9b64f1"
+            },
+            {
+              "name": "b3-delegation-tail-mismatch",
+              "note": "Delegation chain A->B->C, but the preimage agent_id is B rather than the chain tail C. Per -05 the preimage agent_id must be the terminal executor after full delegation resolution; the record is otherwise well-formed and its digest verifies, so only delegation resolution catches it.",
+              "authorized_tool": "payments.send",
+              "dispatched_tool": "payments.send",
+              "action_type": "payment.send",
+              "agent_id_preimage": "agent-B",
+              "delegation_chain": [
+                "agent-A",
+                "agent-B",
+                "agent-C"
+              ],
+              "effective_args": {
+                "amount": 100,
+                "currency": "USD",
+                "to": "acct_7k"
+              },
+              "approved_params": {
+                "amount_max": 100,
+                "currency": "USD",
+                "to": "acct_7k"
+              },
+              "authority_verified_at_ms": 1763280000000,
+              "revocation_check_at_ms": 1763280000000,
+              "settlement_at_ms": 1763280000500,
+              "policy_scope_max": 100,
+              "expected_verdict": "REFUSES",
+              "expected_reason": "delegation-unresolved",
+              "effective_args_digest": "fa123b5b955460102d0b086d0d402d705678a87b5b71aabca080c6ecae9b64f1"
+            }
+          ]
         }
       }
     },
@@ -6766,6 +6969,74 @@
                 "proof_binding": true,
                 "effective_call_binding": true,
                 "post_commit_consistency": true
+              }
+            },
+            {
+              "id": "AUTHORITY_CHECK_ORDER_CONFIRMED",
+              "description": "v1.3. decision_id's preimage carries authority_verified_at_ms and revocation_check_at_ms, both before ts_ms and in order (authority_verified_at_ms <= revocation_check_at_ms). Invariant 8 passes. Does not itself prove the grant was unrevoked or fresh -- only that the record's claimed order of events is coherent; see the spec's 'Gap -- delegation, revocation and freshness'.",
+              "expected": "PASS",
+              "failure_code": "AUTHORIZED_EFFECTIVE_CALL",
+              "envelope": {
+                "version": "execution-join-ref-v1",
+                "action_ref": "53138a338b70ac7cb54165e4175f5432384b44092f2968329212a1661f973b02",
+                "decision_id": "a11faeb239dce250c2b75c12a5e47dedb149a23a2b77b4f80c36868bb9959452",
+                "attempt_id": "9c796e94c7cbfbc898791bdafffb9f83d676820435dfdecc40899fb341f3c2bf",
+                "result_id": "121a8185d514f8458f0eee59647f9f4f7b84442c7de185680ae4e73d619e99f0",
+                "proof_ref": null
+              },
+              "preimages": {
+                "decision_id": {
+                  "action_ref": "53138a338b70ac7cb54165e4175f5432384b44092f2968329212a1661f973b02",
+                  "outcome": "permit",
+                  "policy_id": "stripe-payment-guardrail-v2",
+                  "ts_ms": 1782900000050,
+                  "version": "execution-join-ref-v1",
+                  "authority_verified_at_ms": 1782899990000,
+                  "revocation_check_at_ms": 1782900000000,
+                  "revocation_authority_ref": "6715df92abbc5adef5dce788e6b64d4fd280f16c6a077d4cf959be5f127a675b"
+                }
+              },
+              "checks": {
+                "canonical_envelope": true,
+                "chain_integrity": true,
+                "no_duplicate_attempt": true,
+                "result_uniqueness": true,
+                "effective_call_binding": true,
+                "authority_check_order": true
+              }
+            },
+            {
+              "id": "AUTHORITY_CHECK_ORDER_INVALID",
+              "description": "v1.3. decision_id's preimage carries revocation_check_at_ms earlier than authority_verified_at_ms -- a revocation check claimed to precede the authority verification it depends on. Invariant 8 fails. Same action_ref/attempt_id/result_id as AUTHORITY_CHECK_ORDER_CONFIRMED; only decision_id's preimage timestamps differ, which changes decision_id itself (the hash binds the order, not just the values).",
+              "expected": "FAIL",
+              "failure_code": "AUTHORITY_CHECK_ORDER_INVALID",
+              "envelope": {
+                "version": "execution-join-ref-v1",
+                "action_ref": "53138a338b70ac7cb54165e4175f5432384b44092f2968329212a1661f973b02",
+                "decision_id": "102dfbd20cf11fed38c9c58cbba3caff3d82b2243174437616b76d56fc4eeb69",
+                "attempt_id": "9c796e94c7cbfbc898791bdafffb9f83d676820435dfdecc40899fb341f3c2bf",
+                "result_id": "121a8185d514f8458f0eee59647f9f4f7b84442c7de185680ae4e73d619e99f0",
+                "proof_ref": null
+              },
+              "preimages": {
+                "decision_id": {
+                  "action_ref": "53138a338b70ac7cb54165e4175f5432384b44092f2968329212a1661f973b02",
+                  "outcome": "permit",
+                  "policy_id": "stripe-payment-guardrail-v2",
+                  "ts_ms": 1782900000050,
+                  "version": "execution-join-ref-v1",
+                  "authority_verified_at_ms": 1782900000000,
+                  "revocation_check_at_ms": 1782899990000,
+                  "revocation_authority_ref": "6715df92abbc5adef5dce788e6b64d4fd280f16c6a077d4cf959be5f127a675b"
+                }
+              },
+              "checks": {
+                "canonical_envelope": true,
+                "chain_integrity": true,
+                "no_duplicate_attempt": true,
+                "result_uniqueness": true,
+                "effective_call_binding": true,
+                "authority_check_order": false
               }
             }
           ],
