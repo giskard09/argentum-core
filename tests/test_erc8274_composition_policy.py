@@ -39,9 +39,23 @@ def test_step1_edge_anchor_in_same_block_as_submission_accepted():
 def test_step1_edge_anchor_one_block_late_rejected():
     assert ev(A, 499, 500) == (False, cp.ANCHOR_AFTER_SUBMISSION)
 
-def test_step1_design_late_anchor_not_evaluated_when_anchor_not_required():
-    # DESIGN CHOICE: with require_anchor=False the timing of the anchor is not evaluated (no exigency, no check).
-    assert ev(A, 400, 500, require=False) == (True, cp.ANCHORED_OK)
+def test_step1_design_late_anchor_labelled_not_rejected_when_anchor_not_required():
+    # DESIGN CHOICE: with require_anchor=False a late anchor does not reject, but the reason says it was late.
+    assert ev(A, 400, 500, require=False) == (True, cp.ANCHORED_LATE)
+
+def test_step1_late_anchor_label_edge_same_block_is_ok_one_block_late_is_late():
+    assert ev(A, 500, 500, require=False) == (True, cp.ANCHORED_OK)
+    assert ev(A, 499, 500, require=False) == (True, cp.ANCHORED_LATE)
+
+def test_step1_late_anchor_with_require_anchor_still_rejected():
+    assert ev(A, 499, 500, require=True) == (False, cp.ANCHOR_AFTER_SUBMISSION)
+
+def test_late_anchor_then_later_retirement_retirement_reason_has_precedence():
+    # documented precedence: the retirement decides the reason; HISTORICAL_OK says nothing about anchor timing here.
+    assert ev(A, 400, 500, RET_A, require=False) == (True, cp.HISTORICAL_OK)
+
+def test_late_anchor_after_retirement_rejected_by_retirement():
+    assert ev(A, BLOCK_B + 1, BLOCK_B + 5, RET_A, require=False) == (False, cp.RETIRED_AT_OR_BEFORE_SUBMISSION)
 
 # step 2: retire A at block B, activate verifier B
 def test_step2_retirement_recorded_and_b_accepts_new():

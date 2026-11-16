@@ -11,6 +11,11 @@ Block convention (documented, tested on both sides of the edge): a retirement at
 A submission in block s is historical only if s < B; s >= B is rejected. Reason: a block-level policy cannot order
 two events inside the same block, so the edge fails closed. "After block B" in the original control is covered
 (s > B rejected); s == B is the consumer's choice and this is ours.
+Anchor timing: with require_anchor=True an anchor later than the submission is rejected (ANCHOR_AFTER_SUBMISSION).
+With require_anchor=False the verdict is unchanged (accept) but the reason says what was there: ANCHORED_OK means the
+anchor was in the submission's block or earlier; ANCHORED_LATE means it came later. Precedence: a trusted retirement
+decides the reason first (HISTORICAL_OK / RETIRED_AT_OR_BEFORE_SUBMISSION), so ANCHORED_LATE only labels the branch
+without a retirement; HISTORICAL_OK therefore says nothing about anchor timing when require_anchor=False.
 Inputs are block numbers already read at whatever finality the consumer's policy requires (not handled here).
 """
 from typing import NamedTuple, Optional, Iterable
@@ -20,7 +25,8 @@ UNANCHORED = "UNANCHORED"                                # require_anchor and no
 ANCHOR_AFTER_SUBMISSION = "ANCHOR_AFTER_SUBMISSION"      # first anchor is later than the submission (not covered at that time)
 RETIRED_AT_OR_BEFORE_SUBMISSION = "RETIRED_AT_OR_BEFORE_SUBMISSION"  # trusted retirement at block <= submission block
 HISTORICAL_OK = "HISTORICAL_OK"                          # retired later, submission strictly before the retirement
-ANCHORED_OK = "ANCHORED_OK"                              # anchored, no applicable retirement
+ANCHORED_OK = "ANCHORED_OK"                              # anchor in the submission's block or earlier, no applicable retirement
+ANCHORED_LATE = "ANCHORED_LATE"                          # require_anchor=False, anchor LATER than the submission, no applicable retirement
 ANCHOR_NOT_REQUIRED = "ANCHOR_NOT_REQUIRED"              # unanchored, policy does not require an anchor, no retirement
 
 
@@ -64,4 +70,8 @@ def evaluate(verifier_ref: str, submission_block: int, anchor_block: Optional[in
         if submission_block >= retired_at:
             return Verdict(False, RETIRED_AT_OR_BEFORE_SUBMISSION)
         return Verdict(True, HISTORICAL_OK)
-    return Verdict(True, ANCHORED_OK if anchor_block is not None else ANCHOR_NOT_REQUIRED)
+    if anchor_block is None:
+        return Verdict(True, ANCHOR_NOT_REQUIRED)
+    if anchor_block > submission_block:
+        return Verdict(True, ANCHORED_LATE)    # accepted only because no anchor is required; the label says the anchor was NOT there yet
+    return Verdict(True, ANCHORED_OK)
