@@ -10,7 +10,8 @@ EMPTY_OK_ALLOWLIST is the explicit, reasoned list of verifiers that still do (to
     so a NEW verifier without a guard cannot land silently;
   - test_allowlist_names_existing_verifiers fails on a stale entry.
 The probe only empties JSON inside the verifier's own directory; fixtures it reads from a sibling directory are
-not touched (that is declared, not hidden).
+not touched (that is declared, not hidden). It also does not check that specific vector IDs are present: it
+tests "empty", not "incomplete".
 """
 import glob
 import json
@@ -34,35 +35,33 @@ def _discover():
 
 VERIFIERS = _discover()
 
+# Verifiers that already failed closed on an empty corpus with their OWN message before the ZERO_CASES guards.
+# Every other verifier that is not allowlisted must say ZERO_CASES, so a guard cannot be swapped for an incidental failure.
+OWN_EMPTY_MESSAGE = {
+    "evidence-anchor-static-analysis-v0/verify.py",
+    "scitt-card-trust-root-ref/verify.py",
+    "trail-head-window-ref/verify.py",
+}
+
 EMPTY_OK_ALLOWLIST = {
-    "agentoracle-v1/verify.py": "no ZERO_CASES guard yet; this batch guards the externally-cited baselines first (ratchet: shrink, do not grow)",
-    "anchoring-precedence-ref/verify.py": "no ZERO_CASES guard yet; this batch guards the externally-cited baselines first (ratchet: shrink, do not grow)",
-    "aps/verify.py": "no ZERO_CASES guard yet; this batch guards the externally-cited baselines first (ratchet: shrink, do not grow)",
     "art12-log-integrity-notes/verify.py": "declares itself 'not an Article 12 conformance check' (notes, not a conformance verifier)",
     "axes-exchange/validate.py": "no ZERO_CASES guard yet; this batch guards the externally-cited baselines first (ratchet: shrink, do not grow)",
     "basepay/verify.py": "no ZERO_CASES guard yet; this batch guards the externally-cited baselines first (ratchet: shrink, do not grow)",
     "composed-attestation-bip340-cell/verify.py": "cell.json holds no list-of-objects corpus: the probe empties nothing (vacuous), needs its own check",
     "composed-decision-chain-recompute/verify.py": "no ZERO_CASES guard yet; this batch guards the externally-cited baselines first (ratchet: shrink, do not grow)",
     "custody-ref/validate.py": "no ZERO_CASES guard yet; this batch guards the externally-cited baselines first (ratchet: shrink, do not grow)",
-    "decision-binding-context-digest-v1/verify.py": "no ZERO_CASES guard yet; this batch guards the externally-cited baselines first (ratchet: shrink, do not grow)",
     "delegation-chain-ref/mid-hop-revocation/verify.py": "no ZERO_CASES guard yet; this batch guards the externally-cited baselines first (ratchet: shrink, do not grow)",
     "governance-block-join-ref-v1/verify.py": "no ZERO_CASES guard yet; this batch guards the externally-cited baselines first (ratchet: shrink, do not grow)",
     "graph-advocate/verify.py": "no ZERO_CASES guard yet; this batch guards the externally-cited baselines first (ratchet: shrink, do not grow)",
     "host-capability-ref/verify.py": "no ZERO_CASES guard yet; this batch guards the externally-cited baselines first (ratchet: shrink, do not grow)",
-    "near-miss-v1/verify.py": "no ZERO_CASES guard yet; this batch guards the externally-cited baselines first (ratchet: shrink, do not grow)",
     "offer-identity-ref/verify.py": "no ZERO_CASES guard yet; this batch guards the externally-cited baselines first (ratchet: shrink, do not grow)",
     "peer-reconciliation-ref/verify.py": "no ZERO_CASES guard yet; this batch guards the externally-cited baselines first (ratchet: shrink, do not grow)",
-    "provider-protocol/verify.py": "no ZERO_CASES guard yet; this batch guards the externally-cited baselines first (ratchet: shrink, do not grow)",
     "recipient-allocation-ref/verify.py": "no ZERO_CASES guard yet; this batch guards the externally-cited baselines first (ratchet: shrink, do not grow)",
-    "recompute-drift-v1/verify.py": "no ZERO_CASES guard yet; this batch guards the externally-cited baselines first (ratchet: shrink, do not grow)",
-    "restraint-receipt-v1/verify.py": "no ZERO_CASES guard yet; this batch guards the externally-cited baselines first (ratchet: shrink, do not grow)",
     "retrieval-provenance-v1/verify.py": "no ZERO_CASES guard yet; this batch guards the externally-cited baselines first (ratchet: shrink, do not grow)",
     "settlement-retry-safety/verify.py": "no ZERO_CASES guard yet; this batch guards the externally-cited baselines first (ratchet: shrink, do not grow)",
     "settlement-retry-safety/verify_generic.py": "no ZERO_CASES guard yet; this batch guards the externally-cited baselines first (ratchet: shrink, do not grow)",
     "timestamp-grammar-negative-v1/verify.py": "declares 'no negative vectors present ... Positive control only' on its own output",
-    "tool-trust-ref-v1/verify.py": "no ZERO_CASES guard yet; this batch guards the externally-cited baselines first (ratchet: shrink, do not grow)",
     "transition-sufficiency-ref-v1/verify.py": "no ZERO_CASES guard yet; this batch guards the externally-cited baselines first (ratchet: shrink, do not grow)",
-    "verdict-ref-v1/verify.py": "no ZERO_CASES guard yet; this batch guards the externally-cited baselines first (ratchet: shrink, do not grow)",
     "verifier-key-source-ref/verify.py": "no ZERO_CASES guard yet; this batch guards the externally-cited baselines first (ratchet: shrink, do not grow)",
 }
 
@@ -119,6 +118,8 @@ def test_verifier_turns_red_on_empty_corpus(rel, repo_copy):
     assert n > 0, f"{rel}: nothing to empty in its directory; the probe is vacuous, allowlist it with a reason"
     assert code != 0, f"{rel}: exit 0 on an EMPTY corpus; add a ZERO_CASES guard or allowlist it with a reason\n{out[-400:]}"
     assert "Traceback" not in out, f"{rel}: fails by crash, not by an explicit message\n{out[-400:]}"
+    if rel not in OWN_EMPTY_MESSAGE:
+        assert "ZERO_CASES" in out, f"{rel}: exit != 0 but not through its ZERO_CASES guard (incidental failure?)\n{out[-400:]}"
 
 
 @pytest.mark.parametrize("rel", sorted(EMPTY_OK_ALLOWLIST))

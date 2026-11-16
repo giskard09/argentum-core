@@ -161,6 +161,8 @@ def main():
         fixture = json.load(f)
 
     vectors = fixture["vectors"]
+    if not vectors:
+        sys.exit("ZERO_CASES: fixture vectors is empty; refusing to report success on nothing")
     failures = 0
 
     for v in vectors:

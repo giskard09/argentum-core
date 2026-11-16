@@ -189,6 +189,8 @@ def main():
     vectors_path = Path(__file__).parent / "vectors.json"
     data = json.loads(vectors_path.read_text())
     vectors = data["vectors"]
+    if not vectors:
+        sys.exit("ZERO_CASES: vectors is empty; refusing to report success on nothing")
 
     target = sys.argv[1] if len(sys.argv) > 1 else None
     if target:

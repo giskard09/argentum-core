@@ -76,6 +76,8 @@ def main():
 
     # ---- positive vectors: must recompute byte-identical ----
     positive = load("recompute-drift-v1-positive.fixture.json")
+    if not positive["vectors"]:
+        sys.exit("ZERO_CASES: positive vectors is empty; refusing to report success on nothing")
     for v in positive["vectors"]:
         ok, reason = verify_claim(v["preimage"], v["action_ref"])
         canonical = jcs(v["preimage"])
