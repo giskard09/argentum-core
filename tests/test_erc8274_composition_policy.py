@@ -50,9 +50,19 @@ def test_step1_late_anchor_label_edge_same_block_is_ok_one_block_late_is_late():
 def test_step1_late_anchor_with_require_anchor_still_rejected():
     assert ev(A, 499, 500, require=True) == (False, cp.ANCHOR_AFTER_SUBMISSION)
 
-def test_late_anchor_then_later_retirement_retirement_reason_has_precedence():
-    # documented precedence: the retirement decides the reason; HISTORICAL_OK says nothing about anchor timing here.
-    assert ev(A, 400, 500, RET_A, require=False) == (True, cp.HISTORICAL_OK)
+def test_late_anchor_then_later_retirement_is_historical_late_anchor():
+    # historical (submission < B) but the anchor was NOT there yet: the label must say so (accept unchanged).
+    assert ev(A, 400, 500, RET_A, require=False) == (True, cp.HISTORICAL_LATE_ANCHOR)
+
+def test_historical_label_edge_same_block_is_ok_one_block_late_is_late_anchor():
+    assert ev(A, 500, 500, RET_A, require=False) == (True, cp.HISTORICAL_OK)
+    assert ev(A, 499, 500, RET_A, require=False) == (True, cp.HISTORICAL_LATE_ANCHOR)
+
+def test_historical_with_require_anchor_and_late_anchor_still_rejected():
+    assert ev(A, 499, 500, RET_A, require=True) == (False, cp.ANCHOR_AFTER_SUBMISSION)
+
+def test_historical_without_anchor_and_no_requirement_is_historical_ok():
+    assert ev(A, 900, None, RET_A, require=False) == (True, cp.HISTORICAL_OK)
 
 def test_late_anchor_after_retirement_rejected_by_retirement():
     assert ev(A, BLOCK_B + 1, BLOCK_B + 5, RET_A, require=False) == (False, cp.RETIRED_AT_OR_BEFORE_SUBMISSION)

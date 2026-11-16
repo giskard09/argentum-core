@@ -76,13 +76,13 @@ verifiable historically; (5) a configuration with no anchor is rejected when the
 
 `composition_policy.py` is a pure function `evaluate(verifier_ref, submission_block, anchor_block, retirements,
 trusted_emitters, require_anchor) -> (accept, reason)`; reasons: `UNANCHORED`, `ANCHOR_AFTER_SUBMISSION`,
-`RETIRED_AT_OR_BEFORE_SUBMISSION`, `HISTORICAL_OK`, `ANCHORED_OK`, `ANCHORED_LATE`, `ANCHOR_NOT_REQUIRED`. Tests:
+`RETIRED_AT_OR_BEFORE_SUBMISSION`, `HISTORICAL_OK`, `HISTORICAL_LATE_ANCHOR`, `ANCHORED_OK`, `ANCHORED_LATE`, `ANCHOR_NOT_REQUIRED`. Tests:
 `tests/test_erc8274_composition_policy.py` (a positive and a negative case per step, plus the edges).
 
 Block conventions (chosen here, tested on both sides): a retirement at block B takes effect AT B, so a submission
 in block B is REJECTED and one in B-1 is accepted as historical; an anchor in the same block as the submission
 counts as covered, one block later does not. A block-level policy cannot order two events inside one block, so the
-retirement edge fails closed. With `require_anchor=False` an anchor later than the submission is not rejected, but it is no longer labelled as if it had been there: the reason is `ANCHORED_LATE` (`ANCHORED_OK` is reserved for an anchor in the submission's block or earlier, so same block = `ANCHORED_OK`, one block later = `ANCHORED_LATE`). The timing is evaluated to label, not to reject. Precedence: a trusted retirement decides the reason first, so `ANCHORED_LATE` only applies on the branch without a retirement, and `HISTORICAL_OK` says nothing about anchor timing when `require_anchor=False`. The earliest retirement from a trusted emitter governs (a later duplicate does not
+retirement edge fails closed. With `require_anchor=False` an anchor later than the submission is not rejected, but it is no longer labelled as if it had been there: the reason is `ANCHORED_LATE` (`ANCHORED_OK` is reserved for an anchor in the submission's block or earlier, so same block = `ANCHORED_OK`, one block later = `ANCHORED_LATE`). The timing is evaluated to label, not to reject. The same split applies to a historical submission (strictly before a trusted retirement): `HISTORICAL_OK` means the anchor was in the submission's block or earlier, `HISTORICAL_LATE_ANCHOR` that it came later (only possible with `require_anchor=False`); a submission at or after the retirement is rejected and the anchor's timing does not matter there. The earliest retirement from a trusted emitter governs (a later duplicate does not
 un-retire); retirements from emitters the consumer does not trust, or for another verifier, are ignored.
 
 Non-claims:
