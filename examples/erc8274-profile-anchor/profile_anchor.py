@@ -87,7 +87,8 @@ def _rpc(url, method, params):
 def confirm_anchor(ref: bytes, tx: str, rpc=RPC_BASE, registry=REGISTRY, expected_chain_id=None):
     """Confirm, from the chain's own receipt (not from whoever hands you the tx hash), that `tx` emitted
     Anchored(ref, ...) on the registry. Cheap: one eth_getTransactionReceipt, works on any RPC.
-    Proves: the configuration existed no later than the returned block. Not "first": use first_seen for that.
+    Proves: someone committed to this configuration no later than the returned block (not that the verifier
+    was deployed or live then). Not "first": use first_seen for that.
 
     The registry has the same address on several chains and anyone can anchor any ref on any of them. Pass
     `expected_chain_id` (the chain whose registry you trust, normally the chainId inside the ref) and the
