@@ -25,9 +25,18 @@ NEEDS_CREWAI = "crewai-unguarded-retry"
 
 VERIFIERS = sorted(
     os.path.relpath(p, CONF)
-    for p in glob.glob(os.path.join(CONF, "*", "verify*.py")) + glob.glob(os.path.join(CONF, "*", "*", "verify*.py"))
+    for p in (glob.glob(os.path.join(CONF, "*", "verify*.py")) + glob.glob(os.path.join(CONF, "*", "*", "verify*.py"))
+              + glob.glob(os.path.join(CONF, "*", "validate.py")) + glob.glob(os.path.join(CONF, "*", "*", "validate.py")))
     if "venv" not in p
 )
+
+# An empty glob parametrizes to ONE skipped test and the run stays green. Floor measured 2026-11-16: 49 verify*.py
+# (4 of them crewai) + 4 validate.py = 53. Raise it when a corpus is added; never lower it without saying why.
+MIN_VERIFIERS = 53
+
+
+def test_verifier_discovery_floor():
+    assert len(VERIFIERS) >= MIN_VERIFIERS, f"found {len(VERIFIERS)} verifiers, expected >= {MIN_VERIFIERS}"
 
 
 def _run(directory, script):
