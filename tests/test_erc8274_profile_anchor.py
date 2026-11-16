@@ -191,3 +191,18 @@ def test_live_receipt_confirmation():
     assert r["timestamp"] == int(blk["timestamp"], 16)           # the event timestamp is the block's
     assert pa.confirm_anchor(REF, real_tx) is None               # another ref
     assert pa.confirm_anchor(bytes([real_ref[0] ^ 1]) + real_ref[1:], real_tx) is None
+
+
+# ---- documentation claims ------------------------------------------------------------------------------
+
+def test_docs_claim_commitment_not_existence():
+    """An anchor is a commitment, not proof the verifier existed: the ref is computable before deployment."""
+    d = os.path.join(ROOT, "examples", "erc8274-profile-anchor")
+    for name in ("README.md", "profile_anchor.py"):
+        text = " ".join(open(os.path.join(d, name)).read().split()).lower()
+        for old in ("configuration existed", "proves existence", "configuration exist", "first exist"):
+            assert old not in text, (name, old)
+    readme = " ".join(open(os.path.join(d, "README.md")).read().split())
+    assert "someone committed to this exact configuration no later than block B" in readme
+    assert "lower bound on commitment, not on deployment" in readme
+    assert "no earlier `Anchored` event" not in readme

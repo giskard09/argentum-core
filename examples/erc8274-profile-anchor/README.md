@@ -1,8 +1,8 @@
 # ERC-8274 proofProfile first-seen anchor (DRAFT v0)
 
 Concrete answer to the open point in the ERC-8274 review thread (ethereum/ERCs#1771): the spec now derives the
-profile from components a consumer can recompute (e.g. the runtime bytecode hash), and leaves "when did this
-profile first exist, and did it rotate silently" to a registry-layer mechanism. This is that mechanism, built on
+profile from components a consumer can recompute (e.g. the runtime bytecode hash), and leaves "when was this
+profile first committed to, and did it rotate silently" to a registry-layer mechanism. This is that mechanism, built on
 the AnchorRegistry already deployed at the same address on Base, Arbitrum and Ink:
 `0x49fEcA52bC634a9Ab773226D16619deC547794aa` (permissionless, no owner, `anchor(bytes32 ref)` emits
 `Anchored(ref, anchoredBy, timestamp)`).
@@ -28,7 +28,7 @@ reads itself: the verifier address, `proofProfile()` and the `metadata` bytes it
 2. Find the `Anchored` event(s) for that `ref` (topic1) on the registry. Two ways:
    - `confirm`: whoever holds a tx hash (the verifier's operator, an indexer, the PR) hands it over; the consumer
      confirms with one `eth_getTransactionReceipt` that the registry emitted `Anchored(ref, ...)`. Works on any
-     RPC. Proves the configuration existed no later than that block; does not prove it is the earliest.
+     RPC. Proves that someone committed to this configuration no later than that block; does not prove it is the earliest.
    - `first-seen`: scan the registry's `Anchored` logs for `ref` over a window the consumer picks (from the block
      it first relied on, or from the registry deploy block 47696524 on Base) and take the earliest. Needs an
      archive-capable RPC: free public RPCs cap or refuse historical `eth_getLogs` (checked 16/11: one caps at a
@@ -45,17 +45,21 @@ reads itself: the verifier address, `proofProfile()` and the `metadata` bytes it
    (`anchoredBy` is in the log).
 
 A rotation is a new `ref` (any change to the verifier address, `proofProfile()` or `metadata`). A silent
-rotation is a configuration that is in use but has no earlier `Anchored` event: the consumer can see it and refuse.
+rotation is a configuration that is in use but has no `Anchored` event (or none earlier than the consumer's own pin): the consumer can see it and refuse.
 
 ## What it proves, and what it does not
 
-- Proves existence of the configuration no later than block B. Not authorship, not correct behavior: anyone can
-  anchor any `ref`, so the first event shows the configuration existed, not who operates it or that the verifier
-  does what it says.
+- Proves that someone committed to this exact configuration no later than block B. The `ref` is computable in
+  advance (predictable CREATE/CREATE2 address, public bytecode hash), so an anchor does not show the verifier was
+  deployed or live at B; check its deployment separately (creation block, `eth_getCode`). Not authorship, not
+  correct behavior: anyone can anchor any `ref`. A configuration in use with NO anchor is still detectable.
+- Threat model: pre-anchoring of a predicted configuration is possible and is why first-seen is a lower bound on
+  commitment, not on deployment.
 - Does not force a backend to anchor or to avoid rotating. It makes an un-anchored or late rotation detectable
   under the consumer's own policy.
-- No revocation and no per-anchorer namespace in AnchorRegistry. Those are added by ModelCommitmentAnchor
-  (trustless-ai/flashprove-onchain-verifier#2); the two are complementary, and the consumer chooses which
+- No revocation and no per-anchorer namespace in AnchorRegistry. ModelCommitmentAnchor
+  (trustless-ai/flashprove-onchain-verifier#2) adds them for model commitments (commitment ID -> digest of static
+  artifacts), not for verifier profiles; the two are complementary, and the consumer chooses which
   anchorers to trust by reading `anchoredBy`.
 - Subject to the chain's finality and reorg rules; read at the finality your policy needs. `removed` logs are
   ignored.
