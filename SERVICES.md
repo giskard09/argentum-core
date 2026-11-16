@@ -4,7 +4,7 @@ We check whether the evidence your agent system produces can be verified by some
 
 ## 1. Conformance review — USD 1,200
 
-The basic action-ref check (8 frozen vectors, run as a GitHub Action from the Composable Evidence Criteria lab) is free and you can run it yourself in minutes. This engagement is the work around it: we identify which profiles of the public corpus apply to your implementation, build the adapter, run them, and write up each failure with its cause, pinned to the exact corpus version and commit. The corpus stays free and public; you pay for the review and the report, not for access.
+The basic action-ref check (8 frozen vectors, run as a GitHub Action from the Composable Evidence Criteria lab) is free and you can run it yourself in minutes. This engagement is the work around it: we identify which profiles of the public conformance corpus in argentum-core apply to your implementation, build the adapter, run them, and write up each failure with its cause, pinned to the exact corpus version and commit. The corpus stays free and public; you pay for the review and the report, not for access.
 
 ## 2. Third-party verifiability review — USD 1,200
 
@@ -24,7 +24,8 @@ You point us at one receipt, log or evidence format that your own system already
 
 ## Public work you can check before deciding
 
-- The conformance corpus: [github.com/Composable-Evidence-Criteria/action-ref-conformance](https://github.com/Composable-Evidence-Criteria/action-ref-conformance)
+- The basic check (8 frozen vectors): [github.com/Composable-Evidence-Criteria/action-ref-conformance](https://github.com/Composable-Evidence-Criteria/action-ref-conformance)
+- The wider conformance corpus (profiles and verifiers): [github.com/giskard09/argentum-core/tree/main/examples/conformance](https://github.com/giskard09/argentum-core/tree/main/examples/conformance)
 - The specifications: [github.com/giskard09/argentum-core](https://github.com/giskard09/argentum-core)
 - What third parties have published about this work: [github.com/giskard09/argentum-core/blob/main/RECORD.md](https://github.com/giskard09/argentum-core/blob/main/RECORD.md)
 - Internet-Draft [draft-etcheverry-action-ref](https://datatracker.ietf.org/doc/draft-etcheverry-action-ref/) (IETF datatracker)
