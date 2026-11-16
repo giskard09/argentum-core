@@ -68,14 +68,13 @@ jobs:
             pip install -r "$f"
           done
 
-      - name: Run tests if present
+      - name: Run tests (no tests collected fails; every skip is listed and must be a known one)
         run: |
-          if [ -d tests ] || ls test_*.py 2>/dev/null | grep -q .; then
-            pip install pytest
-            pytest -q || exit 1
-          else
-            echo "No tests — skipping"
-          fi
+          pip install pytest
+          # pipefail: pytest's own exit code counts (exit 5 = nothing collected = failure).
+          set -o pipefail
+          pytest -q -rs | tee pytest.out
+          python tools/check_skips.py < pytest.out
 
       - name: Vector key gate — no invented fields in external-schema vectors
         run: |

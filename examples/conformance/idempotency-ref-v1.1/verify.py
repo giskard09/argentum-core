@@ -71,6 +71,8 @@ def verify(doc: dict) -> list[str]:
             errors.append(f"{ev['id']}: admitted_payload_digest inside idempotency_artifact")
 
     by_id = {ev["id"]: ev for ev in events}
+    if not by_id:
+        sys.exit("ZERO_CASES: no vectors loaded; refusing to report success on nothing")
     if by_id["case-4-drifted-retry"]["idempotency_ref"] != by_id["case-1-first-intentional"]["idempotency_ref"]:
         errors.append("case-4: drifted retry must keep A's idempotency_ref")
     if by_id["case-4-drifted-retry"]["admitted_payload_digest"] == by_id["case-1-first-intentional"]["admitted_payload_digest"]:

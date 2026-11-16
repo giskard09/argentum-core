@@ -229,6 +229,8 @@ def fixture_agrees() -> bool:
     print("vectors.json — declared values recomputed from the fixture's own fields")
     print("=" * 78)
     by_id = {v["id"]: v for v in json.loads((HERE / "vectors.json").read_text())["vectors"]}
+    if not by_id:
+        sys.exit("ZERO_CASES: no vectors loaded; refusing to report success on nothing")
     fails = []
 
     def expect(label, cond):

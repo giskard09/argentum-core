@@ -144,6 +144,8 @@ def verify_neg_salt_reuse_and_substitution(fixture: dict, vector_data: dict) -> 
 def main() -> int:
     fixture = json.loads((HERE / "vectors.json").read_text())
     by_id = {v["id"]: v for v in fixture["vectors"]}
+    if not by_id:
+        sys.exit("ZERO_CASES: no vectors loaded; refusing to report success on nothing")
 
     print("=" * 78)
     print("disclosure-scoped-ref-v0 conformance")

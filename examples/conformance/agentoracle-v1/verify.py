@@ -65,6 +65,8 @@ def preimage_from_input(inp: dict) -> dict:
 def main() -> int:
     here = Path(__file__).parent
     suite = json.loads((here / "vectors.json").read_text(encoding="utf-8"))
+    if not suite["vectors"]:
+        sys.exit("ZERO_CASES: vectors is empty; refusing to report success on nothing")
 
     failures: list[str] = []
     accepted = 0

@@ -59,6 +59,8 @@ def main() -> int:
     here = Path(__file__).parent
     data = json.loads((here / "vectors.json").read_text(encoding="utf-8"))
     snapshots = data["policy_snapshots"]
+    if not data["vectors"]:
+        sys.exit("ZERO_CASES: no vectors loaded; refusing to report success on nothing")
 
     failures: list[str] = []
 

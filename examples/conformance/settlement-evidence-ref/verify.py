@@ -127,6 +127,8 @@ def main():
     vectors_path = Path(__file__).parent / "vectors.json"
     data = json.loads(vectors_path.read_text())
     vectors = data["vectors"]
+    if not vectors:
+        sys.exit("ZERO_CASES: vectors.json vectors is empty; refusing to report success on nothing")
 
     print(f"settlement-evidence-ref-v1 conformance — {len(vectors)} vectors\n")
 

@@ -22,6 +22,8 @@ def sha256_ref(obj: dict) -> str:
 def main() -> int:
     vectors_path = Path(__file__).parent / "vectors.json"
     data = json.loads(vectors_path.read_text())
+    if not data["vectors"]:
+        sys.exit("ZERO_CASES: vectors is empty; refusing to report success on nothing")
 
     ok = True
 

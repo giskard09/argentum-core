@@ -210,6 +210,8 @@ def verify_vector(vector: dict, pubkeys: dict | None = None, seen_registry: "See
 def run_file(vectors_path: Path):
     data = json.loads(vectors_path.read_text())
     vectors = data["vectors"]
+    if not vectors:
+        sys.exit("ZERO_CASES: vectors is empty; refusing to report success on nothing")
     passed = 0
     failed = 0
 

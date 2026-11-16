@@ -38,6 +38,8 @@ def _counting_sha256(*args, **kwargs):
 
 def main() -> int:
     fixture = json.loads((HERE / "action-ref-v1-domain-negative.fixture.json").read_text())
+    if not fixture.get("vectors"):
+        sys.exit("ZERO_CASES: fixture vectors is empty; refusing to report success on nothing")
     failures = 0
     for vec in fixture["vectors"]:
         p = vec["preimage"]

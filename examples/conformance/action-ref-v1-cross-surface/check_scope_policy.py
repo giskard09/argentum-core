@@ -22,6 +22,10 @@ which check the CURRENT implementation's behavior, not the document's wording
 history.
 
 Exit code 0 if every checked ref is internally consistent, 1 otherwise.
+
+EXPECTED EXIT 1 WITHOUT ARGUMENTS: the default refs include the immutable tag action-ref-v1.0, whose spec text really
+contradicts itself (field table permissive, Scope conventions strict); that history cannot be fixed. CI therefore runs
+`python3 check_scope_policy.py --worktree HEAD` (tests/test_conformance_verifiers_run.py), which must say CONSISTENT.
 """
 from __future__ import annotations
 

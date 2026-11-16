@@ -93,6 +93,8 @@ def run(vectors_path: Path, enforcement_path: Path) -> int:
     by_id = {v["id"]: v for v in source["vectors"]}
     top_rev = source["revocation_artifact"]
     cases = json.loads(enforcement_path.read_text())["cases"]
+    if not cases or not by_id:
+        sys.exit("ZERO_CASES: cases or source vectors is empty; refusing to report success on nothing")
 
     lines = []
     failed = 0
