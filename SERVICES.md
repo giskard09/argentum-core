@@ -28,6 +28,7 @@ You point us at one receipt, log or evidence format that your own system already
 - The wider conformance corpus (profiles and verifiers): [github.com/giskard09/argentum-core/tree/main/examples/conformance](https://github.com/giskard09/argentum-core/tree/main/examples/conformance)
 - The specifications: [github.com/giskard09/argentum-core](https://github.com/giskard09/argentum-core)
 - What third parties have published about this work: [github.com/giskard09/argentum-core/blob/main/RECORD.md](https://github.com/giskard09/argentum-core/blob/main/RECORD.md)
+- A worked example of the method on a third party's paid receipt (directed run, not a client engagement): [docs/case-studies/directed-run-receipt-review.md](https://github.com/giskard09/argentum-core/blob/main/docs/case-studies/directed-run-receipt-review.md)
 - Internet-Draft [draft-etcheverry-action-ref](https://datatracker.ietf.org/doc/draft-etcheverry-action-ref/) (IETF datatracker)
 - Our comment on the x402 column of the ABA ASG-WG Draft Matrix, published by the working group at [asg-wg.org/proposed-matrix](https://asg-wg.org/proposed-matrix)
 
@@ -35,4 +36,5 @@ Contact: Pablo Etcheverry — [linkedin.com/in/pablo-etcheverry-5924119](https:/
 
 ## Changelog
 
+- 2026-11-19 — added a worked example under Public work. Prices and terms unchanged.
 - 2026-11-15 — first published. Two services, USD 1,200 each.
