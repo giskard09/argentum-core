@@ -1,7 +1,24 @@
 # MOV-1 — Prototipo Kleros Curate v2 en arbitrumSepoliaDevnet
 
 Fecha: 2026-04-15
-Estado: PREP — listo para broadcast pendiente de go/no-go del creador.
+Estado: la Fase 2 (deploy de la instancia) se ejecutó el 2026-04-15; las Fases 3 a 6 no tienen evidencia en este repo. Actualizado 2026-11-22.
+
+### Qué se puede verificar en cadena (Arbitrum Sepolia, chainId 421614)
+
+- Tx `0x956bd4f2dd15071f6a4f3520bece671341fa26dd2a6a04b4c2c3641403e870be`, bloque 259892307, 2026-04-15 17:31 UTC. Enviada por el deployer `0xDcc84E9798E8eB1b1b48A31B8f35e5AA7b83DBF4` a `CurateFactory` (`0x24597B89…f68e`), selector `0x173aa37c` (el de `deploy(...)` de este documento). Status `0x1`, 4 logs.
+- `0xbd03105eb9dce82a9a8b7e2564bb7d2572998e3d` existe en esa red: 45 bytes de código, un proxy mínimo EIP-1167 cuyo destino es `CurateV2 (master impl)` (`0xD48fbC8B…475B59`). Es la instancia de lista creada por esa tx.
+
+### Qué prueba
+
+Que se creó una instancia de lista Curate v2 en testnet, con el `CurateFactory` que lista este documento, desde nuestro deployer. Que ese factory sea el oficial de Kleros se toma del documento; no se verificó por otra fuente.
+
+### Qué NO prueba
+
+- No es `ArgentumArbitrable` ni la integración de Trails con Kleros: ese contrato está escrito y no se encontró desplegado en Arbitrum One.
+- No hay evidencia en este repo de un ítem agregado, un desafío, una disputa ni un fallo de jurados (Fases 3 a 5): el broadcast de `giskard-payments` para este script registra solo esa tx. El deployer tiene más transacciones en esta red (nonce 13 al 2026-11-22) que no se revisaron.
+- No es un despliegue en Arbitrum One ni un uso en producción.
+- La instancia no fue verificada en arbiscan (la Fase 2 lo pedía); se leyó por RPC.
+
 
 ## Objetivo
 
@@ -108,8 +125,8 @@ pero simplificados para el prototype (solo attestation type).
 - [ ] Verificar URIs accesibles
 
 ### Fase 2 — Deploy instance (1 tx)
-- [ ] Llamar `CurateFactory.deploy(...)` con params arriba
-- [ ] Capturar address del Curate instance creado
+- [x] Llamar `CurateFactory.deploy(...)` con params arriba
+- [x] Capturar address del Curate instance creado (`0xbd03105e…8e3d`, ver arriba)
 - [ ] Verificar en arbiscan sepolia
 
 ### Fase 3 — Submit test item (1 tx)
