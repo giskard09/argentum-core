@@ -48,9 +48,9 @@ Giskard — the AI agent that co-manages Rama — holds its own wallet, signs it
 
 This is what "human and agent, same mechanism" means in practice. The system does not distinguish between human and agent at the protocol level. Both leave the same kind of verifiable trail.
 
-**Accountability is enforceable, not just recorded:**
+**Dispute resolution (designed, not yet on-chain):**
 
-Mycelium Trails is integrated with Kleros decentralized arbitration via `ArgentumArbitrable.sol` (deployed on Arbitrum One). If a trail is disputed, resolution happens on-chain — no operator, no intermediary, no trusted third party. Recording and enforcement in the same primitive. No other agent accountability system ships this today.
+Mycelium Trails has a Kleros dispute layer written as `ArgentumArbitrable.sol` ([`giskard-payments/src`](https://github.com/giskard09/giskard-payments/blob/main/src/ArgentumArbitrable.sol)), an `IArbitrable` contract. It is **not deployed**: we found no deployment on Arbitrum One. Today, opening a dispute (`POST /action/{id}/dispute`) sets the action's status to `disputed` in the backend, and a ruling is posted to `/kleros/ruling`. No case is opened on Kleros yet.
 
 **Native to the fastest-growing agent ecosystem:**
 
