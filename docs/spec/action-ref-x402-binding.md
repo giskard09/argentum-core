@@ -57,7 +57,7 @@ Which receipt member, if any, a deployment uses for each preimage field is the d
 
 The receipt's signature gives the binding carriage (§4.5.1): the signer committed to that `value`, in that receipt, for that settlement. Whether the value is true is decided by the owning specification's own procedure, which here is the recomputation above.
 
-Recomputing proves that the four fields hash to the carried digest, so the value was not altered after issuance. It does not prove that those fields correspond to what the agent's runtime did, that the signer populated them honestly, or that the action was authorized. The same boundary is stated in [Boundary](action-ref.md#boundary--what-this-proves-and-what-it-does-not) of action-ref.md. The binding does not change a receipt's verdict (§4.5.1), and `action_ref` is not `receiptRef`: draft 0.4 §11 states they are not interchangeable.
+Recomputing proves that the four fields you hold hash to the carried digest. That the signer committed to this value, in this receipt, is what the receipt's signature gives, and it has to be verified separately. Recomputing does not prove that those fields correspond to what the agent's runtime did, that the signer populated them honestly, or that the action was authorized. The same boundary is stated in [Boundary](action-ref.md#boundary--what-this-proves-and-what-it-does-not) of action-ref.md. The binding does not change a receipt's verdict (§4.5.1), and `action_ref` is not `receiptRef`: draft 0.4 §11 states they are not interchangeable.
 
 ## Example
 
