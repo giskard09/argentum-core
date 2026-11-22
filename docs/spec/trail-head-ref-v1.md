@@ -135,6 +135,8 @@ A window gets `window_complete` (`proven_from_seq`) and `window_complete_unseale
 
 `continuity_only` is **not** a pass for completeness. A verifier that has no checkpoint knows the log was not altered internally and nothing about whether it is whole; it MUST report completeness as `not_evaluated`, never fold it into a positive result.
 
+The outcomes of this table and of the window tables, and the rule that an unevaluated state is never a pass, are collected in one place in [Outcome vocabulary](#outcome-vocabulary).
+
 ---
 
 ## Window verification
@@ -162,6 +164,61 @@ A matching checkpoint head at seq c >= k commits, through the chain, to every wi
 The anchor matters when there is no completeness checkpoint for the window (the window is newer than the last seal): it is then the only thing that catches a rewrite that also moved the start.
 
 *Added 2026-09-24:* surfaced by an internal cross-check against independent session-chain data verified from a mid-log entry. Earlier text defined verification only from seq 1. Existing results for full logs are unchanged; they now also report `from_seq: 1` and `window_anchor: "genesis"`. Vectors: `examples/conformance/trail-head-window-ref/`.
+
+---
+
+## Outcome vocabulary
+
+*Added 2026-11-21.* This section collects, under this document's own names, the outcomes defined in [Verification](#verification) and [Window verification](#window-verification), and states in one place the rule they already follow. It adds no verdict, reason or field and changes no result: the tables above remain the source for what each check does.
+
+### Classes
+
+Every result of the trail verifier falls in exactly one verdict class (Positive, Not evaluated, Negative, Negative (input)); the scope and anchoring rows are flags that apply on top of any of them. The cadence row describes a separate call and is not a class of the trail verifier. The class is read from `verdict`; for `continuity_only` it is read together with `completeness`, and for a window together with `window_anchor`.
+
+| Class | Verdict (reason) | Completeness | What it says |
+|-------|------------------|--------------|--------------|
+| Positive | `complete`, `complete_unsealed_tail`, `window_complete`, `window_complete_unsealed_tail` | `proven`, `proven_through_checkpoint`, `proven_from_seq`, `proven_from_seq_through_checkpoint` | The checks that ran passed. Only for those checks: `root_anchoring` is `not_checked` on every result, so no positive verdict says the root is on-chain. |
+| Not evaluated | `continuity_only` (`no_checkpoint`, `checkpoint_before_window`) | `not_evaluated` | Continuity ran. Completeness did not: no checkpoint was presented, or the one presented is older than the window and seals nothing in it. |
+| Not evaluated (scope) | any result with `window_anchor: "uncertified"` | as the verdict says | The start of the window could not be certified. A warning state, not a weak pass. |
+| Not evaluated (anchoring) | every result, `root_anchoring: "not_checked"` | as the verdict says | The module checks inclusion in the root it is given, not that the root was anchored. The caller does that. |
+| Negative | `truncated`, `checkpoint_mismatch`, `broken` (`seq_order`, `seq_gap`, `head_mismatch`, `link_mismatch`), `agent_gap`, `anchor_mismatch` | `failed` | A check ran and the records or checkpoint did not satisfy it. The reason says which attack was seen. |
+| Negative (input) | `malformed` (`empty_or_not_a_list`, `entry_shape`, `agent_mixed`, `entry_preimage`, `checkpoint_shape`), `checkpoint_unproven`, `anchor_unproven`, `stale_checkpoint` | `failed` | The input could not be taken as a stream, checkpoint or anchor of this agent, or did not meet the consumer's bound. A mixed stream (`agent_mixed`) is always here, never in a positive class. |
+| Cadence check (consumer side) | `ok`; negative: `period_exceeds_declared_maximum`, `malformed` (`not_a_list`, `agent_mixed`, `period_end`) | none | Returned by `verify_checkpoint_cadence` over a checkpoint stream, a separate call with a consumer-declared ceiling. It has no `completeness` or `root_anchoring` field. `ok` says the gaps between the checkpoints presented are within the ceiling; it says nothing about checkpoints that were not presented. |
+
+### The rule
+
+**A state that was not evaluated is never reported as a pass, and never as a positive verdict.** Concretely, in this specification:
+
+1. No checkpoint: `continuity_only`, completeness `not_evaluated`, reason `no_checkpoint`. Not folded into a positive result (see [Verification](#verification)).
+2. A checkpoint older than the window (seq < k): `continuity_only`, `not_evaluated`, reason `checkpoint_before_window`. Nothing presented is sealed.
+3. A window with no anchor: `window_anchor: "uncertified"`. Both fields are read together; `uncertified` alone is a reason to withhold trust in the start (see [Window verification](#window-verification)).
+4. The root: `root_anchoring: "not_checked"` on every result.
+5. A stream that mixes agents is rejected (`malformed`/`agent_mixed`) before any gap is compared; it cannot produce a positive outcome for any of the agents in it.
+
+A consumer that reads only one of the two fields (`verdict` without `completeness` and `window_anchor`) can read a not-evaluated result as acceptable. That is a defect of the reading, not of the result.
+
+### Mapping to other vocabularies (informative)
+
+Other vocabularies are mapped to this one, not the reverse. The mapping is informative, normative for nothing in this document, and implies no endorsement by or of any other specification or its authors. Each row states where the other vocabulary is defined and whether it applies.
+
+| Vocabulary | Where defined | Applies to this document? |
+|------------|---------------|---------------------------|
+| AER-1 anchor outcomes (`verified`, `verification failed`, `rejected: unresolvable record`, `not checked`, `absent`) | draft-zambo-aer1-26, Section 6 (Verification Procedure), the list that begins "The outcome is exactly one of these values" | Partly. Crosswalk below. |
+| RFC 9943 (SCITT architecture) | Section 7.1 | No. It says verification APIs "may provide more details than a single boolean result" and lists examples (signature, validity period, inclusion proof). It defines no named outcome states, so there is nothing to map. |
+
+**Crosswalk, AER-1 to this document.** Legend: *text* = the AER-1 side was read in the draft text (draft-zambo-aer1-26, retrieved 2026-11-21, sha256 `7e000d80f00ad29b8e01431de562e98956f86e426b2695a34c8a215e689e53d4`) and the right-hand side in this document; *reading* = the correspondence is an interpretation, because AER-1 defines these states over an anchor carried in a receipt (Section 6, Section 10.1) and does not define trail heads or checkpoints; *not mapped* = no clean correspondence, and none is forced.
+
+| AER-1 outcome | This document | Basis |
+|---------------|---------------|-------|
+| `verified` | Not a verdict of this module on its own. A positive verdict (`complete`, ...) plus the caller's confirmation that the period root is on-chain (`root_anchoring` is `not_checked` until then). | text for the AER-1 side; *reading* for the correspondence |
+| `verification failed` | `truncated`, `checkpoint_mismatch`, `checkpoint_unproven`/`not_in_root`, `anchor_mismatch`, `anchor_unproven`/`anchor_not_in_root` | *reading*: AER-1 defines it as a recomputed or stored value that does not match what was committed; `truncated` compares a seq count, which is a stored value |
+| `rejected: unresolvable record` | Not mapped. The module never resolves a record; the caller supplies proofs and roots. The nearest thing is the caller's own on-chain lookup of the root, outside this module. | not mapped |
+| `not checked` | `continuity_only`/`checkpoint_before_window` (a checkpoint was presented and not evaluated against the window) | *reading* |
+| `absent` | Not mapped as a whole: see below | not mapped |
+
+AER-1 states beside these: the structural verdicts `verification failed` and `rejected: <reason>` for the presented bytes (Section 6, step 5) and the `id_verdict` values (which include their own `absent`, a different state from the anchor outcome of the same name). This document has no `id_verdict`, and its chain checks (`broken`, `agent_gap`) are not compared with AER-1 Section 7 (hash-chained job timelines), which was not read for this section.
+
+**Why `absent` and `not checked` do not separate cleanly here.** AER-1 distinguishes them by whether an anchor is *present* in what the verifier was given. This document has two different situations under `no_checkpoint` and under `window_anchor: "uncertified"`: (a) the checkpoint or anchor exists in the anchor stream and was not handed to the verifier, and (b) it was never emitted. The module cannot tell them apart from the input; (b) is visible only to a consumer that holds the stream and checks it (`verify_checkpoint_cadence`, which reports `period_exceeds_declared_maximum`). Reading (a) as `not checked` and (b) as `absent` would need a per-period expectation that this module does not receive. An agent that recorded nothing is not `absent` here: it gets a sealed checkpoint that repeats `seq` and `head` (see [Checkpoint](#checkpoint)) and verifies like any other. This document keeps `no_checkpoint` and the window states under its own names and does not assign them an AER-1 outcome.
 
 ---
 
