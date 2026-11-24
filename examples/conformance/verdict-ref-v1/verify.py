@@ -25,6 +25,8 @@ def verdict_ref(verdict):
 
 def main():
     vectors = json.loads((Path(__file__).parent / "vectors.json").read_text())["vectors"]
+    if not vectors:
+        sys.exit("ZERO_CASES: vectors is empty; refusing to report success on nothing")
     passed = 0
     for v in vectors:
         computed_action_ref = action_ref(v["preimage"])

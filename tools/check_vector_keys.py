@@ -67,11 +67,17 @@ def unbacked_keys(spec: str, vector_dir: Path, exclude: set[str]) -> dict[str, s
 
 def check_manifest() -> list[str]:
     errors = []
-    for entry in json.loads(MANIFEST.read_text(encoding="utf-8"))["sets"]:
+    sets = json.loads(MANIFEST.read_text(encoding="utf-8"))["sets"]
+    if not sets:
+        errors.append("manifest lists no sets: the gate would pass on nothing")
+    for entry in sets:
         spec_path = ROOT / entry["spec"]
         raw = spec_path.read_bytes()
         if hashlib.sha256(raw).hexdigest() != entry["spec_sha256"]:
             errors.append(f"{entry['vectors']}: {entry['spec']} does not match spec_sha256")
+            continue
+        if not collect_keys(ROOT / entry["vectors"], set(entry.get("exclude", []))):
+            errors.append(f"{entry['vectors']}: no JSON keys found (empty set or wrong path): refusing to pass on nothing")
             continue
         bad = unbacked_keys(raw.decode("utf-8", "replace"), ROOT / entry["vectors"], set(entry.get("exclude", [])))
         for k, files in bad.items():
@@ -82,6 +88,9 @@ def check_manifest() -> list[str]:
 def main(argv: list[str]) -> int:
     if argv:
         spec = Path(argv[0]).read_text(encoding="utf-8", errors="replace")
+        if not collect_keys(Path(argv[1]), set(argv[2:])):
+            print("FAIL no JSON keys found in", argv[1], "(empty set or wrong path): refusing to pass on nothing")
+            return 1
         errors = [f"key {k!r} not defined as a field ({', '.join(sorted(f))})"
                   for k, f in unbacked_keys(spec, Path(argv[1]), set(argv[2:])).items()]
     else:

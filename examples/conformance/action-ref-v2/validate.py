@@ -66,6 +66,8 @@ _EXPECTED_PREIMAGE_KEYS = {"agent_id", "action_type", "scope", "timestamp"}
 
 def main() -> int:
     fixture = json.loads((HERE / "action-ref-v2.fixture.json").read_text())
+    if not fixture.get("vectors"):
+        sys.exit("ZERO_CASES: fixture vectors is empty; refusing to report success on nothing")
 
     # Profile metadata: this validator hardcodes hash_algo=sha256,
     # preimage_format=jcs-rfc8785-v1, and domain_tag=V2_DOMAIN_TAG rather than

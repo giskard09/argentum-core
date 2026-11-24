@@ -21,6 +21,8 @@ python3 check_scope_policy.py --worktree          # HEAD reads the working tree 
 python3 check_scope_policy.py <ref1> <ref2> ...   # check specific refs
 ```
 
+Without arguments it exits 1 on purpose: the tag `action-ref-v1.0` has a real, immutable contradiction between the field table and Scope conventions. CI checks only `--worktree HEAD`, which must be CONSISTENT.
+
 ## What it found (2026-08-25)
 
 Running it against the two stable tags surfaced a **second, previously

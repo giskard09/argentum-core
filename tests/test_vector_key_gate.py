@@ -44,3 +44,41 @@ def test_spec_hash_is_pinned(tmp_path, monkeypatch):
     path.write_text(json.dumps(bad), encoding="utf-8")
     monkeypatch.setattr(gate, "MANIFEST", path)
     assert any("spec_sha256" in e for e in gate.check_manifest())
+
+
+# ---- the gate must not pass on nothing ---------------------------------------------------------------
+
+def _manifest(tmp_path, monkeypatch, mutate):
+    manifest = json.loads(gate.MANIFEST.read_text(encoding="utf-8"))
+    mutate(manifest)
+    path = tmp_path / "manifest.json"
+    path.write_text(json.dumps(manifest), encoding="utf-8")
+    monkeypatch.setattr(gate, "MANIFEST", path)
+    return gate.check_manifest()
+
+
+def test_manifest_without_sets_fails(tmp_path, monkeypatch):
+    errs = _manifest(tmp_path, monkeypatch, lambda m: m.update(sets=[]))
+    assert any("no sets" in e for e in errs)
+
+
+def test_set_with_no_json_keys_fails(tmp_path, monkeypatch):
+    empty = tmp_path / "empty_vectors"
+    empty.mkdir()
+    errs = _manifest(tmp_path, monkeypatch, lambda m: m["sets"][0].update(vectors=str(empty)))   # absolute path replaces ROOT / ...
+    assert any("no JSON keys" in e for e in errs)
+
+
+def test_set_whose_files_are_all_excluded_fails(tmp_path, monkeypatch):
+    errs = _manifest(tmp_path, monkeypatch,
+                     lambda m: m["sets"][0].update(exclude=[p.name for p in FARLEY.glob("*.json")]))
+    assert any("no JSON keys" in e for e in errs)
+
+
+def test_cli_mode_on_empty_dir_fails(tmp_path, capsys):
+    spec = tmp_path / "spec.txt"
+    spec.write_text("anything", encoding="utf-8")
+    empty = tmp_path / "e"
+    empty.mkdir()
+    assert gate.main([str(spec), str(empty)]) == 1
+    assert "no JSON keys" in capsys.readouterr().out
