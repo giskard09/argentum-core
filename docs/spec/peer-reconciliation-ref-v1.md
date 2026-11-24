@@ -50,8 +50,9 @@ and neither trusts the other's, did they independently observe the same action?
 one external anchor (`witness_scope=EXTERNAL`) — a single party checking itself against an
 outside record. [`counterparty-ref.md`](./counterparty-ref.md) is a reputation snapshot of
 the counterparty, not a reconciliation of two independently produced chains. Neither answers
-`witness_scope=PEER`: two Guardians, each controlled by a different party within the same
-agreement, each with an equally valid but independently derived record of what happened.
+`witness_scope=PEER`: two Guardians, each assumed to be controlled by a different party within the
+same agreement (an assumption of this profile, not something the verifier checks; see "What this
+profile does not do"), each producing its own record of what happened.
 
 The requirement comes from the field, not a hypothetical: `agent-control-standard#33`
 (narko4u/Empire Labs, addendum witness-scope SELF/PEER/EXTERNAL) defines `PEER` as *"another
@@ -132,7 +133,7 @@ peer_reconciliation_ref = hashlib.sha256(jcs(envelope).encode()).hexdigest()
 |-------|------|--------------|
 | `party_id` | string | Stable identifier of the Guardian producing this observation. |
 | `observed` | boolean | `true` if this party produced its half of the reconciliation. `false` means this party's Guardian did not (yet) supply an observation — the envelope still hashes deterministically, but the comparator MUST treat this as `UNRESOLVED`, never as agreement or disagreement by default. |
-| `action_ref` | string \| null | The `action_ref` (per [`action-ref.md`](./action-ref.md)) this party independently derived for the interaction. `null` when `observed` is `false`. |
+| `action_ref` | string \| null | The `action_ref` (per [`action-ref.md`](./action-ref.md)) this party reports having derived for the interaction. The profile does not check how it was derived. `null` when `observed` is `false`. |
 | `co_signer` | object \| null | Present when `observed` is `true`. Same shape as the co-signer block in [`anchoring-precedence-ref-v1.md`](./anchoring-precedence-ref-v1.md#2-admission_invariant) plus one addition (`signed_fields`, v1.2, see below): `issuer`, `kid`, `pubkey`, `jws_signature`, `signed_fields`, all recomputable from the fixture alone — no out-of-band lookup required. `null` when `observed` is `false`. |
 | `co_signer.signed_fields` | list of strings | **v1.2, REQUIRED when `co_signer` is present.** Declares which fields of this observation the JWS payload actually binds. MUST include `party_id`, `action_ref`, and `interaction_id` — see "Signature scope, honestly declared" below and invariant §4 (`signature_binding`). |
 | `requested_at` | integer (epoch ms) \| absent | **v1.1, optional, RECOMMENDED when `observed` is `false`.** See "Timestamped non-suppression (v1.1)" below. |
@@ -355,6 +356,24 @@ Declared explicitly, matching the honesty convention this repo applies elsewhere
 - **It does not use `as_of` to order or arbitrate anything (v1.1).** It is transported for
   audit legibility only; the ordering guarantee this profile actually makes comes from the
   append-only `supersedes` chain, not from comparing `as_of` values across parties.
+- **It does not show that a record exists behind each observation.** The envelope neither
+  requires nor carries a reference to either party's own record: `interaction_id` MAY be linked
+  back to a party's trail, and that is out of scope here. An `AGREED` state therefore shows two
+  signed observations that carry the same `action_ref`, not that each party holds a record of the
+  interaction. Without a reference to the party's own record, naming a peer is the producer's
+  claim about who was watching, not that party's account (the rule
+  [narko4u/evidence-record-spec](https://github.com/narko4u/evidence-record-spec) applies in its
+  `VERIFIABILITY-OVERVIEW.md`, "What makes a party independent", commit
+  [`6c899c5`](https://github.com/narko4u/evidence-record-spec/commit/6c899c582193643031216c8f26897bb507e61e05),
+  credit narko4u / Empire Labs, who also defined `witness_scope`). An optional reference field is
+  a possible future addition, not part of v1.x.
+- **It does not check that the two parties are different.** Nothing here stops one operator from
+  controlling both `party_id` values. Reproduced with the reference verifier on a copy of the
+  `agreed-001` envelope, with the envelope hash recomputed: giving `party_b` the same `co_signer`
+  as `party_a`, or only the same `issuer` and `pubkey`, or even the same `party_id` on both sides,
+  still yields `AGREED` and a passing verification. "Each controlled by a different party" is an
+  assumption the consumer must establish out of band, for example through custody of the keys (see
+  [custody-ref.md](./custody-ref.md)); "same custody named twice" is not independence.
 
 ---
 
@@ -366,7 +385,7 @@ Declared explicitly, matching the honesty convention this repo applies elsewhere
 | `cross-system-verification` | Does my trail match one external anchor I don't control (`witness_scope=EXTERNAL`)? |
 | `counterparty-ref` | What is the counterparty's reputation snapshot? |
 | `anchoring-precedence-ref` | Did an independent external commitment precede the outcome? |
-| `peer-reconciliation-ref` | Do two independently controlled Guardians agree on the same interaction (`witness_scope=PEER`)? |
+| `peer-reconciliation-ref` | Do two signed observations agree on the same interaction (`witness_scope=PEER`), on the assumption that two different parties produced them? |
 
 ---
 
