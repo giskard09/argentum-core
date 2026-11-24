@@ -1,6 +1,6 @@
 {
   "export_version": "conformance-vectors-v1",
-  "generated_at": "2026-11-24T16:25:12.000Z",
+  "generated_at": "2026-11-24T16:26:43.000Z",
   "generated_by": "examples/conformance/build_export.py",
   "source_repo": "giskard09/argentum-core",
   "set_count": 73,
@@ -10194,6 +10194,66 @@
               "comparator_state": "AGREED",
               "failure_mode": "supersedes_chain_integrity",
               "failure_detail": "resolved_by is not a valid identifier (contains a space)"
+            },
+            {
+              "id": "malformed-supersedes-self-attested-case-envelope-001",
+              "description": "v1.3 negative. The envelope's party_a.party_id is written with capitals (SafeAgent-Guardian) and resolved_by is the same id in lower case (safeagent-guardian). The case-insensitive comparison must fold BOTH sides: folding only resolved_by would let this pass. Covers the other direction of malformed-supersedes-self-attested-case-001.",
+              "expected": "FAIL",
+              "envelope": {
+                "interaction_id": "3f9c9e2e-6b5a-4b7e-8f3e-1a2b3c4d5e6f",
+                "party_a": {
+                  "party_id": "SafeAgent-Guardian",
+                  "observed": true,
+                  "action_ref": "f00dbabe1234c9e0b8e93d4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5",
+                  "co_signer": {
+                    "issuer": "safeagent-guardian",
+                    "kid": "sg-key-02",
+                    "pubkey": "MCowBQYDK2VwAyEAqQm7VZ0X8tGxJm6QwYh3fN4dL9pRk2vC5eA1sT7uHzM=",
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.c2FmZWFnZW50LWd1YXJkaWFuLWNvcnJlY3Rpb24.Rk3Wm7xNp2QbYd9Vt1cH",
+                    "signed_fields": [
+                      "party_id",
+                      "action_ref",
+                      "interaction_id"
+                    ]
+                  }
+                },
+                "party_b": {
+                  "party_id": "counterparty-guardian",
+                  "observed": true,
+                  "action_ref": "f00dbabe1234c9e0b8e93d4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5",
+                  "co_signer": {
+                    "issuer": "counterparty-guardian",
+                    "kid": "cg-key-01",
+                    "pubkey": "MCowBQYDK2VwAyEAnR3xW9vL2sKfQd6BhTz1oYc8gEj4pXm0aVn5rUw7iCk=",
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.Y291bnRlcnBhcnR5LWd1YXJkaWFuLWNvcnJlY3Rpb24.Nt4Rd2mLx8VpBc6Wq3fT",
+                    "signed_fields": [
+                      "party_id",
+                      "action_ref",
+                      "interaction_id"
+                    ]
+                  }
+                },
+                "version": "peer-reconciliation-ref-v1",
+                "supersedes": "46f89af451b3c32faf485b9b1db3aea2edddaa933cb53ff553e00f37efd63751"
+              },
+              "peer_reconciliation_ref": "3a352df7f34d87b4e347b46a2e78e0aee54d41e47c5f241a33f96e4eaaf7258e",
+              "known_envelopes": {
+                "46f89af451b3c32faf485b9b1db3aea2edddaa933cb53ff553e00f37efd63751": {
+                  "interaction_id": "3f9c9e2e-6b5a-4b7e-8f3e-1a2b3c4d5e6f",
+                  "resolved_by": "safeagent-guardian"
+                }
+              },
+              "checks": {
+                "canonical_envelope": true,
+                "structural_validity": true,
+                "signature_valid_a": true,
+                "signature_valid_b": true,
+                "supersedes_chain_integrity": false,
+                "signature_binding": true
+              },
+              "comparator_state": "AGREED",
+              "failure_mode": "supersedes_chain_integrity",
+              "failure_detail": "resolved_by equals party_a.party_id ignoring ASCII case (party_id written with capitals)"
             }
           ],
           "provenance": {
