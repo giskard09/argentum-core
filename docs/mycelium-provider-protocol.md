@@ -1,6 +1,6 @@
 # Mycelium Provider Protocol
 
-**Version:** 1.0 | **Published:** 2026-06-20
+**Version:** 1.1 | **Published:** 2026-06-20 | **Revised:** 2026-11-24 (empty `scope` now out of profile; v1.0 said to pass `""`)
 
 A "Mycelium Provider" is any system that computes `action_ref` deterministically and submits trails to ARGENTUM via `/external/trail`. This document is the integration reference.
 
@@ -100,7 +100,7 @@ def compute_action_ref(
 |-------|------|-----------|
 | `agent_id` | string | Stable identifier of the executing agent |
 | `action_type` | string | Semantic label: `code.execute`, `payment.send`, etc. |
-| `scope` | string | Requested-intent scope. Pass `""` if not applicable. |
+| `scope` | string | Requested-intent scope. Non-empty. The empty string is out of profile (`OUT_OF_PROFILE_DOMAIN`), as in [action-ref.md](spec/action-ref.md). Pass a namespaced label, e.g. `mycelium:provider-protocol`. |
 | `timestamp` | string | RFC 3339 UTC with **exactly 3 fractional digits** and trailing `Z`. Example: `"2026-06-20T14:00:00.123Z"` |
 
 ### Key order (canonical)
