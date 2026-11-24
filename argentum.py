@@ -2021,6 +2021,14 @@ async def kleros_ruling(request: Request, req: KlerosRulingRequest):
 import json as _json
 
 TRAIL_AUTHOR_KARMA_REWARD = 3   # karma when a trail execution succeeds
+
+
+def _same_identity(a, b) -> bool:
+    """True when two entity ids name the same identity written differently (case, outer whitespace)."""
+    if not isinstance(a, str) or not isinstance(b, str):
+        return False
+    return a.strip().casefold() == b.strip().casefold()
+
 MIN_TRAIL_PRICE = 1
 MAX_TRAIL_STEPS = 12
 
@@ -2640,9 +2648,13 @@ async def record_trail_execution(request: Request, trail_id: str, req: TrailExec
          req.output_hash, req.payment_hash, now()))
     conn.execute("UPDATE trails SET executions = executions + 1 WHERE id = ?", (trail_id,))
     karma_reward = 0
+    _self_run = _same_identity(req.executor_id, trail["author_id"])
     if req.status == "success":
         conn.execute("UPDATE trails SET success_count = success_count + 1 WHERE id = ?", (trail_id,))
-        karma_reward = TRAIL_AUTHOR_KARMA_REWARD if signed else 0
+        # No karma for the author's own run (compared case-insensitively, whitespace trimmed, so
+        # the same id written differently does not count as another executor). The execution is
+        # still recorded so clients keep working. It does not stop an author using a second id.
+        karma_reward = TRAIL_AUTHOR_KARMA_REWARD if (signed and not _self_run) else 0
         if karma_reward > 0:
             upsert_wisdom(conn, trail["author_id"], trail["author_name"], "unknown",
                           karma_delta=karma_reward, last_action=now())
@@ -2653,7 +2665,8 @@ async def record_trail_execution(request: Request, trail_id: str, req: TrailExec
         "trail_id":     trail_id,
         "status":       req.status,
         "signed":       signed,
-        "author_karma_awarded": karma_reward
+        "author_karma_awarded": karma_reward,
+        "author_karma_withheld": "executor_is_author" if (req.status == "success" and signed and _self_run) else None,
     }
 
 @app.post("/trails/{trail_id}/rate")
