@@ -67,7 +67,7 @@ def _request(peer, headers=None):
 
 def check_key_func(key):
     assert key(_request("127.0.0.1", {"CF-Connecting-IP": "203.0.113.7"})) == "203.0.113.7"
-    assert key(_request("::1", {"CF-Connecting-IP": "2001:db8::1"})) == "2001:db8::1"
+    assert key(_request("::1", {"CF-Connecting-IP": "2001:db8::1"})) == "2001:db8::/64"
     # from outside, the header is never believed
     assert key(_request("198.51.100.9", {"CF-Connecting-IP": "203.0.113.7"})) == "198.51.100.9"
     assert key(_request("127.0.0.2", {"CF-Connecting-IP": "203.0.113.7"})) == "127.0.0.2"
@@ -75,6 +75,12 @@ def check_key_func(key):
     assert key(_request("127.0.0.1")) == "127.0.0.1"
     assert key(_request("127.0.0.1", {"CF-Connecting-IP": "not-an-ip"})) == "127.0.0.1"
     assert key(_request(None)) == "unknown"
+    # IPv6: one subscriber (a /64) is one bucket; IPv4-mapped is its IPv4; neighbours stay apart
+    assert key(_request("2001:db8:0:1::5")) == key(_request("2001:db8:0:1:ffff:ffff:ffff:ffff")) == "2001:db8:0:1::/64"
+    assert key(_request("2001:db8:0:2::5")) != key(_request("2001:db8:0:1::5"))
+    assert key(_request("::ffff:203.0.113.9")) == "203.0.113.9"
+    assert key(_request("127.0.0.1", {"CF-Connecting-IP": "2001:db8:0:1::9"})) == key(_request("2001:db8:0:1::5"))
+    assert key(_request("::ffff:127.0.0.1", {"CF-Connecting-IP": "203.0.113.7"})) == "127.0.0.1"  # not trusted
 
 
 def test_rate_limit_key_trusts_cf_header_only_from_loopback():

@@ -46,25 +46,44 @@ except ImportError:
 _LOOPBACK_PEERS = ("127.0.0.1", "::1")
 
 
+def _client_bucket(addr: str) -> str:
+    """Bucket for one client address: IPv4 as is, IPv4-mapped IPv6 as its IPv4, any other IPv6
+    grouped by its /64, because one subscriber usually holds a whole /64 and could otherwise
+    rotate addresses to dodge the limit. Not an IP (e.g. "unknown", a test client): unchanged."""
+    try:
+        ip = ipaddress.ip_address(addr)
+    except ValueError:
+        return addr
+    if isinstance(ip, ipaddress.IPv6Address):
+        if ip.ipv4_mapped is not None:
+            return str(ip.ipv4_mapped)
+        return str(ipaddress.ip_network(f"{ip}/64", strict=False))
+    return str(ip)
+
+
 def _rate_limit_key(request: Request) -> str:
     """Per-client key for the rate limiter.
 
-    The app listens on 0.0.0.0, so the socket peer is the truth for any non-loopback
-    connection: CF-Connecting-IP is only believed when the peer is the local loopback
-    (a local tunnel/proxy), never from outside. uvicorn already replaces client.host with
-    the X-Forwarded-For value when the peer is 127.0.0.1 and ignores that header from
-    anyone else, so a spoofed X-Forwarded-For or CF-Connecting-IP from outside cannot move
-    a client into another client's bucket.
+    In production the traffic arrives through a tunnel on 127.0.0.1 and uvicorn has already
+    replaced client.host with the client address from X-Forwarded-For (it trusts that header only
+    from 127.0.0.1 and ignores it from anyone else), so for tunnelled requests client.host is
+    already the real client. The CF-Connecting-IP branch below is a fallback for a local proxy
+    that sends only that header.
+
+    The app also listens on 0.0.0.0, so the socket peer is the truth for any non-loopback
+    connection: CF-Connecting-IP is only believed when the peer is the local loopback, never
+    from outside. A spoofed X-Forwarded-For or CF-Connecting-IP from outside cannot move a
+    client into another client's bucket. IPv6 clients are bucketed by /64 (see _client_bucket).
     """
     peer = request.client.host if request.client else "unknown"
     if peer in _LOOPBACK_PEERS:
         cf = (request.headers.get("cf-connecting-ip") or "").strip()
         if cf:
             try:
-                return str(ipaddress.ip_address(cf))
+                return _client_bucket(str(ipaddress.ip_address(cf)))
             except ValueError:
                 pass
-    return peer
+    return _client_bucket(peer)
 
 
 limiter = Limiter(key_func=_rate_limit_key)
