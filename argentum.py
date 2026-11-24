@@ -622,6 +622,9 @@ _ROOT_HTML = """<!DOCTYPE html>
   <div class="meta">
     ARGENTUM v0.4.0 · <a href="/dashboard/trails">Live dashboard</a> · <a href="/docs/integration">Integration guide</a> · <a href="/status">Status</a>
   </div>
+  <div class="meta">
+    <a href="https://github.com/giskard09/argentum-core/blob/main/SERVICES.md">Independent verification work at a fixed price</a>
+  </div>
 </div>
 </body>
 </html>"""
