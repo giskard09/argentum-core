@@ -517,11 +517,15 @@ def test_cadence_interleaved_agents_cannot_mask_a_breach():
 
 
 def test_cadence_ignores_when_checkpoints_were_anchored():
-    """Documented limit (spec, "What this does NOT prove"): the check sees only
-    the operator-declared period_end. Checkpoints with regular period_end pass
-    whenever they were sealed or anchored, because anchor time is not an input.
+    """Documented limit (spec, "What this does NOT prove"): seal_period takes no
+    sealing time and the cadence check takes no anchor time, so the root and the
+    verdict are identical whether each period is sealed on time or all at once
+    a week later. Only the operator-declared period_end is compared.
     """
     log = _log(3)
     hourly = ["2026-09-23T18:00:00.000Z", "2026-09-23T19:00:00.000Z", "2026-09-23T20:00:00.000Z"]
     cps = [make_checkpoint(AGENT, t, log) for t in hourly]
+    on_time = [seal_period([cp])[0] for cp in cps]    # sealed as each period ends
+    all_late = [seal_period([cp])[0] for cp in cps]   # same periods, sealed together later
+    assert on_time == all_late
     assert verify_checkpoint_cadence(cps, HOUR) == {"verdict": "ok"}
