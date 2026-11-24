@@ -130,7 +130,7 @@ Or recompute locally from the four preimage fields using the snippet above — n
 
 | Tier | Limit | Cost |
 |------|-------|------|
-| Free | 500 trails/month | $0 |
+| Free | 1,000 trails/month | $0 |
 | PAYG | Unlimited | $0.003 / trail |
 
 PAYG activates automatically when the Free tier is exhausted. Usage is invoiced monthly per the Revenue Share Agreement.

@@ -310,9 +310,9 @@ Conformance fixtures: [`examples/conformance/memory-write-v1.fixture.json`](exam
 
 **PAYG — $0.003 USDC per anchored trail.** No subscription, no contract. Pay per trail anchored on-chain.
 
-- Free: up to 500 trails/month — full functionality, on-chain anchoring included
+- Free: up to 1,000 trails/month — full functionality, on-chain anchoring included
 - PAYG: $0.003 USDC per trail above the free tier — paid on Base mainnet
-- Enterprise: fixed monthly rate, SLA, dedicated support — [contact us](mailto:playplay2736@gmail.com)
+- Enterprise: fixed monthly rate, SLA, dedicated support — [contact us](./SERVICES.md)
 
 Payment is on-chain (Base or Arbitrum). The trail anchor and the payment record are both independently verifiable.
 
