@@ -199,7 +199,8 @@ cast receipt 0xce34a07e547f670d7dbade05e42e164d869f126cd68e9504dba60214d51406cc 
 
 The transaction's `Anchored` event carries the `counterparty_ref` above as its indexed
 `ref` topic and `block.timestamp` as the commitment time — no operator cooperation
-required.
+required. `block.timestamp` is the time the block producer declared, not an
+independently proven one (see the caveat under Verification).
 
 ### Verification
 
@@ -210,9 +211,16 @@ A verifier who holds `counterparty_ref` and `counterparty_ref_anchor` can:
 3. Confirm the transaction called `anchor(bytes32(counterparty_ref))` on `contract`,
    or read the `Anchored` event with `ref == counterparty_ref`.
 4. Read the block timestamp — this is the commitment time, independent of the provider.
+   It is the value the block producer declared within the chain's consensus bounds, not an
+   independently proven time: a producer can declare a time that is consensus-valid yet
+   earlier than the block's true position. Same caveat, and same consequence for any
+   ordering check that compares against it, as in
+   [anchoring-precedence-ref-v1](anchoring-precedence-ref-v1.md).
 
-No operator cooperation required after step 1. The anchor is verifiable by any party
-with access to a public RPC for the declared `chain_id`.
+No cooperation from the provider is required after step 1. The anchor is verifiable by any
+party with access to an RPC for the declared `chain_id`. A public RPC is a third party in
+that path: it can withhold or misreport what it serves. A verifier who needs more than
+"the endpoint said so" queries its own node or cross-checks independent endpoints.
 
 ---
 

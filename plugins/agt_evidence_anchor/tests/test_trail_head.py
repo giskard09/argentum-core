@@ -514,3 +514,13 @@ def test_cadence_interleaved_agents_cannot_mask_a_breach():
     # each agent alone does breach the 1h ceiling, confirming this isn't a false alarm
     assert verify_checkpoint_cadence(cp_a, HOUR)["verdict"] == "period_exceeds_declared_maximum"
     assert verify_checkpoint_cadence(cp_b, HOUR)["verdict"] == "period_exceeds_declared_maximum"
+
+
+def test_cadence_ignores_when_checkpoints_were_anchored():
+    """Documented limit (spec, "What this does NOT prove"): the check sees only
+    the operator-declared period_end. Checkpoints with regular period_end pass
+    whenever they were sealed or anchored, because anchor time is not an input.
+    """
+    log = _log(3)
+    cps = [make_checkpoint(AGENT, t, log) for t in (T1, T2, T3)]  # hourly period_end
+    assert verify_checkpoint_cadence(cps, HOUR) == {"verdict": "ok"}
