@@ -58,7 +58,7 @@ A checkpoint MUST be emitted for every period, **including periods in which the 
 
 The period length is a deployment parameter (see above), and the checkpoint rule above does not constrain it: an operator can declare an hour-long period, or a year-long one, and still satisfy "a checkpoint MUST be emitted for every period." A longer period does not break anything already specified — it only widens the window in which a tail cut is undetectable (see [What this does NOT prove](#what-this-does-not-prove)).
 
-A consumer that needs an upper bound on that window declares one, `declared_max_period_s`, and checks it against the checkpoint stream:
+A consumer that needs an upper bound on the gaps between declared `period_end` values declares one, `declared_max_period_s`, and checks it against the checkpoint stream. The check bounds those declared gaps, not the real window in which a tail cut is undetectable: it never sees when the checkpoints were anchored (see [What this does NOT prove](#what-this-does-not-prove), "When a checkpoint was sealed"):
 
 ```
 verify_checkpoint_cadence(checkpoints, declared_max_period_s) -> ok | period_exceeds_declared_maximum
@@ -239,7 +239,8 @@ This answers the independence question from autogen#7353 only under one conditio
 - **That the root was anchored.** The module verifies inclusion in the root it is given (`root_anchoring: "not_checked"` in every result). The caller confirms the root on-chain with an AnchorRegistry query, as for any batch root.
 - **That the checkpoint is the latest one.** Whoever presents the log could present an old checkpoint to hide a later truncation. The verifier MUST take the checkpoint from the anchor stream for the most recent period, not from the presenter. The optional staleness bound (check 6) limits how old an accepted checkpoint may be; it does not replace fetching the latest one.
 - **That a window without an anchor or a checkpoint starts where the log really was.** Its start is `uncertified` and reported as such (see [Window verification](#window-verification)).
-- **Anything between the last checkpoint and now.** Records after the last seal are continuous but unwitnessed (`complete_unsealed_tail`). The period length is the window in which a tail cut is undetectable.
+- **Anything between the last checkpoint and now.** Records after the last seal are continuous but unwitnessed (`complete_unsealed_tail`). The period length is the window in which a tail cut is undetectable, provided each checkpoint is anchored promptly at period end; a late anchor widens it (see "When a checkpoint was sealed" below).
+- **When a checkpoint was sealed.** `verify_checkpoint_cadence` compares only `period_end`, a value the operator declares; it takes no input about when each checkpoint was anchored. A stream whose checkpoints were all anchored late, but carry regular `period_end` values, returns `ok`. A consumer that needs a bound on witnessing time compares the anchor's block time itself, outside this check, and block time is a producer-declared value too (see [anchoring-precedence-ref-v1](anchoring-precedence-ref-v1.md)).
 - **Actions never submitted.** Without `agent_seq`, an action the agent never sent, or one the operator dropped at ingest, leaves no trace. With `agent_seq`, only actions the agent itself signed are covered, and a drop of the agent's latest actions is visible only against the agent's own last counter.
 - **The meaning or legitimacy of any record.** Same limits as [batch-anchor.md](batch-anchor.md) and [action-ref.md](action-ref.md).
 
