@@ -37,4 +37,6 @@ ARGENTUM.
 
 | Implementation | Repo | Verified run | Since |
 |-----------------|------|--------------|-------|
-| whawk46 (flareclaw-verifier) | [flareclaw-conformance](https://github.com/whawk46/flareclaw-conformance) | [30819828942](https://github.com/whawk46/flareclaw-conformance/actions/runs/30819828942) | 2026-08-03 |
+| whawk46 (flareclaw-verifier) | `whawk46/flareclaw-conformance` — no longer resolves as of 2026-11-22 (HTTP 404 from the GitHub API) | run 30819828942 — no longer resolves (HTTP 404). Not counted until a reachable run is pinned again. | 2026-08-03; unverified since 2026-11-22 |
+
+A row whose pinned run no longer resolves is kept as history and marked; it is not counted. See the whawk46 entry in [ADOPTERS.md](ADOPTERS.md).
