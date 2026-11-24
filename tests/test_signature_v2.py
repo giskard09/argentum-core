@@ -129,6 +129,14 @@ def check_integration(tmp_path):
         cap = _signed_body(exe, "/trails/t1/execute", sk, "exe-1")
         stolen = {**reg, **{k: cap[k] for k in ("signature", "timestamp", "nonce", "sig_v")}}
         assert post("/trails", stolen)["signed"] is False
+        # the path is the decoded one: ids with a space route, and sign the decoded form
+        conn = argentum.get_db()
+        conn.execute("INSERT INTO trails (id, author_id, author_name, name, description, steps, price_sats, created_at) "
+                     "VALUES ('t 3', 'auth', 'A', 'n', 'd', '[]', 10, ?)", (argentum.now(),))
+        conn.commit(); conn.close()
+        r = post("/trails/t%203/execute", _signed_body(exe, "/trails/t 3/execute", sk, "exe-1"))
+        assert (r["signed"], r["sig_v"]) == (True, 2), r
+        assert post("/trails/t%203/execute", _signed_body(exe, "/trails/t%203/execute", sk, "exe-1"))["signed"] is False
         # sync handlers (report / rate) also take v2
         conn = argentum.get_db()
         conn.execute("INSERT INTO trail_executions (id, trail_id, executor_id, executor_name, status, created_at) "

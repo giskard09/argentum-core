@@ -30,9 +30,11 @@ _log = logging.getLogger("agent_signing")
 MARKS_URL = "http://localhost:8015"
 # A signature may be this old (seconds) and still verify...
 SIGNATURE_TTL_SECONDS = 60
-# ...but may only be this far in the future. The old rule was symmetric (60 s), which gave a
-# future-dated signature a 120 s life. Small skew tolerance only; override per host if needed.
-SIGNATURE_FUTURE_TOLERANCE_SECONDS = int(os.environ.get("AGENT_SIGNING_FUTURE_TOLERANCE", "10"))
+# ...but may only be this far in the future: room for a client clock that runs a little fast,
+# not a second 60 s. Replays on one service are already stopped by the durable nonce store, so
+# this is not the replay defence; it just keeps a future-dated signature from living much longer
+# than a normal one. Override per host with AGENT_SIGNING_FUTURE_TOLERANCE.
+SIGNATURE_FUTURE_TOLERANCE_SECONDS = int(os.environ.get("AGENT_SIGNING_FUTURE_TOLERANCE", "30"))
 NONCE_CACHE_MAX = 100_000        # rows kept at once; when full, new signatures are REFUSED, never cleared
 NONCE_PER_AGENT_MAX = 1_000      # rows one agent_id may hold, so one key cannot fill the table
 MAX_NONCE_LEN = 128
@@ -66,7 +68,13 @@ def body_sha256(body: dict) -> str:
 
 def build_payload_v2(agent_id: str, timestamp: int, nonce: str, aud: str, method: str, path: str,
                      body_sha256_hex: str) -> bytes:
-    """Canonical bytes for a v2 signature. `aud` is the service, `path` the URL path (no query)."""
+    """Canonical bytes for a v2 signature. `aud` is the service name the server expects.
+
+    `path` is the URL path exactly as the server sees it: percent-decoded, no query string, no
+    fragment. Sign "/trails/my trail/execute", not "/trails/my%20trail/execute". An id that contains
+    "/" decodes into extra path segments and does not route, so it is not supported. The query
+    string is not covered by the signature.
+    """
     return jcs_bytes({
         "agent_id": agent_id, "aud": aud, "body_sha256": body_sha256_hex, "method": method.upper(),
         "nonce": nonce, "path": path, "sig_v": SIG_V2, "timestamp": int(timestamp),
@@ -118,10 +126,10 @@ class NonceCache:
         self._max_size = max_size
         self._per_agent_max = per_agent_max
         self._lock = threading.Lock()
+        self.durable = bool(db_path) and db_path != ":memory:"
         self._conn = self._open(db_path or ":memory:")
 
-    @staticmethod
-    def _open(path: str):
+    def _open(self, path: str):
         try:
             conn = sqlite3.connect(path, check_same_thread=False, timeout=5.0, isolation_level=None)
             conn.execute("PRAGMA journal_mode=WAL") if path != ":memory:" else None
@@ -131,6 +139,7 @@ class NonceCache:
             return conn
         except sqlite3.Error as e:
             _log.error("nonce store %r unavailable (%s); falling back to memory for this process", path, e)
+            self.durable = False
             conn = sqlite3.connect(":memory:", check_same_thread=False, isolation_level=None)
             conn.execute("CREATE TABLE nonces (k TEXT PRIMARY KEY, agent TEXT, expires_at REAL NOT NULL)")
             conn.execute("CREATE INDEX nonces_exp ON nonces (expires_at)")
@@ -224,7 +233,7 @@ def verify_request(
         return False
     try:
         timestamp = int(timestamp)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):   # OverflowError: float("inf")
         return False
 
     current = int(now if now is not None else time.time())

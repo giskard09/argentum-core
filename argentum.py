@@ -922,6 +922,7 @@ def get_status():
         "dependencies": ["sqlite", "giskard-marks", "arbitrum-rpc"],
         "total_actions": n_actions,
         "weight_threshold": WEIGHT_THRESHOLD,
+        "nonce_store_durable": bool(getattr(agent_signing._nonce_cache, "durable", False)),
     }
 
 

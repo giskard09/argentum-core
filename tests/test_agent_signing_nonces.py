@@ -81,6 +81,16 @@ def check_all(m):
     assert chk("w", "w-fut", ts=NOW + f, cache=m.NonceCache()) is True
     assert chk("w", "w-fut+1", ts=NOW + f + 1, cache=m.NonceCache()) is False
 
+    # nothing escapes verify_request: non-finite or absurd timestamps are plain refusals
+    for bad in (float("inf"), float("-inf"), float("nan"), 10 ** 400, None, "x", [1]):
+        sig = m.sign_request(sk, "a", NOW, "n-bad")
+        assert m.verify_request("a", sig, bad, "n-bad", now=NOW, pubkey_loader=ld, nonce_cache=m.NonceCache()) is False, bad
+
+    # durable flag: a file store says so, memory does not
+    assert m.NonceCache().durable is False
+    assert m.NonceCache(db_path=os.path.join(tempfile.mkdtemp(), "d.db")).durable is True
+    assert m.NonceCache(db_path=os.path.join(tempfile.mkdtemp(), "no-such-dir", "d.db")).durable is False  # cannot open: memory
+
     # a store failure refuses (fail closed), it does not accept
     c = m.NonceCache()
     c._conn.close()
@@ -92,5 +102,20 @@ def test_nonce_store_behaviour():
 
 
 def test_defaults_are_the_documented_ones():
-    assert A.SIGNATURE_TTL_SECONDS == 60 and A.SIGNATURE_FUTURE_TOLERANCE_SECONDS == 10
+    assert A.SIGNATURE_TTL_SECONDS == 60 and A.SIGNATURE_FUTURE_TOLERANCE_SECONDS == 30
     assert A.NONCE_CACHE_MAX >= 10_000 and A.MAX_NONCE_LEN == 128
+
+
+def test_status_reports_whether_the_nonce_store_is_durable(tmp_path):
+    from fastapi.testclient import TestClient
+    sys.modules.pop("argentum", None)
+    import argentum
+    argentum.DB_PATH = tmp_path / "argentum.db"
+    argentum.init_db()
+    client = TestClient(argentum.app)
+    assert client.get("/status").json()["nonce_store_durable"] is False   # tests run on the in-memory store
+    argentum.agent_signing._nonce_cache.durable = True
+    try:
+        assert client.get("/status").json()["nonce_store_durable"] is True
+    finally:
+        argentum.agent_signing._nonce_cache.durable = False
