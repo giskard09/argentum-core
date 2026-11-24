@@ -1,4 +1,4 @@
-# Rama — independent verification work, fixed price
+# Rama — conformance and verifiability reviews, fixed price
 
 We check whether the evidence your agent system produces can be verified by someone who does not trust you. You get a written report. We do not certify anything.
 
@@ -20,6 +20,7 @@ You point us at one receipt, log or evidence format that your own system already
 - Every report says, in these words, that it is not a certification, endorsement or conformity seal by Rama, by the Composable Evidence Criteria lab or by LFDT. You may not present it as one.
 - If the work finds a gap in the public corpus itself, that gap is published to the corpus like any other. Paying clients get no advance notice.
 - Where a gap we find could be closed by an external anchor, the report says so. Our own anchor registry is public and free to use; it is not part of the price.
+- You pay for the review, so it is not an independent audit, and we do not call it one.
 - Out of scope: changes to your code, remediation, ongoing monitoring, legal or compliance opinions.
 
 ## Public work you can check before deciding
@@ -36,5 +37,6 @@ Contact: Pablo Etcheverry — [linkedin.com/in/pablo-etcheverry-5924119](https:/
 
 ## Changelog
 
+- 2026-11-24 — renamed the page to say what is sold and added the line on paid reviews. Prices unchanged.
 - 2026-11-19 — added a worked example under Public work. Prices and terms unchanged.
 - 2026-11-15 — first published. Two services, USD 1,200 each.
