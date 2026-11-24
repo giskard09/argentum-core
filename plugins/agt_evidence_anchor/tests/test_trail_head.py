@@ -522,5 +522,6 @@ def test_cadence_ignores_when_checkpoints_were_anchored():
     whenever they were sealed or anchored, because anchor time is not an input.
     """
     log = _log(3)
-    cps = [make_checkpoint(AGENT, t, log) for t in (T1, T2, T3)]  # hourly period_end
+    hourly = ["2026-09-23T18:00:00.000Z", "2026-09-23T19:00:00.000Z", "2026-09-23T20:00:00.000Z"]
+    cps = [make_checkpoint(AGENT, t, log) for t in hourly]
     assert verify_checkpoint_cadence(cps, HOUR) == {"verdict": "ok"}
