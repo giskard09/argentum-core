@@ -16,8 +16,11 @@ with different unused trailing bits must not pass as a second key. **This change
 `AGREED`:** an envelope that was `AGREED` under v1.2 with a repeated `party_id` or a repeated
 `pubkey` is now `UNRESOLVED`. It is not additive, for the same reason v1.2 was not: grandfathering
 the old shape would keep the check unable to fail. No existing fixture changes result and no
-declared hash changes (the 11 v1.2 vectors are untouched, byte for byte); ten negative vectors
-exercise the new rules, one per way of writing the same party or key differently. `party_id` and
+declared hash changes (the 11 v1.2 vectors are untouched, byte for byte); twelve negative vectors
+exercise the new rules, one per way of writing the same party or key differently (including a
+key with one byte too many and a key under another SPKI prefix). The same comparison now applies
+to `resolved_by` in the `supersedes` check: writing a party's own `party_id` in upper case or with
+a space no longer lets that party attest its own correction (two more negative vectors). `party_id` and
 `pubkey` now have format rules (§2 and §7). What it still
 cannot see: one operator holding two different keys under two different `party_id` values (see
 "What this profile does not do"). `verify.py` now canonicalizes with the repo's `jcs.py` (RFC
@@ -259,7 +262,9 @@ A vector without `supersedes` is exempt from this check (it is a root record).
 Each `known_envelopes` entry MUST also declare `resolved_by`: the identifier of
 the source that supplied this record. `resolved_by` MUST NOT equal either
 `party_a.party_id` or `party_b.party_id` of the envelope carrying the
-`supersedes` pointer. Without this, the same party that emits a correction
+`supersedes` pointer (v1.3: compared ignoring ASCII case, and `resolved_by` MUST be a valid
+identifier under the same rule as `party_id`, §7; writing a party's own id differently does not
+make it a different source). Without this, the same party that emits a correction
 could also fabricate the "prior" envelope it claims to correct — the two
 values being compared (the pointer and what it resolves to) could never
 diverge, because one party controls both sides. `resolved_by` names an
@@ -271,8 +276,8 @@ externally-audited fact" treatment `signature_valid_*` receives above.
 **Fails when:** `supersedes` is present but does not resolve to a known prior
 envelope, resolves to an envelope whose own `interaction_id` differs (a
 correction MUST correct the same interaction, not a different one), the
-`known_envelopes` entry has no `resolved_by`, or `resolved_by` is one of the
-current envelope's own two parties.
+`known_envelopes` entry has no `resolved_by`, `resolved_by` is not a valid identifier (v1.3), or `resolved_by` is one of the
+current envelope's own two parties, ignoring ASCII case (v1.3).
 
 ---
 

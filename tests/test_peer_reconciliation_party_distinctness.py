@@ -45,6 +45,11 @@ def check_all(v):
             assert v.compute_comparator_state(x, sa, sb, ba, bb, True) == "UNRESOLVED", vid
         else:
             assert distinct is True, vid  # no pre-v1.3 vector changes
+        # supersedes: resolved_by must not be one of the parties, however it is written.
+        if vid.startswith("malformed-supersedes-self-attested"):
+            assert v.check_supersedes_chain_integrity(x)[0] is False, vid
+        if vid == "correction-supersedes-001":
+            assert v.check_supersedes_chain_integrity(x)[0] is True, vid
     # Strict key parsing, directly.
     good = "MCowBQYDK2VwAyEAqQm7VZ0X8tGxJm6QwYh3fN4dL9pRk2vC5eA1sT7uHzM="
     assert v.pubkey_bytes(good) is not None and len(v.pubkey_bytes(good)) == 32

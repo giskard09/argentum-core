@@ -186,13 +186,22 @@ def check_supersedes_chain_integrity(vector: dict) -> tuple[bool, str]:
         )
 
     resolved_by = prior.get("resolved_by")
+    # v1.3: same identifier rule and same case-insensitive comparison as party_distinctness, so a
+    # party cannot attest its own correction by writing its id differently ("SAFEAGENT-GUARDIAN",
+    # "safeagent-guardian ").
     current_parties = {
-        envelope["party_a"].get("party_id"),
-        envelope["party_b"].get("party_id"),
+        pid.lower()
+        for pid in (envelope["party_a"].get("party_id"), envelope["party_b"].get("party_id"))
+        if party_id_valid(pid)
     }
     if not resolved_by:
         return False, "known_envelopes entry has no resolved_by — provenance not declared"
-    if resolved_by in current_parties:
+    if not party_id_valid(resolved_by):
+        return False, (
+            f"known_envelopes entry resolved_by={resolved_by!r} is not a valid identifier "
+            f"(non-empty printable ASCII, no space or control character)"
+        )
+    if resolved_by.lower() in current_parties:
         return False, (
             f"known_envelopes entry resolved_by={resolved_by!r} is one of this envelope's own "
             f"parties — a party cannot independently resolve the prior envelope it also emits "
