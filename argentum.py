@@ -23,9 +23,9 @@ from fastapi.responses import JSONResponse, HTMLResponse, Response, FileResponse
 from pydantic import BaseModel
 from pathlib import Path
 from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 import agent_signing
+import ipaddress
 import threading as _threading
 try:
     import arb_pay as _arb_pay
@@ -43,7 +43,31 @@ try:
 except ImportError:
     _WEBHOOK_OK = False
 
-limiter = Limiter(key_func=get_remote_address)
+_LOOPBACK_PEERS = ("127.0.0.1", "::1")
+
+
+def _rate_limit_key(request: Request) -> str:
+    """Per-client key for the rate limiter.
+
+    The app listens on 0.0.0.0, so the socket peer is the truth for any non-loopback
+    connection: CF-Connecting-IP is only believed when the peer is the local loopback
+    (a local tunnel/proxy), never from outside. uvicorn already replaces client.host with
+    the X-Forwarded-For value when the peer is 127.0.0.1 and ignores that header from
+    anyone else, so a spoofed X-Forwarded-For or CF-Connecting-IP from outside cannot move
+    a client into another client's bucket.
+    """
+    peer = request.client.host if request.client else "unknown"
+    if peer in _LOOPBACK_PEERS:
+        cf = (request.headers.get("cf-connecting-ip") or "").strip()
+        if cf:
+            try:
+                return str(ipaddress.ip_address(cf))
+            except ValueError:
+                pass
+    return peer
+
+
+limiter = Limiter(key_func=_rate_limit_key)
 
 MEMORY_URL        = "http://localhost:8005"
 MARKS_URL         = "http://localhost:8015"
@@ -943,8 +967,8 @@ async def submit_action(request: Request, req: ActionSubmit):
         "message":            f"Action submitted. Needs {ATTESTATIONS_NEEDED} attestations to be verified."
     }
 
-@limiter.limit("20/minute")
 @app.post("/action/{action_id}/attest")
+@limiter.limit("20/minute")
 async def attest_action(request: Request, action_id: str, req: AttestRequest):
     conn = get_db()
 
@@ -1284,8 +1308,8 @@ class PaygTopupUsdcReq(BaseModel):
     trails: int
     from_address: str  # dirección EVM desde la que se enviará el USDC
 
-@limiter.limit("10/minute")
 @app.post("/payg/topup/lightning")
+@limiter.limit("10/minute")
 async def payg_topup_lightning(request: Request, req: PaygTopupLightningReq):
     """Genera invoice Lightning para comprar N trails (300 sats/trail)."""
     if req.trails < 1 or req.trails > 10000:
@@ -1309,8 +1333,8 @@ async def payg_topup_lightning(request: Request, req: PaygTopupLightningReq):
     }
 
 
-@limiter.limit("10/minute")
 @app.post("/payg/topup/usdc")
+@limiter.limit("10/minute")
 def payg_topup_usdc(request: Request, req: PaygTopupUsdcReq):
     """Registra intent de depósito USDC. Crediting automático al detectar el transfer on-chain."""
     if req.trails < 1 or req.trails > 10000:
@@ -1401,8 +1425,8 @@ def payg_balance(api_key: str):
     }
 
 
-@limiter.limit("5/minute")
 @app.post("/payg/account")
+@limiter.limit("5/minute")
 def create_payg_account(request: Request, agent_id: str):
     """Crea una cuenta PAYG (tier free, 0 créditos). Devuelve api_key."""
     api_key = mycelium_trails.create_payg_account(TRAILS_DB, agent_id)
@@ -1619,8 +1643,8 @@ async def phoenixd_create_invoice(amount_sat: int, description: str, external_id
         r.raise_for_status()
         return r.json()
 
-@limiter.limit("5/minute")
 @app.post("/action/{action_id}/invoice")
+@limiter.limit("5/minute")
 async def create_action_invoice(request: Request, action_id: str):
     """Create a Lightning invoice to stake sats on an action submission."""
     conn = get_db()
@@ -1821,8 +1845,8 @@ def list_reports(status: Optional[str] = None):
 
 # ── KLEROS DISPUTE RESOLUTION ────────────────────────────────────────────────
 
-@limiter.limit("5/minute")
 @app.post("/action/{action_id}/dispute")
+@limiter.limit("5/minute")
 async def open_dispute(request: Request, action_id: str, req: DisputeRequest):
     """
     Escalate a verified action to Kleros for decentralized arbitration.
@@ -2000,8 +2024,8 @@ TRAIL_AUTHOR_KARMA_REWARD = 3   # karma when a trail execution succeeds
 MIN_TRAIL_PRICE = 1
 MAX_TRAIL_STEPS = 12
 
-@limiter.limit("10/minute")
 @app.post("/trails")
+@limiter.limit("10/minute")
 async def register_trail(request: Request, req: TrailRegister):
     if not req.steps or len(req.steps) > MAX_TRAIL_STEPS:
         raise HTTPException(400, f"steps must be 1..{MAX_TRAIL_STEPS}")
@@ -2597,8 +2621,8 @@ def get_trail(trail_id: str):
     d["recent_executions"] = [dict(x) for x in recent]
     return d
 
-@limiter.limit("30/minute")
 @app.post("/trails/{trail_id}/execute")
+@limiter.limit("30/minute")
 async def record_trail_execution(request: Request, trail_id: str, req: TrailExecution):
     if req.status not in ("success", "fail"):
         raise HTTPException(400, "status must be 'success' or 'fail'")
