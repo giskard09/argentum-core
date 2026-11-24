@@ -18,11 +18,15 @@ TIMESTAMP_RE = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{
 PREIMAGE_KEYS = ("action_type", "agent_id", "scope", "timestamp")
 
 
-def compute_action_ref(agent_id: str, action_type: str, scope: str, timestamp: str) -> str:
+def compute_action_ref(agent_id: str, action_type: str, scope: str, timestamp: str, legacy_v1_0: bool = False) -> str:
     """Reference implementation of compute_action_ref per mycelium-provider-protocol.md §1.
 
-    Raises ValueError if timestamp does not match RFC 3339 UTC with 3-digit ms.
+    Raises ValueError if timestamp does not match RFC 3339 UTC with 3-digit ms, or
+    (v1.1) if scope is empty. legacy_v1_0=True skips the scope check, only to
+    re-verify the bytes of vectors deprecated in v1.1.
     """
+    if scope == "" and not legacy_v1_0:
+        raise ValueError("OUT_OF_PROFILE_DOMAIN: scope: must be a non-empty string")
     if not TIMESTAMP_RE.match(timestamp):
         raise ValueError(
             f"timestamp must be RFC 3339 UTC with 3-digit ms and Z suffix, got {timestamp!r}"
@@ -50,6 +54,17 @@ def main() -> int:
     for vec in suite["vectors"]:
         vid = vec["id"]
 
+        if vec.get("reject") and vec.get("reject_field") == "scope":
+            if vec["input"]["scope"] != "":
+                failures.append(f"{vid}: reject_field=scope but scope is not empty")
+                continue
+            try:
+                compute_action_ref(*preimage_from_input(vec["input"]))
+                failures.append(f"{vid}: compute_action_ref did not raise on empty scope")
+            except ValueError:
+                rejected += 1
+            continue
+
         if vec.get("reject"):
             ts = vec["input"]["timestamp"]
             if TIMESTAMP_RE.match(ts):
@@ -66,6 +81,18 @@ def main() -> int:
             continue
 
         agent_id, action_type, scope, timestamp = preimage_from_input(vec["input"])
+        if vec.get("deprecated"):
+            # Bytes must still match under the v1.0 rule, and the current rule must refuse it.
+            legacy, _ = compute_action_ref(agent_id, action_type, scope, timestamp, legacy_v1_0=True)
+            try:
+                compute_action_ref(agent_id, action_type, scope, timestamp)
+                failures.append(f"{vid}: deprecated vector is still accepted by the v1.1 rule")
+            except ValueError:
+                if legacy != vec["expected"]:
+                    failures.append(f"{vid}: deprecated vector no longer matches its v1.0 bytes")
+                else:
+                    rejected += 1
+            continue
         try:
             got, canonical = compute_action_ref(agent_id, action_type, scope, timestamp)
         except ValueError as e:
