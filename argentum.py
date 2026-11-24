@@ -17,7 +17,7 @@ from jcs import jcs_bytes
 from plugins.agt_evidence_anchor.action_ref import _validate_domain, OutOfProfileDomainError
 from datetime import datetime, timezone
 from typing import Optional
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, HTMLResponse, Response, FileResponse
 from pydantic import BaseModel
@@ -482,6 +482,7 @@ class ActionSubmit(BaseModel):
     signature:   Optional[str] = None
     timestamp:   Optional[int] = None
     nonce:       Optional[str] = None
+    sig_v:         Optional[int] = None   # 1 (default) or 2: v2 binds service, method, path and body
 
 class AttestRequest(BaseModel):
     attester_id:   str
@@ -490,6 +491,7 @@ class AttestRequest(BaseModel):
     signature:     Optional[str] = None
     timestamp:     Optional[int] = None
     nonce:         Optional[str] = None
+    sig_v:         Optional[int] = None   # 1 (default) or 2: v2 binds service, method, path and body
 
 class ReportRequest(BaseModel):
     reporter_id: str
@@ -497,6 +499,7 @@ class ReportRequest(BaseModel):
     signature:   Optional[str] = None
     timestamp:   Optional[int] = None
     nonce:       Optional[str] = None
+    sig_v:         Optional[int] = None   # 1 (default) or 2: v2 binds service, method, path and body
 
 class SlashConfirmRequest(BaseModel):
     confirmer_id: str  # must be genesis attestor
@@ -507,6 +510,7 @@ class DisputeRequest(BaseModel):
     signature:   Optional[str] = None
     timestamp:   Optional[int] = None
     nonce:       Optional[str] = None
+    sig_v:         Optional[int] = None   # 1 (default) or 2: v2 binds service, method, path and body
 
 class KlerosRulingRequest(BaseModel):
     action_id: str
@@ -523,6 +527,7 @@ class TrailRegister(BaseModel):
     signature:     Optional[str] = None
     timestamp:     Optional[int] = None
     nonce:         Optional[str] = None
+    sig_v:         Optional[int] = None   # 1 (default) or 2: v2 binds service, method, path and body
 
 class TrailExecution(BaseModel):
     executor_id:   str
@@ -533,6 +538,7 @@ class TrailExecution(BaseModel):
     signature:     Optional[str] = None
     timestamp:     Optional[int] = None
     nonce:         Optional[str] = None
+    sig_v:         Optional[int] = None   # 1 (default) or 2: v2 binds service, method, path and body
 
 class TrailRating(BaseModel):
     execution_id: str
@@ -541,6 +547,7 @@ class TrailRating(BaseModel):
     signature:    Optional[str] = None
     timestamp:    Optional[int] = None
     nonce:        Optional[str] = None
+    sig_v:         Optional[int] = None   # 1 (default) or 2: v2 binds service, method, path and body
 
 # ── HELPERS ─────────────────────────────────────────────────────────────────
 
@@ -903,32 +910,76 @@ def get_status():
 def get_action_types():
     return ACTION_TYPES
 
-def _verify_agent_signature(agent_id: str, signature, timestamp, nonce) -> bool:
+SERVICE_AUD = "argentum"   # `aud` a v2 signature must name to be valid here
+
+
+async def _capture_body(request: Request):
+    """Dependency: keep the raw request body so a v2 signature can be checked against it."""
+    request.state.raw_body = await request.body()
+
+
+def _request_body_sha256(request: Request):
+    """SHA-256 of the JCS of the JSON body without the signature fields, or None if not a JSON object."""
+    raw = getattr(request.state, "raw_body", None)
+    if raw is None:
+        return None
+    try:
+        body = json.loads(raw)
+    except (ValueError, UnicodeDecodeError):
+        return None
+    return agent_signing.body_sha256(body) if isinstance(body, dict) else None
+
+
+def _verify_agent_signature(agent_id: str, signature, timestamp, nonce, request: Optional[Request] = None,
+                            sig_v: Optional[int] = None) -> bool:
     """Returns True only if all fields present and verification passes.
-    Unsigned requests return False silently — caller decides the policy."""
+    Unsigned requests return False silently — caller decides the policy.
+
+    sig_v=None/1 checks the v1 payload; sig_v=2 also requires the signature to cover this
+    service, the HTTP method, the path and the body (needs `request`). The version that
+    verified is left in request.state.sig_v_used for the response; v2 never falls back to v1.
+    """
+    if request is not None:
+        request.state.sig_v_used = None
     if not (signature and timestamp and nonce):
         return False
     try:
-        return agent_signing.verify_request(
+        kwargs = {}
+        if sig_v == agent_signing.SIG_V2:
+            if request is None:
+                return False
+            kwargs = dict(sig_v=2, aud=SERVICE_AUD, method=request.method, path=request.url.path,
+                          body_sha256_hex=_request_body_sha256(request))
+        elif sig_v not in (None, 1):
+            return False
+        ok = agent_signing.verify_request(
             agent_id=agent_id,
             signature_b64=signature,
             timestamp=int(timestamp),
             nonce=nonce,
+            **kwargs,
         )
     except Exception:
         return False
+    if ok and request is not None:
+        request.state.sig_v_used = 2 if sig_v == agent_signing.SIG_V2 else 1
+    return ok
+
+
+def _sig_used(request: Request):
+    return getattr(request.state, "sig_v_used", None)
 
 
 @app.post("/action/submit")
 @limiter.limit("10/minute")
-async def submit_action(request: Request, req: ActionSubmit):
+async def submit_action(request: Request, req: ActionSubmit, _body=Depends(_capture_body)):
     if req.action_type not in ACTION_TYPES:
         raise HTTPException(400, f"Unknown action_type. Valid: {list(ACTION_TYPES)}")
 
     action_id  = str(uuid.uuid4())[:8]
     karma      = ACTION_TYPES[req.action_type]["karma"]
     created_at = now()
-    signed     = _verify_agent_signature(req.entity_id, req.signature, req.timestamp, req.nonce)
+    signed     = _verify_agent_signature(req.entity_id, req.signature, req.timestamp, req.nonce, request, req.sig_v)
 
     conn = get_db()
     conn.execute("""
@@ -964,12 +1015,13 @@ async def submit_action(request: Request, req: ActionSubmit):
         "attestations_needed": ATTESTATIONS_NEEDED,
         "karma_on_verify":    karma,
         "signed":             signed,
+        "sig_v":              _sig_used(request),
         "message":            f"Action submitted. Needs {ATTESTATIONS_NEEDED} attestations to be verified."
     }
 
 @app.post("/action/{action_id}/attest")
 @limiter.limit("20/minute")
-async def attest_action(request: Request, action_id: str, req: AttestRequest):
+async def attest_action(request: Request, action_id: str, req: AttestRequest, _body=Depends(_capture_body)):
     conn = get_db()
 
     action = conn.execute("SELECT * FROM actions WHERE id = ?", (action_id,)).fetchone()
@@ -1020,7 +1072,7 @@ async def attest_action(request: Request, action_id: str, req: AttestRequest):
         # v0.3 karma-weighted attestation weight
         attest_weight = max(KARMA_WEIGHT_MIN, min(KARMA_WEIGHT_MAX, attester_karma / KARMA_WEIGHT_BASE))
         # v0.4 signed identity — unsigned non-genesis attestors get 0.5x weight
-        signed = _verify_agent_signature(req.attester_id, req.signature, req.timestamp, req.nonce)
+        signed = _verify_agent_signature(req.attester_id, req.signature, req.timestamp, req.nonce, request, req.sig_v)
         if not signed:
             attest_weight = attest_weight * 0.5
 
@@ -1743,7 +1795,7 @@ async def payment_webhook(request: Request):
 # ── SLASHING ────────────────────────────────────────────────────────────────
 
 @app.post("/action/{action_id}/report")
-def report_action(action_id: str, req: ReportRequest):
+def report_action(request: Request, action_id: str, req: ReportRequest, _body=Depends(_capture_body)):
     """Anyone can report a verified action as false. Opens a slash investigation."""
     conn = get_db()
     action = conn.execute("SELECT * FROM actions WHERE id = ?", (action_id,)).fetchone()
@@ -1763,7 +1815,7 @@ def report_action(action_id: str, req: ReportRequest):
     if existing:
         conn.close()
         raise HTTPException(400, "Already reported")
-    signed = _verify_agent_signature(req.reporter_id, req.signature, req.timestamp, req.nonce)
+    signed = _verify_agent_signature(req.reporter_id, req.signature, req.timestamp, req.nonce, request, req.sig_v)
     report_id = str(uuid.uuid4())[:8]
     conn.execute(
         "INSERT INTO reports (id, action_id, reporter_id, reason, status, created_at) VALUES (?, ?, ?, ?, 'open', ?)",
@@ -1773,6 +1825,7 @@ def report_action(action_id: str, req: ReportRequest):
     conn.close()
     return {"report_id": report_id, "action_id": action_id, "status": "open",
             "signed": signed,
+            "sig_v": _sig_used(request),
             "message": "Report submitted. Genesis attestors will review."}
 
 
@@ -1847,7 +1900,7 @@ def list_reports(status: Optional[str] = None):
 
 @app.post("/action/{action_id}/dispute")
 @limiter.limit("5/minute")
-async def open_dispute(request: Request, action_id: str, req: DisputeRequest):
+async def open_dispute(request: Request, action_id: str, req: DisputeRequest, _body=Depends(_capture_body)):
     """
     Escalate a verified action to Kleros for decentralized arbitration.
     Requires reporter karma >= MINIMUM_KARMA_TO_DISPUTE (10).
@@ -1888,7 +1941,7 @@ async def open_dispute(request: Request, action_id: str, req: DisputeRequest):
         conn.close()
         raise HTTPException(400, "Dispute already open for this action")
 
-    signed = _verify_agent_signature(req.reporter_id, req.signature, req.timestamp, req.nonce)
+    signed = _verify_agent_signature(req.reporter_id, req.signature, req.timestamp, req.nonce, request, req.sig_v)
     dispute_id = str(uuid.uuid4())[:8]
     conn.execute(
         "INSERT INTO disputes (id, action_id, reporter_id, reason, status, created_at) VALUES (?, ?, ?, ?, 'pending', ?)",
@@ -1909,6 +1962,7 @@ async def open_dispute(request: Request, action_id: str, req: DisputeRequest):
         "action_id":   action_id,
         "status":      "pending",
         "signed":      signed,
+        "sig_v":       _sig_used(request),
         "message":     "Dispute opened. Action frozen pending Kleros ruling.",
         "kleros_note": "ArgentumArbitrable.sol (IArbitrable) — deploy pending Kleros coordination.",
         "rulings":     {"1": "slash poster + attestors", "2": "clear — action restored to verified", "0": "refused — action restored"}
@@ -2034,7 +2088,7 @@ MAX_TRAIL_STEPS = 12
 
 @app.post("/trails")
 @limiter.limit("10/minute")
-async def register_trail(request: Request, req: TrailRegister):
+async def register_trail(request: Request, req: TrailRegister, _body=Depends(_capture_body)):
     if not req.steps or len(req.steps) > MAX_TRAIL_STEPS:
         raise HTTPException(400, f"steps must be 1..{MAX_TRAIL_STEPS}")
     if req.price_sats < MIN_TRAIL_PRICE:
@@ -2042,7 +2096,7 @@ async def register_trail(request: Request, req: TrailRegister):
     for s in req.steps:
         if not isinstance(s, dict) or "service" not in s or "tool" not in s:
             raise HTTPException(400, "each step needs {service, tool}")
-    signed = _verify_agent_signature(req.author_id, req.signature, req.timestamp, req.nonce)
+    signed = _verify_agent_signature(req.author_id, req.signature, req.timestamp, req.nonce, request, req.sig_v)
     trail_id = str(uuid.uuid4())[:8]
     conn = get_db()
     conn.execute(
@@ -2054,7 +2108,7 @@ async def register_trail(request: Request, req: TrailRegister):
     conn.commit()
     conn.close()
     return {"trail_id": trail_id, "name": req.name, "steps": len(req.steps),
-            "price_sats": req.price_sats, "signed": signed}
+            "price_sats": req.price_sats, "signed": signed, "sig_v": _sig_used(request)}
 
 @app.get("/trails/verify")
 def proxy_trails_verify(
@@ -2631,7 +2685,7 @@ def get_trail(trail_id: str):
 
 @app.post("/trails/{trail_id}/execute")
 @limiter.limit("30/minute")
-async def record_trail_execution(request: Request, trail_id: str, req: TrailExecution):
+async def record_trail_execution(request: Request, trail_id: str, req: TrailExecution, _body=Depends(_capture_body)):
     if req.status not in ("success", "fail"):
         raise HTTPException(400, "status must be 'success' or 'fail'")
     conn = get_db()
@@ -2639,7 +2693,7 @@ async def record_trail_execution(request: Request, trail_id: str, req: TrailExec
     if not trail:
         conn.close()
         raise HTTPException(404, "trail not found")
-    signed = _verify_agent_signature(req.executor_id, req.signature, req.timestamp, req.nonce)
+    signed = _verify_agent_signature(req.executor_id, req.signature, req.timestamp, req.nonce, request, req.sig_v)
     exec_id = str(uuid.uuid4())[:8]
     conn.execute(
         "INSERT INTO trail_executions (id, trail_id, executor_id, executor_name, status, output_hash, payment_hash, created_at) "
@@ -2665,12 +2719,13 @@ async def record_trail_execution(request: Request, trail_id: str, req: TrailExec
         "trail_id":     trail_id,
         "status":       req.status,
         "signed":       signed,
+        "sig_v":        _sig_used(request),
         "author_karma_awarded": karma_reward,
         "author_karma_withheld": "executor_is_author" if (req.status == "success" and signed and _self_run) else None,
     }
 
 @app.post("/trails/{trail_id}/rate")
-def rate_trail_execution(trail_id: str, req: TrailRating):
+def rate_trail_execution(request: Request, trail_id: str, req: TrailRating, _body=Depends(_capture_body)):
     if not (1 <= req.rating <= 5):
         raise HTTPException(400, "rating must be 1..5")
     conn = get_db()
@@ -2687,13 +2742,13 @@ def rate_trail_execution(trail_id: str, req: TrailRating):
     if trail and trail["author_id"] == ex["executor_id"]:
         conn.close()
         raise HTTPException(403, "author cannot rate own trail execution")
-    signed = _verify_agent_signature(req.rater_id, req.signature, req.timestamp, req.nonce) if req.rater_id else False
+    signed = _verify_agent_signature(req.rater_id, req.signature, req.timestamp, req.nonce, request, req.sig_v) if req.rater_id else False
     conn.execute("UPDATE trail_executions SET rating = ? WHERE id = ?", (req.rating, req.execution_id))
     conn.execute("UPDATE trails SET rating_sum = rating_sum + ?, rating_count = rating_count + 1 WHERE id = ?",
                  (req.rating, trail_id))
     conn.commit()
     conn.close()
-    return {"execution_id": req.execution_id, "rating": req.rating, "signed": signed}
+    return {"execution_id": req.execution_id, "rating": req.rating, "signed": signed, "sig_v": _sig_used(request)}
 
 
 @app.get("/billing/summary")

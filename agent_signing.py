@@ -51,6 +51,35 @@ def sign_request(signing_key_b64: str, agent_id: str, timestamp: int, nonce: str
     return base64.b64encode(sig).decode("ascii")
 
 
+# ---- v2 (opt-in, additive): the signature also names WHO it is for and WHAT it asks for ----------
+SIG_V2 = 2
+# Fields that carry the signature itself; they are not part of the body that gets hashed.
+SIGNATURE_FIELDS = ("signature", "timestamp", "nonce", "sig_v")
+
+
+def body_sha256(body: dict) -> str:
+    """SHA-256 (hex) of the JCS of the request's JSON body without the signature fields.
+    Client and server both compute it over the JSON object that was sent."""
+    stripped = {k: v for k, v in body.items() if k not in SIGNATURE_FIELDS}
+    return hashlib.sha256(jcs_bytes(stripped)).hexdigest()
+
+
+def build_payload_v2(agent_id: str, timestamp: int, nonce: str, aud: str, method: str, path: str,
+                     body_sha256_hex: str) -> bytes:
+    """Canonical bytes for a v2 signature. `aud` is the service, `path` the URL path (no query)."""
+    return jcs_bytes({
+        "agent_id": agent_id, "aud": aud, "body_sha256": body_sha256_hex, "method": method.upper(),
+        "nonce": nonce, "path": path, "sig_v": SIG_V2, "timestamp": int(timestamp),
+    })
+
+
+def sign_request_v2(signing_key_b64: str, agent_id: str, timestamp: int, nonce: str, aud: str,
+                    method: str, path: str, body_sha256_hex: str) -> str:
+    sk = SigningKey(base64.b64decode(signing_key_b64))
+    sig = sk.sign(build_payload_v2(agent_id, timestamp, nonce, aud, method, path, body_sha256_hex)).signature
+    return base64.b64encode(sig).decode("ascii")
+
+
 def generate_keypair() -> tuple:
     """Return (signing_key_b64, verify_key_b64). Helper for agents bootstrapping."""
     sk = SigningKey.generate()
@@ -168,8 +197,19 @@ def verify_request(
     now: Optional[int] = None,
     pubkey_loader=None,
     nonce_cache: Optional[NonceCache] = None,
+    *,
+    sig_v: Optional[int] = None,
+    aud: Optional[str] = None,
+    method: Optional[str] = None,
+    path: Optional[str] = None,
+    body_sha256_hex: Optional[str] = None,
 ) -> bool:
     """Verify Ed25519 signature, freshness, and single-use nonce.
+
+    Default is the v1 payload {agent_id, timestamp, nonce}. With sig_v=2 the signature must
+    cover aud, method, path and body_sha256 as well, and all four must be supplied by the
+    caller (the server states what it expects; nothing is taken from the client). v2 never
+    falls back to v1.
 
     The pub_key is resolved at request-time (at_ts=timestamp) so historical
     signatures validate against the key that was active when they were produced,
@@ -201,7 +241,15 @@ def verify_request(
 
     try:
         vk = VerifyKey(base64.b64decode(pub_b64))
-        vk.verify(build_payload(agent_id, timestamp, nonce), base64.b64decode(signature_b64))
+        if sig_v == SIG_V2:
+            if not (aud and method and path and body_sha256_hex):
+                return False
+            payload = build_payload_v2(agent_id, timestamp, nonce, aud, method, path, body_sha256_hex)
+        elif sig_v in (None, 1):
+            payload = build_payload(agent_id, timestamp, nonce)
+        else:
+            return False
+        vk.verify(payload, base64.b64decode(signature_b64))
     except (BadSignatureError, ValueError, TypeError):
         return False
 
