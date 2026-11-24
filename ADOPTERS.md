@@ -81,8 +81,8 @@ below is tagged with what evidence it is:
 
 ### whawk46 (flareclaw-verifier)
 
-**Evidence:** [flareclaw-conformance](https://github.com/whawk46/flareclaw-conformance), pinned CI run [30819828942](https://github.com/whawk46/flareclaw-conformance/actions/runs/30819828942), conclusion `success`.
-**Status:** Verified conformant implementation. Never sent production trails — not a Provider, listed separately by design in [PROVIDERS.md](PROVIDERS.md).
+**Evidence:** the previously pinned repository and CI run (`whawk46/flareclaw-conformance`, run 30819828942, recorded here with conclusion `success`) no longer resolve as of 2026-11-22 (HTTP 404 from the GitHub API). Not counted until a reachable run is pinned again.
+**Status:** Unverified since 2026-11-22. Previously listed as a verified conformant implementation (see git history). Never sent production trails — not a Provider, listed separately by design in [PROVIDERS.md](PROVIDERS.md).
 **Kind:** (b) independent implementation. Re-checked 2026-08-21: `canonical-json.ts`/`action-ref-cli.ts` are their own code (not vendored from us), validated blind against our pinned `action-ref-conformance@v1` Action and vectors — same shape as running a third-party test suite against your own implementation, not reproducing our checkers on their machine.
 
 ### vstantch (aps-conformance-suite)
