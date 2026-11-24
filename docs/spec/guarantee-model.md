@@ -217,19 +217,26 @@ explicitly instead of leaving it to be inferred from behavior.
 
 ## Canonical key derivation
 
-All three systems converge on the same linking key:
+The linking key this repository computes and verifies is `action_ref`, as defined in
+[`action-ref.md`](action-ref.md) (v1):
 
 ```
-action_ref = SHA-256(
-  agent_id.encode('utf-8') ||
-  action_type.encode('utf-8') ||
-  scope.encode('utf-8') ||
-  timestamp_ms.to_bytes(8, 'big')
-)
+action_ref = SHA-256( JCS( {agent_id, action_type, scope, timestamp} ) )
 ```
 
-All four fields are required. `timestamp_ms` is millisecond-precision Unix time at claim time
-(before execution), encoded as int64 big-endian.
+`JCS` is RFC 8785 canonicalization. All four fields are required, and each is a string.
+`timestamp` is the claim time (before execution) in the one accepted form,
+`YYYY-MM-DDTHH:MM:SS.mmmZ` (RFC 3339, UTC, three fractional digits); `agent_id`,
+`action_type` and `scope` must be ASCII and `scope` must be non-empty. The Domain paragraph
+of `action-ref.md` and the vectors under
+[`examples/conformance/action-ref-v1-domain-negative/`](../../examples/conformance/action-ref-v1-domain-negative/)
+define what a verifier refuses.
+
+An earlier revision of this section specified a different construction: the byte
+concatenation of `agent_id`, `action_type`, `scope` and an int64 big-endian `timestamp_ms`.
+That construction yields different digests from the one above for the same inputs, so a
+value computed by that older recipe does not match what `compute_action_ref` in
+`plugins/agt_evidence_anchor/action_ref.py` returns for the same fields.
 
 ### DashClaw field mapping
 
@@ -242,10 +249,10 @@ All four fields are required. `timestamp_ms` is millisecond-precision Unix time 
 | `action_id` | DashClaw's local evidence/outcome row ID |
 
 Callers compute `action_ref` externally and pass it as `idempotency_key`. DashClaw consumes
-it opaquely; SafeAgent and Mycelium standardize the key. No runtime coupling required.
+it opaquely. No runtime coupling required.
 
 **Same boundary applies here:** DashClaw's dedup only fires if the same `action_ref` arrives
-twice. If the caller recomputes `action_ref` per retry attempt (new `timestamp_ms` each
+twice. If the caller recomputes `action_ref` per retry attempt (new `timestamp` each
 time, per the derivation above) rather than fixing it once before the first attempt, no two
 attempts ever share a key and DashClaw never sees a duplicate to dedup — see the "What a
 COMMITTED SafeAgent claim proves" boundary note above for the retry scenario where this

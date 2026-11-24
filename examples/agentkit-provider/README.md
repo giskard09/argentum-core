@@ -20,22 +20,32 @@ Check if an agent has a verified trail for a given `action_ref`.
 
 ```typescript
 const result = await agentkit.run(
-  "verify trail for pioneer-agent-001 with action_ref 3ad733..."
+  "verify trail for pioneer-agent-001 with action_ref 689ebc4c..."
 );
 ```
 
-Returns: `{ verified, trail_id, tx_hash, timestamp, service, operation }`
+Returns what `GET /trails/verify` returns: `{ verified, trail }`, where `trail` holds `trail_id`, `tx_hash`, `service`, `operation`, `action_ref` and the other trail fields (`trail` is absent when `verified` is false).
 
 ### `compute_action_ref`
 
-Compute the canonical SHA-256 reference from action inputs. Same algorithm as `argentum-sdk`.
+Compute the action_ref (v1) from action inputs: `SHA-256(JCS({agent_id, action_type, scope, timestamp}))`,
+RFC 8785. Reference: [`docs/spec/action-ref.md`](../../docs/spec/action-ref.md).
 
 ```typescript
-// SHA-256(agent_id:action_type:scope:timestamp)
 const result = await agentkit.run(
-  "compute action_ref for pioneer-agent-001, action_type agent_trail, scope giskard-oasis, timestamp 1777991810"
+  'compute action_ref for giskard-self, action_type trail.anchor, scope mycelium:baseline, timestamp "2026-05-23T00:00:00.000Z"'
 );
+// { action_ref: "f4ebda732e3c063bdd8547c734e4956f009bbed7f557cb949f7c8033e8c42d1d", canonical: "{...}" }
 ```
+
+The timestamp is a **string**, exactly `YYYY-MM-DDTHH:MM:SS.mmmZ`. `agent_id`, `action_type` and `scope` must be
+ASCII and `scope` must not be empty. An input outside that domain returns
+`{ "error": "OUT_OF_PROFILE_DOMAIN", "field": ..., "reason": ... }` instead of a hash.
+
+> **Breaking change in this example (schema `timestamp`: number -> string).** Earlier revisions of this example
+> hashed a colon-joined string of the four fields, with the time as a Unix-seconds number. That construction does not
+> match action_ref v1: a value computed that way is not what `POST /nexus/trail` recomputes. This README, the
+> demo and the code now follow v1.
 
 ### `get_trails`
 
@@ -58,17 +68,20 @@ npm run demo   # runs against live Mycelium API, no API key needed
 npm run demo
 ```
 
+The verify step uses a trail that existed when this was written. If it no longer verifies, take the
+`anchor_proof.preimage` and `action_ref` of any current trail from `GET /trails/{trail_id}` and use those instead.
+
 Output:
 ```
 === Mycelium Trails AgentKit Provider Demo ===
 
 1. compute_action_ref()
-   inputs: { agent_id: 'pioneer-agent-001', action_type: 'agent_trail', ... }
-   result: { action_ref: '3ad733...', payload: '...' }
+   inputs: { agent_id: 'giskard-self', action_type: 'trail.anchor', ... }
+   result: { action_ref: 'f4ebda73...', canonical: '...' }
    matches known ref: true
 
 2. verify_trail()
-   result: { verified: true, tx_hash: null, timestamp: '2026-05-05T14:36:50+00:00', ... }
+   result: { verified: true, trail: { ... } }
 
 3. get_trails()
    count: 11
@@ -95,5 +108,5 @@ const agentkit = await AgentKit.from({
 ## Related
 
 - [Mycelium Trails API](https://argentum.rgiskard.xyz/trails/demo)
-- [argentum-sdk](https://github.com/giskard09/argentum-core) — Python SDK with `compute_action_ref`
+- [action_ref spec](../../docs/spec/action-ref.md) — v1 derivation and Domain rules
 - [ERC-8004](https://eips.ethereum.org/EIPS/eip-8004) — Agent identity standard

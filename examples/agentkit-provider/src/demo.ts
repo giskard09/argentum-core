@@ -9,16 +9,26 @@
 
 import { MyceliumTrailsProvider } from "./myceliumTrailsProvider";
 
+// A trail that existed when this was written (pioneer-agent-001, cycle:monitor); it may
+// no longer be listed later -- substitute any current trail's preimage and action_ref. Its
+// action_ref is SHA-256(JCS(preimage)); the inputs below are the preimage the API
+// returns for it (GET /trails/1e910613-6488-400b-8871-abae3f6406b4, anchor_proof.preimage).
 const DEMO_AGENT_ID = "pioneer-agent-001";
-// Real action_ref from a verified trail in the Mycelium ecosystem
-const DEMO_ACTION_REF = "3ad733678e731d4cb3f11bce1f4906e764b9e517be93abb231f4dc7a55f3b08c";
-// Inputs that produce the above action_ref
+const DEMO_ACTION_REF = "689ebc4c7d65fe3fc38f9ddcb7f39be2c31727e6b405f3df585f3c3ec3145da1";
 const DEMO_INPUTS = {
   agent_id: DEMO_AGENT_ID,
-  action_type: "agent_trail",
-  scope: "giskard-oasis",
-  timestamp: 1777991810,
+  action_type: "cycle:monitor",
+  scope: "services:10/10,alerts:0",
+  timestamp: "2026-11-24T01:09:53.000Z",
 };
+// Fixed baseline vector (examples/conformance/action-ref-v1-baseline.fixture.json).
+const BASELINE_INPUTS = {
+  agent_id: "giskard-self",
+  action_type: "trail.anchor",
+  scope: "mycelium:baseline",
+  timestamp: "2026-05-23T00:00:00.000Z",
+};
+const BASELINE_ACTION_REF = "f4ebda732e3c063bdd8547c734e4956f009bbed7f557cb949f7c8033e8c42d1d";
 
 async function main() {
   const provider = new MyceliumTrailsProvider();
@@ -27,12 +37,12 @@ async function main() {
 
   // 1. compute_action_ref
   console.log("1. compute_action_ref()");
-  console.log("   inputs:", DEMO_INPUTS);
-  const refResult = await provider.computeActionRef(null, DEMO_INPUTS);
-  const ref = JSON.parse(refResult);
-  console.log("   result:", ref);
-  const matches = ref.action_ref === DEMO_ACTION_REF;
-  console.log("   matches known ref:", matches, "\n");
+  console.log("   inputs:", BASELINE_INPUTS);
+  const baseline = JSON.parse(await provider.computeActionRef(null, BASELINE_INPUTS));
+  console.log("   result:", baseline);
+  console.log("   matches baseline vector:", baseline.action_ref === BASELINE_ACTION_REF);
+  const live = JSON.parse(await provider.computeActionRef(null, DEMO_INPUTS));
+  console.log("   live trail inputs reproduce its action_ref:", live.action_ref === DEMO_ACTION_REF, "\n");
 
   // 2. verify_trail
   console.log("2. verify_trail()");

@@ -120,7 +120,7 @@ Or retrieve by trail_id:
 GET https://argentum-api.rgiskard.xyz/trails/{trail_id}
 ```
 
-Note: the trail detail endpoint is `/trails/{trail_id}`, not `/mycelium/trails/{trail_id}` — the `/mycelium/trails/...` prefix is reserved for graph sub-resources (`/mycelium/trails/{trail_id}/graph`, `/verify_chain`).
+Note: the trail detail endpoint is `/trails/{trail_id}`, not `/mycelium/trails/{trail_id}` — the `/mycelium/trails/{trail_id}` path itself is not served (HTTP 404); only its `/graph` and `/verify_chain` sub-resources are.
 
 Or recompute locally from the four preimage fields using the snippet above — no API call needed.
 
@@ -145,8 +145,8 @@ PAYG activates automatically when the Free tier is exhausted. Usage is invoiced 
 | `/trails/verify` | GET | Verify by action_ref |
 | `/trails/{trail_id}` | GET | Trail detail + tx_hash (not `/mycelium/trails/{trail_id}`) |
 | `/trails/agents/{agent_id}` | GET | Trail history |
-| `/mycelium/trails/{trail_id}/graph` | GET | Trail graph (parent/root chain) |
-| `/mycelium/trails/{trail_id}/verify_chain` | GET | Verify full trail chain |
+| `/mycelium/trails/{trail_id}/graph` | GET | Trail graph: walks up to the root, then down through all descendants |
+| `/mycelium/trails/{trail_id}/verify_chain` | GET | Walk a trail's parent links to the root: checks each trail exists, has a `signature_ref`, and has a `delegation_ref` consistent with its parent. Does not verify a cryptographic signature |
 | `/karma/{agent_id}` | GET | Karma score + Ed25519 badge |
 | `/status` | GET | API health |
 
