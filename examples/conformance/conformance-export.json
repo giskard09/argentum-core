@@ -1,6 +1,6 @@
 {
   "export_version": "conformance-export-v0-draft",
-  "generated_at": "2026-11-24T15:33:20.000Z",
+  "generated_at": "2026-11-24T16:17:50.000Z",
   "generated_by": "examples/conformance/build_export.py",
   "source_repo": "giskard09/argentum-core",
   "note": "Draft aggregation of every conformance vector set in this repo. Public discovery route and final field-naming convention are deliberately NOT decided here — pending convergence with Kenneives/CTEF (agentgraph.co/.well-known/cte-test-vectors.json pattern, A2A#1628) so the ecosystem doesn't end up with two competing conventions. Each set's `files` map preserves the original vectors.json/fixture.json bytes unmodified.",
@@ -8875,9 +8875,9 @@
       "path": "examples/conformance/peer-reconciliation-ref/",
       "files": {
         "vectors.json": {
-          "spec_version": "peer-reconciliation-ref-v1.2",
-          "description": "Conformance vectors for peer-reconciliation-ref-v1. Six invariants are separately recomputable: canonical_envelope, structural_validity, signature_validity, signature_binding, comparator_state, and supersedes_chain_integrity (v1.1, present only when `supersedes` is set). A verifier that treats any pair of present observations as AGREED without checking action_ref equality will silently pass disagreed-001. A verifier that defaults a missing half to AGREED will silently pass unresolved-001. A verifier that does not check what each co_signer's signed_fields actually covers will silently pass replay-001 (v1.2) as AGREED. v1.1 added three optional additive checks: supersedes_chain_integrity (correction pointers), requested_at (recommended non-suppression timestamp), as_of (informational per-observation time). v1.2 adds signature_binding and the mandatory co_signer.signed_fields field -- see 'v1.2' in the spec for why this one is not additive the way v1.1's fields were.",
-          "comparator_rule": "AGREED requires both observed=true, both signatures valid, both signatures' signed_fields covering {party_id, action_ref, interaction_id}, and matching action_ref. DISAGREED requires the same three readiness conditions with differing action_ref. Anything else (missing observation, invalid signature, or a signature that does not bind action_ref/interaction_id/party_id) is UNRESOLVED -- never defaulted to AGREED or DISAGREED.",
+          "spec_version": "peer-reconciliation-ref-v1.3",
+          "description": "Conformance vectors for peer-reconciliation-ref-v1. Seven invariants are separately recomputable: canonical_envelope, structural_validity, signature_validity, signature_binding, comparator_state, and supersedes_chain_integrity (v1.1, present only when `supersedes` is set). A verifier that treats any pair of present observations as AGREED without checking action_ref equality will silently pass disagreed-001. A verifier that defaults a missing half to AGREED will silently pass unresolved-001. A verifier that does not check what each co_signer's signed_fields actually covers will silently pass replay-001 (v1.2) as AGREED. v1.1 added three optional additive checks: supersedes_chain_integrity (correction pointers), requested_at (recommended non-suppression timestamp), as_of (informational per-observation time). v1.2 adds signature_binding and the mandatory co_signer.signed_fields field -- see 'v1.2' in the spec for why this one is not additive the way v1.1's fields were.",
+          "comparator_rule": "AGREED requires party_a and party_b to have different party_id values and, when both are observed, different co_signer pubkeys (v1.3), both observed=true, both signatures valid, both signatures' signed_fields covering {party_id, action_ref, interaction_id}, and matching action_ref. DISAGREED requires the same three readiness conditions with differing action_ref. Anything else (missing observation, invalid signature, or a signature that does not bind action_ref/interaction_id/party_id) is UNRESOLVED -- never defaulted to AGREED or DISAGREED.",
           "vectors": [
             {
               "id": "agreed-001",
@@ -9437,6 +9437,112 @@
                 "signature_valid_a": true,
                 "signature_valid_b": true,
                 "signature_binding": false
+              },
+              "comparator_state": "UNRESOLVED"
+            },
+            {
+              "id": "distinct-same-party-id-001",
+              "description": "v1.3 negative. Both parties declare the same party_id (safeagent-guardian) and the same action_ref; every other check passes (signatures declared valid, signed_fields complete, hash recomputed). Before v1.3 this envelope was AGREED, which would count one party's observation twice as if it were two. party_distinctness fails and comparator_state is UNRESOLVED.",
+              "expected": "FAIL",
+              "failure_mode": "party_distinctness",
+              "failure_detail": "party_a.party_id == party_b.party_id ('safeagent-guardian')",
+              "envelope": {
+                "interaction_id": "3f9c9e2e-6b5a-4b7e-8f3e-1a2b3c4d5e6f",
+                "party_a": {
+                  "party_id": "safeagent-guardian",
+                  "observed": true,
+                  "action_ref": "a2f1c9e0b8e93d4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f",
+                  "co_signer": {
+                    "issuer": "safeagent-guardian",
+                    "kid": "sg-key-01",
+                    "pubkey": "MCowBQYDK2VwAyEAqQm7VZ0X8tGxJm6QwYh3fN4dL9pRk2vC5eA1sT7uHzM=",
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.c2FmZWFnZW50LWd1YXJkaWFu.QVKz8n2Lp9wXbYr4Ht7c",
+                    "signed_fields": [
+                      "party_id",
+                      "action_ref",
+                      "interaction_id"
+                    ]
+                  }
+                },
+                "party_b": {
+                  "party_id": "safeagent-guardian",
+                  "observed": true,
+                  "action_ref": "a2f1c9e0b8e93d4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f",
+                  "co_signer": {
+                    "issuer": "counterparty-guardian",
+                    "kid": "cg-key-01",
+                    "pubkey": "MCowBQYDK2VwAyEAnR3xW9vL2sKfQd6BhTz1oYc8gEj4pXm0aVn5rUw7iCk=",
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.Y291bnRlcnBhcnR5LWd1YXJkaWFu.Bt6Jd0mQx3Ny8VpFcW2r",
+                    "signed_fields": [
+                      "party_id",
+                      "action_ref",
+                      "interaction_id"
+                    ]
+                  }
+                },
+                "version": "peer-reconciliation-ref-v1"
+              },
+              "peer_reconciliation_ref": "e650470ce114880edff2174e031b9c27ac6f00cb8e286d2e0f3bb6b1fd95ce4f",
+              "checks": {
+                "canonical_envelope": true,
+                "structural_validity": true,
+                "signature_valid_a": true,
+                "signature_valid_b": true,
+                "signature_binding": true,
+                "party_distinctness": false
+              },
+              "comparator_state": "UNRESOLVED"
+            },
+            {
+              "id": "distinct-same-pubkey-001",
+              "description": "v1.3 negative. party_ids differ, but both co_signers present the same pubkey: one key behind two ids. Before v1.3 this envelope was AGREED. party_distinctness fails and comparator_state is UNRESOLVED. An operator holding two DIFFERENT keys under two different ids is not detected by this check; that remains a declared limit.",
+              "expected": "FAIL",
+              "failure_mode": "party_distinctness",
+              "failure_detail": "party_a.co_signer.pubkey == party_b.co_signer.pubkey with both observed=true",
+              "envelope": {
+                "interaction_id": "3f9c9e2e-6b5a-4b7e-8f3e-1a2b3c4d5e6f",
+                "party_a": {
+                  "party_id": "safeagent-guardian",
+                  "observed": true,
+                  "action_ref": "a2f1c9e0b8e93d4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f",
+                  "co_signer": {
+                    "issuer": "safeagent-guardian",
+                    "kid": "sg-key-01",
+                    "pubkey": "MCowBQYDK2VwAyEAqQm7VZ0X8tGxJm6QwYh3fN4dL9pRk2vC5eA1sT7uHzM=",
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.c2FmZWFnZW50LWd1YXJkaWFu.QVKz8n2Lp9wXbYr4Ht7c",
+                    "signed_fields": [
+                      "party_id",
+                      "action_ref",
+                      "interaction_id"
+                    ]
+                  }
+                },
+                "party_b": {
+                  "party_id": "counterparty-guardian",
+                  "observed": true,
+                  "action_ref": "a2f1c9e0b8e93d4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f",
+                  "co_signer": {
+                    "issuer": "counterparty-guardian",
+                    "kid": "cg-key-01",
+                    "pubkey": "MCowBQYDK2VwAyEAqQm7VZ0X8tGxJm6QwYh3fN4dL9pRk2vC5eA1sT7uHzM=",
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.Y291bnRlcnBhcnR5LWd1YXJkaWFu.Bt6Jd0mQx3Ny8VpFcW2r",
+                    "signed_fields": [
+                      "party_id",
+                      "action_ref",
+                      "interaction_id"
+                    ]
+                  }
+                },
+                "version": "peer-reconciliation-ref-v1"
+              },
+              "peer_reconciliation_ref": "195926b09cfdf7e66d5d1a9fb3b2035a7db4c41a820744d735232110a29d2914",
+              "checks": {
+                "canonical_envelope": true,
+                "structural_validity": true,
+                "signature_valid_a": true,
+                "signature_valid_b": true,
+                "signature_binding": true,
+                "party_distinctness": false
               },
               "comparator_state": "UNRESOLVED"
             }
