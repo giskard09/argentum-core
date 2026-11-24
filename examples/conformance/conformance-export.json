@@ -1,6 +1,6 @@
 {
   "export_version": "conformance-export-v0-draft",
-  "generated_at": "2026-11-24T16:17:50.000Z",
+  "generated_at": "2026-11-24T16:23:09.000Z",
   "generated_by": "examples/conformance/build_export.py",
   "source_repo": "giskard09/argentum-core",
   "note": "Draft aggregation of every conformance vector set in this repo. Public discovery route and final field-naming convention are deliberately NOT decided here — pending convergence with Kenneives/CTEF (agentgraph.co/.well-known/cte-test-vectors.json pattern, A2A#1628) so the ecosystem doesn't end up with two competing conventions. Each set's `files` map preserves the original vectors.json/fixture.json bytes unmodified.",
@@ -9543,6 +9543,430 @@
                 "signature_valid_b": true,
                 "signature_binding": true,
                 "party_distinctness": false
+              },
+              "comparator_state": "UNRESOLVED"
+            },
+            {
+              "id": "distinct-pubkey-trailing-bits-001",
+              "description": "v1.3 negative. same 32 key bytes written with different unused trailing bits (\"...HzN=\" for \"...HzM=\"): decodes to the same key, so party_distinctness fails. This is the vector that shows keys are compared as bytes, not as text. The non-canonical form is NOT itself rejected: eight existing fixture keys use it. party_a's key is untouched; party_ids differ.",
+              "expected": "FAIL",
+              "failure_mode": "party_distinctness",
+              "failure_detail": "party_b.co_signer.pubkey decodes to the same 32 bytes as party_a's",
+              "envelope": {
+                "interaction_id": "3f9c9e2e-6b5a-4b7e-8f3e-1a2b3c4d5e6f",
+                "party_a": {
+                  "party_id": "safeagent-guardian",
+                  "observed": true,
+                  "action_ref": "a2f1c9e0b8e93d4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f",
+                  "co_signer": {
+                    "issuer": "safeagent-guardian",
+                    "kid": "sg-key-01",
+                    "pubkey": "MCowBQYDK2VwAyEAqQm7VZ0X8tGxJm6QwYh3fN4dL9pRk2vC5eA1sT7uHzM=",
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.c2FmZWFnZW50LWd1YXJkaWFu.QVKz8n2Lp9wXbYr4Ht7c",
+                    "signed_fields": [
+                      "party_id",
+                      "action_ref",
+                      "interaction_id"
+                    ]
+                  }
+                },
+                "party_b": {
+                  "party_id": "counterparty-guardian",
+                  "observed": true,
+                  "action_ref": "a2f1c9e0b8e93d4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f",
+                  "co_signer": {
+                    "issuer": "counterparty-guardian",
+                    "kid": "cg-key-01",
+                    "pubkey": "MCowBQYDK2VwAyEAqQm7VZ0X8tGxJm6QwYh3fN4dL9pRk2vC5eA1sT7uHzN=",
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.Y291bnRlcnBhcnR5LWd1YXJkaWFu.Bt6Jd0mQx3Ny8VpFcW2r",
+                    "signed_fields": [
+                      "party_id",
+                      "action_ref",
+                      "interaction_id"
+                    ]
+                  }
+                },
+                "version": "peer-reconciliation-ref-v1"
+              },
+              "peer_reconciliation_ref": "ff10b4dc9513b45458e2a9b40c9e68a07c98ace9e2031b284ce9c7f3ab2c53c5",
+              "checks": {
+                "canonical_envelope": true,
+                "structural_validity": true,
+                "signature_valid_a": true,
+                "signature_valid_b": true,
+                "signature_binding": true,
+                "party_distinctness": false
+              },
+              "comparator_state": "UNRESOLVED"
+            },
+            {
+              "id": "pubkey-no-padding-001",
+              "description": "v1.3 negative. party_b presents party_a's key, written differently: same key without the trailing \"=\": not strict base64, so party_b is structurally invalid (not \"a different key\"). Without strict decoding a text comparison would see two different keys and report AGREED.",
+              "expected": "FAIL",
+              "failure_mode": "structural_validity",
+              "failure_detail": "party_b.co_signer.pubkey is not a strict base64 SPKI Ed25519 key",
+              "envelope": {
+                "interaction_id": "3f9c9e2e-6b5a-4b7e-8f3e-1a2b3c4d5e6f",
+                "party_a": {
+                  "party_id": "safeagent-guardian",
+                  "observed": true,
+                  "action_ref": "a2f1c9e0b8e93d4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f",
+                  "co_signer": {
+                    "issuer": "safeagent-guardian",
+                    "kid": "sg-key-01",
+                    "pubkey": "MCowBQYDK2VwAyEAqQm7VZ0X8tGxJm6QwYh3fN4dL9pRk2vC5eA1sT7uHzM=",
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.c2FmZWFnZW50LWd1YXJkaWFu.QVKz8n2Lp9wXbYr4Ht7c",
+                    "signed_fields": [
+                      "party_id",
+                      "action_ref",
+                      "interaction_id"
+                    ]
+                  }
+                },
+                "party_b": {
+                  "party_id": "counterparty-guardian",
+                  "observed": true,
+                  "action_ref": "a2f1c9e0b8e93d4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f",
+                  "co_signer": {
+                    "issuer": "counterparty-guardian",
+                    "kid": "cg-key-01",
+                    "pubkey": "MCowBQYDK2VwAyEAqQm7VZ0X8tGxJm6QwYh3fN4dL9pRk2vC5eA1sT7uHzM",
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.Y291bnRlcnBhcnR5LWd1YXJkaWFu.Bt6Jd0mQx3Ny8VpFcW2r",
+                    "signed_fields": [
+                      "party_id",
+                      "action_ref",
+                      "interaction_id"
+                    ]
+                  }
+                },
+                "version": "peer-reconciliation-ref-v1"
+              },
+              "peer_reconciliation_ref": "6d11dab723db701c1c6f58505d539aacdc95ccbfd7fa4b0aac921cf49ce47c0f",
+              "checks": {
+                "canonical_envelope": true,
+                "structural_validity": false,
+                "signature_valid_a": true,
+                "signature_valid_b": true,
+                "signature_binding": true,
+                "party_distinctness": true
+              },
+              "comparator_state": "UNRESOLVED"
+            },
+            {
+              "id": "pubkey-trailing-newline-001",
+              "description": "v1.3 negative. party_b presents party_a's key, written differently: same key with a trailing newline: not strict base64, structurally invalid. Without strict decoding a text comparison would see two different keys and report AGREED.",
+              "expected": "FAIL",
+              "failure_mode": "structural_validity",
+              "failure_detail": "party_b.co_signer.pubkey is not a strict base64 SPKI Ed25519 key",
+              "envelope": {
+                "interaction_id": "3f9c9e2e-6b5a-4b7e-8f3e-1a2b3c4d5e6f",
+                "party_a": {
+                  "party_id": "safeagent-guardian",
+                  "observed": true,
+                  "action_ref": "a2f1c9e0b8e93d4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f",
+                  "co_signer": {
+                    "issuer": "safeagent-guardian",
+                    "kid": "sg-key-01",
+                    "pubkey": "MCowBQYDK2VwAyEAqQm7VZ0X8tGxJm6QwYh3fN4dL9pRk2vC5eA1sT7uHzM=",
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.c2FmZWFnZW50LWd1YXJkaWFu.QVKz8n2Lp9wXbYr4Ht7c",
+                    "signed_fields": [
+                      "party_id",
+                      "action_ref",
+                      "interaction_id"
+                    ]
+                  }
+                },
+                "party_b": {
+                  "party_id": "counterparty-guardian",
+                  "observed": true,
+                  "action_ref": "a2f1c9e0b8e93d4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f",
+                  "co_signer": {
+                    "issuer": "counterparty-guardian",
+                    "kid": "cg-key-01",
+                    "pubkey": "MCowBQYDK2VwAyEAqQm7VZ0X8tGxJm6QwYh3fN4dL9pRk2vC5eA1sT7uHzM=\n",
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.Y291bnRlcnBhcnR5LWd1YXJkaWFu.Bt6Jd0mQx3Ny8VpFcW2r",
+                    "signed_fields": [
+                      "party_id",
+                      "action_ref",
+                      "interaction_id"
+                    ]
+                  }
+                },
+                "version": "peer-reconciliation-ref-v1"
+              },
+              "peer_reconciliation_ref": "7979f45554995587cdf081b83c4027c3683d5961ba186c497c190f13ae836006",
+              "checks": {
+                "canonical_envelope": true,
+                "structural_validity": false,
+                "signature_valid_a": true,
+                "signature_valid_b": true,
+                "signature_binding": true,
+                "party_distinctness": true
+              },
+              "comparator_state": "UNRESOLVED"
+            },
+            {
+              "id": "pubkey-leading-space-001",
+              "description": "v1.3 negative. party_b presents party_a's key, written differently: same key with a leading space: not strict base64, structurally invalid. Without strict decoding a text comparison would see two different keys and report AGREED.",
+              "expected": "FAIL",
+              "failure_mode": "structural_validity",
+              "failure_detail": "party_b.co_signer.pubkey is not a strict base64 SPKI Ed25519 key",
+              "envelope": {
+                "interaction_id": "3f9c9e2e-6b5a-4b7e-8f3e-1a2b3c4d5e6f",
+                "party_a": {
+                  "party_id": "safeagent-guardian",
+                  "observed": true,
+                  "action_ref": "a2f1c9e0b8e93d4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f",
+                  "co_signer": {
+                    "issuer": "safeagent-guardian",
+                    "kid": "sg-key-01",
+                    "pubkey": "MCowBQYDK2VwAyEAqQm7VZ0X8tGxJm6QwYh3fN4dL9pRk2vC5eA1sT7uHzM=",
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.c2FmZWFnZW50LWd1YXJkaWFu.QVKz8n2Lp9wXbYr4Ht7c",
+                    "signed_fields": [
+                      "party_id",
+                      "action_ref",
+                      "interaction_id"
+                    ]
+                  }
+                },
+                "party_b": {
+                  "party_id": "counterparty-guardian",
+                  "observed": true,
+                  "action_ref": "a2f1c9e0b8e93d4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f",
+                  "co_signer": {
+                    "issuer": "counterparty-guardian",
+                    "kid": "cg-key-01",
+                    "pubkey": " MCowBQYDK2VwAyEAqQm7VZ0X8tGxJm6QwYh3fN4dL9pRk2vC5eA1sT7uHzM=",
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.Y291bnRlcnBhcnR5LWd1YXJkaWFu.Bt6Jd0mQx3Ny8VpFcW2r",
+                    "signed_fields": [
+                      "party_id",
+                      "action_ref",
+                      "interaction_id"
+                    ]
+                  }
+                },
+                "version": "peer-reconciliation-ref-v1"
+              },
+              "peer_reconciliation_ref": "a279c3447e523ae853951bffb73eb0290812f54d3e321796748abd477f722255",
+              "checks": {
+                "canonical_envelope": true,
+                "structural_validity": false,
+                "signature_valid_a": true,
+                "signature_valid_b": true,
+                "signature_binding": true,
+                "party_distinctness": true
+              },
+              "comparator_state": "UNRESOLVED"
+            },
+            {
+              "id": "pubkey-extra-padding-001",
+              "description": "v1.3 negative. party_b presents party_a's key, written differently: same key with an extra \"=\": not strict base64, structurally invalid. Without strict decoding a text comparison would see two different keys and report AGREED.",
+              "expected": "FAIL",
+              "failure_mode": "structural_validity",
+              "failure_detail": "party_b.co_signer.pubkey is not a strict base64 SPKI Ed25519 key",
+              "envelope": {
+                "interaction_id": "3f9c9e2e-6b5a-4b7e-8f3e-1a2b3c4d5e6f",
+                "party_a": {
+                  "party_id": "safeagent-guardian",
+                  "observed": true,
+                  "action_ref": "a2f1c9e0b8e93d4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f",
+                  "co_signer": {
+                    "issuer": "safeagent-guardian",
+                    "kid": "sg-key-01",
+                    "pubkey": "MCowBQYDK2VwAyEAqQm7VZ0X8tGxJm6QwYh3fN4dL9pRk2vC5eA1sT7uHzM=",
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.c2FmZWFnZW50LWd1YXJkaWFu.QVKz8n2Lp9wXbYr4Ht7c",
+                    "signed_fields": [
+                      "party_id",
+                      "action_ref",
+                      "interaction_id"
+                    ]
+                  }
+                },
+                "party_b": {
+                  "party_id": "counterparty-guardian",
+                  "observed": true,
+                  "action_ref": "a2f1c9e0b8e93d4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f",
+                  "co_signer": {
+                    "issuer": "counterparty-guardian",
+                    "kid": "cg-key-01",
+                    "pubkey": "MCowBQYDK2VwAyEAqQm7VZ0X8tGxJm6QwYh3fN4dL9pRk2vC5eA1sT7uHzM==",
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.Y291bnRlcnBhcnR5LWd1YXJkaWFu.Bt6Jd0mQx3Ny8VpFcW2r",
+                    "signed_fields": [
+                      "party_id",
+                      "action_ref",
+                      "interaction_id"
+                    ]
+                  }
+                },
+                "version": "peer-reconciliation-ref-v1"
+              },
+              "peer_reconciliation_ref": "ffdacede388a26cb19b61508a163f96ffbfd0006295788dac568319c28571915",
+              "checks": {
+                "canonical_envelope": true,
+                "structural_validity": false,
+                "signature_valid_a": true,
+                "signature_valid_b": true,
+                "signature_binding": true,
+                "party_distinctness": true
+              },
+              "comparator_state": "UNRESOLVED"
+            },
+            {
+              "id": "pubkey-raw32-001",
+              "description": "v1.3 negative. party_b presents party_a's key, written differently: the 32 raw key bytes in base64 without the SPKI prefix (44 characters, 32 bytes): not a 44-byte SPKI Ed25519 key, structurally invalid. Without strict decoding a text comparison would see two different keys and report AGREED.",
+              "expected": "FAIL",
+              "failure_mode": "structural_validity",
+              "failure_detail": "party_b.co_signer.pubkey is not a strict base64 SPKI Ed25519 key",
+              "envelope": {
+                "interaction_id": "3f9c9e2e-6b5a-4b7e-8f3e-1a2b3c4d5e6f",
+                "party_a": {
+                  "party_id": "safeagent-guardian",
+                  "observed": true,
+                  "action_ref": "a2f1c9e0b8e93d4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f",
+                  "co_signer": {
+                    "issuer": "safeagent-guardian",
+                    "kid": "sg-key-01",
+                    "pubkey": "MCowBQYDK2VwAyEAqQm7VZ0X8tGxJm6QwYh3fN4dL9pRk2vC5eA1sT7uHzM=",
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.c2FmZWFnZW50LWd1YXJkaWFu.QVKz8n2Lp9wXbYr4Ht7c",
+                    "signed_fields": [
+                      "party_id",
+                      "action_ref",
+                      "interaction_id"
+                    ]
+                  }
+                },
+                "party_b": {
+                  "party_id": "counterparty-guardian",
+                  "observed": true,
+                  "action_ref": "a2f1c9e0b8e93d4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f",
+                  "co_signer": {
+                    "issuer": "counterparty-guardian",
+                    "kid": "cg-key-01",
+                    "pubkey": "qQm7VZ0X8tGxJm6QwYh3fN4dL9pRk2vC5eA1sT7uHzM=",
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.Y291bnRlcnBhcnR5LWd1YXJkaWFu.Bt6Jd0mQx3Ny8VpFcW2r",
+                    "signed_fields": [
+                      "party_id",
+                      "action_ref",
+                      "interaction_id"
+                    ]
+                  }
+                },
+                "version": "peer-reconciliation-ref-v1"
+              },
+              "peer_reconciliation_ref": "a436f71fc0bf19aab022d579da6c9e0c5ec8a8ca68717c63568f8a1ec5a373b8",
+              "checks": {
+                "canonical_envelope": true,
+                "structural_validity": false,
+                "signature_valid_a": true,
+                "signature_valid_b": true,
+                "signature_binding": true,
+                "party_distinctness": true
+              },
+              "comparator_state": "UNRESOLVED"
+            },
+            {
+              "id": "distinct-party-id-case-001",
+              "description": "v1.3 negative. party_b's party_id is party_a's in upper case (SAFEAGENT-GUARDIAN vs safeagent-guardian): the same id written differently. party_id comparison ignores ASCII case, so party_distinctness fails.",
+              "expected": "FAIL",
+              "failure_mode": "party_distinctness",
+              "failure_detail": "party_ids equal ignoring ASCII case",
+              "envelope": {
+                "interaction_id": "3f9c9e2e-6b5a-4b7e-8f3e-1a2b3c4d5e6f",
+                "party_a": {
+                  "party_id": "safeagent-guardian",
+                  "observed": true,
+                  "action_ref": "a2f1c9e0b8e93d4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f",
+                  "co_signer": {
+                    "issuer": "safeagent-guardian",
+                    "kid": "sg-key-01",
+                    "pubkey": "MCowBQYDK2VwAyEAqQm7VZ0X8tGxJm6QwYh3fN4dL9pRk2vC5eA1sT7uHzM=",
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.c2FmZWFnZW50LWd1YXJkaWFu.QVKz8n2Lp9wXbYr4Ht7c",
+                    "signed_fields": [
+                      "party_id",
+                      "action_ref",
+                      "interaction_id"
+                    ]
+                  }
+                },
+                "party_b": {
+                  "party_id": "SAFEAGENT-GUARDIAN",
+                  "observed": true,
+                  "action_ref": "a2f1c9e0b8e93d4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f",
+                  "co_signer": {
+                    "issuer": "counterparty-guardian",
+                    "kid": "cg-key-01",
+                    "pubkey": "MCowBQYDK2VwAyEAnR3xW9vL2sKfQd6BhTz1oYc8gEj4pXm0aVn5rUw7iCk=",
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.Y291bnRlcnBhcnR5LWd1YXJkaWFu.Bt6Jd0mQx3Ny8VpFcW2r",
+                    "signed_fields": [
+                      "party_id",
+                      "action_ref",
+                      "interaction_id"
+                    ]
+                  }
+                },
+                "version": "peer-reconciliation-ref-v1"
+              },
+              "peer_reconciliation_ref": "bb2cc4952e89e8c35e994f809a8e0862144e07955a0404e60d07efccefb3df32",
+              "checks": {
+                "canonical_envelope": true,
+                "structural_validity": true,
+                "signature_valid_a": true,
+                "signature_valid_b": true,
+                "signature_binding": true,
+                "party_distinctness": false
+              },
+              "comparator_state": "UNRESOLVED"
+            },
+            {
+              "id": "party-id-trailing-space-001",
+              "description": "v1.3 negative. party_b's party_id is party_a's plus a trailing space. A party_id must be non-empty printable ASCII without spaces or control characters, so party_b is structurally invalid (not 'a different party').",
+              "expected": "FAIL",
+              "failure_mode": "structural_validity",
+              "failure_detail": "party_b.party_id contains a space",
+              "envelope": {
+                "interaction_id": "3f9c9e2e-6b5a-4b7e-8f3e-1a2b3c4d5e6f",
+                "party_a": {
+                  "party_id": "safeagent-guardian",
+                  "observed": true,
+                  "action_ref": "a2f1c9e0b8e93d4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f",
+                  "co_signer": {
+                    "issuer": "safeagent-guardian",
+                    "kid": "sg-key-01",
+                    "pubkey": "MCowBQYDK2VwAyEAqQm7VZ0X8tGxJm6QwYh3fN4dL9pRk2vC5eA1sT7uHzM=",
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.c2FmZWFnZW50LWd1YXJkaWFu.QVKz8n2Lp9wXbYr4Ht7c",
+                    "signed_fields": [
+                      "party_id",
+                      "action_ref",
+                      "interaction_id"
+                    ]
+                  }
+                },
+                "party_b": {
+                  "party_id": "safeagent-guardian ",
+                  "observed": true,
+                  "action_ref": "a2f1c9e0b8e93d4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f",
+                  "co_signer": {
+                    "issuer": "counterparty-guardian",
+                    "kid": "cg-key-01",
+                    "pubkey": "MCowBQYDK2VwAyEAnR3xW9vL2sKfQd6BhTz1oYc8gEj4pXm0aVn5rUw7iCk=",
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.Y291bnRlcnBhcnR5LWd1YXJkaWFu.Bt6Jd0mQx3Ny8VpFcW2r",
+                    "signed_fields": [
+                      "party_id",
+                      "action_ref",
+                      "interaction_id"
+                    ]
+                  }
+                },
+                "version": "peer-reconciliation-ref-v1"
+              },
+              "peer_reconciliation_ref": "c66d0dc77962b17803eb4b1f85edefb0d0a84454f193325b808d7b3462142611",
+              "checks": {
+                "canonical_envelope": true,
+                "structural_validity": false,
+                "signature_valid_a": true,
+                "signature_valid_b": true,
+                "signature_binding": true,
+                "party_distinctness": true
               },
               "comparator_state": "UNRESOLVED"
             }
