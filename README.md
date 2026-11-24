@@ -8,7 +8,7 @@ Post-execution audit layer: anchor a signed `TrailRecord` after every agent acti
 
 Published on the [Official MCP Registry](https://registry.modelcontextprotocol.io) · `io.github.giskard09/argentum` · Exposed as **ARGENTUM** MCP server.
 
-Independent verification work at a fixed price: [SERVICES.md](./SERVICES.md).
+Conformance and verifiability reviews at a fixed price: [SERVICES.md](./SERVICES.md).
 
 ## Why Mycelium
 
