@@ -196,13 +196,6 @@ def init_db():
         conn.commit()
     except Exception:
         pass  # column already exists
-    # v0.6 migration — total_karma INTEGER → REAL for fractional conformance weights
-    try:
-        conn.execute("ALTER TABLE wisdom ADD COLUMN total_karma_real REAL DEFAULT 0.0")
-        conn.execute("UPDATE wisdom SET total_karma_real = CAST(total_karma AS REAL) WHERE total_karma_real = 0.0")
-        conn.commit()
-    except Exception:
-        pass  # column already exists
     conn.execute("""
     CREATE TABLE IF NOT EXISTS wisdom (
         entity_id           TEXT PRIMARY KEY,
@@ -213,6 +206,13 @@ def init_db():
         attestations_given  INTEGER DEFAULT 0,
         last_action         TEXT
     )""")
+    # v0.6 migration — total_karma INTEGER → REAL for fractional conformance weights
+    try:
+        conn.execute("ALTER TABLE wisdom ADD COLUMN total_karma_real REAL DEFAULT 0.0")
+        conn.execute("UPDATE wisdom SET total_karma_real = CAST(total_karma AS REAL) WHERE total_karma_real = 0.0")
+        conn.commit()
+    except Exception:
+        pass  # column already exists
     conn.execute("""
     CREATE TABLE IF NOT EXISTS reports (
         id           TEXT PRIMARY KEY,

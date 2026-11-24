@@ -19,11 +19,6 @@ def _setup(tmp_path):
     argentum.DB_PATH = tmp_path / "argentum.db"
     argentum.init_db()
     conn = argentum.get_db()
-    # Production schema: the v0.6 ALTER in init_db() runs before CREATE TABLE wisdom, so on a
-    # brand-new DB the column is missing (separate pre-existing issue, see the report).
-    cols = [r[1] for r in conn.execute("PRAGMA table_info(wisdom)")]
-    if "total_karma_real" not in cols:
-        conn.execute("ALTER TABLE wisdom ADD COLUMN total_karma_real REAL DEFAULT 0.0")
     conn.execute(
         "INSERT INTO trails (id, author_id, author_name, name, description, steps, price_sats, created_at) "
         "VALUES ('t1', 'Author-1', 'Author', 'n', 'd', '[]', 10, ?)", (argentum.now(),))
