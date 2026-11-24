@@ -1,9 +1,25 @@
 # peer-reconciliation-ref-v1 — Specification
 
 **Status:** stable
-**Version:** 1.2
+**Version:** 1.3
 **Canonical fixture:** [`examples/conformance/peer-reconciliation-ref/vectors.json`](../../examples/conformance/peer-reconciliation-ref/vectors.json)
 **Reference verifier:** [`examples/conformance/peer-reconciliation-ref/verify.py`](../../examples/conformance/peer-reconciliation-ref/verify.py)
+
+**v1.3 (2026-11-24, party distinctness — NOT additive, see below):** a self-audit found that
+nothing in the envelope or the verifier checked that `party_a` and `party_b` are different: the
+same `party_id` on both sides, or two `party_id` values behind one `co_signer.pubkey`, still
+produced `AGREED` (reproduced with the reference verifier, hash recomputed). A new computed
+invariant, §7 `party_distinctness`, requires different `party_id` values and, when both parties
+are `observed=true`, different `co_signer.pubkey` values. **This changes which envelopes can be
+`AGREED`:** an envelope that was `AGREED` under v1.2 with a repeated `party_id` or a repeated
+`pubkey` is now `UNRESOLVED`. It is not additive, for the same reason v1.2 was not: grandfathering
+the old shape would keep the check unable to fail. No existing fixture changes result and no
+declared hash changes (the 11 v1.2 vectors are untouched); two negative vectors,
+`distinct-same-party-id-001` and `distinct-same-pubkey-001`, exercise the new check. What it still
+cannot see: one operator holding two different keys under two different `party_id` values (see
+"What this profile does not do"). `verify.py` now canonicalizes with the repo's `jcs.py` (RFC
+8785) instead of `json.dumps(sort_keys=True)`, which this spec says not to use; all 11 existing
+hashes are identical under both.
 
 **v1.2 (2026-10-18, closes a signature-binding gap — NOT additive, see below):** found in a
 self-audit of this spec prompted by narko4u/Empire Labs flagging the same class of bug in a
@@ -168,9 +184,9 @@ one, and conflating them would hide exactly the gap this version closes.
 
 ---
 
-## The six invariants
+## The seven invariants
 
-Each invariant is separately recomputable. A verifier MUST check all six independently.
+Each invariant is separately recomputable. A verifier MUST check all seven independently.
 
 ### 1. canonical_envelope
 
@@ -221,9 +237,9 @@ either "agreed" or "disagreed"** — the same principle
 
 | State | Condition |
 |-------|-----------|
-| `AGREED` | Both parties `observed=true`, both signatures declared valid, both signatures' `signed_fields` cover `{party_id, action_ref, interaction_id}`, `party_a.action_ref == party_b.action_ref`. |
+| `AGREED` | `party_distinctness` holds (v1.3), both parties `observed=true`, both signatures declared valid, both signatures' `signed_fields` cover `{party_id, action_ref, interaction_id}`, `party_a.action_ref == party_b.action_ref`. |
 | `DISAGREED` | Same readiness conditions as `AGREED`, but `party_a.action_ref != party_b.action_ref`. The mismatched values are carried in the output, not discarded — this is a named conflict, not an error. |
-| `UNRESOLVED` | Either party has `observed=false`, either declared `signature_valid_*` is `false` for a party that claims `observed=true`, or either party's `signed_fields` fails `signature_binding`. Applies regardless of what the other party observed or signed — one missing, invalid, or unbound half is enough to make the pair `UNRESOLVED`, never a default `AGREED`. |
+| `UNRESOLVED` | Either party has `observed=false`, either declared `signature_valid_*` is `false` for a party that claims `observed=true`, either party's `signed_fields` fails `signature_binding`, or `party_distinctness` fails (v1.3). Applies regardless of what the other party observed or signed — one missing, invalid, or unbound half is enough to make the pair `UNRESOLVED`, never a default `AGREED`. |
 
 **Fails when:** the declared `comparator_state` in a vector does not match what the inputs
 above compute.
@@ -255,6 +271,18 @@ correction MUST correct the same interaction, not a different one), the
 current envelope's own two parties.
 
 ---
+
+### 7. party_distinctness (v1.3)
+
+Computed from the envelope, like `signature_binding`: `party_a.party_id` and `party_b.party_id`
+MUST differ, and when both parties are `observed=true`, `party_a.co_signer.pubkey` and
+`party_b.co_signer.pubkey` MUST differ.
+
+**Fails when:** the two `party_id` values are equal, or both parties are `observed=true` and
+present the same `co_signer.pubkey`. The comparator state is then `UNRESOLVED`, never `AGREED`
+or `DISAGREED`: two signed observations from one identity or one key are one observation.
+See `distinct-same-party-id-001` and `distinct-same-pubkey-001`. A shared `issuer` is not
+checked: a hosting platform can legitimately issue for two parties.
 
 ## Corrections (v1.1)
 
@@ -367,13 +395,12 @@ Declared explicitly, matching the honesty convention this repo applies elsewhere
   [`6c899c5`](https://github.com/narko4u/evidence-record-spec/commit/6c899c582193643031216c8f26897bb507e61e05),
   credit narko4u / Empire Labs, who also defined `witness_scope`). An optional reference field is
   a possible future addition, not part of v1.x.
-- **It does not check that the two parties are different.** Nothing here stops one operator from
-  controlling both `party_id` values. Reproduced with the reference verifier on a copy of the
-  `agreed-001` envelope, with the envelope hash recomputed: giving `party_b` the same `co_signer`
-  as `party_a`, or only the same `issuer` and `pubkey`, or even the same `party_id` on both sides,
-  still yields `AGREED` and a passing verification. "Each controlled by a different party" is an
-  assumption the consumer must establish out of band, for example through custody of the keys (see
-  [custody-ref.md](./custody-ref.md)); "same custody named twice" is not independence.
+- **It does not show that the two parties are controlled by different operators.** Since v1.3 the
+  envelope must carry two different `party_id` values and, when both are observed, two different
+  `co_signer.pubkey` values (§7). Nothing stops one operator from holding both keys under both
+  ids. "Each controlled by a different party" stays an assumption the consumer must establish out
+  of band, for example through custody of the keys (see [custody-ref.md](./custody-ref.md));
+  "same custody named twice" is not independence.
 
 ---
 

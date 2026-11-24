@@ -1,7 +1,7 @@
 """
 Verifier for peer-reconciliation-ref-v1 conformance vectors.
 
-Six invariants checked per spec (docs/spec/peer-reconciliation-ref-v1.md):
+Seven invariants checked per spec (docs/spec/peer-reconciliation-ref-v1.md):
   1. canonical_envelope        — SHA-256(JCS(envelope)) matches declared peer_reconciliation_ref
   2. structural_validity       — observed=true implies non-null action_ref + complete co_signer
                                   (issuer/kid/pubkey/jws_signature/signed_fields all present,
@@ -36,6 +36,15 @@ Six invariants checked per spec (docs/spec/peer-reconciliation-ref-v1.md):
                                   could also fabricate the "prior" envelope it claims to correct,
                                   making the check structurally unable to fail. Absent
                                   `supersedes` = exempt.
+  7. party_distinctness (v1.3) — computed from the envelope, like signature_binding: party_a and
+                                  party_b MUST carry different party_id values, and when both are
+                                  observed=true their co_signer.pubkey values MUST differ. Closes
+                                  the cheapest form of "the same operator on both sides" (same id
+                                  twice, or one key behind two ids). It does NOT detect one
+                                  operator holding two distinct keys under two distinct ids; that
+                                  stays a declared limit in the spec. NOT additive: it changes
+                                  which envelopes can be AGREED. No existing fixture changes
+                                  result and no declared hash changes.
 
 v1.1 additive fields (docs/spec/peer-reconciliation-ref-v1.md, "v1.1" sections):
   - envelope.supersedes            (optional) — correction pointer, never a rewrite
@@ -64,9 +73,15 @@ import json
 import sys
 from pathlib import Path
 
+# RFC 8785 JCS from the repo's jcs.py, not json.dumps(sort_keys=True): the spec says "not
+# json.dumps(sort_keys=True)" (that sorts by code point, JCS by UTF-16 code unit). Same
+# import pattern as farley-receipt-signature/verify.py.
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
+from jcs import jcs_bytes  # noqa: E402
+
 
 def jcs(obj: dict) -> str:
-    return json.dumps(obj, separators=(",", ":"), sort_keys=True, ensure_ascii=False)
+    return jcs_bytes(obj).decode("utf-8")
 
 
 def sha256hex(s: str) -> str:
@@ -148,8 +163,23 @@ def check_supersedes_chain_integrity(vector: dict) -> tuple[bool, str]:
     return True, "resolves to known prior envelope, same interaction_id, independent resolved_by"
 
 
+def check_party_distinctness(envelope: dict) -> bool:
+    """v1.3. party_a and party_b must carry different party_id values; when both are
+    observed=true their co_signer pubkeys must also differ. Computed from the envelope."""
+    a, b = envelope["party_a"], envelope["party_b"]
+    if a.get("party_id") == b.get("party_id"):
+        return False
+    if a.get("observed") is True and b.get("observed") is True:
+        ka = (a.get("co_signer") or {}).get("pubkey")
+        kb = (b.get("co_signer") or {}).get("pubkey")
+        if ka and ka == kb:
+            return False
+    return True
+
+
 def compute_comparator_state(
-    vector: dict, struct_a: bool, struct_b: bool, bind_a: bool, bind_b: bool
+    vector: dict, struct_a: bool, struct_b: bool, bind_a: bool, bind_b: bool,
+    distinct: bool = True,
 ) -> str:
     party_a = vector["envelope"]["party_a"]
     party_b = vector["envelope"]["party_b"]
@@ -161,7 +191,7 @@ def compute_comparator_state(
     a_ready = struct_a and party_a.get("observed") is True and sig_a_ok and bind_a
     b_ready = struct_b and party_b.get("observed") is True and sig_b_ok and bind_b
 
-    if not (a_ready and b_ready):
+    if not (a_ready and b_ready and distinct):
         return "UNRESOLVED"
 
     if party_a["action_ref"] == party_b["action_ref"]:
@@ -220,8 +250,21 @@ def verify_vector(vector: dict) -> tuple[bool, list[str]]:
                 f"does not cover {sorted(REQUIRED_SIGNED_FIELDS)}"
             )
 
-    # 5. comparator_state
-    computed_state = compute_comparator_state(vector, struct_a, struct_b, bind_a, bind_b)
+    # 5. party_distinctness (v1.3) -- computed from the envelope
+    distinct = check_party_distinctness(envelope)
+    declared_distinct = checks.get("party_distinctness", True)
+    if distinct != declared_distinct:
+        failures.append(
+            f"party_distinctness: computed {distinct} != declared {declared_distinct}"
+        )
+    if not distinct:
+        failures.append(
+            "party_distinctness: party_a and party_b share a party_id, or both are observed "
+            "with the same co_signer.pubkey"
+        )
+
+    # 6. comparator_state
+    computed_state = compute_comparator_state(vector, struct_a, struct_b, bind_a, bind_b, distinct)
     declared_state = vector.get("comparator_state", "")
     if computed_state != declared_state:
         failures.append(
