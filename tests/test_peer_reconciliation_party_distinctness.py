@@ -21,23 +21,39 @@ def _load():
 
 
 def check_all(v):
-    """Raise AssertionError if `v` (a loaded verify module) mishandles distinctness."""
+    """Raise AssertionError if `v` (a loaded verify module) mishandles distinctness or strictness."""
+    import inspect
+    assert inspect.signature(v.compute_comparator_state).parameters["distinct"].default is inspect.Parameter.empty
     vectors = {x["id"]: x for x in json.loads((HERE / "vectors.json").read_text())["vectors"]}
-    for vid in ("distinct-same-party-id-001", "distinct-same-pubkey-001"):
-        x = vectors[vid]
-        assert v.check_party_distinctness(x["envelope"]) is False, vid
-        # Everything else is ready, so only the distinctness gate can keep this off AGREED.
+    for vid, x in vectors.items():
         env = x["envelope"]
         sa = v.check_structural_validity(env["party_a"])
         sb = v.check_structural_validity(env["party_b"])
         ba = v.check_signature_binding(env["party_a"])
         bb = v.check_signature_binding(env["party_b"])
-        assert (sa, sb, ba, bb) == (True, True, True, True), vid
-        assert v.compute_comparator_state(x, sa, sb, ba, bb, False) == "UNRESOLVED", vid
-        assert v.compute_comparator_state(x, sa, sb, ba, bb, True) == "AGREED", vid  # gate is what blocks it
-    for vid, x in vectors.items():
-        if not vid.startswith("distinct-"):
-            assert v.check_party_distinctness(x["envelope"]) is True, vid
+        distinct = v.check_party_distinctness(env)
+        if vid.startswith("distinct-"):
+            # Same party or same key: only the distinctness gate keeps it off AGREED.
+            assert (sa, sb, ba, bb) == (True, True, True, True), vid
+            assert distinct is False, vid
+            assert v.compute_comparator_state(x, sa, sb, ba, bb, False) == "UNRESOLVED", vid
+            assert v.compute_comparator_state(x, sa, sb, ba, bb, True) == "AGREED", vid
+        elif vid.startswith(("pubkey-", "party-id-")):
+            # Same identity written differently: structurally invalid, not "a different party".
+            assert (sa, sb) == (True, False), vid
+            assert distinct is True, vid
+            assert v.compute_comparator_state(x, sa, sb, ba, bb, True) == "UNRESOLVED", vid
+        else:
+            assert distinct is True, vid  # no pre-v1.3 vector changes
+    # Strict key parsing, directly.
+    good = "MCowBQYDK2VwAyEAqQm7VZ0X8tGxJm6QwYh3fN4dL9pRk2vC5eA1sT7uHzM="
+    assert v.pubkey_bytes(good) is not None and len(v.pubkey_bytes(good)) == 32
+    assert v.pubkey_bytes(good[:-1]) is None and v.pubkey_bytes(good + "\n") is None
+    assert v.pubkey_bytes(" " + good) is None and v.pubkey_bytes(good + "=") is None
+    assert v.pubkey_bytes(good[:-2] + "N=") == v.pubkey_bytes(good)  # trailing bits: same key
+    assert v.pubkey_bytes(None) is None and v.pubkey_bytes(5) is None
+    assert v.party_id_valid("a-b:c") and not v.party_id_valid("a b") and not v.party_id_valid("")
+    assert not v.party_id_valid(None) and not v.party_id_valid("é") and not v.party_id_valid("a\n")
 
 
 def test_party_distinctness_is_computed_and_gates_agreed():

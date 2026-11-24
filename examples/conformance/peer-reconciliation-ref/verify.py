@@ -5,7 +5,9 @@ Seven invariants checked per spec (docs/spec/peer-reconciliation-ref-v1.md):
   1. canonical_envelope        — SHA-256(JCS(envelope)) matches declared peer_reconciliation_ref
   2. structural_validity       — observed=true implies non-null action_ref + complete co_signer
                                   (issuer/kid/pubkey/jws_signature/signed_fields all present,
-                                  signed_fields a non-empty list — shape only, not content);
+                                  signed_fields a non-empty list — shape only, not content;
+                                  v1.3: pubkey must be a strict base64 SPKI Ed25519 key, and every
+                                  block needs a valid party_id: printable ASCII, no space);
                                   observed=false implies action_ref and co_signer are both null
   3. signature_validity        — checks.signature_valid_a / checks.signature_valid_b declared in
                                   vector (external resolution; verifier trusts vector declaration,
@@ -37,8 +39,9 @@ Seven invariants checked per spec (docs/spec/peer-reconciliation-ref-v1.md):
                                   making the check structurally unable to fail. Absent
                                   `supersedes` = exempt.
   7. party_distinctness (v1.3) — computed from the envelope, like signature_binding: party_a and
-                                  party_b MUST carry different party_id values, and when both are
-                                  observed=true their co_signer.pubkey values MUST differ. Closes
+                                  party_b MUST carry different party_id values (ASCII case folded),
+                                  and when both are observed=true their co_signer pubkeys MUST be
+                                  different keys, compared as the 32 decoded bytes, not as text. Closes
                                   the cheapest form of "the same operator on both sides" (same id
                                   twice, or one key behind two ids). It does NOT detect one
                                   operator holding two distinct keys under two distinct ids; that
@@ -68,8 +71,11 @@ and the GenAI-Security-Project/agent-control-standard#33 finding that prompted t
 
 REQUIRED_SIGNED_FIELDS = {"party_id", "action_ref", "interaction_id"}
 
+import base64
+import binascii
 import hashlib
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -88,10 +94,41 @@ def sha256hex(s: str) -> str:
     return hashlib.sha256(s.encode("utf-8")).hexdigest()
 
 
+# v1.3. A co_signer.pubkey is a base64 SPKI Ed25519 key: 12-byte prefix + 32 key bytes = 44 bytes.
+SPKI_ED25519_PREFIX = base64.b64decode("MCowBQYDK2VwAyEA")
+PARTY_ID_RE = re.compile(r"[\x21-\x7e]+")  # non-empty, printable ASCII, no space or control
+
+
+def party_id_valid(party_id) -> bool:
+    return isinstance(party_id, str) and PARTY_ID_RE.fullmatch(party_id) is not None
+
+
+def pubkey_bytes(pubkey):
+    """The 32 raw Ed25519 key bytes of a base64 SPKI pubkey, or None if it is not one.
+
+    Strict base64 (validate=True: no whitespace, no characters outside the alphabet, padding
+    required), exactly 44 decoded bytes, SPKI Ed25519 prefix. The canonical re-encoding is NOT
+    required: eight fixture keys carry non-zero trailing bits, and the same key written with
+    different trailing bits decodes to the same 32 bytes, which is what distinctness compares.
+    """
+    if not isinstance(pubkey, str):
+        return None
+    try:
+        raw = base64.b64decode(pubkey, validate=True)
+    except (binascii.Error, ValueError):
+        return None
+    if len(raw) != 44 or raw[:12] != SPKI_ED25519_PREFIX:
+        return None
+    return raw[12:]
+
+
 def check_structural_validity(party: dict) -> bool:
     observed = party.get("observed")
     action_ref = party.get("action_ref")
     co_signer = party.get("co_signer")
+
+    if not party_id_valid(party.get("party_id")):
+        return False
 
     if observed is True:
         if action_ref is None:
@@ -100,6 +137,8 @@ def check_structural_validity(party: dict) -> bool:
             return False
         required = ("issuer", "kid", "pubkey", "jws_signature")
         if not all(co_signer.get(k) for k in required):
+            return False
+        if pubkey_bytes(co_signer.get("pubkey")) is None:
             return False
         signed_fields = co_signer.get("signed_fields")
         if not isinstance(signed_fields, list) or not signed_fields:
@@ -164,22 +203,25 @@ def check_supersedes_chain_integrity(vector: dict) -> tuple[bool, str]:
 
 
 def check_party_distinctness(envelope: dict) -> bool:
-    """v1.3. party_a and party_b must carry different party_id values; when both are
-    observed=true their co_signer pubkeys must also differ. Computed from the envelope."""
+    """v1.3. party_a and party_b must carry different party_id values (compared without regard
+    to ASCII case); when both are observed=true their co_signer pubkeys must be different KEYS,
+    compared as the 32 decoded key bytes, never as text. Computed from the envelope. A value that
+    is not a valid party_id or pubkey is a structural_validity failure, reported there."""
     a, b = envelope["party_a"], envelope["party_b"]
-    if a.get("party_id") == b.get("party_id"):
+    ia, ib = a.get("party_id"), b.get("party_id")
+    if party_id_valid(ia) and party_id_valid(ib) and ia.lower() == ib.lower():
         return False
     if a.get("observed") is True and b.get("observed") is True:
-        ka = (a.get("co_signer") or {}).get("pubkey")
-        kb = (b.get("co_signer") or {}).get("pubkey")
-        if ka and ka == kb:
+        ka = pubkey_bytes((a.get("co_signer") or {}).get("pubkey"))
+        kb = pubkey_bytes((b.get("co_signer") or {}).get("pubkey"))
+        if ka is not None and ka == kb:
             return False
     return True
 
 
 def compute_comparator_state(
     vector: dict, struct_a: bool, struct_b: bool, bind_a: bool, bind_b: bool,
-    distinct: bool = True,
+    distinct: bool,
 ) -> str:
     party_a = vector["envelope"]["party_a"]
     party_b = vector["envelope"]["party_b"]
@@ -252,8 +294,11 @@ def verify_vector(vector: dict) -> tuple[bool, list[str]]:
 
     # 5. party_distinctness (v1.3) -- computed from the envelope
     distinct = check_party_distinctness(envelope)
-    declared_distinct = checks.get("party_distinctness", True)
-    if distinct != declared_distinct:
+    # The computed result always decides. The declared value is only a cross-check, and the 11
+    # pre-v1.3 vectors do not declare it (their bytes are cited by others and stay untouched):
+    # absent means "pre-v1.3 vector, nothing declared", never "declared true".
+    declared_distinct = checks.get("party_distinctness")
+    if declared_distinct is not None and distinct != declared_distinct:
         failures.append(
             f"party_distinctness: computed {distinct} != declared {declared_distinct}"
         )

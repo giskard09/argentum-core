@@ -9,13 +9,16 @@
 nothing in the envelope or the verifier checked that `party_a` and `party_b` are different: the
 same `party_id` on both sides, or two `party_id` values behind one `co_signer.pubkey`, still
 produced `AGREED` (reproduced with the reference verifier, hash recomputed). A new computed
-invariant, §7 `party_distinctness`, requires different `party_id` values and, when both parties
-are `observed=true`, different `co_signer.pubkey` values. **This changes which envelopes can be
+invariant, §7 `party_distinctness`, requires different `party_id` values (compared ignoring ASCII case)
+and, when both parties are `observed=true`, different `co_signer.pubkey` KEYS, compared as the
+32 decoded key bytes and never as text: the same key written without padding, with whitespace, or
+with different unused trailing bits must not pass as a second key. **This changes which envelopes can be
 `AGREED`:** an envelope that was `AGREED` under v1.2 with a repeated `party_id` or a repeated
 `pubkey` is now `UNRESOLVED`. It is not additive, for the same reason v1.2 was not: grandfathering
 the old shape would keep the check unable to fail. No existing fixture changes result and no
-declared hash changes (the 11 v1.2 vectors are untouched); two negative vectors,
-`distinct-same-party-id-001` and `distinct-same-pubkey-001`, exercise the new check. What it still
+declared hash changes (the 11 v1.2 vectors are untouched, byte for byte); ten negative vectors
+exercise the new rules, one per way of writing the same party or key differently. `party_id` and
+`pubkey` now have format rules (§2 and §7). What it still
 cannot see: one operator holding two different keys under two different `party_id` values (see
 "What this profile does not do"). `verify.py` now canonicalizes with the repo's `jcs.py` (RFC
 8785) instead of `json.dumps(sort_keys=True)`, which this spec says not to use; all 11 existing
@@ -199,12 +202,13 @@ mutated after either party signed.
 ### 2. structural_validity
 
 Both `party_a` and `party_b` blocks are present and internally consistent: `observed=true`
-requires a non-null `action_ref` and a complete `co_signer` block (`issuer`, `kid`, `pubkey`,
-`jws_signature` all present); `observed=false` requires `action_ref` and `co_signer` to both
+requires a non-null `action_ref` and a complete `co_signer` block (`issuer`, `kid`, `jws_signature`
+all present, and a `pubkey` that is a strict base64 SPKI Ed25519 key, see §7); every block, observed or
+not, needs a valid `party_id` (§7); `observed=false` requires `action_ref` and `co_signer` to both
 be `null`.
 
 **Fails when:** a block claims `observed=true` with a missing `action_ref` or an incomplete
-`co_signer`, or claims `observed=false` while still carrying a non-null `action_ref` —
+`co_signer`, a `pubkey` that is not a strict base64 SPKI Ed25519 key, or an invalid `party_id` (v1.3), or claims `observed=false` while still carrying a non-null `action_ref` —
 either shape decouples the observation from its signature and is malformed by construction.
 
 ### 3. signature_validity
@@ -274,15 +278,38 @@ current envelope's own two parties.
 
 ### 7. party_distinctness (v1.3)
 
-Computed from the envelope, like `signature_binding`: `party_a.party_id` and `party_b.party_id`
-MUST differ, and when both parties are `observed=true`, `party_a.co_signer.pubkey` and
-`party_b.co_signer.pubkey` MUST differ.
+Computed from the envelope, like `signature_binding`. `party_a.party_id` and `party_b.party_id`
+MUST differ, compared without regard to ASCII case. When both parties are `observed=true`,
+`party_a.co_signer.pubkey` and `party_b.co_signer.pubkey` MUST be different keys.
 
-**Fails when:** the two `party_id` values are equal, or both parties are `observed=true` and
-present the same `co_signer.pubkey`. The comparator state is then `UNRESOLVED`, never `AGREED`
-or `DISAGREED`: two signed observations from one identity or one key are one observation.
-See `distinct-same-party-id-001` and `distinct-same-pubkey-001`. A shared `issuer` is not
-checked: a hosting platform can legitimately issue for two parties.
+**Keys are compared as bytes, not as text.** A `pubkey` is read as strict base64 (no whitespace,
+no character outside the alphabet, padding present), must decode to exactly 44 bytes, and must
+start with the SPKI Ed25519 prefix (`MCowBQYDK2VwAyEA`); the comparison is on the remaining 32
+key bytes. A `pubkey` that is not such a key makes its block `structural_validity` false, not
+"a different key": the same key without its `=`, with a trailing newline or a leading space, or
+as the 32 raw bytes cannot be used to pass as a second key.
+
+**The canonical re-encoding is not required.** A key whose last base64 character carries
+non-zero unused bits decodes to the same bytes as the canonical spelling; eight keys in the
+existing fixtures are written that way, and rejecting them would change the result of six
+existing vectors. They are accepted, and because the comparison is on bytes, the same key written
+with different trailing bits is still caught as the same key
+(`distinct-pubkey-trailing-bits-001`).
+
+**`party_id` format (also part of `structural_validity`):** a non-empty string of printable
+ASCII with no space or control character. `null`, a non-string, an empty string, or a value with
+a space or a newline makes the block structurally invalid.
+
+**Fails when:** the two `party_id` values are equal ignoring ASCII case, or both parties are
+`observed=true` and decode to the same 32 key bytes. The comparator state is then `UNRESOLVED`,
+never `AGREED` or `DISAGREED`: two signed observations from one identity or one key are one
+observation. A shared `issuer` is not checked: a hosting platform can legitimately issue for two
+parties.
+
+**Declared versus computed.** The result is always computed; a vector's
+`checks.party_distinctness` is only a cross-check. The 11 vectors that predate v1.3 do not declare
+it and keep their bytes, so for them an absent value means "nothing declared", not "declared
+true"; the vectors added in v1.3 all declare it.
 
 ## Corrections (v1.1)
 
