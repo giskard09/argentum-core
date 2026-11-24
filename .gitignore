@@ -3,3 +3,4 @@ __pycache__/
 argentum.db
 .env
 examples/conformance/**/node_modules/
+.agent_signing_nonces.db*

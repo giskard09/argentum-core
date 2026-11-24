@@ -10,6 +10,11 @@ Cadena de confianza:
 Sin firma o firma inválida → karma_discount devuelve base_price. Opt-in, no rompe clientes viejos.
 """
 import base64
+import hashlib
+import json
+import logging
+import os
+import sqlite3
 import threading
 import time
 from typing import Optional
@@ -20,9 +25,18 @@ from nacl.signing import SigningKey, VerifyKey
 
 from jcs import jcs_bytes
 
+_log = logging.getLogger("agent_signing")
+
 MARKS_URL = "http://localhost:8015"
+# A signature may be this old (seconds) and still verify...
 SIGNATURE_TTL_SECONDS = 60
-NONCE_CACHE_MAX = 10_000
+# ...but may only be this far in the future. The old rule was symmetric (60 s), which gave a
+# future-dated signature a 120 s life. Small skew tolerance only; override per host if needed.
+SIGNATURE_FUTURE_TOLERANCE_SECONDS = int(os.environ.get("AGENT_SIGNING_FUTURE_TOLERANCE", "10"))
+NONCE_CACHE_MAX = 100_000        # rows kept at once; when full, new signatures are REFUSED, never cleared
+NONCE_PER_AGENT_MAX = 1_000      # rows one agent_id may hold, so one key cannot fill the table
+MAX_NONCE_LEN = 128
+MAX_AGENT_ID_LEN = 256
 
 
 def build_payload(agent_id: str, timestamp: int, nonce: str) -> bytes:
@@ -46,36 +60,77 @@ def generate_keypair() -> tuple:
     )
 
 
-class NonceCache:
-    """In-memory nonce store with TTL. Thread-safe, bounded size."""
+def _default_nonce_db_path() -> str:
+    """Where the module-level cache lives. Persisting it lets consumed nonces survive a restart
+    (the old in-memory cache was empty after one, reopening every signature still in its window).
+    AGENT_SIGNING_NONCE_DB overrides it; ':memory:' keeps the old per-process behaviour."""
+    env = os.environ.get("AGENT_SIGNING_NONCE_DB")
+    if env:
+        return env
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), ".agent_signing_nonces.db")
 
-    def __init__(self, ttl: int = SIGNATURE_TTL_SECONDS, max_size: int = NONCE_CACHE_MAX):
+
+def _nonce_key(agent_id: str, nonce: str) -> str:
+    """Unambiguous cache key: ('a', 'b:c') and ('a:b', 'c') must not collide."""
+    return json.dumps([agent_id, nonce], separators=(",", ":"), ensure_ascii=True)
+
+
+class NonceCache:
+    """Single-use nonce store on SQLite, with expiry. Thread-safe and safe across processes that
+    share the file (the insert is atomic). Default (db_path=None) is in memory, for tests/injection.
+
+    Entries live until the signature they came from can no longer verify (`expires_at`), and are
+    purged by time on every call. When full the cache REFUSES (fail closed); it never clears.
+    """
+
+    def __init__(self, ttl: int = SIGNATURE_TTL_SECONDS, max_size: int = NONCE_CACHE_MAX,
+                 db_path: Optional[str] = None, per_agent_max: int = NONCE_PER_AGENT_MAX):
         self._ttl = ttl
         self._max_size = max_size
-        self._store: dict = {}
+        self._per_agent_max = per_agent_max
         self._lock = threading.Lock()
+        self._conn = self._open(db_path or ":memory:")
 
-    def _evict_expired(self, now: float) -> None:
-        cutoff = now - self._ttl
-        stale = [k for k, t in self._store.items() if t < cutoff]
-        for k in stale:
-            del self._store[k]
+    @staticmethod
+    def _open(path: str):
+        try:
+            conn = sqlite3.connect(path, check_same_thread=False, timeout=5.0, isolation_level=None)
+            conn.execute("PRAGMA journal_mode=WAL") if path != ":memory:" else None
+            conn.execute("CREATE TABLE IF NOT EXISTS nonces (k TEXT PRIMARY KEY, agent TEXT, expires_at REAL NOT NULL)")
+            conn.execute("CREATE INDEX IF NOT EXISTS nonces_exp ON nonces (expires_at)")
+            conn.execute("CREATE INDEX IF NOT EXISTS nonces_agent ON nonces (agent)")
+            return conn
+        except sqlite3.Error as e:
+            _log.error("nonce store %r unavailable (%s); falling back to memory for this process", path, e)
+            conn = sqlite3.connect(":memory:", check_same_thread=False, isolation_level=None)
+            conn.execute("CREATE TABLE nonces (k TEXT PRIMARY KEY, agent TEXT, expires_at REAL NOT NULL)")
+            conn.execute("CREATE INDEX nonces_exp ON nonces (expires_at)")
+            conn.execute("CREATE INDEX nonces_agent ON nonces (agent)")
+            return conn
 
-    def check_and_store(self, key: str) -> bool:
-        """True if key was fresh and stored. False if already seen (replay)."""
+    def check_and_store(self, key: str, expires_at: Optional[float] = None, agent: Optional[str] = None) -> bool:
+        """True if the key was fresh and is now stored. False if already seen (replay), the cache
+        is full, the agent is over its quota, or the store failed (fail closed)."""
+        now = time.time()
+        exp = float(expires_at) if expires_at is not None else now + self._ttl
+        k = hashlib.sha256(key.encode("utf-8")).hexdigest()
         with self._lock:
-            now = time.time()
-            if len(self._store) > self._max_size:
-                self._evict_expired(now)
-                if len(self._store) > self._max_size:
-                    self._store.clear()
-            if key in self._store:
+            try:
+                c = self._conn
+                c.execute("DELETE FROM nonces WHERE expires_at < ?", (now,))
+                if c.execute("SELECT COUNT(*) FROM nonces").fetchone()[0] >= self._max_size:
+                    return False
+                if agent is not None and c.execute(
+                        "SELECT COUNT(*) FROM nonces WHERE agent = ?", (agent,)).fetchone()[0] >= self._per_agent_max:
+                    return False
+                cur = c.execute("INSERT OR IGNORE INTO nonces (k, agent, expires_at) VALUES (?, ?, ?)", (k, agent, exp))
+                return cur.rowcount == 1
+            except sqlite3.Error as e:
+                _log.error("nonce store error (%s); refusing the signature", e)
                 return False
-            self._store[key] = now
-            return True
 
 
-_nonce_cache = NonceCache()
+_nonce_cache = NonceCache(db_path=_default_nonce_db_path())
 
 
 def _fetch_pubkey(agent_id: str) -> Optional[str]:
@@ -123,13 +178,18 @@ def verify_request(
     """
     if not (agent_id and signature_b64 and nonce):
         return False
+    if not isinstance(agent_id, str) or not isinstance(nonce, str):
+        return False
+    if len(nonce) > MAX_NONCE_LEN or len(agent_id) > MAX_AGENT_ID_LEN:
+        return False
     try:
         timestamp = int(timestamp)
     except (TypeError, ValueError):
         return False
 
     current = int(now if now is not None else time.time())
-    if abs(current - timestamp) > SIGNATURE_TTL_SECONDS:
+    age = current - timestamp            # > 0: signed in the past; < 0: dated in the future
+    if age > SIGNATURE_TTL_SECONDS or -age > SIGNATURE_FUTURE_TOLERANCE_SECONDS:
         return False
 
     if pubkey_loader is not None:
@@ -145,5 +205,8 @@ def verify_request(
     except (BadSignatureError, ValueError, TypeError):
         return False
 
-    cache = nonce_cache or _nonce_cache
-    return cache.check_and_store(f"{agent_id}:{nonce}")
+    cache = nonce_cache if nonce_cache is not None else _nonce_cache
+    # Keep the nonce until this signature can no longer verify (ts + TTL, plus a margin for the
+    # int() truncation of `now`), not for a fixed time after it was first seen.
+    return cache.check_and_store(_nonce_key(agent_id, nonce),
+                                 expires_at=timestamp + SIGNATURE_TTL_SECONDS + 2, agent=agent_id)
