@@ -57,7 +57,7 @@ print(resp.json())
 ## 2. End-to-end example
 
 ```python
-import base64, hashlib, json, time, uuid
+import base64, datetime, hashlib, json, re, time, uuid
 import requests
 from nacl.signing import SigningKey
 
@@ -77,13 +77,40 @@ def sign_request(agent_id: str, timestamp: int, nonce: str) -> str:
     return base64.b64encode(sk.sign(payload).signature).decode("ascii")
 
 
-def compute_action_ref(agent_id: str, action_type: str, scope: str, timestamp: int) -> str:
-    """Canonical content-addressed identifier for this action."""
-    payload = f"{agent_id}:{action_type}:{scope}:{int(timestamp)}"
-    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+def format_timestamp(unix_seconds: int) -> str:
+    """Unix seconds -> the one accepted timestamp form: YYYY-MM-DDTHH:MM:SS.mmmZ (UTC)."""
+    return time.strftime("%Y-%m-%dT%H:%M:%S.000Z", time.gmtime(unix_seconds))
+
+
+def compute_action_ref(agent_id: str, action_type: str, scope: str, timestamp: str) -> str:
+    """action_ref v1 = SHA-256(JCS({agent_id, action_type, scope, timestamp})), RFC 8785.
+
+    `timestamp` is a STRING in the form format_timestamp() returns. Values outside the
+    v1 Domain (docs/spec/action-ref.md) are refused, never hashed: ASCII-only
+    agent_id/action_type/scope, non-empty scope, a real calendar instant.
+    """
+    for name, value in (("agent_id", agent_id), ("action_type", action_type), ("scope", scope)):
+        if not value.isascii():
+            raise ValueError(f"OUT_OF_PROFILE_DOMAIN: {name}: non-ASCII character in field value")
+    if not scope:
+        raise ValueError("OUT_OF_PROFILE_DOMAIN: scope: must be a non-empty string")
+    if not re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z", timestamp):
+        raise ValueError("OUT_OF_PROFILE_DOMAIN: timestamp: expected YYYY-MM-DDTHH:MM:SS.mmmZ")
+    try:
+        datetime.datetime.strptime(timestamp, "%Y-%m-%dT%H:%M:%S.%fZ")
+    except ValueError:
+        raise ValueError("OUT_OF_PROFILE_DOMAIN: timestamp: not a real calendar instant")
+    # For ASCII string members, sorted keys + compact separators is the RFC 8785 form.
+    canonical = json.dumps(
+        {"agent_id": agent_id, "action_type": action_type, "scope": scope, "timestamp": timestamp},
+        sort_keys=True, separators=(",", ":"), ensure_ascii=False,
+    )
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
 # ── Step A: Record a trail ────────────────────────────────────────────────────
+# NOTE: POST /agent/trail is not in the current public API. The action_ref derivation
+# above (compute_action_ref) is what POST /nexus/trail recomputes; see that endpoint.
 
 timestamp = int(time.time())
 nonce     = str(uuid.uuid4())
@@ -100,10 +127,11 @@ resp = requests.post(f"{BASE_URL}/agent/trail", json={
 resp.raise_for_status()
 trail = resp.json()
 trail_id   = trail["trail_id"]
-action_ref = compute_action_ref(AGENT_ID, action, scope, timestamp)
+action_ref = compute_action_ref(AGENT_ID, action, scope, format_timestamp(timestamp))
 print(f"Trail recorded: {trail_id}")
 
 # ── Step B: Anchor on-chain (Arbitrum) ───────────────────────────────────────
+# NOTE: POST /trails/anchor is not in the current public API.
 
 resp = requests.post(
     f"{BASE_URL}/trails/anchor",
@@ -128,6 +156,8 @@ print(f"verified={result['verified']}  tx={result.get('tx_hash')}")
 ---
 
 ## 3. Fields reference
+
+> `POST /agent/trail` and `POST /trails/anchor` are not in the current public API. The two tables below are kept from an earlier revision and are not verified against the current API.
 
 ### POST /agent/trail
 
@@ -161,7 +191,7 @@ print(f"verified={result['verified']}  tx={result.get('tx_hash')}")
 | Param | Required | Notes |
 |-------|----------|-------|
 | `agent_id` | Yes (with action_ref) | |
-| `action_ref` | Yes (with agent_id) | SHA-256 of `"{agent_id}:{action_type}:{scope}:{timestamp}"` |
+| `action_ref` | Yes (with agent_id) | action_ref v1: SHA-256 of the RFC 8785 JCS of `{agent_id, action_type, scope, timestamp}`, `timestamp` a string `YYYY-MM-DDTHH:MM:SS.mmmZ` (see [action-ref.md](../spec/action-ref.md)) |
 | `payment_hash` | Alternative | Can verify without agent_id if you have the payment_hash |
 
 No authentication required. Public endpoint.
@@ -192,7 +222,7 @@ SafeAgent, aeoess) expect.
 
 ## Boundaries
 
-- `agent_id` is authenticated via Ed25519 against giskard-marks. Unsigned requests return 401.
+- On `POST /nexus/trail`, `agent_id` is caller-supplied and no signature is checked: a receipt is accepted when its `action_ref` recomputes from the preimage (see [MYCELIUM_TRAILS_REFERENCE.md](../MYCELIUM_TRAILS_REFERENCE.md)).
 - Trails are append-only. No update or delete endpoints exist.
 - The trail records **what happened** — it does not decide whether it should have happened.
 - `anchor_status` is observable via the anchor response. There is no push notification; poll `GET /trails/verify` if you need confirmation of the on-chain anchor.

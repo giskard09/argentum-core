@@ -11,26 +11,23 @@
  *
  * Available actions:
  * - verify_trail: Check if an agent has a verified trail for a given action_ref
- * - compute_action_ref: Compute the canonical SHA-256 action reference
+ * - compute_action_ref: Compute the action_ref (v1: SHA-256 of the JCS of the four preimage fields)
  * - get_trails: List recent trails for an agent
  */
 
-import { createHash } from "crypto";
 import { z } from "zod";
 import { ActionProvider } from "@coinbase/agentkit";
 import { CreateAction } from "@coinbase/agentkit";
 import { Network } from "@coinbase/agentkit";
 import { VerifyTrailSchema, ComputeActionRefSchema, GetTrailsSchema } from "./schemas";
+import { computeActionRef, OutOfProfileDomainError } from "./actionRef";
 
 const MYCELIUM_API_BASE = "https://argentum.rgiskard.xyz";
 
+// Shape of GET /trails/verify: { verified: false } or { verified: true, trail: {...} }.
 interface VerifyTrailResult {
   verified: boolean;
-  trail_id: string | null;
-  tx_hash: string | null;
-  timestamp: string | null;
-  service: string | null;
-  operation: string | null;
+  trail?: Record<string, unknown>;
 }
 
 /**
@@ -62,12 +59,8 @@ Use this after an agent claims to have executed an action to verify it actually 
 Pairs with compute_action_ref to generate the canonical reference before verifying.
 
 Returns:
-- verified: true if the trail exists and is confirmed
-- tx_hash: on-chain transaction hash on Base (if available)
-- timestamp: ISO 8601 timestamp of when the trail was recorded
-- trail_id: internal trail identifier
-- service: which Mycelium service recorded the trail (e.g. giskard-oasis)
-- operation: the operation type (e.g. enter_oasis, agent_trail)
+- verified: true if the trail exists
+- trail (only when verified): trail_id, tx_hash (if anchored), service, operation, action_ref, timestamp (Unix seconds) and the other trail fields
 
 Example: verify pioneer-agent-001 executed a swap on 2026-05-05
 `,
@@ -82,7 +75,7 @@ Example: verify pioneer-agent-001 executed a swap on 2026-05-05
       const resp = await fetch(url, { signal: AbortSignal.timeout(10_000) });
 
       if (resp.status === 404) {
-        return JSON.stringify({ verified: false, trail_id: null, tx_hash: null, timestamp: null, service: null, operation: null });
+        return JSON.stringify({ verified: false });
       }
       if (!resp.ok) {
         return JSON.stringify({ error: `API error: ${resp.status}`, verified: false });
@@ -96,24 +89,31 @@ Example: verify pioneer-agent-001 executed a swap on 2026-05-05
   }
 
   /**
-   * Computes the canonical action_ref for a given action.
-   * The action_ref is SHA-256(agent_id:action_type:scope:timestamp) — deterministic.
-   * Use the same inputs that were used when the trail was recorded.
+   * Computes the action_ref (v1) for a given action:
+   * SHA-256(JCS({agent_id, action_type, scope, timestamp})), RFC 8785.
+   * Use the same inputs that were used when the trail was recorded. Inputs outside the
+   * v1 domain (non-ASCII, empty scope, a timestamp that is not YYYY-MM-DDTHH:MM:SS.mmmZ
+   * or not a real instant) are refused, not hashed.
    *
-   * @param args - agent_id, action_type, scope, timestamp.
-   * @returns JSON string with the computed action_ref hex string.
+   * @param args - agent_id, action_type, scope, timestamp (string).
+   * @returns JSON string with the action_ref hex string and the canonical bytes hashed,
+   *          or { error, field, reason } when an input is outside the domain.
    */
   @CreateAction({
     name: "compute_action_ref",
-    description: `Computes the canonical Mycelium action_ref for a given action.
+    description: `Computes the Mycelium action_ref (v1) for a given action.
 
-The action_ref is SHA-256(agent_id:action_type:scope:timestamp) — a deterministic
-content-addressed reference used to link external records to Mycelium Trails.
+The action_ref is SHA-256 of the RFC 8785 (JCS) serialization of
+{agent_id, action_type, scope, timestamp} -- a deterministic content-addressed
+reference used to link external records to Mycelium Trails.
+
+The timestamp is a STRING, exactly YYYY-MM-DDTHH:MM:SS.mmmZ (UTC, three fractional
+digits). agent_id, action_type and scope must be ASCII and scope must not be empty.
+Inputs outside that domain return an error instead of a hash.
 
 Use this before verify_trail when you know the inputs but not the hash.
-The same algorithm is used by the Mycelium ecosystem (argentum-sdk/argentum/trails.py).
 
-Example: compute_action_ref("pioneer-agent-001", "agent_trail", "giskard-oasis", 1777991810)
+Example: compute_action_ref("giskard-self", "trail.anchor", "mycelium:baseline", "2026-05-23T00:00:00.000Z")
 `,
     schema: ComputeActionRefSchema,
   })
@@ -121,9 +121,21 @@ Example: compute_action_ref("pioneer-agent-001", "agent_trail", "giskard-oasis",
     _walletProvider: unknown,
     args: z.infer<typeof ComputeActionRefSchema>,
   ): Promise<string> {
-    const payload = `${args.agent_id}:${args.action_type}:${args.scope}:${args.timestamp}`;
-    const hash = createHash("sha256").update(payload, "utf8").digest("hex");
-    return JSON.stringify({ action_ref: hash, payload });
+    try {
+      const action_ref = computeActionRef(args.agent_id, args.action_type, args.scope, args.timestamp);
+      const canonical = JSON.stringify({
+        action_type: args.action_type,
+        agent_id: args.agent_id,
+        scope: args.scope,
+        timestamp: args.timestamp,
+      });
+      return JSON.stringify({ action_ref, canonical });
+    } catch (err) {
+      if (err instanceof OutOfProfileDomainError) {
+        return JSON.stringify({ error: "OUT_OF_PROFILE_DOMAIN", field: err.field, reason: err.reason });
+      }
+      return JSON.stringify({ error: String(err) });
+    }
   }
 
   /**

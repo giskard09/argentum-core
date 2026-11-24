@@ -18,23 +18,35 @@ No coupling between layers. Each surface is independently queryable.
 
 ## Trail Record Schema
 
-A trail is written when an agent successfully completes a paid action.
+A trail records one action an agent performed; `success` says whether it completed. These are the
+fields of a trail record, as returned by `GET /trails/{trail_id}` and inside `trail` in
+`GET /trails/verify`:
 
 | Field | Type | Description |
 |---|---|---|
-| `trail_id` | UUID | Unique record identifier |
-| `agent_id` | string | Agent identifier (caller-supplied, not authenticated) |
+| `trail_id` | string | Unique record identifier (a UUID) |
+| `agent_id` | string | Agent identifier (caller-supplied) |
 | `service` | string | Service name (e.g. `giskard-oasis`) |
 | `operation` | string | Operation performed (e.g. `enter_oasis`) |
-| `action_ref` | string | SHA-256 content-addressed identifier (see below) |
-| `payment_hash` | string | Lightning payment hash or on-chain tx hash |
-| `timestamp` | integer | Unix timestamp of the action |
-| `signature_ref` | string | Ed25519 signature reference over canonical record |
-| `claims` | object | Runtime metadata attached at write time (see below) |
+| `action_ref` | string \| null | SHA-256 hex content-addressed identifier (see below); `null` on older records |
+| `timestamp` | integer | Unix seconds when the trail was recorded |
+| `karma_at_time` | integer \| null | Karma of the agent when the trail was recorded, if known |
 | `success` | boolean | Whether the action completed successfully |
+| `signature_ref` | string | SHA-256 hex of the nonce the trail was recorded with (for `POST /nexus/trail` the nonce is the `action_ref`). A reference derived from the nonce, not a signature over the record. |
 | `scope` | string \| null | What the agent was authorized to do (optional, v2) |
-| `delegation_ref` | string \| null | Opaque reference to the delegation chain that originated this action (optional, v2) |
+| `delegation_ref` | string \| null | Opaque reference (optional, v2). For a trail from `POST /nexus/trail`, the receipt's `payment_hash` is stored here. |
+| `parent_trail_id` | string \| null | Trail that spawned this one (v3) |
+| `root_trail_id` | string \| null | First trail in the chain (v3) |
 | `negotiation_ref` | string \| null | SHA-256 hex pointer to the negotiation artifact that preceded this action (optional, v4). Does not enter the `action_ref` preimage. |
+| `negotiation_ref_status` | string \| null | How the issuer recorded obtaining that artifact; see [`spec/negotiation-ref.md`](spec/negotiation-ref.md) |
+| `origin` | string \| null | Where the trail came from, e.g. `nexus` (via `POST /nexus/trail`) |
+| `tx_hash` | string \| null | Hash of the transaction that anchors the trail on-chain, once anchored |
+| `anchor_status` | string \| null | Anchoring state, e.g. `anchored` |
+| `anchor_block` | integer \| null | Block number of the anchor transaction |
+| `anchor_fail_reason` | string \| null | Reason recorded when anchoring failed |
+
+There is no `payment_hash` or `claims` field on the record. A NEXUS receipt's `payment_hash` is kept in
+`delegation_ref`, and `GET /trails/verify?payment_hash=<hash>` looks a trail up by it.
 
 ### scope and delegation_ref — v2 optional fields
 
@@ -43,8 +55,8 @@ compliance adapters (e.g. ATP delegation chain) that need to verify the action f
 the declared authorization boundary.
 
 `delegation_ref` is an opaque pointer to the delegation chain that originated the action.
-Format is caller-defined (URL, content hash, UUID). Mycelium stores it verbatim and indexes
-nothing — the caller is responsible for making the reference resolvable.
+Format is caller-defined (URL, content hash, UUID). Mycelium stores it verbatim — the caller is
+responsible for making the reference resolvable.
 
 Both fields are `null` when not supplied. Backward-compatible: consumers that do not supply
 or read these fields are unaffected.
@@ -52,31 +64,27 @@ or read these fields are unaffected.
 ### action_ref — content-addressed identifier
 
 ```python
-import hashlib
+import hashlib, json
 
-def compute_action_ref(agent_id: str, action_type: str, scope: str, timestamp: int) -> str:
-    payload = f"{agent_id}:{action_type}:{scope}:{int(timestamp)}"
-    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+def compute_action_ref(agent_id: str, action_type: str, scope: str, timestamp: str) -> str:
+    # action_ref v1: SHA-256 of the RFC 8785 (JCS) serialization of the four fields.
+    # `timestamp` is a string, YYYY-MM-DDTHH:MM:SS.mmmZ. For ASCII string members,
+    # sorted keys + compact separators is the RFC 8785 form.
+    canonical = json.dumps(
+        {"agent_id": agent_id, "action_type": action_type, "scope": scope, "timestamp": timestamp},
+        sort_keys=True, separators=(",", ":"), ensure_ascii=False,
+    )
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 ```
+
+This snippet shows the derivation only. The Domain rules (ASCII-only `agent_id`, `action_type` and
+`scope`; non-empty `scope`; a real calendar instant in the exact timestamp form) are in
+[`spec/action-ref.md`](spec/action-ref.md), and a value outside them is refused rather than hashed.
+`POST /nexus/trail` recomputes this value and answers 422 when it does not match.
 
 Any party (APS gateway, asqav compliance layer, the agent itself) can
 pre-compute this identifier before the trail is written. The trail links
 back to it on Base. This is the canonical linking key across all surfaces.
-
-### claims object
-
-```json
-{
-  "runtime": "lightning",
-  "wallet": "phoenixd",
-  "contract": null,
-  "payment_method": "lightning",
-  "mocked": false,
-  "impossible_effects": false
-}
-```
-
-Claims are attached at write time and are not modifiable after the fact.
 
 ---
 
@@ -84,42 +92,34 @@ Claims are attached at write time and are not modifiable after the fact.
 
 ```
 GET https://argentum.rgiskard.xyz/trails/verify?agent_id=X&action_ref=Y
+GET https://argentum.rgiskard.xyz/trails/verify?payment_hash=Z
 ```
 
 No authentication required. No API key.
 
-**Response — trail found:**
+**Response — trail found (HTTP 200):**
 ```json
-{
-  "verified": true,
-  "trail_id": "ea145ca5-e9ac-4900-b583-a2e1bea61140",
-  "tx_hash": "7fd0a8ededd1feb65ab37b3324218a0386dbf124174cf122bffc40717c057b84",
-  "timestamp": "2026-04-13T02:47:35+00:00",
-  "service": "giskard-oasis",
-  "operation": "enter_oasis"
-}
+{"verified": true, "trail": { "trail_id": "...", "agent_id": "...", "action_ref": "...", "tx_hash": "...", "...": "other record fields, see Trail Record Schema" }}
 ```
 
-**Response — not found:**
+**Response — not found (HTTP 404):**
 ```json
-{"verified": false, "block": null, "tx_hash": null, "timestamp": null}
+{"verified": false}
 ```
 
-The `tx_hash` is the Base mainnet transaction hash or Lightning payment hash
-that anchors the trail. A verifier can replay from any Base RPC node without
-querying our API.
+With neither `agent_id` + `action_ref` nor `payment_hash`, the endpoint answers HTTP 422
+(`{"detail": "provide action_ref+agent_id or payment_hash"}`).
+
+`trail.tx_hash` is the hash of the transaction that anchors the trail on-chain; it can be looked up
+with any RPC node of that chain. Anchors are on Arbitrum One or Base: a live trail's `tx_hash` resolves
+on Arbitrum One, and the example below is on Base.
 
 ---
 
 ## Example: post-action anchor on Base
 
-Trail from a real agent payment (pioneer-agent-001, 2026-04-13):
-
-- **agent_id:** `pioneer-agent-001`
-- **service:** `giskard-oasis`
-- **payment:** 20 sats via Lightning
-- **bridge tx:** `0x7fd0a8ededd1feb65ab37b3324218a0386dbf124174cf122bffc40717c057b84`
-- **Base explorer:** https://basescan.org/tx/0x7fd0a8ededd1feb65ab37b3324218a0386dbf124174cf122bffc40717c057b84
+An anchor transaction on Base (chain id 8453): `0x7fd0a8ededd1feb65ab37b3324218a0386dbf124174cf122bffc40717c057b84`
+([Base explorer](https://basescan.org/tx/0x7fd0a8ededd1feb65ab37b3324218a0386dbf124174cf122bffc40717c057b84)).
 
 Live trail viewer: https://argentum.rgiskard.xyz/trails/demo
 
@@ -135,12 +135,9 @@ Live trail viewer: https://argentum.rgiskard.xyz/trails/demo
    → permit receipt with action_ref as linking key
 4. AgentKit / framework executes the action
 5. Mycelium Trails writes the post-action record
-   → trail anchored on Base with payment_hash cross-referencing the permit
-6. Any verifier replays from Base and recovers the full chain
-   → permit (APS-signed) → revocation/re-issue (asqav) → trail (Mycelium)
+   → the permit's payment_hash can be carried in delegation_ref and looked up with
+     GET /trails/verify?payment_hash=<hash>
 ```
-
-No single point of trust. Each surface is independently verifiable.
 
 ---
 
@@ -149,50 +146,37 @@ No single point of trust. Each surface is independently verifiable.
 - Not a security guarantee
 - Not an official integration with Sentinel, x402, AgentKit, or Stripe
 - The trail records what happened — it does not decide whether it should have happened
-- agent_id is caller-supplied; Mycelium does not authenticate the caller
+- On `POST /nexus/trail`, agent_id is caller-supplied and no signature is checked: a receipt is accepted when its `action_ref` recomputes from the preimage
 
 ---
-
-## SDK
-
-```python
-# pip install argentum-sdk
-from argentum.trails import compute_action_ref, verify_trail
-
-ref = compute_action_ref(
-    agent_id="my-agent-001",
-    action_type="enter_oasis",
-    scope="giskard-oasis",
-    timestamp=1746500000
-)
-
-result = verify_trail(agent_id="my-agent-001", action_ref=ref)
-# {"verified": True/False, "tx_hash": "...", "timestamp": "..."}
-```
 
 Source: https://github.com/giskard09/argentum-core
 
 ---
 
-## Timestamp representation — wire vs. API layers
+## Timestamp representation — what is hashed and what is stored
 
-`action_ref` derivation involves a timestamp field that has three distinct representations depending on the layer. These are not inconsistencies — they are intentional boundaries between the internal wire format and external interoperability specs.
+A trail carries its time in two forms. They are not interchangeable.
 
-| Layer | Format | Where used |
-|-------|--------|-----------|
-| **Wire (internal)** | Unix epoch seconds, integer | `timestamp` column in trails DB, `compute_action_ref()` input, `record_trail()` |
-| **Cross-rail** | `timestamp_ms = timestamp × 1000`, int64 big-endian | Published in `preimage.timestamp_ms` on each TrailRecord response; used by cross-rail integrations (SafeAgent, APS) |
-| **API / crosswalk** | RFC 3339 string, UTC, 3-digit ms — e.g. `"2026-05-13T10:00:00.123Z"` | `anchored_at` field in AnchorReceipt; AGT EvidenceAnchor proposal (PR #2244); aeoess crosswalk YAML |
+| Where | Form | Notes |
+|-------|------|-------|
+| `timestamp` column of the trails DB and the `timestamp` field of trail responses | Unix epoch seconds, integer | The time the trail was recorded, kept as an integer. It is not a member of the preimage, so `action_ref` does not hash it. |
+| `timestamp` member of the action_ref preimage (`anchor_proof.preimage`, `preimage_json`) | RFC 3339 string, UTC, three fractional digits, e.g. `"2026-05-13T10:00:00.123Z"` | The form `action_ref` v1 hashes. |
+| `anchored_at` in AnchorReceipt; AGT EvidenceAnchor proposal (PR #2244) | RFC 3339 string, same form | API / crosswalk layer. |
 
-The `action_ref` hash is always computed over the **wire format** (Unix seconds integer):
+`action_ref` is computed over the preimage with the RFC 3339 string:
 
 ```
-action_ref = SHA-256("{agent_id}:{action_type}:{scope}:{timestamp_seconds}")
+action_ref = SHA-256( JCS( {agent_id, action_type, scope, timestamp} ) )
 ```
 
-External callers that need to pre-generate the same `action_ref` should use the integer seconds value, not milliseconds and not RFC 3339. The `preimage.timestamp_ms` field in the API response is provided for cross-rail linking, not for hash recomputation.
+External callers that pre-generate an `action_ref` must therefore convert a Unix time to the RFC 3339 form
+before hashing; hashing the integer, or a different spelling of the same instant, gives a different value.
+For a trail that stored its preimage, `GET /trails/{trail_id}` returns it under `anchor_proof.preimage`, with `action_ref_verified`, so a third party can recompute the value.
+Trail responses do not carry a `timestamp_ms` field.
 
-This design keeps the internal hash function simple and stable, while allowing external systems to express the same timestamp in their preferred format without creating hash divergence.
+`POST /nexus/trail` additionally accepts, for the NEXUS wire format (packet_version 1.0), a Unix
+epoch-millisecond value written as a string; it is hashed as given and is not the canonical form.
 
 ---
 
@@ -227,10 +211,11 @@ trail_id: A  (root)          agent: orchestrator
 ### Graph endpoint
 
 ```
-GET https://argentum.rgiskard.xyz/trails/{id}/graph
+GET https://argentum-api.rgiskard.xyz/mycelium/trails/{trail_id}/graph
 ```
 
-Returns the full DAG rooted at the given trail (walks up to the real root, then down through all descendants).
+Returns the DAG that contains the given trail: it walks up through `parent_trail_id` to the root, then down
+through all descendants. HTTP 404 `{"detail": "trail not found"}` when the trail does not exist.
 
 **Response:**
 ```json
@@ -238,52 +223,51 @@ Returns the full DAG rooted at the given trail (walks up to the real root, then 
   "root": {
     "trail_id": "A",
     "agent_id": "orchestrator",
-    "timestamp": "2026-05-14T10:00:00.000Z",
-    "karma": 42,
-    "attestation_count": 2,
+    "karma_at_time": null,
+    "attestation_count": 0,
     "parent_trail_id": null,
-    "root_trail_id": null,
     "children": [
       {
         "trail_id": "B",
         "agent_id": "researcher",
+        "karma_at_time": null,
+        "attestation_count": 0,
         "parent_trail_id": "A",
-        "root_trail_id": "A",
-        "children": [...]
+        "children": []
       }
     ]
   }
 }
 ```
 
+`attestation_count` is a placeholder and is always `0`.
+
 ### Chain verification endpoint
 
 ```
-GET https://argentum.rgiskard.xyz/trails/{id}/verify_chain
+GET https://argentum-api.rgiskard.xyz/mycelium/trails/{trail_id}/verify_chain
 ```
 
-Walks the chain from the given trail up to the root and validates:
-1. Ed25519 signature (`signature_ref`) is valid at each step.
-2. `delegation_ref` is consistent with `parent_trail_id` (when both are present).
+Walks from the given trail up through `parent_trail_id` to the root and checks, at each trail:
+1. the trail exists;
+2. `signature_ref` is present (non-empty). **The endpoint does not verify a cryptographic signature**:
+   `signature_ref` is derived from the nonce (see Trail Record Schema), and only its presence is checked;
+3. when both `parent_trail_id` and `delegation_ref` are set, `delegation_ref` contains the `parent_trail_id`;
+4. the walk does not revisit a trail (cycle).
+
+The first check that fails ends the walk.
 
 **Response — valid chain:**
 ```json
-{"valid": true, "broken_at": null, "reason": null, "chain_length": 3}
+{"valid": true, "broken_at": null, "reason": null, "negotiation_linkage": "absent", "negotiation_ref_status": null}
 ```
 
 **Response — broken chain:**
 ```json
-{"valid": false, "broken_at": "B", "reason": "signature_invalid", "chain_length": 2}
+{"valid": false, "broken_at": "<trail_id>", "reason": "missing_signature_ref", "negotiation_linkage": "absent", "negotiation_ref_status": null}
 ```
 
-### SDK
-
-```python
-from argentum.trails import get_trail_graph, verify_chain
-
-graph = get_trail_graph("trail-id-A")
-# Returns nested dict matching the /graph response
-
-result = verify_chain("trail-id-C")
-# {"valid": True, "broken_at": None, "reason": None, "chain_length": 3}
-```
+`reason` is one of `trail_not_found`, `missing_signature_ref`, `delegation_ref_parent_mismatch`,
+`cycle_detected`. `negotiation_linkage` describes the trail named in the request:
+`absent`, `present` (a `negotiation_ref` is set; the referenced artifact is not validated), `malformed`
+(set but empty), or `null` when that trail could not be read.
