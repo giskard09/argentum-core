@@ -31,6 +31,22 @@ def log_of(n, agent):
     return log
 
 
+def extend(log, agent, i_from, i_to):
+    for i in range(i_from, i_to + 1):
+        append_entry(log, agent, compute_action_ref(
+            agent, "payments.transfer", "trail-head-cadence", f"2026-10-23T00:{i:02d}:00.000Z"))
+    return log
+
+
+def mixed_cps():
+    log = log_of(9, A)
+    out = [cp(A, pe(0), log)]
+    out.append(cp(A, pe(1), extend(log, A, 10, 12)))
+    out.append(cp(A, pe(2), log))
+    out.append(cp(A, pe(3), extend(log, A, 13, 15)))
+    return out
+
+
 def cp(agent, period_end, log):
     return make_checkpoint(agent, period_end, log)
 
@@ -133,10 +149,12 @@ def main() -> int:
             breach(pe(0), pe(2), 7200.0, CEILING),
         ),
         vec(
-            "cad-009-empty-period-seals-within-ceiling",
-            "An agent that recorded nothing still seals every period (seq and "
-            "head repeat, period_end advances): passes.",
-            [cp(A, pe(h), log_a) for h in (0, 1, 2)], CEILING, ok(),
+            "cad-009-mixed-empty-filled-periods",
+            "Entries appended between some checkpoints and not others: seq "
+            "and head advance only on filled periods while period_end "
+            "advances every period — an empty seal sits inside a filled "
+            "stream. Gaps stay hourly: passes.",
+            mixed_cps(), CEILING, ok(),
         ),
         vec(
             "cad-010-one-ms-over",

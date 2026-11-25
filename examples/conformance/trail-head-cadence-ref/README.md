@@ -12,6 +12,6 @@ What the set pins down:
 - The stream is sorted by `period_end` before comparing, so a breach the presented order hides still surfaces (cad-005); fewer than two checkpoints has no gap to measure (cad-006, cad-007).
 - The first breach in sorted order is reported with the gap and the ceiling it exceeded (cad-002, cad-008).
 - A stream that mixes agents is `malformed`/`agent_mixed` before any gap is measured (cad-014): interleaved checkpoints from two agents can mask a per-agent breach, so the mixed stream can never produce a positive outcome. This is the precondition the ceiling check verifies on its own input.
-- Sealed empty periods behave like any other checkpoint (cad-009): an idle agent that still seals every period stays inside the ceiling.
+- Empty seals inside a filled stream behave like any other checkpoint (cad-009): entries appended between some checkpoints and not others — seq and head advance only on filled periods, cadence is measured on period_end alone and stays inside the ceiling.
 
-Proposed by nmatt1 (paymnts) — surfaced by differential-testing an independent implementation of `verify_checkpoint_cadence`, where the interleave-masking precondition was found missing and reported upstream.
+Proposed by nmatt1 (paymnts) — surfaced by differential-testing an implementation of `verify_checkpoint_cadence`, where the interleave-masking precondition was found missing and reported upstream.

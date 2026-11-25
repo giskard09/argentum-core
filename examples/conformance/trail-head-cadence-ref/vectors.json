@@ -257,8 +257,8 @@
    }
   },
   {
-   "id": "cad-009-empty-period-seals-within-ceiling",
-   "description": "An agent that recorded nothing still seals every period (seq and head repeat, period_end advances): passes.",
+   "id": "cad-009-mixed-empty-filled-periods",
+   "description": "Entries appended between some checkpoints and not others: seq and head advance only on filled periods while period_end advances every period \u2014 an empty seal sits inside a filled stream. Gaps stay hourly: passes.",
    "input": {
     "checkpoints": [
      {
@@ -272,15 +272,22 @@
       "v": "trail-head-ref/v1/checkpoint",
       "agent_id": "agent_cad_001",
       "period_end": "2026-10-23T01:00:00.000Z",
-      "seq": 9,
-      "head": "73052d299ee12c26593e2ec47b7900584efb6412b178c198c44e8df675988478"
+      "seq": 12,
+      "head": "8df8bb17067d1efd50f8bd76f2790bc99081cb9a77f001f4cf87f15b61e820bd"
      },
      {
       "v": "trail-head-ref/v1/checkpoint",
       "agent_id": "agent_cad_001",
       "period_end": "2026-10-23T02:00:00.000Z",
-      "seq": 9,
-      "head": "73052d299ee12c26593e2ec47b7900584efb6412b178c198c44e8df675988478"
+      "seq": 12,
+      "head": "8df8bb17067d1efd50f8bd76f2790bc99081cb9a77f001f4cf87f15b61e820bd"
+     },
+     {
+      "v": "trail-head-ref/v1/checkpoint",
+      "agent_id": "agent_cad_001",
+      "period_end": "2026-10-23T03:00:00.000Z",
+      "seq": 15,
+      "head": "e6f948e4f90c933e5abc104ec725319c04d9ff6a446a986b990ad8dd43a52b39"
      }
     ],
     "declared_max_period_s": 3600
