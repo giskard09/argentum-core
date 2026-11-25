@@ -1,0 +1,465 @@
+{
+ "spec_version": "trail-head-ref-v1#cadence-ceiling",
+ "description": "Declared-maximum cadence check: a consumer declares declared_max_period_s and the verifier compares consecutive period_end gaps (sorted) against it. Proposed vectors for the cadence-ceiling section (added 2026-10-23, now implemented in the upstream reference module).",
+ "vectors": [
+  {
+   "id": "cad-001-within-ceiling",
+   "description": "Hourly checkpoints; every adjacent gap equals the declared period. Ceiling equals the period: passes.",
+   "input": {
+    "checkpoints": [
+     {
+      "v": "trail-head-ref/v1/checkpoint",
+      "agent_id": "agent_cad_001",
+      "period_end": "2026-10-23T00:00:00.000Z",
+      "seq": 9,
+      "head": "73052d299ee12c26593e2ec47b7900584efb6412b178c198c44e8df675988478"
+     },
+     {
+      "v": "trail-head-ref/v1/checkpoint",
+      "agent_id": "agent_cad_001",
+      "period_end": "2026-10-23T01:00:00.000Z",
+      "seq": 9,
+      "head": "73052d299ee12c26593e2ec47b7900584efb6412b178c198c44e8df675988478"
+     },
+     {
+      "v": "trail-head-ref/v1/checkpoint",
+      "agent_id": "agent_cad_001",
+      "period_end": "2026-10-23T02:00:00.000Z",
+      "seq": 9,
+      "head": "73052d299ee12c26593e2ec47b7900584efb6412b178c198c44e8df675988478"
+     }
+    ],
+    "declared_max_period_s": 3600
+   },
+   "expected": {
+    "verdict": "ok",
+    "reason": null,
+    "prev_period_end": null,
+    "period_end": null,
+    "gap_s": null,
+    "declared_max_period_s": null
+   }
+  },
+  {
+   "id": "cad-002-gap-exceeds-ceiling",
+   "description": "A two-hour gap in an hourly-ceiling stream: first breach reported.",
+   "input": {
+    "checkpoints": [
+     {
+      "v": "trail-head-ref/v1/checkpoint",
+      "agent_id": "agent_cad_001",
+      "period_end": "2026-10-23T00:00:00.000Z",
+      "seq": 9,
+      "head": "73052d299ee12c26593e2ec47b7900584efb6412b178c198c44e8df675988478"
+     },
+     {
+      "v": "trail-head-ref/v1/checkpoint",
+      "agent_id": "agent_cad_001",
+      "period_end": "2026-10-23T02:00:00.000Z",
+      "seq": 9,
+      "head": "73052d299ee12c26593e2ec47b7900584efb6412b178c198c44e8df675988478"
+     }
+    ],
+    "declared_max_period_s": 3600
+   },
+   "expected": {
+    "verdict": "period_exceeds_declared_maximum",
+    "reason": null,
+    "prev_period_end": "2026-10-23T00:00:00.000Z",
+    "period_end": "2026-10-23T02:00:00.000Z",
+    "gap_s": 7200.0,
+    "declared_max_period_s": 3600
+   }
+  },
+  {
+   "id": "cad-003-gap-equals-ceiling",
+   "description": "Gap exactly equal to the declared maximum: passes. The comparison is strictly greater-than.",
+   "input": {
+    "checkpoints": [
+     {
+      "v": "trail-head-ref/v1/checkpoint",
+      "agent_id": "agent_cad_001",
+      "period_end": "2026-10-23T00:00:00.000Z",
+      "seq": 9,
+      "head": "73052d299ee12c26593e2ec47b7900584efb6412b178c198c44e8df675988478"
+     },
+     {
+      "v": "trail-head-ref/v1/checkpoint",
+      "agent_id": "agent_cad_001",
+      "period_end": "2026-10-23T01:00:00.000Z",
+      "seq": 9,
+      "head": "73052d299ee12c26593e2ec47b7900584efb6412b178c198c44e8df675988478"
+     }
+    ],
+    "declared_max_period_s": 3600
+   },
+   "expected": {
+    "verdict": "ok",
+    "reason": null,
+    "prev_period_end": null,
+    "period_end": null,
+    "gap_s": null,
+    "declared_max_period_s": null
+   }
+  },
+  {
+   "id": "cad-004-unsorted-within-ceiling",
+   "description": "Presented out of order; after sorting the gaps are all within the ceiling: passes.",
+   "input": {
+    "checkpoints": [
+     {
+      "v": "trail-head-ref/v1/checkpoint",
+      "agent_id": "agent_cad_001",
+      "period_end": "2026-10-23T02:00:00.000Z",
+      "seq": 9,
+      "head": "73052d299ee12c26593e2ec47b7900584efb6412b178c198c44e8df675988478"
+     },
+     {
+      "v": "trail-head-ref/v1/checkpoint",
+      "agent_id": "agent_cad_001",
+      "period_end": "2026-10-23T00:00:00.000Z",
+      "seq": 9,
+      "head": "73052d299ee12c26593e2ec47b7900584efb6412b178c198c44e8df675988478"
+     },
+     {
+      "v": "trail-head-ref/v1/checkpoint",
+      "agent_id": "agent_cad_001",
+      "period_end": "2026-10-23T01:00:00.000Z",
+      "seq": 9,
+      "head": "73052d299ee12c26593e2ec47b7900584efb6412b178c198c44e8df675988478"
+     }
+    ],
+    "declared_max_period_s": 3600
+   },
+   "expected": {
+    "verdict": "ok",
+    "reason": null,
+    "prev_period_end": null,
+    "period_end": null,
+    "gap_s": null,
+    "declared_max_period_s": null
+   }
+  },
+  {
+   "id": "cad-005-unsorted-reveals-breach",
+   "description": "Presented out of order; sorting reveals a three-hour gap the presented order hid: first breach reported.",
+   "input": {
+    "checkpoints": [
+     {
+      "v": "trail-head-ref/v1/checkpoint",
+      "agent_id": "agent_cad_001",
+      "period_end": "2026-10-23T04:00:00.000Z",
+      "seq": 9,
+      "head": "73052d299ee12c26593e2ec47b7900584efb6412b178c198c44e8df675988478"
+     },
+     {
+      "v": "trail-head-ref/v1/checkpoint",
+      "agent_id": "agent_cad_001",
+      "period_end": "2026-10-23T00:00:00.000Z",
+      "seq": 9,
+      "head": "73052d299ee12c26593e2ec47b7900584efb6412b178c198c44e8df675988478"
+     },
+     {
+      "v": "trail-head-ref/v1/checkpoint",
+      "agent_id": "agent_cad_001",
+      "period_end": "2026-10-23T01:00:00.000Z",
+      "seq": 9,
+      "head": "73052d299ee12c26593e2ec47b7900584efb6412b178c198c44e8df675988478"
+     }
+    ],
+    "declared_max_period_s": 3600
+   },
+   "expected": {
+    "verdict": "period_exceeds_declared_maximum",
+    "reason": null,
+    "prev_period_end": "2026-10-23T01:00:00.000Z",
+    "period_end": "2026-10-23T04:00:00.000Z",
+    "gap_s": 10800.0,
+    "declared_max_period_s": 3600
+   }
+  },
+  {
+   "id": "cad-006-single-checkpoint",
+   "description": "Fewer than two checkpoints has no gap to measure: passes.",
+   "input": {
+    "checkpoints": [
+     {
+      "v": "trail-head-ref/v1/checkpoint",
+      "agent_id": "agent_cad_001",
+      "period_end": "2026-10-23T00:00:00.000Z",
+      "seq": 9,
+      "head": "73052d299ee12c26593e2ec47b7900584efb6412b178c198c44e8df675988478"
+     }
+    ],
+    "declared_max_period_s": 3600
+   },
+   "expected": {
+    "verdict": "ok",
+    "reason": null,
+    "prev_period_end": null,
+    "period_end": null,
+    "gap_s": null,
+    "declared_max_period_s": null
+   }
+  },
+  {
+   "id": "cad-007-empty",
+   "description": "An empty stream has no gap to measure: passes.",
+   "input": {
+    "checkpoints": [],
+    "declared_max_period_s": 3600
+   },
+   "expected": {
+    "verdict": "ok",
+    "reason": null,
+    "prev_period_end": null,
+    "period_end": null,
+    "gap_s": null,
+    "declared_max_period_s": null
+   }
+  },
+  {
+   "id": "cad-008-two-breaches",
+   "description": "Two gaps over the ceiling; the first one in sorted order is reported.",
+   "input": {
+    "checkpoints": [
+     {
+      "v": "trail-head-ref/v1/checkpoint",
+      "agent_id": "agent_cad_001",
+      "period_end": "2026-10-23T00:00:00.000Z",
+      "seq": 9,
+      "head": "73052d299ee12c26593e2ec47b7900584efb6412b178c198c44e8df675988478"
+     },
+     {
+      "v": "trail-head-ref/v1/checkpoint",
+      "agent_id": "agent_cad_001",
+      "period_end": "2026-10-23T02:00:00.000Z",
+      "seq": 9,
+      "head": "73052d299ee12c26593e2ec47b7900584efb6412b178c198c44e8df675988478"
+     },
+     {
+      "v": "trail-head-ref/v1/checkpoint",
+      "agent_id": "agent_cad_001",
+      "period_end": "2026-10-23T04:00:00.000Z",
+      "seq": 9,
+      "head": "73052d299ee12c26593e2ec47b7900584efb6412b178c198c44e8df675988478"
+     }
+    ],
+    "declared_max_period_s": 3600
+   },
+   "expected": {
+    "verdict": "period_exceeds_declared_maximum",
+    "reason": null,
+    "prev_period_end": "2026-10-23T00:00:00.000Z",
+    "period_end": "2026-10-23T02:00:00.000Z",
+    "gap_s": 7200.0,
+    "declared_max_period_s": 3600
+   }
+  },
+  {
+   "id": "cad-009-mixed-empty-filled-periods",
+   "description": "Entries appended between some checkpoints and not others: seq and head advance only on filled periods while period_end advances every period \u2014 an empty seal sits inside a filled stream. Gaps stay hourly: passes.",
+   "input": {
+    "checkpoints": [
+     {
+      "v": "trail-head-ref/v1/checkpoint",
+      "agent_id": "agent_cad_001",
+      "period_end": "2026-10-23T00:00:00.000Z",
+      "seq": 9,
+      "head": "73052d299ee12c26593e2ec47b7900584efb6412b178c198c44e8df675988478"
+     },
+     {
+      "v": "trail-head-ref/v1/checkpoint",
+      "agent_id": "agent_cad_001",
+      "period_end": "2026-10-23T01:00:00.000Z",
+      "seq": 12,
+      "head": "8df8bb17067d1efd50f8bd76f2790bc99081cb9a77f001f4cf87f15b61e820bd"
+     },
+     {
+      "v": "trail-head-ref/v1/checkpoint",
+      "agent_id": "agent_cad_001",
+      "period_end": "2026-10-23T02:00:00.000Z",
+      "seq": 12,
+      "head": "8df8bb17067d1efd50f8bd76f2790bc99081cb9a77f001f4cf87f15b61e820bd"
+     },
+     {
+      "v": "trail-head-ref/v1/checkpoint",
+      "agent_id": "agent_cad_001",
+      "period_end": "2026-10-23T03:00:00.000Z",
+      "seq": 15,
+      "head": "e6f948e4f90c933e5abc104ec725319c04d9ff6a446a986b990ad8dd43a52b39"
+     }
+    ],
+    "declared_max_period_s": 3600
+   },
+   "expected": {
+    "verdict": "ok",
+    "reason": null,
+    "prev_period_end": null,
+    "period_end": null,
+    "gap_s": null,
+    "declared_max_period_s": null
+   }
+  },
+  {
+   "id": "cad-010-one-ms-over",
+   "description": "3600.001 seconds between consecutive period_ends: breaches a 3600-second ceiling.",
+   "input": {
+    "checkpoints": [
+     {
+      "v": "trail-head-ref/v1/checkpoint",
+      "agent_id": "agent_cad_001",
+      "period_end": "2026-10-23T00:00:00.000Z",
+      "seq": 9,
+      "head": "73052d299ee12c26593e2ec47b7900584efb6412b178c198c44e8df675988478"
+     },
+     {
+      "v": "trail-head-ref/v1/checkpoint",
+      "agent_id": "agent_cad_001",
+      "period_end": "2026-10-23T01:00:00.001Z",
+      "seq": 9,
+      "head": "73052d299ee12c26593e2ec47b7900584efb6412b178c198c44e8df675988478"
+     }
+    ],
+    "declared_max_period_s": 3600
+   },
+   "expected": {
+    "verdict": "period_exceeds_declared_maximum",
+    "reason": null,
+    "prev_period_end": "2026-10-23T00:00:00.000Z",
+    "period_end": "2026-10-23T01:00:00.001Z",
+    "gap_s": 3600.001,
+    "declared_max_period_s": 3600
+   }
+  },
+  {
+   "id": "cad-011-missing-period-end",
+   "description": "A checkpoint with no period_end cannot be sorted into the stream: malformed/period_end.",
+   "input": {
+    "checkpoints": [
+     {
+      "v": "trail-head-ref/v1/checkpoint",
+      "agent_id": "agent_cad_001",
+      "seq": 9,
+      "head": "73052d299ee12c26593e2ec47b7900584efb6412b178c198c44e8df675988478"
+     },
+     {
+      "v": "trail-head-ref/v1/checkpoint",
+      "agent_id": "agent_cad_001",
+      "period_end": "2026-10-23T01:00:00.000Z",
+      "seq": 9,
+      "head": "73052d299ee12c26593e2ec47b7900584efb6412b178c198c44e8df675988478"
+     }
+    ],
+    "declared_max_period_s": 3600
+   },
+   "expected": {
+    "verdict": "malformed",
+    "reason": "period_end",
+    "prev_period_end": null,
+    "period_end": null,
+    "gap_s": null,
+    "declared_max_period_s": null
+   }
+  },
+  {
+   "id": "cad-012-bad-period-end-format",
+   "description": "A period_end that does not parse cannot be sorted into the stream: malformed/period_end.",
+   "input": {
+    "checkpoints": [
+     {
+      "v": "trail-head-ref/v1/checkpoint",
+      "agent_id": "agent_cad_001",
+      "period_end": "not-a-timestamp",
+      "seq": 9,
+      "head": "73052d299ee12c26593e2ec47b7900584efb6412b178c198c44e8df675988478"
+     },
+     {
+      "v": "trail-head-ref/v1/checkpoint",
+      "agent_id": "agent_cad_001",
+      "period_end": "2026-10-23T01:00:00.000Z",
+      "seq": 9,
+      "head": "73052d299ee12c26593e2ec47b7900584efb6412b178c198c44e8df675988478"
+     }
+    ],
+    "declared_max_period_s": 3600
+   },
+   "expected": {
+    "verdict": "malformed",
+    "reason": "period_end",
+    "prev_period_end": null,
+    "period_end": null,
+    "gap_s": null,
+    "declared_max_period_s": null
+   }
+  },
+  {
+   "id": "cad-013-not-a-list",
+   "description": "checkpoints that is not a list: malformed/not_a_list.",
+   "input": {
+    "checkpoints": {
+     "oops": "not_a_list"
+    },
+    "declared_max_period_s": 3600
+   },
+   "expected": {
+    "verdict": "malformed",
+    "reason": "not_a_list",
+    "prev_period_end": null,
+    "period_end": null,
+    "gap_s": null,
+    "declared_max_period_s": null
+   }
+  },
+  {
+   "id": "cad-014-mixed-agent-masking",
+   "description": "Two agents each breach the ceiling alone (2h gaps); interleaved [A,B,A,B] the sorted gaps look compliant. Mixed streams are malformed/agent_mixed, never measured \u2014 silent masking must surface as a verdict.",
+   "input": {
+    "checkpoints": [
+     {
+      "v": "trail-head-ref/v1/checkpoint",
+      "agent_id": "agent_cad_001",
+      "period_end": "2026-10-23T00:00:00.000Z",
+      "seq": 9,
+      "head": "73052d299ee12c26593e2ec47b7900584efb6412b178c198c44e8df675988478"
+     },
+     {
+      "v": "trail-head-ref/v1/checkpoint",
+      "agent_id": "agent_cad_002",
+      "period_end": "2026-10-23T01:00:00.000Z",
+      "seq": 3,
+      "head": "15a6be699c55e7c8f9284c4522729c9009a0adb1a07b15cd3ae430b1747cf28e"
+     },
+     {
+      "v": "trail-head-ref/v1/checkpoint",
+      "agent_id": "agent_cad_001",
+      "period_end": "2026-10-23T02:00:00.000Z",
+      "seq": 9,
+      "head": "73052d299ee12c26593e2ec47b7900584efb6412b178c198c44e8df675988478"
+     },
+     {
+      "v": "trail-head-ref/v1/checkpoint",
+      "agent_id": "agent_cad_002",
+      "period_end": "2026-10-23T03:00:00.000Z",
+      "seq": 3,
+      "head": "15a6be699c55e7c8f9284c4522729c9009a0adb1a07b15cd3ae430b1747cf28e"
+     }
+    ],
+    "declared_max_period_s": 3600
+   },
+   "expected": {
+    "verdict": "malformed",
+    "reason": "agent_mixed",
+    "prev_period_end": null,
+    "period_end": null,
+    "gap_s": null,
+    "declared_max_period_s": null
+   }
+  }
+ ],
+ "provenance": {
+  "authored_by": "paymnts (nmatt1)",
+  "verification_mode": "asserted",
+  "independently_reproduced_by": []
+ }
+}
