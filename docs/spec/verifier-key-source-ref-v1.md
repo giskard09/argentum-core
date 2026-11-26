@@ -16,11 +16,11 @@ A `signer_record` is the per-signer artifact that proves one leg of a multi-sign
 
 ## signer_record schema
 
-Each signer in a multi-signer admission block MUST include a `signer_record` with the following eight fields:
+Each signer in a multi-signer admission block MUST include a `signer_record` with the following eight required fields. A ninth, `verifier_role`, is optional:
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `signer_id` | string | Stable identifier for the signer. Stable identifier of the signer. What a verifier can check about it is in invariant 3: without a `role_registry` it is a declaration, not a verified link. |
+| `signer_id` | string | Stable identifier of the signer. What a verifier can check about it is in invariant 3: without a `role_registry` it is a declaration, not a verified link. |
 | `key_id` | string | Key identifier within the signer's key set (e.g. JWK `kid`). |
 | `key_source` | enum | How the public key was obtained. One of: `embedded` / `published_jwks` / `pinned_registry` / `cached_prior`. See [key_source values](#key_source-values). |
 | `public_key_hash` | SHA-256 hex | Hash of the raw public key bytes. Present when `key_source = embedded` or `pinned_registry`. Absent is valid for `published_jwks` or `cached_prior` only if `key_resolution_evidence_hash` is present. |
@@ -72,7 +72,7 @@ What this invariant checks depends on one optional input, `role_registry`: a map
 - **Without `role_registry`** the reference verifier rejects exactly one value, the sentinel `signer_id` `anonymous-key-holder` (`signer_identity_unbound`). It does **not** check that any `signer_id` is linked to a role. Every other `signer_id` passes this invariant, including one nobody has ever heard of. The result carries `identity_binding: "declared_only"`: the identity is what the record declares, not something the verifier established. A pass on invariant 3 in this mode is not a pass of identity binding.
 - **With `role_registry`** each `signer_record` must carry `verifier_role`, and its `signer_id` must appear in `role_registry[verifier_role]`. A record with no `verifier_role`, a role that is not in the registry, or a `signer_id` not listed for its role fails `signer_identity_unbound`. The result carries `identity_binding: "registry_checked"`. The registry is the verifier's own input; this spec does not say where it comes from, and a registry the fixture's producer controls proves nothing about who signed.
 
-A key that verifies cryptographically but belongs to an identity the verifier could not place does not satisfy admission independence. In `declared_only` mode the verifier could not place any identity, so a board MUST NOT present a `declared_only` result as identity binding.
+Without a `role_registry`, invariant 3 fails only for the sentinel. A record set that otherwise passes is a recomputable admission with unverified identities (`identity_binding: "declared_only"`): in that mode the verifier does not establish admission independence of the signers, and a board MUST NOT present the result as identity binding.
 
 **4. key_resolution_not_stale**  
 `key_resolution_time` MUST precede or equal the fixture certification time. A key resolved after the fixture was certified cannot be proven to have been used during the original admission. Both values are compared as instants (see [Rules a verifier must apply](#rules-a-verifier-must-apply)), never as strings. If either is absent, `null` or empty, the relation cannot be established and the record fails closed.
