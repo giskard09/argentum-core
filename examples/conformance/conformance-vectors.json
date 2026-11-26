@@ -1,9 +1,9 @@
 {
   "export_version": "conformance-vectors-v1",
-  "generated_at": "2026-11-24T16:26:43.000Z",
+  "generated_at": "2026-11-26T23:14:03.000Z",
   "generated_by": "examples/conformance/build_export.py",
   "source_repo": "giskard09/argentum-core",
-  "set_count": 73,
+  "set_count": 75,
   "sets": {
     "action-ref-v1-baseline.fixture": {
       "path": "examples/conformance/action-ref-v1-baseline.fixture.json",
@@ -13181,6 +13181,977 @@
         }
       }
     },
+    "trail-head-cadence-ref": {
+      "path": "examples/conformance/trail-head-cadence-ref/",
+      "files": {
+        "vectors.json": {
+          "spec_version": "trail-head-ref-v1#cadence-ceiling",
+          "description": "Declared-maximum cadence check: a consumer declares declared_max_period_s and the verifier compares consecutive period_end gaps (sorted) against it. Proposed vectors for the cadence-ceiling section (added 2026-10-23, now implemented in the upstream reference module).",
+          "vectors": [
+            {
+              "id": "cad-001-within-ceiling",
+              "description": "Hourly checkpoints; every adjacent gap equals the declared period. Ceiling equals the period: passes.",
+              "input": {
+                "checkpoints": [
+                  {
+                    "v": "trail-head-ref/v1/checkpoint",
+                    "agent_id": "agent_cad_001",
+                    "period_end": "2026-10-23T00:00:00.000Z",
+                    "seq": 9,
+                    "head": "73052d299ee12c26593e2ec47b7900584efb6412b178c198c44e8df675988478"
+                  },
+                  {
+                    "v": "trail-head-ref/v1/checkpoint",
+                    "agent_id": "agent_cad_001",
+                    "period_end": "2026-10-23T01:00:00.000Z",
+                    "seq": 9,
+                    "head": "73052d299ee12c26593e2ec47b7900584efb6412b178c198c44e8df675988478"
+                  },
+                  {
+                    "v": "trail-head-ref/v1/checkpoint",
+                    "agent_id": "agent_cad_001",
+                    "period_end": "2026-10-23T02:00:00.000Z",
+                    "seq": 9,
+                    "head": "73052d299ee12c26593e2ec47b7900584efb6412b178c198c44e8df675988478"
+                  }
+                ],
+                "declared_max_period_s": 3600
+              },
+              "expected": {
+                "verdict": "ok",
+                "reason": null,
+                "prev_period_end": null,
+                "period_end": null,
+                "gap_s": null,
+                "declared_max_period_s": null
+              }
+            },
+            {
+              "id": "cad-002-gap-exceeds-ceiling",
+              "description": "A two-hour gap in an hourly-ceiling stream: first breach reported.",
+              "input": {
+                "checkpoints": [
+                  {
+                    "v": "trail-head-ref/v1/checkpoint",
+                    "agent_id": "agent_cad_001",
+                    "period_end": "2026-10-23T00:00:00.000Z",
+                    "seq": 9,
+                    "head": "73052d299ee12c26593e2ec47b7900584efb6412b178c198c44e8df675988478"
+                  },
+                  {
+                    "v": "trail-head-ref/v1/checkpoint",
+                    "agent_id": "agent_cad_001",
+                    "period_end": "2026-10-23T02:00:00.000Z",
+                    "seq": 9,
+                    "head": "73052d299ee12c26593e2ec47b7900584efb6412b178c198c44e8df675988478"
+                  }
+                ],
+                "declared_max_period_s": 3600
+              },
+              "expected": {
+                "verdict": "period_exceeds_declared_maximum",
+                "reason": null,
+                "prev_period_end": "2026-10-23T00:00:00.000Z",
+                "period_end": "2026-10-23T02:00:00.000Z",
+                "gap_s": 7200.0,
+                "declared_max_period_s": 3600
+              }
+            },
+            {
+              "id": "cad-003-gap-equals-ceiling",
+              "description": "Gap exactly equal to the declared maximum: passes. The comparison is strictly greater-than.",
+              "input": {
+                "checkpoints": [
+                  {
+                    "v": "trail-head-ref/v1/checkpoint",
+                    "agent_id": "agent_cad_001",
+                    "period_end": "2026-10-23T00:00:00.000Z",
+                    "seq": 9,
+                    "head": "73052d299ee12c26593e2ec47b7900584efb6412b178c198c44e8df675988478"
+                  },
+                  {
+                    "v": "trail-head-ref/v1/checkpoint",
+                    "agent_id": "agent_cad_001",
+                    "period_end": "2026-10-23T01:00:00.000Z",
+                    "seq": 9,
+                    "head": "73052d299ee12c26593e2ec47b7900584efb6412b178c198c44e8df675988478"
+                  }
+                ],
+                "declared_max_period_s": 3600
+              },
+              "expected": {
+                "verdict": "ok",
+                "reason": null,
+                "prev_period_end": null,
+                "period_end": null,
+                "gap_s": null,
+                "declared_max_period_s": null
+              }
+            },
+            {
+              "id": "cad-004-unsorted-within-ceiling",
+              "description": "Presented out of order; after sorting the gaps are all within the ceiling: passes.",
+              "input": {
+                "checkpoints": [
+                  {
+                    "v": "trail-head-ref/v1/checkpoint",
+                    "agent_id": "agent_cad_001",
+                    "period_end": "2026-10-23T02:00:00.000Z",
+                    "seq": 9,
+                    "head": "73052d299ee12c26593e2ec47b7900584efb6412b178c198c44e8df675988478"
+                  },
+                  {
+                    "v": "trail-head-ref/v1/checkpoint",
+                    "agent_id": "agent_cad_001",
+                    "period_end": "2026-10-23T00:00:00.000Z",
+                    "seq": 9,
+                    "head": "73052d299ee12c26593e2ec47b7900584efb6412b178c198c44e8df675988478"
+                  },
+                  {
+                    "v": "trail-head-ref/v1/checkpoint",
+                    "agent_id": "agent_cad_001",
+                    "period_end": "2026-10-23T01:00:00.000Z",
+                    "seq": 9,
+                    "head": "73052d299ee12c26593e2ec47b7900584efb6412b178c198c44e8df675988478"
+                  }
+                ],
+                "declared_max_period_s": 3600
+              },
+              "expected": {
+                "verdict": "ok",
+                "reason": null,
+                "prev_period_end": null,
+                "period_end": null,
+                "gap_s": null,
+                "declared_max_period_s": null
+              }
+            },
+            {
+              "id": "cad-005-unsorted-reveals-breach",
+              "description": "Presented out of order; sorting reveals a three-hour gap the presented order hid: first breach reported.",
+              "input": {
+                "checkpoints": [
+                  {
+                    "v": "trail-head-ref/v1/checkpoint",
+                    "agent_id": "agent_cad_001",
+                    "period_end": "2026-10-23T04:00:00.000Z",
+                    "seq": 9,
+                    "head": "73052d299ee12c26593e2ec47b7900584efb6412b178c198c44e8df675988478"
+                  },
+                  {
+                    "v": "trail-head-ref/v1/checkpoint",
+                    "agent_id": "agent_cad_001",
+                    "period_end": "2026-10-23T00:00:00.000Z",
+                    "seq": 9,
+                    "head": "73052d299ee12c26593e2ec47b7900584efb6412b178c198c44e8df675988478"
+                  },
+                  {
+                    "v": "trail-head-ref/v1/checkpoint",
+                    "agent_id": "agent_cad_001",
+                    "period_end": "2026-10-23T01:00:00.000Z",
+                    "seq": 9,
+                    "head": "73052d299ee12c26593e2ec47b7900584efb6412b178c198c44e8df675988478"
+                  }
+                ],
+                "declared_max_period_s": 3600
+              },
+              "expected": {
+                "verdict": "period_exceeds_declared_maximum",
+                "reason": null,
+                "prev_period_end": "2026-10-23T01:00:00.000Z",
+                "period_end": "2026-10-23T04:00:00.000Z",
+                "gap_s": 10800.0,
+                "declared_max_period_s": 3600
+              }
+            },
+            {
+              "id": "cad-006-single-checkpoint",
+              "description": "Fewer than two checkpoints has no gap to measure: passes.",
+              "input": {
+                "checkpoints": [
+                  {
+                    "v": "trail-head-ref/v1/checkpoint",
+                    "agent_id": "agent_cad_001",
+                    "period_end": "2026-10-23T00:00:00.000Z",
+                    "seq": 9,
+                    "head": "73052d299ee12c26593e2ec47b7900584efb6412b178c198c44e8df675988478"
+                  }
+                ],
+                "declared_max_period_s": 3600
+              },
+              "expected": {
+                "verdict": "ok",
+                "reason": null,
+                "prev_period_end": null,
+                "period_end": null,
+                "gap_s": null,
+                "declared_max_period_s": null
+              }
+            },
+            {
+              "id": "cad-007-empty",
+              "description": "An empty stream has no gap to measure: passes.",
+              "input": {
+                "checkpoints": [],
+                "declared_max_period_s": 3600
+              },
+              "expected": {
+                "verdict": "ok",
+                "reason": null,
+                "prev_period_end": null,
+                "period_end": null,
+                "gap_s": null,
+                "declared_max_period_s": null
+              }
+            },
+            {
+              "id": "cad-008-two-breaches",
+              "description": "Two gaps over the ceiling; the first one in sorted order is reported.",
+              "input": {
+                "checkpoints": [
+                  {
+                    "v": "trail-head-ref/v1/checkpoint",
+                    "agent_id": "agent_cad_001",
+                    "period_end": "2026-10-23T00:00:00.000Z",
+                    "seq": 9,
+                    "head": "73052d299ee12c26593e2ec47b7900584efb6412b178c198c44e8df675988478"
+                  },
+                  {
+                    "v": "trail-head-ref/v1/checkpoint",
+                    "agent_id": "agent_cad_001",
+                    "period_end": "2026-10-23T02:00:00.000Z",
+                    "seq": 9,
+                    "head": "73052d299ee12c26593e2ec47b7900584efb6412b178c198c44e8df675988478"
+                  },
+                  {
+                    "v": "trail-head-ref/v1/checkpoint",
+                    "agent_id": "agent_cad_001",
+                    "period_end": "2026-10-23T04:00:00.000Z",
+                    "seq": 9,
+                    "head": "73052d299ee12c26593e2ec47b7900584efb6412b178c198c44e8df675988478"
+                  }
+                ],
+                "declared_max_period_s": 3600
+              },
+              "expected": {
+                "verdict": "period_exceeds_declared_maximum",
+                "reason": null,
+                "prev_period_end": "2026-10-23T00:00:00.000Z",
+                "period_end": "2026-10-23T02:00:00.000Z",
+                "gap_s": 7200.0,
+                "declared_max_period_s": 3600
+              }
+            },
+            {
+              "id": "cad-009-mixed-empty-filled-periods",
+              "description": "Entries appended between some checkpoints and not others: seq and head advance only on filled periods while period_end advances every period — an empty seal sits inside a filled stream. Gaps stay hourly: passes.",
+              "input": {
+                "checkpoints": [
+                  {
+                    "v": "trail-head-ref/v1/checkpoint",
+                    "agent_id": "agent_cad_001",
+                    "period_end": "2026-10-23T00:00:00.000Z",
+                    "seq": 9,
+                    "head": "73052d299ee12c26593e2ec47b7900584efb6412b178c198c44e8df675988478"
+                  },
+                  {
+                    "v": "trail-head-ref/v1/checkpoint",
+                    "agent_id": "agent_cad_001",
+                    "period_end": "2026-10-23T01:00:00.000Z",
+                    "seq": 12,
+                    "head": "8df8bb17067d1efd50f8bd76f2790bc99081cb9a77f001f4cf87f15b61e820bd"
+                  },
+                  {
+                    "v": "trail-head-ref/v1/checkpoint",
+                    "agent_id": "agent_cad_001",
+                    "period_end": "2026-10-23T02:00:00.000Z",
+                    "seq": 12,
+                    "head": "8df8bb17067d1efd50f8bd76f2790bc99081cb9a77f001f4cf87f15b61e820bd"
+                  },
+                  {
+                    "v": "trail-head-ref/v1/checkpoint",
+                    "agent_id": "agent_cad_001",
+                    "period_end": "2026-10-23T03:00:00.000Z",
+                    "seq": 15,
+                    "head": "e6f948e4f90c933e5abc104ec725319c04d9ff6a446a986b990ad8dd43a52b39"
+                  }
+                ],
+                "declared_max_period_s": 3600
+              },
+              "expected": {
+                "verdict": "ok",
+                "reason": null,
+                "prev_period_end": null,
+                "period_end": null,
+                "gap_s": null,
+                "declared_max_period_s": null
+              }
+            },
+            {
+              "id": "cad-010-one-ms-over",
+              "description": "3600.001 seconds between consecutive period_ends: breaches a 3600-second ceiling.",
+              "input": {
+                "checkpoints": [
+                  {
+                    "v": "trail-head-ref/v1/checkpoint",
+                    "agent_id": "agent_cad_001",
+                    "period_end": "2026-10-23T00:00:00.000Z",
+                    "seq": 9,
+                    "head": "73052d299ee12c26593e2ec47b7900584efb6412b178c198c44e8df675988478"
+                  },
+                  {
+                    "v": "trail-head-ref/v1/checkpoint",
+                    "agent_id": "agent_cad_001",
+                    "period_end": "2026-10-23T01:00:00.001Z",
+                    "seq": 9,
+                    "head": "73052d299ee12c26593e2ec47b7900584efb6412b178c198c44e8df675988478"
+                  }
+                ],
+                "declared_max_period_s": 3600
+              },
+              "expected": {
+                "verdict": "period_exceeds_declared_maximum",
+                "reason": null,
+                "prev_period_end": "2026-10-23T00:00:00.000Z",
+                "period_end": "2026-10-23T01:00:00.001Z",
+                "gap_s": 3600.001,
+                "declared_max_period_s": 3600
+              }
+            },
+            {
+              "id": "cad-011-missing-period-end",
+              "description": "A checkpoint with no period_end cannot be sorted into the stream: malformed/period_end.",
+              "input": {
+                "checkpoints": [
+                  {
+                    "v": "trail-head-ref/v1/checkpoint",
+                    "agent_id": "agent_cad_001",
+                    "seq": 9,
+                    "head": "73052d299ee12c26593e2ec47b7900584efb6412b178c198c44e8df675988478"
+                  },
+                  {
+                    "v": "trail-head-ref/v1/checkpoint",
+                    "agent_id": "agent_cad_001",
+                    "period_end": "2026-10-23T01:00:00.000Z",
+                    "seq": 9,
+                    "head": "73052d299ee12c26593e2ec47b7900584efb6412b178c198c44e8df675988478"
+                  }
+                ],
+                "declared_max_period_s": 3600
+              },
+              "expected": {
+                "verdict": "malformed",
+                "reason": "period_end",
+                "prev_period_end": null,
+                "period_end": null,
+                "gap_s": null,
+                "declared_max_period_s": null
+              }
+            },
+            {
+              "id": "cad-012-bad-period-end-format",
+              "description": "A period_end that does not parse cannot be sorted into the stream: malformed/period_end.",
+              "input": {
+                "checkpoints": [
+                  {
+                    "v": "trail-head-ref/v1/checkpoint",
+                    "agent_id": "agent_cad_001",
+                    "period_end": "not-a-timestamp",
+                    "seq": 9,
+                    "head": "73052d299ee12c26593e2ec47b7900584efb6412b178c198c44e8df675988478"
+                  },
+                  {
+                    "v": "trail-head-ref/v1/checkpoint",
+                    "agent_id": "agent_cad_001",
+                    "period_end": "2026-10-23T01:00:00.000Z",
+                    "seq": 9,
+                    "head": "73052d299ee12c26593e2ec47b7900584efb6412b178c198c44e8df675988478"
+                  }
+                ],
+                "declared_max_period_s": 3600
+              },
+              "expected": {
+                "verdict": "malformed",
+                "reason": "period_end",
+                "prev_period_end": null,
+                "period_end": null,
+                "gap_s": null,
+                "declared_max_period_s": null
+              }
+            },
+            {
+              "id": "cad-013-not-a-list",
+              "description": "checkpoints that is not a list: malformed/not_a_list.",
+              "input": {
+                "checkpoints": {
+                  "oops": "not_a_list"
+                },
+                "declared_max_period_s": 3600
+              },
+              "expected": {
+                "verdict": "malformed",
+                "reason": "not_a_list",
+                "prev_period_end": null,
+                "period_end": null,
+                "gap_s": null,
+                "declared_max_period_s": null
+              }
+            },
+            {
+              "id": "cad-014-mixed-agent-masking",
+              "description": "Two agents each breach the ceiling alone (2h gaps); interleaved [A,B,A,B] the sorted gaps look compliant. Mixed streams are malformed/agent_mixed, never measured — silent masking must surface as a verdict.",
+              "input": {
+                "checkpoints": [
+                  {
+                    "v": "trail-head-ref/v1/checkpoint",
+                    "agent_id": "agent_cad_001",
+                    "period_end": "2026-10-23T00:00:00.000Z",
+                    "seq": 9,
+                    "head": "73052d299ee12c26593e2ec47b7900584efb6412b178c198c44e8df675988478"
+                  },
+                  {
+                    "v": "trail-head-ref/v1/checkpoint",
+                    "agent_id": "agent_cad_002",
+                    "period_end": "2026-10-23T01:00:00.000Z",
+                    "seq": 3,
+                    "head": "15a6be699c55e7c8f9284c4522729c9009a0adb1a07b15cd3ae430b1747cf28e"
+                  },
+                  {
+                    "v": "trail-head-ref/v1/checkpoint",
+                    "agent_id": "agent_cad_001",
+                    "period_end": "2026-10-23T02:00:00.000Z",
+                    "seq": 9,
+                    "head": "73052d299ee12c26593e2ec47b7900584efb6412b178c198c44e8df675988478"
+                  },
+                  {
+                    "v": "trail-head-ref/v1/checkpoint",
+                    "agent_id": "agent_cad_002",
+                    "period_end": "2026-10-23T03:00:00.000Z",
+                    "seq": 3,
+                    "head": "15a6be699c55e7c8f9284c4522729c9009a0adb1a07b15cd3ae430b1747cf28e"
+                  }
+                ],
+                "declared_max_period_s": 3600
+              },
+              "expected": {
+                "verdict": "malformed",
+                "reason": "agent_mixed",
+                "prev_period_end": null,
+                "period_end": null,
+                "gap_s": null,
+                "declared_max_period_s": null
+              }
+            }
+          ],
+          "provenance": {
+            "authored_by": "paymnts (nmatt1)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
+        }
+      }
+    },
+    "trail-head-shape-ref": {
+      "path": "examples/conformance/trail-head-shape-ref/",
+      "files": {
+        "vectors.json": {
+          "description": "Shape rules for trail-head-ref v1: each vector changes one field of a well-formed input. `input` holds the arguments of verify_trail; `expected` is what a conformant verifier reports.",
+          "provenance": "Built by build.py with the reference producer. Expected results are hand-written from docs/spec/trail-head-ref-v1.md, not computed by the verifier.",
+          "spec_version": "trail-head-ref-v1#shape-rules",
+          "vectors": [
+            {
+              "description": "Regression: a well-formed full log, no checkpoint.",
+              "expected": {
+                "completeness": "not_evaluated",
+                "reason": "no_checkpoint",
+                "verdict": "continuity_only"
+              },
+              "id": "ths-001-baseline",
+              "input": {
+                "entries": [
+                  {
+                    "action_ref": "3829496f092687208d3d7bcc708f76fa559ce46d0fea4252f9eb2bbab8e6a0da",
+                    "agent_id": "agent-alpha",
+                    "head": "8c175ec8a91224ac239e9025979a9795faf833c80fef8ed2fa2181e5ec869990",
+                    "seq": 1
+                  },
+                  {
+                    "action_ref": "2398f18101649c307a369bd39f5ad66786ba41862b3a42a0d01cae94e27635bb",
+                    "agent_id": "agent-alpha",
+                    "head": "fe7f9c94abe301bbba522a8db2b074d6f198cc60821f468b44f92f58e38aadf4",
+                    "prev_head": "8c175ec8a91224ac239e9025979a9795faf833c80fef8ed2fa2181e5ec869990",
+                    "seq": 2
+                  },
+                  {
+                    "action_ref": "f8ace6794773a51e128438c18cfc139e948ed9b4ccf2539bca6c23f13a2dc7da",
+                    "agent_id": "agent-alpha",
+                    "head": "b6625665f67f7ee846bf6a88e54035a1d88928b1c2229b38f5477fee87a80f25",
+                    "prev_head": "fe7f9c94abe301bbba522a8db2b074d6f198cc60821f468b44f92f58e38aadf4",
+                    "seq": 3
+                  }
+                ]
+              }
+            },
+            {
+              "description": "prev_head present as null at seq 1. Absent is required; null is not absent.",
+              "expected": {
+                "completeness": "failed",
+                "reason": "entry_preimage",
+                "verdict": "malformed"
+              },
+              "id": "ths-002-prev-head-null-at-genesis",
+              "input": {
+                "entries": [
+                  {
+                    "action_ref": "3829496f092687208d3d7bcc708f76fa559ce46d0fea4252f9eb2bbab8e6a0da",
+                    "agent_id": "agent-alpha",
+                    "head": "8c175ec8a91224ac239e9025979a9795faf833c80fef8ed2fa2181e5ec869990",
+                    "prev_head": null,
+                    "seq": 1
+                  },
+                  {
+                    "action_ref": "2398f18101649c307a369bd39f5ad66786ba41862b3a42a0d01cae94e27635bb",
+                    "agent_id": "agent-alpha",
+                    "head": "fe7f9c94abe301bbba522a8db2b074d6f198cc60821f468b44f92f58e38aadf4",
+                    "prev_head": "8c175ec8a91224ac239e9025979a9795faf833c80fef8ed2fa2181e5ec869990",
+                    "seq": 2
+                  },
+                  {
+                    "action_ref": "f8ace6794773a51e128438c18cfc139e948ed9b4ccf2539bca6c23f13a2dc7da",
+                    "agent_id": "agent-alpha",
+                    "head": "b6625665f67f7ee846bf6a88e54035a1d88928b1c2229b38f5477fee87a80f25",
+                    "prev_head": "fe7f9c94abe301bbba522a8db2b074d6f198cc60821f468b44f92f58e38aadf4",
+                    "seq": 3
+                  }
+                ]
+              }
+            },
+            {
+              "description": "prev_head is \"\" at seq 2.",
+              "expected": {
+                "completeness": "failed",
+                "reason": "entry_preimage",
+                "verdict": "malformed"
+              },
+              "id": "ths-003-prev-head-empty-string",
+              "input": {
+                "entries": [
+                  {
+                    "action_ref": "3829496f092687208d3d7bcc708f76fa559ce46d0fea4252f9eb2bbab8e6a0da",
+                    "agent_id": "agent-alpha",
+                    "head": "8c175ec8a91224ac239e9025979a9795faf833c80fef8ed2fa2181e5ec869990",
+                    "seq": 1
+                  },
+                  {
+                    "action_ref": "2398f18101649c307a369bd39f5ad66786ba41862b3a42a0d01cae94e27635bb",
+                    "agent_id": "agent-alpha",
+                    "head": "fe7f9c94abe301bbba522a8db2b074d6f198cc60821f468b44f92f58e38aadf4",
+                    "prev_head": "",
+                    "seq": 2
+                  },
+                  {
+                    "action_ref": "f8ace6794773a51e128438c18cfc139e948ed9b4ccf2539bca6c23f13a2dc7da",
+                    "agent_id": "agent-alpha",
+                    "head": "b6625665f67f7ee846bf6a88e54035a1d88928b1c2229b38f5477fee87a80f25",
+                    "prev_head": "fe7f9c94abe301bbba522a8db2b074d6f198cc60821f468b44f92f58e38aadf4",
+                    "seq": 3
+                  }
+                ]
+              }
+            },
+            {
+              "description": "agent_seq present as null on every record. Absent and null are not interchangeable.",
+              "expected": {
+                "completeness": "failed",
+                "reason": "entry_preimage",
+                "verdict": "malformed"
+              },
+              "id": "ths-004-agent-seq-null-on-all",
+              "input": {
+                "entries": [
+                  {
+                    "action_ref": "3829496f092687208d3d7bcc708f76fa559ce46d0fea4252f9eb2bbab8e6a0da",
+                    "agent_id": "agent-alpha",
+                    "agent_seq": null,
+                    "head": "349ccc6d6dbfb9738ef98cc1696a07b601f38a28b630fca4a3a42a2804e5b175",
+                    "seq": 1
+                  },
+                  {
+                    "action_ref": "2398f18101649c307a369bd39f5ad66786ba41862b3a42a0d01cae94e27635bb",
+                    "agent_id": "agent-alpha",
+                    "agent_seq": null,
+                    "head": "37dafdef2a7e0ed9ec143729c08d2bc3907924520a2e53ab71fc8eaa25c6cd5b",
+                    "prev_head": "349ccc6d6dbfb9738ef98cc1696a07b601f38a28b630fca4a3a42a2804e5b175",
+                    "seq": 2
+                  },
+                  {
+                    "action_ref": "f8ace6794773a51e128438c18cfc139e948ed9b4ccf2539bca6c23f13a2dc7da",
+                    "agent_id": "agent-alpha",
+                    "agent_seq": null,
+                    "head": "9a4b2506d3c72f1c0f89a865689f28e4391944daa8db5ce03ea2f8f48b785cbc",
+                    "prev_head": "37dafdef2a7e0ed9ec143729c08d2bc3907924520a2e53ab71fc8eaa25c6cd5b",
+                    "seq": 3
+                  }
+                ]
+              }
+            },
+            {
+              "description": "agent_seq is false at seq 2.",
+              "expected": {
+                "completeness": "failed",
+                "reason": "entry_preimage",
+                "verdict": "malformed"
+              },
+              "id": "ths-005-agent-seq-false",
+              "input": {
+                "entries": [
+                  {
+                    "action_ref": "3829496f092687208d3d7bcc708f76fa559ce46d0fea4252f9eb2bbab8e6a0da",
+                    "agent_id": "agent-alpha",
+                    "agent_seq": 1,
+                    "head": "349ccc6d6dbfb9738ef98cc1696a07b601f38a28b630fca4a3a42a2804e5b175",
+                    "seq": 1
+                  },
+                  {
+                    "action_ref": "2398f18101649c307a369bd39f5ad66786ba41862b3a42a0d01cae94e27635bb",
+                    "agent_id": "agent-alpha",
+                    "agent_seq": false,
+                    "head": "37dafdef2a7e0ed9ec143729c08d2bc3907924520a2e53ab71fc8eaa25c6cd5b",
+                    "prev_head": "349ccc6d6dbfb9738ef98cc1696a07b601f38a28b630fca4a3a42a2804e5b175",
+                    "seq": 2
+                  },
+                  {
+                    "action_ref": "f8ace6794773a51e128438c18cfc139e948ed9b4ccf2539bca6c23f13a2dc7da",
+                    "agent_id": "agent-alpha",
+                    "agent_seq": 3,
+                    "head": "9a4b2506d3c72f1c0f89a865689f28e4391944daa8db5ce03ea2f8f48b785cbc",
+                    "prev_head": "37dafdef2a7e0ed9ec143729c08d2bc3907924520a2e53ab71fc8eaa25c6cd5b",
+                    "seq": 3
+                  }
+                ]
+              }
+            },
+            {
+              "description": "An unknown key on an entry is ignored: it is not covered by head and does not fail the shape check.",
+              "expected": {
+                "completeness": "not_evaluated",
+                "reason": "no_checkpoint",
+                "verdict": "continuity_only"
+              },
+              "id": "ths-006-extra-entry-key-ignored",
+              "input": {
+                "entries": [
+                  {
+                    "action_ref": "3829496f092687208d3d7bcc708f76fa559ce46d0fea4252f9eb2bbab8e6a0da",
+                    "agent_id": "agent-alpha",
+                    "head": "8c175ec8a91224ac239e9025979a9795faf833c80fef8ed2fa2181e5ec869990",
+                    "note": "not covered by head",
+                    "seq": 1
+                  },
+                  {
+                    "action_ref": "2398f18101649c307a369bd39f5ad66786ba41862b3a42a0d01cae94e27635bb",
+                    "agent_id": "agent-alpha",
+                    "head": "fe7f9c94abe301bbba522a8db2b074d6f198cc60821f468b44f92f58e38aadf4",
+                    "prev_head": "8c175ec8a91224ac239e9025979a9795faf833c80fef8ed2fa2181e5ec869990",
+                    "seq": 2
+                  },
+                  {
+                    "action_ref": "f8ace6794773a51e128438c18cfc139e948ed9b4ccf2539bca6c23f13a2dc7da",
+                    "agent_id": "agent-alpha",
+                    "head": "b6625665f67f7ee846bf6a88e54035a1d88928b1c2229b38f5477fee87a80f25",
+                    "prev_head": "fe7f9c94abe301bbba522a8db2b074d6f198cc60821f468b44f92f58e38aadf4",
+                    "seq": 3
+                  }
+                ]
+              }
+            },
+            {
+              "description": "head in uppercase hex.",
+              "expected": {
+                "completeness": "failed",
+                "reason": "entry_shape",
+                "verdict": "malformed"
+              },
+              "id": "ths-007-head-uppercase",
+              "input": {
+                "entries": [
+                  {
+                    "action_ref": "3829496f092687208d3d7bcc708f76fa559ce46d0fea4252f9eb2bbab8e6a0da",
+                    "agent_id": "agent-alpha",
+                    "head": "8C175EC8A91224AC239E9025979A9795FAF833C80FEF8ED2FA2181E5EC869990",
+                    "seq": 1
+                  },
+                  {
+                    "action_ref": "2398f18101649c307a369bd39f5ad66786ba41862b3a42a0d01cae94e27635bb",
+                    "agent_id": "agent-alpha",
+                    "head": "fe7f9c94abe301bbba522a8db2b074d6f198cc60821f468b44f92f58e38aadf4",
+                    "prev_head": "8c175ec8a91224ac239e9025979a9795faf833c80fef8ed2fa2181e5ec869990",
+                    "seq": 2
+                  },
+                  {
+                    "action_ref": "f8ace6794773a51e128438c18cfc139e948ed9b4ccf2539bca6c23f13a2dc7da",
+                    "agent_id": "agent-alpha",
+                    "head": "b6625665f67f7ee846bf6a88e54035a1d88928b1c2229b38f5477fee87a80f25",
+                    "prev_head": "fe7f9c94abe301bbba522a8db2b074d6f198cc60821f468b44f92f58e38aadf4",
+                    "seq": 3
+                  }
+                ]
+              }
+            },
+            {
+              "description": "Checkpoint seq is true (a boolean, not an integer), sealed as given.",
+              "expected": {
+                "completeness": "failed",
+                "reason": "checkpoint_shape",
+                "verdict": "malformed"
+              },
+              "id": "ths-008-checkpoint-seq-boolean",
+              "input": {
+                "checkpoint": {
+                  "agent_id": "agent-alpha",
+                  "head": "8c175ec8a91224ac239e9025979a9795faf833c80fef8ed2fa2181e5ec869990",
+                  "period_end": "2026-09-23T18:00:00.000Z",
+                  "seq": true,
+                  "v": "trail-head-ref/v1/checkpoint"
+                },
+                "entries": [
+                  {
+                    "action_ref": "3829496f092687208d3d7bcc708f76fa559ce46d0fea4252f9eb2bbab8e6a0da",
+                    "agent_id": "agent-alpha",
+                    "head": "8c175ec8a91224ac239e9025979a9795faf833c80fef8ed2fa2181e5ec869990",
+                    "seq": 1
+                  }
+                ],
+                "proof": [],
+                "root": "f139a9ac7af9617f817e48b1d805f541752835225e599d72e9441d5448dc7613"
+              }
+            },
+            {
+              "description": "Checkpoint period_end is null, sealed as given.",
+              "expected": {
+                "completeness": "failed",
+                "reason": "checkpoint_shape",
+                "verdict": "malformed"
+              },
+              "id": "ths-009-checkpoint-period-end-null",
+              "input": {
+                "checkpoint": {
+                  "agent_id": "agent-alpha",
+                  "head": "8c175ec8a91224ac239e9025979a9795faf833c80fef8ed2fa2181e5ec869990",
+                  "period_end": null,
+                  "seq": 1,
+                  "v": "trail-head-ref/v1/checkpoint"
+                },
+                "entries": [
+                  {
+                    "action_ref": "3829496f092687208d3d7bcc708f76fa559ce46d0fea4252f9eb2bbab8e6a0da",
+                    "agent_id": "agent-alpha",
+                    "head": "8c175ec8a91224ac239e9025979a9795faf833c80fef8ed2fa2181e5ec869990",
+                    "seq": 1
+                  }
+                ],
+                "proof": [],
+                "root": "0daa8b8ccf7c717370dd4cb736f39691c33818a716c2771758d0aa63838c32ea"
+              }
+            },
+            {
+              "description": "Checkpoint has no period_end, sealed as given.",
+              "expected": {
+                "completeness": "failed",
+                "reason": "checkpoint_shape",
+                "verdict": "malformed"
+              },
+              "id": "ths-010-checkpoint-period-end-missing",
+              "input": {
+                "checkpoint": {
+                  "agent_id": "agent-alpha",
+                  "head": "8c175ec8a91224ac239e9025979a9795faf833c80fef8ed2fa2181e5ec869990",
+                  "seq": 1,
+                  "v": "trail-head-ref/v1/checkpoint"
+                },
+                "entries": [
+                  {
+                    "action_ref": "3829496f092687208d3d7bcc708f76fa559ce46d0fea4252f9eb2bbab8e6a0da",
+                    "agent_id": "agent-alpha",
+                    "head": "8c175ec8a91224ac239e9025979a9795faf833c80fef8ed2fa2181e5ec869990",
+                    "seq": 1
+                  }
+                ],
+                "proof": [],
+                "root": "3b5ecb1cc62e7b45257680fa90001e1f5cca9a44ece74a86ba6ce2140f97073d"
+              }
+            },
+            {
+              "description": "Checkpoint period_end is not a timestamp, sealed as given.",
+              "expected": {
+                "completeness": "failed",
+                "reason": "checkpoint_shape",
+                "verdict": "malformed"
+              },
+              "id": "ths-011-checkpoint-period-end-garbage",
+              "input": {
+                "checkpoint": {
+                  "agent_id": "agent-alpha",
+                  "head": "8c175ec8a91224ac239e9025979a9795faf833c80fef8ed2fa2181e5ec869990",
+                  "period_end": "garbage",
+                  "seq": 1,
+                  "v": "trail-head-ref/v1/checkpoint"
+                },
+                "entries": [
+                  {
+                    "action_ref": "3829496f092687208d3d7bcc708f76fa559ce46d0fea4252f9eb2bbab8e6a0da",
+                    "agent_id": "agent-alpha",
+                    "head": "8c175ec8a91224ac239e9025979a9795faf833c80fef8ed2fa2181e5ec869990",
+                    "seq": 1
+                  }
+                ],
+                "proof": [],
+                "root": "50903a0539cfb65455844d3092d56865dc00ecadf87292f2c0e14ee987964986"
+              }
+            },
+            {
+              "description": "A checkpoint with an unknown key, sealed as given, is not rejected by shape: the key is part of the digest.",
+              "expected": {
+                "completeness": "proven",
+                "reason": null,
+                "verdict": "complete"
+              },
+              "id": "ths-012-checkpoint-unknown-key-sealed",
+              "input": {
+                "checkpoint": {
+                  "agent_id": "agent-alpha",
+                  "head": "8c175ec8a91224ac239e9025979a9795faf833c80fef8ed2fa2181e5ec869990",
+                  "note": "part of the digest",
+                  "period_end": "2026-09-23T18:00:00.000Z",
+                  "seq": 1,
+                  "v": "trail-head-ref/v1/checkpoint"
+                },
+                "entries": [
+                  {
+                    "action_ref": "3829496f092687208d3d7bcc708f76fa559ce46d0fea4252f9eb2bbab8e6a0da",
+                    "agent_id": "agent-alpha",
+                    "head": "8c175ec8a91224ac239e9025979a9795faf833c80fef8ed2fa2181e5ec869990",
+                    "seq": 1
+                  }
+                ],
+                "proof": [],
+                "root": "08501d321d5bd707093dbfeb061e7aa60c546a2531f35561eb6ccdc8bdfefd80"
+              }
+            },
+            {
+              "description": "Window anchor seq is true, sealed as given.",
+              "expected": {
+                "completeness": "failed",
+                "reason": "anchor_shape",
+                "verdict": "anchor_unproven"
+              },
+              "id": "ths-013-anchor-seq-boolean",
+              "input": {
+                "anchor": {
+                  "agent_id": "agent-alpha",
+                  "head": "fe7f9c94abe301bbba522a8db2b074d6f198cc60821f468b44f92f58e38aadf4",
+                  "period_end": "2026-09-23T18:00:00.000Z",
+                  "seq": true,
+                  "v": "trail-head-ref/v1/checkpoint"
+                },
+                "anchor_proof": [],
+                "anchor_root": "ea59f7917e00a9e21e6f903899e49ce4f1e30952af022991d81f71f25ae37ad4",
+                "entries": [
+                  {
+                    "action_ref": "f8ace6794773a51e128438c18cfc139e948ed9b4ccf2539bca6c23f13a2dc7da",
+                    "agent_id": "agent-alpha",
+                    "head": "b6625665f67f7ee846bf6a88e54035a1d88928b1c2229b38f5477fee87a80f25",
+                    "prev_head": "fe7f9c94abe301bbba522a8db2b074d6f198cc60821f468b44f92f58e38aadf4",
+                    "seq": 3
+                  },
+                  {
+                    "action_ref": "e8b110389ce7946270ee186ab9369f318960f20c968677dddb6cb0e3f606454e",
+                    "agent_id": "agent-alpha",
+                    "head": "b119f15da7f46eb6b32e32388a8af59819dd7989cd33a600169a8494fdb0d945",
+                    "prev_head": "b6625665f67f7ee846bf6a88e54035a1d88928b1c2229b38f5477fee87a80f25",
+                    "seq": 4
+                  }
+                ],
+                "from_seq": 3
+              }
+            },
+            {
+              "description": "Window anchor has no period_end, sealed as given.",
+              "expected": {
+                "completeness": "failed",
+                "reason": "anchor_shape",
+                "verdict": "anchor_unproven"
+              },
+              "id": "ths-014-anchor-period-end-missing",
+              "input": {
+                "anchor": {
+                  "agent_id": "agent-alpha",
+                  "head": "fe7f9c94abe301bbba522a8db2b074d6f198cc60821f468b44f92f58e38aadf4",
+                  "seq": 2,
+                  "v": "trail-head-ref/v1/checkpoint"
+                },
+                "anchor_proof": [],
+                "anchor_root": "e1cd3087541713f5df2815a8e1a3edb152cb28d12c785ef8b43a97a219b88e64",
+                "entries": [
+                  {
+                    "action_ref": "f8ace6794773a51e128438c18cfc139e948ed9b4ccf2539bca6c23f13a2dc7da",
+                    "agent_id": "agent-alpha",
+                    "head": "b6625665f67f7ee846bf6a88e54035a1d88928b1c2229b38f5477fee87a80f25",
+                    "prev_head": "fe7f9c94abe301bbba522a8db2b074d6f198cc60821f468b44f92f58e38aadf4",
+                    "seq": 3
+                  },
+                  {
+                    "action_ref": "e8b110389ce7946270ee186ab9369f318960f20c968677dddb6cb0e3f606454e",
+                    "agent_id": "agent-alpha",
+                    "head": "b119f15da7f46eb6b32e32388a8af59819dd7989cd33a600169a8494fdb0d945",
+                    "prev_head": "b6625665f67f7ee846bf6a88e54035a1d88928b1c2229b38f5477fee87a80f25",
+                    "seq": 4
+                  }
+                ],
+                "from_seq": 3
+              }
+            },
+            {
+              "description": "Regression: the same window with a well-formed anchor passes the shape check.",
+              "expected": {
+                "completeness": "not_evaluated",
+                "reason": "no_checkpoint",
+                "verdict": "continuity_only"
+              },
+              "id": "ths-015-window-certified-baseline",
+              "input": {
+                "anchor": {
+                  "agent_id": "agent-alpha",
+                  "head": "fe7f9c94abe301bbba522a8db2b074d6f198cc60821f468b44f92f58e38aadf4",
+                  "period_end": "2026-09-23T18:00:00.000Z",
+                  "seq": 2,
+                  "v": "trail-head-ref/v1/checkpoint"
+                },
+                "anchor_proof": [],
+                "anchor_root": "d1731db7212e1c3b457dd01cbbc8e60ce199ab4c7e9fc106711163c26a5c5edd",
+                "entries": [
+                  {
+                    "action_ref": "f8ace6794773a51e128438c18cfc139e948ed9b4ccf2539bca6c23f13a2dc7da",
+                    "agent_id": "agent-alpha",
+                    "head": "b6625665f67f7ee846bf6a88e54035a1d88928b1c2229b38f5477fee87a80f25",
+                    "prev_head": "fe7f9c94abe301bbba522a8db2b074d6f198cc60821f468b44f92f58e38aadf4",
+                    "seq": 3
+                  },
+                  {
+                    "action_ref": "e8b110389ce7946270ee186ab9369f318960f20c968677dddb6cb0e3f606454e",
+                    "agent_id": "agent-alpha",
+                    "head": "b119f15da7f46eb6b32e32388a8af59819dd7989cd33a600169a8494fdb0d945",
+                    "prev_head": "b6625665f67f7ee846bf6a88e54035a1d88928b1c2229b38f5477fee87a80f25",
+                    "seq": 4
+                  }
+                ],
+                "from_seq": 3
+              }
+            }
+          ]
+        }
+      }
+    },
     "trail-head-window-ref": {
       "path": "examples/conformance/trail-head-window-ref/",
       "files": {
@@ -14201,6 +15172,620 @@
     "verifier-key-source-ref": {
       "path": "examples/conformance/verifier-key-source-ref/",
       "files": {
+        "vectors-v1.2.json": {
+          "spec_version": "verifier-key-source-ref-v1.2",
+          "description": "Additive vectors for verifier-key-source-ref v1.2: positive cases and the rules in 'Rules a verifier must apply'. Each vector changes one field of a record that passes. A vector may carry role_registry as a test input (a real verifier receives it from outside the fixture).",
+          "canonical_envelope_ref": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+          "vectors": [
+            {
+              "id": "vk-001-two-embedded-pass",
+              "description": "Regression: two embedded signers, complete records, certification time declared. A pass of recomputability; identity_binding is declared_only.",
+              "expected": "PASS",
+              "signer_records": [
+                {
+                  "signer_id": "signer-a",
+                  "key_id": "signer-a-key",
+                  "key_source": "embedded",
+                  "public_key_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+                  "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+                  "verification_result": "pass",
+                  "key_resolution_time": "2026-06-28T09:00:00.000Z",
+                  "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+                  "verifier_role": "admission"
+                },
+                {
+                  "signer_id": "signer-b",
+                  "key_id": "signer-b-key",
+                  "key_source": "embedded",
+                  "public_key_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+                  "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+                  "verification_result": "pass",
+                  "key_resolution_time": "2026-06-28T09:00:00.000Z",
+                  "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+                  "verifier_role": "co-signer"
+                }
+              ],
+              "fixture_certification_time": "2026-06-28T10:00:00.000Z"
+            },
+            {
+              "id": "vk-002-registry-checked-pass",
+              "description": "Both signer_ids are listed for their declared roles in the supplied role_registry: identity_binding is registry_checked.",
+              "expected": "PASS",
+              "signer_records": [
+                {
+                  "signer_id": "signer-a",
+                  "key_id": "signer-a-key",
+                  "key_source": "embedded",
+                  "public_key_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+                  "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+                  "verification_result": "pass",
+                  "key_resolution_time": "2026-06-28T09:00:00.000Z",
+                  "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+                  "verifier_role": "admission"
+                },
+                {
+                  "signer_id": "signer-b",
+                  "key_id": "signer-b-key",
+                  "key_source": "embedded",
+                  "public_key_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+                  "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+                  "verification_result": "pass",
+                  "key_resolution_time": "2026-06-28T09:00:00.000Z",
+                  "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+                  "verifier_role": "co-signer"
+                }
+              ],
+              "fixture_certification_time": "2026-06-28T10:00:00.000Z",
+              "role_registry": {
+                "admission": [
+                  "signer-a"
+                ],
+                "co-signer": [
+                  "signer-b"
+                ]
+              }
+            },
+            {
+              "id": "vk-003-registry-signer-not-listed",
+              "description": "A role_registry is supplied and signer-b is not listed for co-signer.",
+              "expected": "FAIL",
+              "signer_records": [
+                {
+                  "signer_id": "signer-a",
+                  "key_id": "signer-a-key",
+                  "key_source": "embedded",
+                  "public_key_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+                  "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+                  "verification_result": "pass",
+                  "key_resolution_time": "2026-06-28T09:00:00.000Z",
+                  "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+                  "verifier_role": "admission"
+                },
+                {
+                  "signer_id": "signer-b",
+                  "key_id": "signer-b-key",
+                  "key_source": "embedded",
+                  "public_key_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+                  "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+                  "verification_result": "pass",
+                  "key_resolution_time": "2026-06-28T09:00:00.000Z",
+                  "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+                  "verifier_role": "co-signer"
+                }
+              ],
+              "failure_mode": "signer_identity_unbound",
+              "fixture_certification_time": "2026-06-28T10:00:00.000Z",
+              "role_registry": {
+                "admission": [
+                  "signer-a"
+                ],
+                "co-signer": [
+                  "someone-else"
+                ]
+              }
+            },
+            {
+              "id": "vk-004-registry-role-undeclared",
+              "description": "A role_registry is supplied and signer-b carries no verifier_role.",
+              "expected": "FAIL",
+              "signer_records": [
+                {
+                  "signer_id": "signer-a",
+                  "key_id": "signer-a-key",
+                  "key_source": "embedded",
+                  "public_key_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+                  "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+                  "verification_result": "pass",
+                  "key_resolution_time": "2026-06-28T09:00:00.000Z",
+                  "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+                  "verifier_role": "admission"
+                },
+                {
+                  "signer_id": "signer-b",
+                  "key_id": "signer-b-key",
+                  "key_source": "embedded",
+                  "public_key_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+                  "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+                  "verification_result": "pass",
+                  "key_resolution_time": "2026-06-28T09:00:00.000Z",
+                  "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2"
+                }
+              ],
+              "failure_mode": "signer_identity_unbound",
+              "fixture_certification_time": "2026-06-28T10:00:00.000Z",
+              "role_registry": {
+                "admission": [
+                  "signer-a"
+                ],
+                "co-signer": [
+                  "signer-b"
+                ]
+              }
+            },
+            {
+              "id": "vk-005-mixed-precision-stale",
+              "description": "key_resolution_time 10:00:00.500Z is half a second after the certification time 10:00:00Z. As strings it sorts before; as instants it is later.",
+              "expected": "FAIL",
+              "signer_records": [
+                {
+                  "signer_id": "signer-a",
+                  "key_id": "signer-a-key",
+                  "key_source": "embedded",
+                  "public_key_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+                  "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+                  "verification_result": "pass",
+                  "key_resolution_time": "2026-06-28T09:00:00.000Z",
+                  "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+                  "verifier_role": "admission"
+                },
+                {
+                  "signer_id": "signer-b",
+                  "key_id": "signer-b-key",
+                  "key_source": "embedded",
+                  "public_key_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+                  "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+                  "verification_result": "pass",
+                  "key_resolution_time": "2026-06-28T10:00:00.500Z",
+                  "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+                  "verifier_role": "co-signer"
+                }
+              ],
+              "failure_mode": "stale_external_key",
+              "fixture_certification_time": "2026-06-28T10:00:00Z"
+            },
+            {
+              "id": "vk-006-same-instant-different-precision",
+              "description": "key_resolution_time 10:00:00.000Z equals the certification time 10:00:00Z as an instant: precedes-or-equals holds.",
+              "expected": "PASS",
+              "signer_records": [
+                {
+                  "signer_id": "signer-a",
+                  "key_id": "signer-a-key",
+                  "key_source": "embedded",
+                  "public_key_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+                  "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+                  "verification_result": "pass",
+                  "key_resolution_time": "2026-06-28T09:00:00.000Z",
+                  "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+                  "verifier_role": "admission"
+                },
+                {
+                  "signer_id": "signer-b",
+                  "key_id": "signer-b-key",
+                  "key_source": "embedded",
+                  "public_key_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+                  "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+                  "verification_result": "pass",
+                  "key_resolution_time": "2026-06-28T10:00:00.000Z",
+                  "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+                  "verifier_role": "co-signer"
+                }
+              ],
+              "fixture_certification_time": "2026-06-28T10:00:00Z"
+            },
+            {
+              "id": "vk-007-key-resolution-time-absent",
+              "description": "key_resolution_time absent: the relation cannot be established.",
+              "expected": "FAIL",
+              "signer_records": [
+                {
+                  "signer_id": "signer-a",
+                  "key_id": "signer-a-key",
+                  "key_source": "embedded",
+                  "public_key_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+                  "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+                  "verification_result": "pass",
+                  "key_resolution_time": "2026-06-28T09:00:00.000Z",
+                  "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+                  "verifier_role": "admission"
+                },
+                {
+                  "signer_id": "signer-b",
+                  "key_id": "signer-b-key",
+                  "key_source": "embedded",
+                  "public_key_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+                  "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+                  "verification_result": "pass",
+                  "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+                  "verifier_role": "co-signer"
+                }
+              ],
+              "failure_mode": "key_resolution_time_missing",
+              "fixture_certification_time": "2026-06-28T10:00:00.000Z"
+            },
+            {
+              "id": "vk-008-key-resolution-time-null",
+              "description": "key_resolution_time present as null.",
+              "expected": "FAIL",
+              "signer_records": [
+                {
+                  "signer_id": "signer-a",
+                  "key_id": "signer-a-key",
+                  "key_source": "embedded",
+                  "public_key_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+                  "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+                  "verification_result": "pass",
+                  "key_resolution_time": "2026-06-28T09:00:00.000Z",
+                  "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+                  "verifier_role": "admission"
+                },
+                {
+                  "signer_id": "signer-b",
+                  "key_id": "signer-b-key",
+                  "key_source": "embedded",
+                  "public_key_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+                  "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+                  "verification_result": "pass",
+                  "key_resolution_time": null,
+                  "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+                  "verifier_role": "co-signer"
+                }
+              ],
+              "failure_mode": "key_resolution_time_missing",
+              "fixture_certification_time": "2026-06-28T10:00:00.000Z"
+            },
+            {
+              "id": "vk-009-key-resolution-time-empty",
+              "description": "key_resolution_time present as an empty string.",
+              "expected": "FAIL",
+              "signer_records": [
+                {
+                  "signer_id": "signer-a",
+                  "key_id": "signer-a-key",
+                  "key_source": "embedded",
+                  "public_key_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+                  "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+                  "verification_result": "pass",
+                  "key_resolution_time": "2026-06-28T09:00:00.000Z",
+                  "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+                  "verifier_role": "admission"
+                },
+                {
+                  "signer_id": "signer-b",
+                  "key_id": "signer-b-key",
+                  "key_source": "embedded",
+                  "public_key_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+                  "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+                  "verification_result": "pass",
+                  "key_resolution_time": "",
+                  "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+                  "verifier_role": "co-signer"
+                }
+              ],
+              "failure_mode": "key_resolution_time_missing",
+              "fixture_certification_time": "2026-06-28T10:00:00.000Z"
+            },
+            {
+              "id": "vk-010-certification-time-absent",
+              "description": "Otherwise complete records, but the vector declares no certification time.",
+              "expected": "FAIL",
+              "signer_records": [
+                {
+                  "signer_id": "signer-a",
+                  "key_id": "signer-a-key",
+                  "key_source": "embedded",
+                  "public_key_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+                  "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+                  "verification_result": "pass",
+                  "key_resolution_time": "2026-06-28T09:00:00.000Z",
+                  "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+                  "verifier_role": "admission"
+                },
+                {
+                  "signer_id": "signer-b",
+                  "key_id": "signer-b-key",
+                  "key_source": "embedded",
+                  "public_key_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+                  "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+                  "verification_result": "pass",
+                  "key_resolution_time": "2026-06-28T09:00:00.000Z",
+                  "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+                  "verifier_role": "co-signer"
+                }
+              ],
+              "failure_mode": "fixture_certification_time_missing"
+            },
+            {
+              "id": "vk-011-key-source-unknown",
+              "description": "key_source 'telepathy' is not one of the four values.",
+              "expected": "FAIL",
+              "signer_records": [
+                {
+                  "signer_id": "signer-a",
+                  "key_id": "signer-a-key",
+                  "key_source": "embedded",
+                  "public_key_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+                  "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+                  "verification_result": "pass",
+                  "key_resolution_time": "2026-06-28T09:00:00.000Z",
+                  "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+                  "verifier_role": "admission"
+                },
+                {
+                  "signer_id": "signer-b",
+                  "key_id": "signer-b-key",
+                  "key_source": "telepathy",
+                  "public_key_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+                  "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+                  "verification_result": "pass",
+                  "key_resolution_time": "2026-06-28T09:00:00.000Z",
+                  "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+                  "verifier_role": "co-signer"
+                }
+              ],
+              "failure_mode": "key_source_unknown",
+              "fixture_certification_time": "2026-06-28T10:00:00.000Z"
+            },
+            {
+              "id": "vk-012-embedded-evidence-hash-only",
+              "description": "key_source embedded, no public_key_hash, only an evidence hash: the evidence hash does not stand in for the public key hash.",
+              "expected": "FAIL",
+              "signer_records": [
+                {
+                  "signer_id": "signer-a",
+                  "key_id": "signer-a-key",
+                  "key_source": "embedded",
+                  "public_key_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+                  "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+                  "verification_result": "pass",
+                  "key_resolution_time": "2026-06-28T09:00:00.000Z",
+                  "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+                  "verifier_role": "admission"
+                },
+                {
+                  "signer_id": "signer-b",
+                  "key_id": "signer-b-key",
+                  "key_source": "embedded",
+                  "public_key_hash": null,
+                  "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+                  "verification_result": "pass",
+                  "key_resolution_time": "2026-06-28T09:00:00.000Z",
+                  "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+                  "verifier_role": "co-signer"
+                }
+              ],
+              "failure_mode": "missing_key_material",
+              "fixture_certification_time": "2026-06-28T10:00:00.000Z"
+            },
+            {
+              "id": "vk-013-hash-not-hex",
+              "description": "public_key_hash is present but is not 64 lowercase hex.",
+              "expected": "FAIL",
+              "signer_records": [
+                {
+                  "signer_id": "signer-a",
+                  "key_id": "signer-a-key",
+                  "key_source": "embedded",
+                  "public_key_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+                  "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+                  "verification_result": "pass",
+                  "key_resolution_time": "2026-06-28T09:00:00.000Z",
+                  "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+                  "verifier_role": "admission"
+                },
+                {
+                  "signer_id": "signer-b",
+                  "key_id": "signer-b-key",
+                  "key_source": "embedded",
+                  "public_key_hash": "x",
+                  "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+                  "verification_result": "pass",
+                  "key_resolution_time": "2026-06-28T09:00:00.000Z",
+                  "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+                  "verifier_role": "co-signer"
+                }
+              ],
+              "failure_mode": "hash_format_invalid",
+              "fixture_certification_time": "2026-06-28T10:00:00.000Z"
+            },
+            {
+              "id": "vk-014-out-of-scope",
+              "description": "verification_result out_of_scope does not satisfy admission independence.",
+              "expected": "FAIL",
+              "signer_records": [
+                {
+                  "signer_id": "signer-a",
+                  "key_id": "signer-a-key",
+                  "key_source": "embedded",
+                  "public_key_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+                  "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+                  "verification_result": "pass",
+                  "key_resolution_time": "2026-06-28T09:00:00.000Z",
+                  "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+                  "verifier_role": "admission"
+                },
+                {
+                  "signer_id": "signer-b",
+                  "key_id": "signer-b-key",
+                  "key_source": "embedded",
+                  "public_key_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+                  "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+                  "verification_result": "out_of_scope",
+                  "key_resolution_time": "2026-06-28T09:00:00.000Z",
+                  "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+                  "verifier_role": "co-signer"
+                }
+              ],
+              "failure_mode": "multisig_overclaim_or_unverifiable",
+              "fixture_certification_time": "2026-06-28T10:00:00.000Z"
+            },
+            {
+              "id": "vk-015-verification-result-unknown",
+              "description": "verification_result 'ok' is not one of the four values.",
+              "expected": "FAIL",
+              "signer_records": [
+                {
+                  "signer_id": "signer-a",
+                  "key_id": "signer-a-key",
+                  "key_source": "embedded",
+                  "public_key_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+                  "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+                  "verification_result": "pass",
+                  "key_resolution_time": "2026-06-28T09:00:00.000Z",
+                  "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+                  "verifier_role": "admission"
+                },
+                {
+                  "signer_id": "signer-b",
+                  "key_id": "signer-b-key",
+                  "key_source": "embedded",
+                  "public_key_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+                  "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+                  "verification_result": "ok",
+                  "key_resolution_time": "2026-06-28T09:00:00.000Z",
+                  "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+                  "verifier_role": "co-signer"
+                }
+              ],
+              "failure_mode": "verification_result_unknown",
+              "fixture_certification_time": "2026-06-28T10:00:00.000Z"
+            },
+            {
+              "id": "vk-016-timestamp-garbage",
+              "description": "key_resolution_time is not a timestamp.",
+              "expected": "FAIL",
+              "signer_records": [
+                {
+                  "signer_id": "signer-a",
+                  "key_id": "signer-a-key",
+                  "key_source": "embedded",
+                  "public_key_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+                  "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+                  "verification_result": "pass",
+                  "key_resolution_time": "2026-06-28T09:00:00.000Z",
+                  "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+                  "verifier_role": "admission"
+                },
+                {
+                  "signer_id": "signer-b",
+                  "key_id": "signer-b-key",
+                  "key_source": "embedded",
+                  "public_key_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+                  "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+                  "verification_result": "pass",
+                  "key_resolution_time": "yesterday",
+                  "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+                  "verifier_role": "co-signer"
+                }
+              ],
+              "failure_mode": "timestamp_invalid",
+              "fixture_certification_time": "2026-06-28T10:00:00.000Z"
+            },
+            {
+              "id": "vk-017-jwks-evidence-hash-only-pass",
+              "description": "published_jwks with no public_key_hash but an evidence hash is valid per the key_source table.",
+              "expected": "PASS",
+              "signer_records": [
+                {
+                  "signer_id": "signer-a",
+                  "key_id": "signer-a-key",
+                  "key_source": "embedded",
+                  "public_key_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+                  "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+                  "verification_result": "pass",
+                  "key_resolution_time": "2026-06-28T09:00:00.000Z",
+                  "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+                  "verifier_role": "admission"
+                },
+                {
+                  "signer_id": "signer-b",
+                  "key_id": "signer-b-key",
+                  "key_source": "published_jwks",
+                  "public_key_hash": null,
+                  "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+                  "verification_result": "pass",
+                  "key_resolution_time": "2026-06-28T09:00:00.000Z",
+                  "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+                  "verifier_role": "co-signer"
+                }
+              ],
+              "fixture_certification_time": "2026-06-28T10:00:00.000Z"
+            },
+            {
+              "id": "vk-018-hash-trailing-characters",
+              "description": "public_key_hash is 64 lowercase hex followed by one more character (65 characters).",
+              "expected": "FAIL",
+              "signer_records": [
+                {
+                  "signer_id": "signer-a",
+                  "key_id": "signer-a-key",
+                  "key_source": "embedded",
+                  "public_key_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+                  "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+                  "verification_result": "pass",
+                  "key_resolution_time": "2026-06-28T09:00:00.000Z",
+                  "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+                  "verifier_role": "admission"
+                },
+                {
+                  "signer_id": "signer-b",
+                  "key_id": "signer-b-key",
+                  "key_source": "embedded",
+                  "public_key_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a10",
+                  "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+                  "verification_result": "pass",
+                  "key_resolution_time": "2026-06-28T09:00:00.000Z",
+                  "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+                  "verifier_role": "co-signer"
+                }
+              ],
+              "failure_mode": "hash_format_invalid",
+              "fixture_certification_time": "2026-06-28T10:00:00.000Z"
+            },
+            {
+              "id": "vk-019-timestamp-trailing-characters",
+              "description": "key_resolution_time is a valid timestamp followed by trailing text.",
+              "expected": "FAIL",
+              "signer_records": [
+                {
+                  "signer_id": "signer-a",
+                  "key_id": "signer-a-key",
+                  "key_source": "embedded",
+                  "public_key_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+                  "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+                  "verification_result": "pass",
+                  "key_resolution_time": "2026-06-28T09:00:00.000Z",
+                  "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+                  "verifier_role": "admission"
+                },
+                {
+                  "signer_id": "signer-b",
+                  "key_id": "signer-b-key",
+                  "key_source": "embedded",
+                  "public_key_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+                  "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+                  "verification_result": "pass",
+                  "key_resolution_time": "2026-06-28T09:00:00.000Zjunk",
+                  "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+                  "verifier_role": "co-signer"
+                }
+              ],
+              "failure_mode": "timestamp_invalid",
+              "fixture_certification_time": "2026-06-28T10:00:00.000Z"
+            }
+          ],
+          "provenance": "Built by build_v12.py. Expected results are hand-written from docs/spec/verifier-key-source-ref-v1.md, not computed by the verifier."
+        },
         "vectors.json": {
           "spec_version": "verifier-key-source-ref-v1",
           "description": "Negative conformance fixtures for signer_record key-source binding. All six vectors represent admission claims that a lenient verifier might silently accept but that fail at least one signer_record invariant.",

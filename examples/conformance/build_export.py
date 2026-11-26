@@ -25,12 +25,20 @@ Only files tracked by git are exported. The script used to walk the disk,
 so an untracked local virtualenv (crewai-unguarded-retry/venv/) put 59
 site-packages JSON files into the export.
 
-Usage: python3 build_export.py [--out conformance-export.json]
+Reproducibility: `generated_at` is the only field that depends on when the script runs.
+By default it is the current UTC time. `--generated-at 2026-11-26T00:00:00.000Z` or the
+SOURCE_DATE_EPOCH environment variable (integer seconds, https://reproducible-builds.org/
+specs/source-date-epoch/) fixes it; the argument wins over the variable. With a fixed value
+the output is byte-identical between runs, and tests/test_conformance_export_reproducible.py
+uses that to fail when a set is added without regenerating the committed export.
+
+Usage: python3 build_export.py [--out conformance-export.json] [--generated-at TIMESTAMP]
 """
 
 import argparse
 import datetime
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -65,7 +73,25 @@ def collect_dir_files(d: Path) -> dict:
     return files
 
 
-def build(out_name: str) -> dict:
+TS_FORMAT = "%Y-%m-%dT%H:%M:%S.000Z"
+
+
+def resolve_generated_at(arg=None) -> str:
+    """The `generated_at` value: the argument, else SOURCE_DATE_EPOCH, else the current UTC time."""
+    if arg:
+        return arg
+    epoch = os.environ.get("SOURCE_DATE_EPOCH")
+    if epoch:
+        if not (epoch.isascii() and epoch.isdigit()):
+            raise SystemExit(f"SOURCE_DATE_EPOCH must be integer seconds, got {epoch!r}")
+        moment = datetime.datetime.fromtimestamp(int(epoch), datetime.timezone.utc)
+    else:
+        moment = datetime.datetime.now(datetime.timezone.utc)
+    return moment.strftime(TS_FORMAT)
+
+
+def build(out_name: str, generated_at=None) -> dict:
+    generated_at = resolve_generated_at(generated_at)
     sets = {}
     skipped = []
 
@@ -99,9 +125,7 @@ def build(out_name: str) -> dict:
 
     return {
         "export_version": "conformance-export-v0-draft",
-        "generated_at": datetime.datetime.now(datetime.timezone.utc).strftime(
-            "%Y-%m-%dT%H:%M:%S.000Z"
-        ),
+        "generated_at": generated_at,
         "generated_by": "examples/conformance/build_export.py",
         "source_repo": "giskard09/argentum-core",
         "note": (
@@ -120,9 +144,11 @@ def build(out_name: str) -> dict:
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default="conformance-export.json")
+    ap.add_argument("--generated-at", default=None,
+                    help="fixed generated_at (default: SOURCE_DATE_EPOCH, else the current UTC time)")
     args = ap.parse_args()
 
-    export = build(args.out)
+    export = build(args.out, args.generated_at)
     out_path = HERE / args.out
     out_path.write_text(json.dumps(export, indent=2, ensure_ascii=False, sort_keys=False) + "\n")
 
