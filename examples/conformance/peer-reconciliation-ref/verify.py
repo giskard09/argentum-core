@@ -67,6 +67,14 @@ shape as still-valid would defeat the fix. All v1.0/v1.1 fixtures in this file w
 place to declare signed_fields (this changed their declared peer_reconciliation_ref, since the
 field is inside the hashed envelope) — see the "v1.2" section of the spec for the full rationale
 and the GenAI-Security-Project/agent-control-standard#33 finding that prompted this self-audit.
+
+v1.3.1 (docs/spec/peer-reconciliation-ref-v1.md, "Conformance: what a negative vector must show"):
+no rule changes. A negative vector now counts as passed only if the verifier rejects it, reports
+a failure under the check the vector's `failure_mode` names, and does NOT report that its own
+computed result differs from the vector's declared value (`score()` below). Before, any rejection
+counted, including that disagreement, so a verifier that had lost a rule still passed every
+vector whose declared `checks` already said the rule fails. The eleven vectors added in
+vectors-v1.3.1.json cover rules no vector exercised.
 """
 
 REQUIRED_SIGNED_FIELDS = {"party_id", "action_ref", "interaction_id"}
@@ -333,12 +341,59 @@ def verify_vector(vector: dict) -> tuple[bool, list[str]]:
     return len(failures) == 0, failures
 
 
-def main():
-    vectors_path = Path(__file__).parent / "vectors.json"
-    data = json.loads(vectors_path.read_text())
-    vectors = data["vectors"]
+# v1.3.1. Checks whose "computed X != declared Y" line means the verifier and the vector disagree
+# about the answer. canonical_envelope is not in this list: for it, a computed hash that differs
+# from the declared one IS the rule being tested.
+DISAGREEMENT_CHECKS = ("structural_validity", "signature_binding", "party_distinctness", "comparator_state")
 
-    print(f"peer-reconciliation-ref-v1 conformance — {len(vectors)} vectors\n")
+
+def check_of(failure: str) -> str:
+    return failure.split(":", 1)[0]
+
+
+def is_disagreement(failure: str) -> bool:
+    return check_of(failure) in DISAGREEMENT_CHECKS and " != declared " in failure
+
+
+def score(vector: dict) -> tuple[bool, bool, list[str], str]:
+    """(ok, conforms, failures, why). v1.3.1: a negative vector is ok only if it is rejected, a
+    failure is reported under its `failure_mode`, and no failure is a verifier/vector disagreement."""
+    conforms, failures = verify_vector(vector)
+    if vector["expected"] == "PASS":
+        return conforms, conforms, failures, ""
+    if conforms:
+        return False, conforms, failures, "expected FAIL but the verifier accepted it"
+    bad = [f for f in failures if is_disagreement(f)]
+    if bad:
+        return False, conforms, failures, f"rejected only by disagreeing with the declared value: {bad[0]}"
+    mode = vector.get("failure_mode")
+    if mode and mode not in [check_of(f) for f in failures]:
+        return False, conforms, failures, f"rejected, but not under its failure_mode {mode!r}: {failures[0]}"
+    return True, conforms, failures, ""
+
+
+VECTOR_FILES = ("vectors.json", "vectors-v1.3.1.json")
+
+
+def load_vectors() -> list[dict]:
+    here = Path(__file__).parent
+    vectors, seen = [], set()
+    for name in VECTOR_FILES:
+        path = here / name
+        if not path.exists():
+            raise SystemExit(f"missing vector file {name}")
+        for v in json.loads(path.read_text())["vectors"]:
+            if v["id"] in seen:
+                raise SystemExit(f"duplicate vector id {v['id']} in {name}")
+            seen.add(v["id"])
+            vectors.append(v)
+    return vectors
+
+
+def main():
+    vectors = load_vectors()
+
+    print(f"peer-reconciliation-ref-v1.3.1 conformance — {len(vectors)} vectors\n")
 
     passed = 0
     failed = 0
@@ -346,9 +401,7 @@ def main():
     for v in vectors:
         vid = v["id"]
         expected = v["expected"]
-        conforms, failures = verify_vector(v)
-
-        ok = conforms if expected == "PASS" else not conforms
+        ok, conforms, failures, why = score(v)
         marker = "✓" if ok else "✗"
         status = "PASS" if ok else "FAIL"
 
@@ -360,7 +413,7 @@ def main():
                 for f in failures:
                     print(f"         unexpected failure: {f}")
             else:
-                print(f"         expected FAIL ({v.get('failure_mode', '?')}) but verifier accepted it")
+                print(f"         expected FAIL ({v.get('failure_mode', '?')}): {why}")
 
         if ok:
             passed += 1

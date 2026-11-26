@@ -1,9 +1,24 @@
 # peer-reconciliation-ref-v1 — Specification
 
 **Status:** stable
-**Version:** 1.3
+**Version:** 1.3.1
 **Canonical fixture:** [`examples/conformance/peer-reconciliation-ref/vectors.json`](../../examples/conformance/peer-reconciliation-ref/vectors.json)
 **Reference verifier:** [`examples/conformance/peer-reconciliation-ref/verify.py`](../../examples/conformance/peer-reconciliation-ref/verify.py)
+
+**v1.3.1 (2026-11-26, conformance oracle and eleven vectors; no rule changes):** a mutation run of
+`verify.py` (38 mutants, each removing or loosening one rule) found that 28 survived. The cause was
+not missing rules but how a negative vector was scored: it counted as passed when the verifier
+rejected it for *any* reason, including the verifier's computed result disagreeing with the
+vector's own declared `checks` (`structural_validity: computed True != declared False`). A
+verifier with a rule removed still "rejected" the vector, through that mismatch, so the vector
+did not show the rule was checked. v1.3.1 changes the scoring, not the rules: see "Conformance:
+what a negative vector must show" below. Eleven new negative vectors, in `vectors-v1.3.1.json`
+(`vectors.json` is untouched, byte for byte), exercise rules this spec already states and no
+vector covered: an empty `party_id`, `observed` that is not a JSON boolean, an unobserved block
+that still carries an `action_ref` or a `co_signer`, a `co_signer` missing a required field,
+two invalid keys, a `false` `signature_valid_*` on either side alone, and two `supersedes` cases
+(different `interaction_id`, no `resolved_by`). Every vector that was in the corpus keeps its
+verdict under the new scoring.
 
 **v1.3 (2026-11-24, party distinctness — NOT additive, see below):** a self-audit found that
 nothing in the envelope or the verifier checked that `party_a` and `party_b` are different: the
@@ -154,7 +169,7 @@ peer_reconciliation_ref = hashlib.sha256(jcs(envelope).encode()).hexdigest()
 | Field | Type | Description |
 |-------|------|--------------|
 | `party_id` | string | Stable identifier of the Guardian producing this observation. |
-| `observed` | boolean | `true` if this party produced its half of the reconciliation. `false` means this party's Guardian did not (yet) supply an observation — the envelope still hashes deterministically, but the comparator MUST treat this as `UNRESOLVED`, never as agreement or disagreement by default. |
+| `observed` | boolean | A JSON boolean: any other value (the string `"true"`, the number `1`, `null`) makes the block structurally invalid (§2). `true` if this party produced its half of the reconciliation. `false` means this party's Guardian did not (yet) supply an observation — the envelope still hashes deterministically, but the comparator MUST treat this as `UNRESOLVED`, never as agreement or disagreement by default. |
 | `action_ref` | string \| null | The `action_ref` (per [`action-ref.md`](./action-ref.md)) this party reports having derived for the interaction. The profile does not check how it was derived. `null` when `observed` is `false`. |
 | `co_signer` | object \| null | Present when `observed` is `true`. Same shape as the co-signer block in [`anchoring-precedence-ref-v1.md`](./anchoring-precedence-ref-v1.md#2-admission_invariant) plus one addition (`signed_fields`, v1.2, see below): `issuer`, `kid`, `pubkey`, `jws_signature`, `signed_fields`, all recomputable from the fixture alone — no out-of-band lookup required. `null` when `observed` is `false`. |
 | `co_signer.signed_fields` | list of strings | **v1.2, REQUIRED when `co_signer` is present.** Declares which fields of this observation the JWS payload actually binds. MUST include `party_id`, `action_ref`, and `interaction_id` — see "Signature scope, honestly declared" below and invariant §4 (`signature_binding`). |
@@ -315,6 +330,37 @@ parties.
 `checks.party_distinctness` is only a cross-check. The 11 vectors that predate v1.3 do not declare
 it and keep their bytes, so for them an absent value means "nothing declared", not "declared
 true"; the vectors added in v1.3 all declare it.
+
+## Conformance: what a negative vector must show (v1.3.1)
+
+A negative vector (`expected: "FAIL"`) names the rule it exists to test in `failure_mode`. It
+counts as passed only when all of these hold:
+
+1. the verifier rejects the envelope;
+2. a failure is reported under the check named by `failure_mode`;
+3. no failure reports that the verifier's computed result differs from the vector's declared
+   value for `structural_validity`, `signature_binding`, `party_distinctness` or
+   `comparator_state`. Such a line says the verifier and the vector disagree about the answer, which
+   is a defect in one of them, not a correct rejection.
+
+`canonical_envelope` is the one check whose failure *is* a disagreement between computed and
+declared (the declared `peer_reconciliation_ref` does not match the envelope), so a line from it
+satisfies 2 and is not excluded by 3.
+
+Before v1.3.1 the reference verifier applied only condition 1. This changes nothing about which
+envelopes are valid, and no vector in `vectors.json` changes result (all 26 pass conditions 1 to
+3). It changes what a passing run proves: with condition 1 alone, a verifier that had lost a rule
+still passed every vector whose declared `checks` already said the rule fails. `mutants.py`
+removes or loosens 29 rules of `verify.py`, one per run, and a mutant is caught when some vector
+is not passed. Under condition 1 alone the 37 vectors of the corpus catch 11 of the 29. Under
+conditions 1 to 3 the 26 earlier vectors catch 20 and the 11 new vectors catch the other 9, 29 of 29. A
+few rules are left out of the list, each with its reason, in `mutants.py` (none proven equivalent
+one by one).
+
+Declared checks are cross-checks, not inputs: a vector's `checks.signature_valid_a` and
+`checks.signature_valid_b` are the only declared values the verifier *uses* (it cannot verify a
+signature itself, see "Signature scope, honestly declared"). The other declared values are what
+the vector's author says the verifier will compute.
 
 ## Corrections (v1.1)
 
