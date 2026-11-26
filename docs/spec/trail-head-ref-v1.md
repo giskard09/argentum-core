@@ -107,6 +107,26 @@ result = {
 }
 ```
 
+### Shape rules
+
+Checks 1, 2e and 5 below say "well formed". This is what that means. A shape failure on any input listed here is a verdict from the tables below, not an exception, and a verifier written from this document alone must reach the same one.
+
+**Entry** (each element of `entries`):
+
+- A JSON object. `seq` is an integer, not a boolean. `action_ref` and `head` are 64 lowercase hex characters (uppercase fails). All entries carry the same `agent_id`.
+- `prev_head` is absent at seq 1 and, at every other seq (including the first entry of a window), present as 64 lowercase hex characters. A key that is **present** with `null`, `""`, `false` or `0` is not "absent": it fails with `malformed` / `entry_preimage`, at seq 1 too. The preimage omits the field, so a record that carries it as `null` would show two different things to two readers.
+- `agent_seq` is absent or an integer >= 1 that is not a boolean. Present as `null`, `""`, `false` or `0` fails with `malformed` / `entry_preimage`. The agent-counter check (3) applies to records that carry the key, so absent and `null` are not interchangeable there either.
+- Keys other than `agent_id`, `seq`, `action_ref`, `prev_head`, `agent_seq` and `head` are ignored. They are not covered by `head`, so `head` does not authenticate them.
+
+**Checkpoint, and the window anchor (which is a checkpoint)**:
+
+- A JSON object with `v` equal to `trail-head-ref/v1/checkpoint`, `head` 64 lowercase hex characters, `seq` an integer >= 1 that is not a boolean, and `period_end` present as a string that ends in `Z` and parses as a date-time. The reference implementation parses it with Python's `datetime.fromisoformat`; emitters should use the millisecond form shown above.
+- A failure is `malformed` / `checkpoint_shape` for the checkpoint and `anchor_unproven` / `anchor_shape` for the anchor.
+- `agent_id` is not a shape rule: a checkpoint for another agent is `checkpoint_other_agent` / `anchor_other_agent`.
+- Unknown keys are not rejected. They are part of the checkpoint digest, so such a checkpoint proves inclusion only if that same object was sealed.
+
+*Added 2026-11-26.* Before this section the reference verifier accepted a checkpoint whose `seq` was a boolean or whose `period_end` was `null`, raised `KeyError` on a missing `period_end` and accepted an unparseable one unless the age check ran, accepted an anchor with no `period_end`, and accepted `prev_head: null` at seq 1. It read `agent_seq: null` as absent when recomputing `head` and as present in check 3. All of those inputs now get the shape verdict above. No input that the published vectors or the test suite exercise changes verdict; see the changelog.
+
 Checks run in this order; the first failure decides the verdict. Each failure has its own `verdict`/`reason`, so a verifier reports *which* attack it saw, not only that it rejected.
 
 | # | Check | Verdict | Reason |

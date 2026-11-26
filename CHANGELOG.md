@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+### Changed — trail-head-ref-v1: shape rules written down, shape failures are verdicts (2026-11-26)
+
+- `docs/spec/trail-head-ref-v1.md`: new "Shape rules" subsection under Verification. It says what "well formed" means in checks 1, 2e and 5 (types, lowercase hex, boolean is not an integer, `period_end` required and parseable, null is not absent for `prev_head` and `agent_seq`, unknown keys), which a verifier written from the document alone could not know.
+- `plugins/agt_evidence_anchor/trail_head.py`: checkpoint and window-anchor shape now share one check. Inputs that were accepted or crashed now return a verdict: a checkpoint with a boolean `seq` (was `complete`); `period_end` null (was `complete`), missing (was `KeyError`) or unparseable (was `ValueError` with the age check, `complete` without it); an anchor with a missing `period_end` (was accepted); `prev_head: null` at seq 1 (was `continuity_only`); `agent_seq: null` (was `agent_gap` or, with heads computed over the field, `head_mismatch`).
+- Compatibility: every `verify_trail` input of the published `trail-head-window-ref` vectors (11) and of `test_trail_head.py` (44 calls) gives the same verdict before and after. No trail-head chain from a third party is published in this repository.
+- New: `examples/conformance/trail-head-shape-ref/` (15 vectors, hand-written expected results, two mutants that must fail) and `tests/test_trail_head_shape.py`.
+
 ### Changed — JCS integer profile (2026-10-07)
 
 - `jcs.py` refuses integers outside `[-(2^53-1), 2^53-1]` with a `ValueError` that names the profile. Before, it emitted their exact value, which RFC 8785 (IEEE-754 doubles) does not reproduce: `2^53+1` came out as `9007199254740993` where a conformant verifier gives `9007199254740992`. Implemented in PR #121 (commit badcd25). Tests in `tests/test_jcs_integer_profile.py`.
