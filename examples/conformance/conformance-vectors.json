@@ -1,6 +1,6 @@
 {
   "export_version": "conformance-vectors-v1",
-  "generated_at": "2026-11-26T23:14:03.000Z",
+  "generated_at": "2026-11-26T23:20:11.000Z",
   "generated_by": "examples/conformance/build_export.py",
   "source_repo": "giskard09/argentum-core",
   "set_count": 75,
@@ -8873,6 +8873,604 @@
     "peer-reconciliation-ref": {
       "path": "examples/conformance/peer-reconciliation-ref/",
       "files": {
+        "vectors-v1.3.1.json": {
+          "spec_version": "peer-reconciliation-ref-v1.3.1",
+          "description": "Additive negative vectors for peer-reconciliation-ref v1.3.1. Each is an existing passing envelope with one thing changed, and each exercises a rule the spec already states that no vector in vectors.json covered. A vector counts as passed only if the verifier rejects it under its failure_mode and does not merely disagree with its declared checks (spec, 'Conformance: what a negative vector must show').",
+          "vectors": [
+            {
+              "id": "party-id-empty-001",
+              "description": "v1.3.1 negative. party_a.party_id is the empty string. party_id must be a non-empty string of printable ASCII (section 7), so the block is structurally invalid. The pair is UNRESOLVED.",
+              "expected": "FAIL",
+              "failure_mode": "structural_validity",
+              "failure_detail": "party_a.party_id is the empty string",
+              "envelope": {
+                "interaction_id": "3f9c9e2e-6b5a-4b7e-8f3e-1a2b3c4d5e6f",
+                "party_a": {
+                  "party_id": "",
+                  "observed": true,
+                  "action_ref": "a2f1c9e0b8e93d4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f",
+                  "co_signer": {
+                    "issuer": "safeagent-guardian",
+                    "kid": "sg-key-01",
+                    "pubkey": "MCowBQYDK2VwAyEAqQm7VZ0X8tGxJm6QwYh3fN4dL9pRk2vC5eA1sT7uHzM=",
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.c2FmZWFnZW50LWd1YXJkaWFu.QVKz8n2Lp9wXbYr4Ht7c",
+                    "signed_fields": [
+                      "party_id",
+                      "action_ref",
+                      "interaction_id"
+                    ]
+                  }
+                },
+                "party_b": {
+                  "party_id": "counterparty-guardian",
+                  "observed": true,
+                  "action_ref": "a2f1c9e0b8e93d4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f",
+                  "co_signer": {
+                    "issuer": "counterparty-guardian",
+                    "kid": "cg-key-01",
+                    "pubkey": "MCowBQYDK2VwAyEAnR3xW9vL2sKfQd6BhTz1oYc8gEj4pXm0aVn5rUw7iCk=",
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.Y291bnRlcnBhcnR5LWd1YXJkaWFu.Bt6Jd0mQx3Ny8VpFcW2r",
+                    "signed_fields": [
+                      "party_id",
+                      "action_ref",
+                      "interaction_id"
+                    ]
+                  }
+                },
+                "version": "peer-reconciliation-ref-v1"
+              },
+              "peer_reconciliation_ref": "60e4180152471340cb1be773fa76aaa84793e35d69670cd0307a88c8b468fb91",
+              "checks": {
+                "canonical_envelope": true,
+                "structural_validity": false,
+                "signature_valid_a": true,
+                "signature_valid_b": true,
+                "signature_binding": true,
+                "party_distinctness": true
+              },
+              "comparator_state": "UNRESOLVED"
+            },
+            {
+              "id": "observed-string-true-001",
+              "description": "v1.3.1 negative. party_a.observed is the string \"true\", not the JSON boolean true. observed must be a JSON boolean, so the block is structurally invalid and cannot count as an observation. The pair is UNRESOLVED.",
+              "expected": "FAIL",
+              "failure_mode": "structural_validity",
+              "failure_detail": "party_a.observed is the string \"true\"",
+              "envelope": {
+                "interaction_id": "3f9c9e2e-6b5a-4b7e-8f3e-1a2b3c4d5e6f",
+                "party_a": {
+                  "party_id": "safeagent-guardian",
+                  "observed": "true",
+                  "action_ref": "a2f1c9e0b8e93d4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f",
+                  "co_signer": {
+                    "issuer": "safeagent-guardian",
+                    "kid": "sg-key-01",
+                    "pubkey": "MCowBQYDK2VwAyEAqQm7VZ0X8tGxJm6QwYh3fN4dL9pRk2vC5eA1sT7uHzM=",
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.c2FmZWFnZW50LWd1YXJkaWFu.QVKz8n2Lp9wXbYr4Ht7c",
+                    "signed_fields": [
+                      "party_id",
+                      "action_ref",
+                      "interaction_id"
+                    ]
+                  }
+                },
+                "party_b": {
+                  "party_id": "counterparty-guardian",
+                  "observed": true,
+                  "action_ref": "a2f1c9e0b8e93d4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f",
+                  "co_signer": {
+                    "issuer": "counterparty-guardian",
+                    "kid": "cg-key-01",
+                    "pubkey": "MCowBQYDK2VwAyEAnR3xW9vL2sKfQd6BhTz1oYc8gEj4pXm0aVn5rUw7iCk=",
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.Y291bnRlcnBhcnR5LWd1YXJkaWFu.Bt6Jd0mQx3Ny8VpFcW2r",
+                    "signed_fields": [
+                      "party_id",
+                      "action_ref",
+                      "interaction_id"
+                    ]
+                  }
+                },
+                "version": "peer-reconciliation-ref-v1"
+              },
+              "peer_reconciliation_ref": "37e676f80cfe03dabf36f96b32e2d81951d342cacd9143e1747f4da7cf802e81",
+              "checks": {
+                "canonical_envelope": true,
+                "structural_validity": false,
+                "signature_valid_a": true,
+                "signature_valid_b": true,
+                "signature_binding": true,
+                "party_distinctness": true
+              },
+              "comparator_state": "UNRESOLVED"
+            },
+            {
+              "id": "observed-integer-one-001",
+              "description": "v1.3.1 negative. party_a.observed is the number 1, not the JSON boolean true. Same rule as observed-string-true-001: only a JSON boolean is an observed value. The pair is UNRESOLVED.",
+              "expected": "FAIL",
+              "failure_mode": "structural_validity",
+              "failure_detail": "party_a.observed is the number 1",
+              "envelope": {
+                "interaction_id": "3f9c9e2e-6b5a-4b7e-8f3e-1a2b3c4d5e6f",
+                "party_a": {
+                  "party_id": "safeagent-guardian",
+                  "observed": 1,
+                  "action_ref": "a2f1c9e0b8e93d4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f",
+                  "co_signer": {
+                    "issuer": "safeagent-guardian",
+                    "kid": "sg-key-01",
+                    "pubkey": "MCowBQYDK2VwAyEAqQm7VZ0X8tGxJm6QwYh3fN4dL9pRk2vC5eA1sT7uHzM=",
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.c2FmZWFnZW50LWd1YXJkaWFu.QVKz8n2Lp9wXbYr4Ht7c",
+                    "signed_fields": [
+                      "party_id",
+                      "action_ref",
+                      "interaction_id"
+                    ]
+                  }
+                },
+                "party_b": {
+                  "party_id": "counterparty-guardian",
+                  "observed": true,
+                  "action_ref": "a2f1c9e0b8e93d4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f",
+                  "co_signer": {
+                    "issuer": "counterparty-guardian",
+                    "kid": "cg-key-01",
+                    "pubkey": "MCowBQYDK2VwAyEAnR3xW9vL2sKfQd6BhTz1oYc8gEj4pXm0aVn5rUw7iCk=",
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.Y291bnRlcnBhcnR5LWd1YXJkaWFu.Bt6Jd0mQx3Ny8VpFcW2r",
+                    "signed_fields": [
+                      "party_id",
+                      "action_ref",
+                      "interaction_id"
+                    ]
+                  }
+                },
+                "version": "peer-reconciliation-ref-v1"
+              },
+              "peer_reconciliation_ref": "fc681fb1e2a1986d149ccb6098d1bff6cae099546e0345e680b4fca49beec8a3",
+              "checks": {
+                "canonical_envelope": true,
+                "structural_validity": false,
+                "signature_valid_a": true,
+                "signature_valid_b": true,
+                "signature_binding": true,
+                "party_distinctness": true
+              },
+              "comparator_state": "UNRESOLVED"
+            },
+            {
+              "id": "unobserved-with-action-ref-001",
+              "description": "v1.3.1 negative. party_b says observed=false but still carries an action_ref (its co_signer is null). observed=false requires both action_ref and co_signer to be null (section 2): a value with no signature behind it is malformed by construction. The pair is UNRESOLVED.",
+              "expected": "FAIL",
+              "failure_mode": "structural_validity",
+              "failure_detail": "party_b.observed=false with a non-null action_ref",
+              "envelope": {
+                "interaction_id": "3f9c9e2e-6b5a-4b7e-8f3e-1a2b3c4d5e6f",
+                "party_a": {
+                  "party_id": "safeagent-guardian",
+                  "observed": true,
+                  "action_ref": "a2f1c9e0b8e93d4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f",
+                  "co_signer": {
+                    "issuer": "safeagent-guardian",
+                    "kid": "sg-key-01",
+                    "pubkey": "MCowBQYDK2VwAyEAqQm7VZ0X8tGxJm6QwYh3fN4dL9pRk2vC5eA1sT7uHzM=",
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.c2FmZWFnZW50LWd1YXJkaWFu.QVKz8n2Lp9wXbYr4Ht7c",
+                    "signed_fields": [
+                      "party_id",
+                      "action_ref",
+                      "interaction_id"
+                    ]
+                  }
+                },
+                "party_b": {
+                  "party_id": "counterparty-guardian",
+                  "observed": false,
+                  "action_ref": "a2f1c9e0b8e93d4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f",
+                  "co_signer": null
+                },
+                "version": "peer-reconciliation-ref-v1"
+              },
+              "peer_reconciliation_ref": "c9a894f8e155d64efaa964c72be34ac135e238bdd0ee1e0ebb0e69f15de66929",
+              "checks": {
+                "canonical_envelope": true,
+                "structural_validity": false,
+                "signature_valid_a": true,
+                "signature_valid_b": false,
+                "signature_binding": true,
+                "party_distinctness": true
+              },
+              "comparator_state": "UNRESOLVED"
+            },
+            {
+              "id": "unobserved-with-cosigner-001",
+              "description": "v1.3.1 negative. party_b says observed=false and has no action_ref, but carries a co_signer, and that co_signer's pubkey is party_a's. observed=false requires co_signer to be null, so the block is structurally invalid. party_distinctness still holds: it compares keys only when both parties are observed=true, and here only party_a is. The pair is UNRESOLVED.",
+              "expected": "FAIL",
+              "failure_mode": "structural_validity",
+              "failure_detail": "party_b.observed=false with a non-null co_signer",
+              "envelope": {
+                "interaction_id": "3f9c9e2e-6b5a-4b7e-8f3e-1a2b3c4d5e6f",
+                "party_a": {
+                  "party_id": "safeagent-guardian",
+                  "observed": true,
+                  "action_ref": "a2f1c9e0b8e93d4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f",
+                  "co_signer": {
+                    "issuer": "safeagent-guardian",
+                    "kid": "sg-key-01",
+                    "pubkey": "MCowBQYDK2VwAyEAqQm7VZ0X8tGxJm6QwYh3fN4dL9pRk2vC5eA1sT7uHzM=",
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.c2FmZWFnZW50LWd1YXJkaWFu.QVKz8n2Lp9wXbYr4Ht7c",
+                    "signed_fields": [
+                      "party_id",
+                      "action_ref",
+                      "interaction_id"
+                    ]
+                  }
+                },
+                "party_b": {
+                  "party_id": "counterparty-guardian",
+                  "observed": false,
+                  "action_ref": null,
+                  "co_signer": {
+                    "issuer": "counterparty-guardian",
+                    "kid": "cg-key-01",
+                    "pubkey": "MCowBQYDK2VwAyEAqQm7VZ0X8tGxJm6QwYh3fN4dL9pRk2vC5eA1sT7uHzM=",
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.Y291bnRlcnBhcnR5LWd1YXJkaWFu.Bt6Jd0mQx3Ny8VpFcW2r",
+                    "signed_fields": [
+                      "party_id",
+                      "action_ref",
+                      "interaction_id"
+                    ]
+                  }
+                },
+                "version": "peer-reconciliation-ref-v1"
+              },
+              "peer_reconciliation_ref": "8ab2e5786ec3465aba852196212b99476a0cc9215186b1c7c893bfe655e2a76d",
+              "checks": {
+                "canonical_envelope": true,
+                "structural_validity": false,
+                "signature_valid_a": true,
+                "signature_valid_b": false,
+                "signature_binding": true,
+                "party_distinctness": true
+              },
+              "comparator_state": "UNRESOLVED"
+            },
+            {
+              "id": "cosigner-missing-kid-001",
+              "description": "v1.3.1 negative. party_a is observed=true and its co_signer has no kid. A complete co_signer needs issuer, kid, pubkey, jws_signature and signed_fields (section 2); one missing is enough. The pair is UNRESOLVED.",
+              "expected": "FAIL",
+              "failure_mode": "structural_validity",
+              "failure_detail": "party_a.co_signer has no kid",
+              "envelope": {
+                "interaction_id": "3f9c9e2e-6b5a-4b7e-8f3e-1a2b3c4d5e6f",
+                "party_a": {
+                  "party_id": "safeagent-guardian",
+                  "observed": true,
+                  "action_ref": "a2f1c9e0b8e93d4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f",
+                  "co_signer": {
+                    "issuer": "safeagent-guardian",
+                    "pubkey": "MCowBQYDK2VwAyEAqQm7VZ0X8tGxJm6QwYh3fN4dL9pRk2vC5eA1sT7uHzM=",
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.c2FmZWFnZW50LWd1YXJkaWFu.QVKz8n2Lp9wXbYr4Ht7c",
+                    "signed_fields": [
+                      "party_id",
+                      "action_ref",
+                      "interaction_id"
+                    ]
+                  }
+                },
+                "party_b": {
+                  "party_id": "counterparty-guardian",
+                  "observed": true,
+                  "action_ref": "a2f1c9e0b8e93d4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f",
+                  "co_signer": {
+                    "issuer": "counterparty-guardian",
+                    "kid": "cg-key-01",
+                    "pubkey": "MCowBQYDK2VwAyEAnR3xW9vL2sKfQd6BhTz1oYc8gEj4pXm0aVn5rUw7iCk=",
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.Y291bnRlcnBhcnR5LWd1YXJkaWFu.Bt6Jd0mQx3Ny8VpFcW2r",
+                    "signed_fields": [
+                      "party_id",
+                      "action_ref",
+                      "interaction_id"
+                    ]
+                  }
+                },
+                "version": "peer-reconciliation-ref-v1"
+              },
+              "peer_reconciliation_ref": "e3744760415ec6da140a75127c1eeca5c72b8a3e5ad3c5e162aaafe556e5af6e",
+              "checks": {
+                "canonical_envelope": true,
+                "structural_validity": false,
+                "signature_valid_a": true,
+                "signature_valid_b": true,
+                "signature_binding": true,
+                "party_distinctness": true
+              },
+              "comparator_state": "UNRESOLVED"
+            },
+            {
+              "id": "pubkey-both-invalid-001",
+              "description": "v1.3.1 negative. Both co_signers present the same pubkey value, and it is not a base64 SPKI Ed25519 key. A pubkey that is not such a key makes its block structurally invalid (section 7); it is not 'a key', so there is no key to compare and party_distinctness is not what fails. The pair is UNRESOLVED.",
+              "expected": "FAIL",
+              "failure_mode": "structural_validity",
+              "failure_detail": "both co_signer.pubkey values are the same invalid string",
+              "envelope": {
+                "interaction_id": "3f9c9e2e-6b5a-4b7e-8f3e-1a2b3c4d5e6f",
+                "party_a": {
+                  "party_id": "safeagent-guardian",
+                  "observed": true,
+                  "action_ref": "a2f1c9e0b8e93d4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f",
+                  "co_signer": {
+                    "issuer": "safeagent-guardian",
+                    "kid": "sg-key-01",
+                    "pubkey": "not-a-key",
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.c2FmZWFnZW50LWd1YXJkaWFu.QVKz8n2Lp9wXbYr4Ht7c",
+                    "signed_fields": [
+                      "party_id",
+                      "action_ref",
+                      "interaction_id"
+                    ]
+                  }
+                },
+                "party_b": {
+                  "party_id": "counterparty-guardian",
+                  "observed": true,
+                  "action_ref": "a2f1c9e0b8e93d4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f",
+                  "co_signer": {
+                    "issuer": "counterparty-guardian",
+                    "kid": "cg-key-01",
+                    "pubkey": "not-a-key",
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.Y291bnRlcnBhcnR5LWd1YXJkaWFu.Bt6Jd0mQx3Ny8VpFcW2r",
+                    "signed_fields": [
+                      "party_id",
+                      "action_ref",
+                      "interaction_id"
+                    ]
+                  }
+                },
+                "version": "peer-reconciliation-ref-v1"
+              },
+              "peer_reconciliation_ref": "f8ab52f237cb10d9ead91a6316e408f44b61db7e851682d9f2d2453c73f8fafc",
+              "checks": {
+                "canonical_envelope": true,
+                "structural_validity": false,
+                "signature_valid_a": true,
+                "signature_valid_b": true,
+                "signature_binding": true,
+                "party_distinctness": true
+              },
+              "comparator_state": "UNRESOLVED"
+            },
+            {
+              "id": "signature-invalid-a-001",
+              "description": "v1.3.1 negative. Everything is valid and the two action_refs match, but party_a's declared signature_valid_a is false. One invalid signature is enough: the pair is UNRESOLVED, never AGREED. signature_validity fails.",
+              "expected": "FAIL",
+              "failure_mode": "signature_validity",
+              "failure_detail": "checks.signature_valid_a is false for an observed=true party",
+              "envelope": {
+                "interaction_id": "3f9c9e2e-6b5a-4b7e-8f3e-1a2b3c4d5e6f",
+                "party_a": {
+                  "party_id": "safeagent-guardian",
+                  "observed": true,
+                  "action_ref": "a2f1c9e0b8e93d4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f",
+                  "co_signer": {
+                    "issuer": "safeagent-guardian",
+                    "kid": "sg-key-01",
+                    "pubkey": "MCowBQYDK2VwAyEAqQm7VZ0X8tGxJm6QwYh3fN4dL9pRk2vC5eA1sT7uHzM=",
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.c2FmZWFnZW50LWd1YXJkaWFu.QVKz8n2Lp9wXbYr4Ht7c",
+                    "signed_fields": [
+                      "party_id",
+                      "action_ref",
+                      "interaction_id"
+                    ]
+                  }
+                },
+                "party_b": {
+                  "party_id": "counterparty-guardian",
+                  "observed": true,
+                  "action_ref": "a2f1c9e0b8e93d4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f",
+                  "co_signer": {
+                    "issuer": "counterparty-guardian",
+                    "kid": "cg-key-01",
+                    "pubkey": "MCowBQYDK2VwAyEAnR3xW9vL2sKfQd6BhTz1oYc8gEj4pXm0aVn5rUw7iCk=",
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.Y291bnRlcnBhcnR5LWd1YXJkaWFu.Bt6Jd0mQx3Ny8VpFcW2r",
+                    "signed_fields": [
+                      "party_id",
+                      "action_ref",
+                      "interaction_id"
+                    ]
+                  }
+                },
+                "version": "peer-reconciliation-ref-v1"
+              },
+              "peer_reconciliation_ref": "46f89af451b3c32faf485b9b1db3aea2edddaa933cb53ff553e00f37efd63751",
+              "checks": {
+                "canonical_envelope": true,
+                "structural_validity": true,
+                "signature_valid_a": false,
+                "signature_valid_b": true,
+                "signature_binding": true,
+                "party_distinctness": true
+              },
+              "comparator_state": "UNRESOLVED"
+            },
+            {
+              "id": "signature-invalid-b-001",
+              "description": "v1.3.1 negative. Same as signature-invalid-a-001 on the other side: party_b observed=true, declared signature_valid_b false, everything else valid. The pair is UNRESOLVED. signature_validity fails.",
+              "expected": "FAIL",
+              "failure_mode": "signature_validity",
+              "failure_detail": "checks.signature_valid_b is false for an observed=true party",
+              "envelope": {
+                "interaction_id": "3f9c9e2e-6b5a-4b7e-8f3e-1a2b3c4d5e6f",
+                "party_a": {
+                  "party_id": "safeagent-guardian",
+                  "observed": true,
+                  "action_ref": "a2f1c9e0b8e93d4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f",
+                  "co_signer": {
+                    "issuer": "safeagent-guardian",
+                    "kid": "sg-key-01",
+                    "pubkey": "MCowBQYDK2VwAyEAqQm7VZ0X8tGxJm6QwYh3fN4dL9pRk2vC5eA1sT7uHzM=",
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.c2FmZWFnZW50LWd1YXJkaWFu.QVKz8n2Lp9wXbYr4Ht7c",
+                    "signed_fields": [
+                      "party_id",
+                      "action_ref",
+                      "interaction_id"
+                    ]
+                  }
+                },
+                "party_b": {
+                  "party_id": "counterparty-guardian",
+                  "observed": true,
+                  "action_ref": "a2f1c9e0b8e93d4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f",
+                  "co_signer": {
+                    "issuer": "counterparty-guardian",
+                    "kid": "cg-key-01",
+                    "pubkey": "MCowBQYDK2VwAyEAnR3xW9vL2sKfQd6BhTz1oYc8gEj4pXm0aVn5rUw7iCk=",
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.Y291bnRlcnBhcnR5LWd1YXJkaWFu.Bt6Jd0mQx3Ny8VpFcW2r",
+                    "signed_fields": [
+                      "party_id",
+                      "action_ref",
+                      "interaction_id"
+                    ]
+                  }
+                },
+                "version": "peer-reconciliation-ref-v1"
+              },
+              "peer_reconciliation_ref": "46f89af451b3c32faf485b9b1db3aea2edddaa933cb53ff553e00f37efd63751",
+              "checks": {
+                "canonical_envelope": true,
+                "structural_validity": true,
+                "signature_valid_a": true,
+                "signature_valid_b": false,
+                "signature_binding": true,
+                "party_distinctness": true
+              },
+              "comparator_state": "UNRESOLVED"
+            },
+            {
+              "id": "supersedes-interaction-id-mismatch-001",
+              "description": "v1.3.1 negative. A correction whose supersedes pointer resolves to a known envelope with a different interaction_id. A correction must correct the same interaction (section 6). Everything else matches correction-supersedes-001 and the comparator state is AGREED; only supersedes_chain_integrity fails.",
+              "expected": "FAIL",
+              "failure_mode": "supersedes_chain_integrity",
+              "failure_detail": "known_envelopes entry has a different interaction_id",
+              "envelope": {
+                "interaction_id": "3f9c9e2e-6b5a-4b7e-8f3e-1a2b3c4d5e6f",
+                "party_a": {
+                  "party_id": "safeagent-guardian",
+                  "observed": true,
+                  "action_ref": "f00dbabe1234c9e0b8e93d4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5",
+                  "co_signer": {
+                    "issuer": "safeagent-guardian",
+                    "kid": "sg-key-02",
+                    "pubkey": "MCowBQYDK2VwAyEAqQm7VZ0X8tGxJm6QwYh3fN4dL9pRk2vC5eA1sT7uHzM=",
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.c2FmZWFnZW50LWd1YXJkaWFuLWNvcnJlY3Rpb24.Rk3Wm7xNp2QbYd9Vt1cH",
+                    "signed_fields": [
+                      "party_id",
+                      "action_ref",
+                      "interaction_id"
+                    ]
+                  }
+                },
+                "party_b": {
+                  "party_id": "counterparty-guardian",
+                  "observed": true,
+                  "action_ref": "f00dbabe1234c9e0b8e93d4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5",
+                  "co_signer": {
+                    "issuer": "counterparty-guardian",
+                    "kid": "cg-key-01",
+                    "pubkey": "MCowBQYDK2VwAyEAnR3xW9vL2sKfQd6BhTz1oYc8gEj4pXm0aVn5rUw7iCk=",
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.Y291bnRlcnBhcnR5LWd1YXJkaWFuLWNvcnJlY3Rpb24.Nt4Rd2mLx8VpBc6Wq3fT",
+                    "signed_fields": [
+                      "party_id",
+                      "action_ref",
+                      "interaction_id"
+                    ]
+                  }
+                },
+                "version": "peer-reconciliation-ref-v1",
+                "supersedes": "46f89af451b3c32faf485b9b1db3aea2edddaa933cb53ff553e00f37efd63751"
+              },
+              "peer_reconciliation_ref": "11e11998e14f2a59cb8c98f0a6ff4b503845118d89d877a59ab4ab937a44c9f8",
+              "known_envelopes": {
+                "46f89af451b3c32faf485b9b1db3aea2edddaa933cb53ff553e00f37efd63751": {
+                  "interaction_id": "9b8a7c6d-5e4f-4a3b-9c2d-1e0f9a8b7c6d",
+                  "resolved_by": "mycelium-trail-index"
+                }
+              },
+              "checks": {
+                "canonical_envelope": true,
+                "structural_validity": true,
+                "signature_valid_a": true,
+                "signature_valid_b": true,
+                "supersedes_chain_integrity": false,
+                "signature_binding": true,
+                "party_distinctness": true
+              },
+              "comparator_state": "AGREED"
+            },
+            {
+              "id": "supersedes-no-resolved-by-001",
+              "description": "v1.3.1 negative. A correction whose known_envelopes entry declares no resolved_by. Each entry must name the source that supplied it (section 6); without it nothing shows the record did not come from the party that points at it. Everything else matches correction-supersedes-001; only supersedes_chain_integrity fails.",
+              "expected": "FAIL",
+              "failure_mode": "supersedes_chain_integrity",
+              "failure_detail": "known_envelopes entry has no resolved_by",
+              "envelope": {
+                "interaction_id": "3f9c9e2e-6b5a-4b7e-8f3e-1a2b3c4d5e6f",
+                "party_a": {
+                  "party_id": "safeagent-guardian",
+                  "observed": true,
+                  "action_ref": "f00dbabe1234c9e0b8e93d4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5",
+                  "co_signer": {
+                    "issuer": "safeagent-guardian",
+                    "kid": "sg-key-02",
+                    "pubkey": "MCowBQYDK2VwAyEAqQm7VZ0X8tGxJm6QwYh3fN4dL9pRk2vC5eA1sT7uHzM=",
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.c2FmZWFnZW50LWd1YXJkaWFuLWNvcnJlY3Rpb24.Rk3Wm7xNp2QbYd9Vt1cH",
+                    "signed_fields": [
+                      "party_id",
+                      "action_ref",
+                      "interaction_id"
+                    ]
+                  }
+                },
+                "party_b": {
+                  "party_id": "counterparty-guardian",
+                  "observed": true,
+                  "action_ref": "f00dbabe1234c9e0b8e93d4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5",
+                  "co_signer": {
+                    "issuer": "counterparty-guardian",
+                    "kid": "cg-key-01",
+                    "pubkey": "MCowBQYDK2VwAyEAnR3xW9vL2sKfQd6BhTz1oYc8gEj4pXm0aVn5rUw7iCk=",
+                    "jws_signature": "eyJhbGciOiJFZERTQSJ9.Y291bnRlcnBhcnR5LWd1YXJkaWFuLWNvcnJlY3Rpb24.Nt4Rd2mLx8VpBc6Wq3fT",
+                    "signed_fields": [
+                      "party_id",
+                      "action_ref",
+                      "interaction_id"
+                    ]
+                  }
+                },
+                "version": "peer-reconciliation-ref-v1",
+                "supersedes": "46f89af451b3c32faf485b9b1db3aea2edddaa933cb53ff553e00f37efd63751"
+              },
+              "peer_reconciliation_ref": "11e11998e14f2a59cb8c98f0a6ff4b503845118d89d877a59ab4ab937a44c9f8",
+              "known_envelopes": {
+                "46f89af451b3c32faf485b9b1db3aea2edddaa933cb53ff553e00f37efd63751": {
+                  "interaction_id": "3f9c9e2e-6b5a-4b7e-8f3e-1a2b3c4d5e6f"
+                }
+              },
+              "checks": {
+                "canonical_envelope": true,
+                "structural_validity": true,
+                "signature_valid_a": true,
+                "signature_valid_b": true,
+                "supersedes_chain_integrity": false,
+                "signature_binding": true,
+                "party_distinctness": true
+              },
+              "comparator_state": "AGREED"
+            }
+          ],
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
+        },
         "vectors.json": {
           "spec_version": "peer-reconciliation-ref-v1.3",
           "description": "Conformance vectors for peer-reconciliation-ref-v1. Seven invariants are separately recomputable: canonical_envelope, structural_validity, signature_validity, signature_binding, comparator_state, and supersedes_chain_integrity (v1.1, present only when `supersedes` is set). A verifier that treats any pair of present observations as AGREED without checking action_ref equality will silently pass disagreed-001. A verifier that defaults a missing half to AGREED will silently pass unresolved-001. A verifier that does not check what each co_signer's signed_fields actually covers will silently pass replay-001 (v1.2) as AGREED. v1.1 added three optional additive checks: supersedes_chain_integrity (correction pointers), requested_at (recommended non-suppression timestamp), as_of (informational per-observation time). v1.2 adds signature_binding and the mandatory co_signer.signed_fields field -- see 'v1.2' in the spec for why this one is not additive the way v1.1's fields were.",

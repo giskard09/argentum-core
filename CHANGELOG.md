@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+### Changed — peer-reconciliation-ref-v1.3.1: negative vectors must be rejected for their own reason; eleven vectors (2026-11-26)
+
+- `docs/spec/peer-reconciliation-ref-v1.md` (v1.3.1, no rule changes): new section "Conformance: what a negative vector must show". A negative vector counts as passed only if the verifier rejects it, reports a failure under the vector's `failure_mode`, and does not report that its computed result differs from the vector's declared `checks`. `observed` is stated to be a JSON boolean (the reference verifier already treated anything else as structurally invalid).
+- `examples/conformance/peer-reconciliation-ref/verify.py`: `score()` applies that scoring; `verify_vector` and the check functions keep their signatures. Before, any rejection counted, including the verifier disagreeing with the declared value, so a verifier with a rule removed still passed most negative vectors (a 38-mutant run: 28 survived under the old scoring).
+- New: `vectors-v1.3.1.json` (11 negative vectors, built by `build_v131.py`, expected results written by hand from the spec) and `mutants.py` (29 mutants, 29 caught; 11 of 29 under the old scoring; the 26 earlier vectors catch 20 under the new scoring, the new ones the other 9). `vectors.json` is byte-identical.
+- Compatibility: all 26 earlier vectors give the same verdict and the same failure list under the old and the new verifier, and pass under both scorings. The 11 new vectors are also rejected by the old verifier code: the rules were enforced, no vector exercised them. No third-party use of this `verify.py` was found (GitHub code search shows only this repository; not proof of absence).
+- `conformance-export.json` and `conformance-vectors.json` regenerated (75 sets; `vectors-v1.3.1.json` added to `peer-reconciliation-ref`).
+
 ### Changed — trail-head-ref-v1: shape rules written down, shape failures are verdicts (2026-11-26)
 
 - `docs/spec/trail-head-ref-v1.md`: new "Shape rules" subsection under Verification. It says what "well formed" means in checks 1, 2e and 5 (types, lowercase hex, boolean is not an integer, `period_end` required and parseable, null is not absent for `prev_head` and `agent_seq`, unknown keys), which a verifier written from the document alone could not know.
