@@ -28,13 +28,13 @@ UNBOUND_SIGNER_IDS = {"anonymous-key-holder"}
 KEY_SOURCES = {"embedded", "published_jwks", "pinned_registry", "cached_prior"}
 VERIFICATION_RESULTS = {"pass", "fail", "unverifiable", "out_of_scope"}
 NEEDS_PUBLIC_KEY_HASH = {"embedded", "pinned_registry"}
-_HEX64 = re.compile(r"^[0-9a-f]{64}$")
-_TS = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$")
+_HEX64 = re.compile(r"[0-9a-f]{64}")
+_TS = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\.[0-9]+)?Z")
 
 
 def parse_instant(ts):
     """RFC 3339 UTC date-time ending in Z -> aware datetime; ValueError otherwise."""
-    if not isinstance(ts, str) or not _TS.match(ts):
+    if not isinstance(ts, str) or not _TS.fullmatch(ts):
         raise ValueError(f"not an RFC 3339 UTC timestamp: {ts!r}")
     return datetime.fromisoformat(ts[:-1] + "+00:00").astimezone(timezone.utc)
 
@@ -110,7 +110,7 @@ def verify_signer_record(
 
     pkh, evh = record.get("public_key_hash"), record.get("key_resolution_evidence_hash")
     for name, val in (("public_key_hash", pkh), ("key_resolution_evidence_hash", evh)):
-        if not _absent(val) and not (isinstance(val, str) and _HEX64.match(val)):
+        if not _absent(val) and not (isinstance(val, str) and _HEX64.fullmatch(val)):
             failures.append(f"hash_format_invalid: signer_id={sid!r} - {name} is not 64 lowercase hex")
     if ks in NEEDS_PUBLIC_KEY_HASH:
         has_key = not _absent(pkh)

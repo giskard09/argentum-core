@@ -66,6 +66,9 @@ add("vk-015-verification-result-unknown", "verification_result 'ok' is not one o
 add("vk-016-timestamp-garbage", "key_resolution_time is not a timestamp.", "FAIL", two(key_resolution_time="yesterday"), "timestamp_invalid")
 add("vk-017-jwks-evidence-hash-only-pass", "published_jwks with no public_key_hash but an evidence hash is valid per the key_source table.", "PASS", two(key_source="published_jwks", public_key_hash=None))
 
+add("vk-018-hash-trailing-characters", "public_key_hash is 64 lowercase hex followed by one more character (65 characters).", "FAIL", two(public_key_hash=H1 + "0"), "hash_format_invalid")
+add("vk-019-timestamp-trailing-characters", "key_resolution_time is a valid timestamp followed by trailing text.", "FAIL", two(key_resolution_time="2026-06-28T09:00:00.000Zjunk"), "timestamp_invalid")
+
 out = {"spec_version": "verifier-key-source-ref-v1.2",
        "description": "Additive vectors for verifier-key-source-ref v1.2: positive cases and the rules in 'Rules a verifier must apply'. Each vector changes one field of a record that passes. A vector may carry role_registry as a test input (a real verifier receives it from outside the fixture).",
        "canonical_envelope_ref": ENV,

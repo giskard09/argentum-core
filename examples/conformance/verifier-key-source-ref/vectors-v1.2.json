@@ -546,6 +546,68 @@
         }
       ],
       "fixture_certification_time": "2026-06-28T10:00:00.000Z"
+    },
+    {
+      "id": "vk-018-hash-trailing-characters",
+      "description": "public_key_hash is 64 lowercase hex followed by one more character (65 characters).",
+      "expected": "FAIL",
+      "signer_records": [
+        {
+          "signer_id": "signer-a",
+          "key_id": "signer-a-key",
+          "key_source": "embedded",
+          "public_key_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+          "verification_result": "pass",
+          "key_resolution_time": "2026-06-28T09:00:00.000Z",
+          "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+          "verifier_role": "admission"
+        },
+        {
+          "signer_id": "signer-b",
+          "key_id": "signer-b-key",
+          "key_source": "embedded",
+          "public_key_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a10",
+          "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+          "verification_result": "pass",
+          "key_resolution_time": "2026-06-28T09:00:00.000Z",
+          "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+          "verifier_role": "co-signer"
+        }
+      ],
+      "failure_mode": "hash_format_invalid",
+      "fixture_certification_time": "2026-06-28T10:00:00.000Z"
+    },
+    {
+      "id": "vk-019-timestamp-trailing-characters",
+      "description": "key_resolution_time is a valid timestamp followed by trailing text.",
+      "expected": "FAIL",
+      "signer_records": [
+        {
+          "signer_id": "signer-a",
+          "key_id": "signer-a-key",
+          "key_source": "embedded",
+          "public_key_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+          "verification_result": "pass",
+          "key_resolution_time": "2026-06-28T09:00:00.000Z",
+          "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+          "verifier_role": "admission"
+        },
+        {
+          "signer_id": "signer-b",
+          "key_id": "signer-b-key",
+          "key_source": "embedded",
+          "public_key_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+          "verification_result": "pass",
+          "key_resolution_time": "2026-06-28T09:00:00.000Zjunk",
+          "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+          "verifier_role": "co-signer"
+        }
+      ],
+      "failure_mode": "timestamp_invalid",
+      "fixture_certification_time": "2026-06-28T10:00:00.000Z"
     }
   ],
   "provenance": "Built by build_v12.py. Expected results are hand-written from docs/spec/verifier-key-source-ref-v1.md, not computed by the verifier."
