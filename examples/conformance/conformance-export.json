@@ -14269,10 +14269,10 @@
             },
             {
               "id": "signer-identity-unbound",
-              "description": "Co-signer public key is present and cryptographic verification passes, but signer_id 'anonymous-key-holder' is not linked to any declared verifier role. The key proves ownership of a key pair, not independent admission authority.",
+              "description": "Co-signer public key is present and cryptographic verification passes, but signer_id 'anonymous-key-holder' is the declared-unbound sentinel: the reference verifier does not check a role registry, it only rejects this value (identity_binding: declared_only). The key proves ownership of a key pair, not independent admission authority.",
               "expected": "FAIL",
               "failure_mode": "signer_identity_unbound",
-              "failure_detail": "signer_records[1].signer_id='anonymous-key-holder' is not bound to a declared verifier role. Cryptographic verification passing does not establish admission independence.",
+              "failure_detail": "signer_records[1].signer_id='anonymous-key-holder' is the declared-unbound sentinel; no role registry is checked (identity_binding: declared_only). Cryptographic verification passing does not establish admission independence.",
               "signer_records": [
                 {
                   "signer_id": "giskard-admission-v1",
