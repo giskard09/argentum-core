@@ -56,9 +56,20 @@ from pathlib import Path
 from nacl.exceptions import BadSignatureError
 from nacl.signing import VerifyKey
 
+# The repo's RFC 8785 helper. Loaded relative to this file, so the verifier must be run from a
+# checkout of the repository (it already needs PyNaCl; the frozen copies in the subdirectories
+# keep their own canonicalization and are not changed).
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
+from jcs import jcs_bytes  # noqa: E402
+
 
 def jcs(obj: dict) -> str:
-    return json.dumps(obj, separators=(",", ":"), sort_keys=True, ensure_ascii=False)
+    """RFC 8785 canonical JSON, from the repo's jcs.py. Until 2026-11-26 this was
+    json.dumps(sort_keys=True), which orders keys by code point (RFC 8785: UTF-16 code unit)
+    and writes numbers with Python's repr (1.0, 1e-06) instead of ECMAScript's (1, 0.000001).
+    No published vector contained data where the two differ. Raises ValueError for an integer
+    outside +/-(2^53-1) or a non-finite float (out of the JCS profile)."""
+    return jcs_bytes(obj).decode("utf-8")
 
 
 def sha256hex(s: str) -> str:
@@ -190,9 +201,13 @@ def evaluate_vector(vector: dict, pubkeys: dict | None = None, seen_registry: "S
     pubkeys = pubkeys or {}
 
     # 0. delegation_chain_ref byte-match
-    expected_dcr = sha256hex(jcs(chain))
+    try:
+        expected_dcr = sha256hex(jcs(chain))
+    except (ValueError, TypeError) as e:
+        expected_dcr = None
+        failures.append(f"delegation_chain_ref: chain_artifact cannot be canonicalized under RFC 8785 ({e})")
     actual_dcr = vector.get("delegation_chain_ref", "")
-    if expected_dcr != actual_dcr:
+    if expected_dcr is not None and expected_dcr != actual_dcr:
         failures.append(
             f"delegation_chain_ref mismatch: expected {expected_dcr}, got {actual_dcr}"
         )
@@ -347,7 +362,8 @@ def main():
     total_passed = 0
     total_failed = 0
     for fname in ("vectors.json", "cross-org-vectors.json", "replay-vectors.json",
-                  "key-completeness-vectors.json", "small-order-key-vectors.json"):
+                  "key-completeness-vectors.json", "small-order-key-vectors.json",
+                  "coverage-vectors.json"):
         p, f = run_file(base / fname)
         total_passed += p
         total_failed += f
