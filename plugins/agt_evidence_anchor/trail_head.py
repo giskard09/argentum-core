@@ -92,6 +92,30 @@ def _parse_ts(ts: str) -> datetime.datetime:
     return datetime.datetime.fromisoformat(ts[:-1] + "+00:00")
 
 
+def _is_int(v) -> bool:
+    return isinstance(v, int) and not isinstance(v, bool)
+
+
+def _checkpoint_shape_ok(cp) -> bool:
+    """Shape rules for a checkpoint (and for a window anchor, which is one).
+
+    Same discipline as an entry: seq is an integer >= 1 and not a bool, head
+    is 64 lowercase hex, and period_end is present and parses as an RFC 3339
+    UTC timestamp. A bad shape is a verdict, never an exception. Unknown keys
+    are not rejected here; they are part of the digest, so a checkpoint
+    carrying one proves inclusion only if that same object was sealed.
+    """
+    if not isinstance(cp, dict) or cp.get("v") != CHECKPOINT_V:
+        return False
+    if not _is_hex64(cp.get("head")) or not _is_int(cp.get("seq")) or cp["seq"] < 1:
+        return False
+    try:
+        _parse_ts(cp.get("period_end"))
+    except (ValueError, TypeError):
+        return False
+    return True
+
+
 # ---------------------------------------------------------------------------
 # Producer side
 # ---------------------------------------------------------------------------
@@ -306,6 +330,12 @@ def verify_trail(
         seq = e["seq"]
         if seq != prev_seq + 1:
             return _result("broken", FAILED, at_seq=seq, reason="seq_gap")
+        # A key that is present but null is not "absent": the preimage omits the
+        # field, so a record that carries it as null is ambiguous. Same for ""
+        # and false, which entry_preimage rejects.
+        if ("prev_head" in e and e["prev_head"] is None) \
+                or ("agent_seq" in e and e["agent_seq"] is None):
+            return _result("malformed", FAILED, at_seq=seq, reason="entry_preimage")
         stated_prev = e.get("prev_head")
         try:
             pre = entry_preimage(agent_id, seq, e["action_ref"], stated_prev,
@@ -322,9 +352,7 @@ def verify_trail(
     # prev_head is certified only by an anchor checkpoint at seq k-1 proven
     # in a period root; the presented records cannot certify themselves.
     if anchor is not None:
-        if not isinstance(anchor, dict) or anchor.get("v") != CHECKPOINT_V \
-                or not _is_hex64(anchor.get("head")) \
-                or not isinstance(anchor.get("seq"), int) or isinstance(anchor.get("seq"), bool):
+        if not _checkpoint_shape_ok(anchor):
             return _result("anchor_unproven", FAILED, reason="anchor_shape")
         if anchor.get("agent_id") != agent_id:
             return _result("anchor_unproven", FAILED, reason="anchor_other_agent")
@@ -364,9 +392,7 @@ def verify_trail(
         return _result("continuity_only", NOT_EVALUATED, reason="no_checkpoint",
                        last_seq=last_seq, **scope)
 
-    if not isinstance(checkpoint, dict) or checkpoint.get("v") != CHECKPOINT_V \
-            or not _is_hex64(checkpoint.get("head")) \
-            or not isinstance(checkpoint.get("seq"), int):
+    if not _checkpoint_shape_ok(checkpoint):
         return _result("malformed", FAILED, reason="checkpoint_shape")
     if checkpoint.get("agent_id") != agent_id:
         return _result("checkpoint_unproven", FAILED, reason="checkpoint_other_agent")
