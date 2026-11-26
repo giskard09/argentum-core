@@ -1,0 +1,552 @@
+{
+  "spec_version": "verifier-key-source-ref-v1.2",
+  "description": "Additive vectors for verifier-key-source-ref v1.2: positive cases and the rules in 'Rules a verifier must apply'. Each vector changes one field of a record that passes. A vector may carry role_registry as a test input (a real verifier receives it from outside the fixture).",
+  "canonical_envelope_ref": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+  "vectors": [
+    {
+      "id": "vk-001-two-embedded-pass",
+      "description": "Regression: two embedded signers, complete records, certification time declared. A pass of recomputability; identity_binding is declared_only.",
+      "expected": "PASS",
+      "signer_records": [
+        {
+          "signer_id": "signer-a",
+          "key_id": "signer-a-key",
+          "key_source": "embedded",
+          "public_key_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+          "verification_result": "pass",
+          "key_resolution_time": "2026-06-28T09:00:00.000Z",
+          "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+          "verifier_role": "admission"
+        },
+        {
+          "signer_id": "signer-b",
+          "key_id": "signer-b-key",
+          "key_source": "embedded",
+          "public_key_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+          "verification_result": "pass",
+          "key_resolution_time": "2026-06-28T09:00:00.000Z",
+          "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+          "verifier_role": "co-signer"
+        }
+      ],
+      "fixture_certification_time": "2026-06-28T10:00:00.000Z"
+    },
+    {
+      "id": "vk-002-registry-checked-pass",
+      "description": "Both signer_ids are listed for their declared roles in the supplied role_registry: identity_binding is registry_checked.",
+      "expected": "PASS",
+      "signer_records": [
+        {
+          "signer_id": "signer-a",
+          "key_id": "signer-a-key",
+          "key_source": "embedded",
+          "public_key_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+          "verification_result": "pass",
+          "key_resolution_time": "2026-06-28T09:00:00.000Z",
+          "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+          "verifier_role": "admission"
+        },
+        {
+          "signer_id": "signer-b",
+          "key_id": "signer-b-key",
+          "key_source": "embedded",
+          "public_key_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+          "verification_result": "pass",
+          "key_resolution_time": "2026-06-28T09:00:00.000Z",
+          "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+          "verifier_role": "co-signer"
+        }
+      ],
+      "fixture_certification_time": "2026-06-28T10:00:00.000Z",
+      "role_registry": {
+        "admission": [
+          "signer-a"
+        ],
+        "co-signer": [
+          "signer-b"
+        ]
+      }
+    },
+    {
+      "id": "vk-003-registry-signer-not-listed",
+      "description": "A role_registry is supplied and signer-b is not listed for co-signer.",
+      "expected": "FAIL",
+      "signer_records": [
+        {
+          "signer_id": "signer-a",
+          "key_id": "signer-a-key",
+          "key_source": "embedded",
+          "public_key_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+          "verification_result": "pass",
+          "key_resolution_time": "2026-06-28T09:00:00.000Z",
+          "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+          "verifier_role": "admission"
+        },
+        {
+          "signer_id": "signer-b",
+          "key_id": "signer-b-key",
+          "key_source": "embedded",
+          "public_key_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+          "verification_result": "pass",
+          "key_resolution_time": "2026-06-28T09:00:00.000Z",
+          "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+          "verifier_role": "co-signer"
+        }
+      ],
+      "failure_mode": "signer_identity_unbound",
+      "fixture_certification_time": "2026-06-28T10:00:00.000Z",
+      "role_registry": {
+        "admission": [
+          "signer-a"
+        ],
+        "co-signer": [
+          "someone-else"
+        ]
+      }
+    },
+    {
+      "id": "vk-004-registry-role-undeclared",
+      "description": "A role_registry is supplied and signer-b carries no verifier_role.",
+      "expected": "FAIL",
+      "signer_records": [
+        {
+          "signer_id": "signer-a",
+          "key_id": "signer-a-key",
+          "key_source": "embedded",
+          "public_key_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+          "verification_result": "pass",
+          "key_resolution_time": "2026-06-28T09:00:00.000Z",
+          "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+          "verifier_role": "admission"
+        },
+        {
+          "signer_id": "signer-b",
+          "key_id": "signer-b-key",
+          "key_source": "embedded",
+          "public_key_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+          "verification_result": "pass",
+          "key_resolution_time": "2026-06-28T09:00:00.000Z",
+          "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2"
+        }
+      ],
+      "failure_mode": "signer_identity_unbound",
+      "fixture_certification_time": "2026-06-28T10:00:00.000Z",
+      "role_registry": {
+        "admission": [
+          "signer-a"
+        ],
+        "co-signer": [
+          "signer-b"
+        ]
+      }
+    },
+    {
+      "id": "vk-005-mixed-precision-stale",
+      "description": "key_resolution_time 10:00:00.500Z is half a second after the certification time 10:00:00Z. As strings it sorts before; as instants it is later.",
+      "expected": "FAIL",
+      "signer_records": [
+        {
+          "signer_id": "signer-a",
+          "key_id": "signer-a-key",
+          "key_source": "embedded",
+          "public_key_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+          "verification_result": "pass",
+          "key_resolution_time": "2026-06-28T09:00:00.000Z",
+          "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+          "verifier_role": "admission"
+        },
+        {
+          "signer_id": "signer-b",
+          "key_id": "signer-b-key",
+          "key_source": "embedded",
+          "public_key_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+          "verification_result": "pass",
+          "key_resolution_time": "2026-06-28T10:00:00.500Z",
+          "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+          "verifier_role": "co-signer"
+        }
+      ],
+      "failure_mode": "stale_external_key",
+      "fixture_certification_time": "2026-06-28T10:00:00Z"
+    },
+    {
+      "id": "vk-006-same-instant-different-precision",
+      "description": "key_resolution_time 10:00:00.000Z equals the certification time 10:00:00Z as an instant: precedes-or-equals holds.",
+      "expected": "PASS",
+      "signer_records": [
+        {
+          "signer_id": "signer-a",
+          "key_id": "signer-a-key",
+          "key_source": "embedded",
+          "public_key_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+          "verification_result": "pass",
+          "key_resolution_time": "2026-06-28T09:00:00.000Z",
+          "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+          "verifier_role": "admission"
+        },
+        {
+          "signer_id": "signer-b",
+          "key_id": "signer-b-key",
+          "key_source": "embedded",
+          "public_key_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+          "verification_result": "pass",
+          "key_resolution_time": "2026-06-28T10:00:00.000Z",
+          "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+          "verifier_role": "co-signer"
+        }
+      ],
+      "fixture_certification_time": "2026-06-28T10:00:00Z"
+    },
+    {
+      "id": "vk-007-key-resolution-time-absent",
+      "description": "key_resolution_time absent: the relation cannot be established.",
+      "expected": "FAIL",
+      "signer_records": [
+        {
+          "signer_id": "signer-a",
+          "key_id": "signer-a-key",
+          "key_source": "embedded",
+          "public_key_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+          "verification_result": "pass",
+          "key_resolution_time": "2026-06-28T09:00:00.000Z",
+          "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+          "verifier_role": "admission"
+        },
+        {
+          "signer_id": "signer-b",
+          "key_id": "signer-b-key",
+          "key_source": "embedded",
+          "public_key_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+          "verification_result": "pass",
+          "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+          "verifier_role": "co-signer"
+        }
+      ],
+      "failure_mode": "key_resolution_time_missing",
+      "fixture_certification_time": "2026-06-28T10:00:00.000Z"
+    },
+    {
+      "id": "vk-008-key-resolution-time-null",
+      "description": "key_resolution_time present as null.",
+      "expected": "FAIL",
+      "signer_records": [
+        {
+          "signer_id": "signer-a",
+          "key_id": "signer-a-key",
+          "key_source": "embedded",
+          "public_key_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+          "verification_result": "pass",
+          "key_resolution_time": "2026-06-28T09:00:00.000Z",
+          "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+          "verifier_role": "admission"
+        },
+        {
+          "signer_id": "signer-b",
+          "key_id": "signer-b-key",
+          "key_source": "embedded",
+          "public_key_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+          "verification_result": "pass",
+          "key_resolution_time": null,
+          "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+          "verifier_role": "co-signer"
+        }
+      ],
+      "failure_mode": "key_resolution_time_missing",
+      "fixture_certification_time": "2026-06-28T10:00:00.000Z"
+    },
+    {
+      "id": "vk-009-key-resolution-time-empty",
+      "description": "key_resolution_time present as an empty string.",
+      "expected": "FAIL",
+      "signer_records": [
+        {
+          "signer_id": "signer-a",
+          "key_id": "signer-a-key",
+          "key_source": "embedded",
+          "public_key_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+          "verification_result": "pass",
+          "key_resolution_time": "2026-06-28T09:00:00.000Z",
+          "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+          "verifier_role": "admission"
+        },
+        {
+          "signer_id": "signer-b",
+          "key_id": "signer-b-key",
+          "key_source": "embedded",
+          "public_key_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+          "verification_result": "pass",
+          "key_resolution_time": "",
+          "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+          "verifier_role": "co-signer"
+        }
+      ],
+      "failure_mode": "key_resolution_time_missing",
+      "fixture_certification_time": "2026-06-28T10:00:00.000Z"
+    },
+    {
+      "id": "vk-010-certification-time-absent",
+      "description": "Otherwise complete records, but the vector declares no certification time.",
+      "expected": "FAIL",
+      "signer_records": [
+        {
+          "signer_id": "signer-a",
+          "key_id": "signer-a-key",
+          "key_source": "embedded",
+          "public_key_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+          "verification_result": "pass",
+          "key_resolution_time": "2026-06-28T09:00:00.000Z",
+          "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+          "verifier_role": "admission"
+        },
+        {
+          "signer_id": "signer-b",
+          "key_id": "signer-b-key",
+          "key_source": "embedded",
+          "public_key_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+          "verification_result": "pass",
+          "key_resolution_time": "2026-06-28T09:00:00.000Z",
+          "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+          "verifier_role": "co-signer"
+        }
+      ],
+      "failure_mode": "fixture_certification_time_missing"
+    },
+    {
+      "id": "vk-011-key-source-unknown",
+      "description": "key_source 'telepathy' is not one of the four values.",
+      "expected": "FAIL",
+      "signer_records": [
+        {
+          "signer_id": "signer-a",
+          "key_id": "signer-a-key",
+          "key_source": "embedded",
+          "public_key_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+          "verification_result": "pass",
+          "key_resolution_time": "2026-06-28T09:00:00.000Z",
+          "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+          "verifier_role": "admission"
+        },
+        {
+          "signer_id": "signer-b",
+          "key_id": "signer-b-key",
+          "key_source": "telepathy",
+          "public_key_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+          "verification_result": "pass",
+          "key_resolution_time": "2026-06-28T09:00:00.000Z",
+          "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+          "verifier_role": "co-signer"
+        }
+      ],
+      "failure_mode": "key_source_unknown",
+      "fixture_certification_time": "2026-06-28T10:00:00.000Z"
+    },
+    {
+      "id": "vk-012-embedded-evidence-hash-only",
+      "description": "key_source embedded, no public_key_hash, only an evidence hash: the evidence hash does not stand in for the public key hash.",
+      "expected": "FAIL",
+      "signer_records": [
+        {
+          "signer_id": "signer-a",
+          "key_id": "signer-a-key",
+          "key_source": "embedded",
+          "public_key_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+          "verification_result": "pass",
+          "key_resolution_time": "2026-06-28T09:00:00.000Z",
+          "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+          "verifier_role": "admission"
+        },
+        {
+          "signer_id": "signer-b",
+          "key_id": "signer-b-key",
+          "key_source": "embedded",
+          "public_key_hash": null,
+          "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+          "verification_result": "pass",
+          "key_resolution_time": "2026-06-28T09:00:00.000Z",
+          "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+          "verifier_role": "co-signer"
+        }
+      ],
+      "failure_mode": "missing_key_material",
+      "fixture_certification_time": "2026-06-28T10:00:00.000Z"
+    },
+    {
+      "id": "vk-013-hash-not-hex",
+      "description": "public_key_hash is present but is not 64 lowercase hex.",
+      "expected": "FAIL",
+      "signer_records": [
+        {
+          "signer_id": "signer-a",
+          "key_id": "signer-a-key",
+          "key_source": "embedded",
+          "public_key_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+          "verification_result": "pass",
+          "key_resolution_time": "2026-06-28T09:00:00.000Z",
+          "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+          "verifier_role": "admission"
+        },
+        {
+          "signer_id": "signer-b",
+          "key_id": "signer-b-key",
+          "key_source": "embedded",
+          "public_key_hash": "x",
+          "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+          "verification_result": "pass",
+          "key_resolution_time": "2026-06-28T09:00:00.000Z",
+          "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+          "verifier_role": "co-signer"
+        }
+      ],
+      "failure_mode": "hash_format_invalid",
+      "fixture_certification_time": "2026-06-28T10:00:00.000Z"
+    },
+    {
+      "id": "vk-014-out-of-scope",
+      "description": "verification_result out_of_scope does not satisfy admission independence.",
+      "expected": "FAIL",
+      "signer_records": [
+        {
+          "signer_id": "signer-a",
+          "key_id": "signer-a-key",
+          "key_source": "embedded",
+          "public_key_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+          "verification_result": "pass",
+          "key_resolution_time": "2026-06-28T09:00:00.000Z",
+          "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+          "verifier_role": "admission"
+        },
+        {
+          "signer_id": "signer-b",
+          "key_id": "signer-b-key",
+          "key_source": "embedded",
+          "public_key_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+          "verification_result": "out_of_scope",
+          "key_resolution_time": "2026-06-28T09:00:00.000Z",
+          "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+          "verifier_role": "co-signer"
+        }
+      ],
+      "failure_mode": "multisig_overclaim_or_unverifiable",
+      "fixture_certification_time": "2026-06-28T10:00:00.000Z"
+    },
+    {
+      "id": "vk-015-verification-result-unknown",
+      "description": "verification_result 'ok' is not one of the four values.",
+      "expected": "FAIL",
+      "signer_records": [
+        {
+          "signer_id": "signer-a",
+          "key_id": "signer-a-key",
+          "key_source": "embedded",
+          "public_key_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+          "verification_result": "pass",
+          "key_resolution_time": "2026-06-28T09:00:00.000Z",
+          "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+          "verifier_role": "admission"
+        },
+        {
+          "signer_id": "signer-b",
+          "key_id": "signer-b-key",
+          "key_source": "embedded",
+          "public_key_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+          "verification_result": "ok",
+          "key_resolution_time": "2026-06-28T09:00:00.000Z",
+          "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+          "verifier_role": "co-signer"
+        }
+      ],
+      "failure_mode": "verification_result_unknown",
+      "fixture_certification_time": "2026-06-28T10:00:00.000Z"
+    },
+    {
+      "id": "vk-016-timestamp-garbage",
+      "description": "key_resolution_time is not a timestamp.",
+      "expected": "FAIL",
+      "signer_records": [
+        {
+          "signer_id": "signer-a",
+          "key_id": "signer-a-key",
+          "key_source": "embedded",
+          "public_key_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+          "verification_result": "pass",
+          "key_resolution_time": "2026-06-28T09:00:00.000Z",
+          "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+          "verifier_role": "admission"
+        },
+        {
+          "signer_id": "signer-b",
+          "key_id": "signer-b-key",
+          "key_source": "embedded",
+          "public_key_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+          "verification_result": "pass",
+          "key_resolution_time": "yesterday",
+          "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+          "verifier_role": "co-signer"
+        }
+      ],
+      "failure_mode": "timestamp_invalid",
+      "fixture_certification_time": "2026-06-28T10:00:00.000Z"
+    },
+    {
+      "id": "vk-017-jwks-evidence-hash-only-pass",
+      "description": "published_jwks with no public_key_hash but an evidence hash is valid per the key_source table.",
+      "expected": "PASS",
+      "signer_records": [
+        {
+          "signer_id": "signer-a",
+          "key_id": "signer-a-key",
+          "key_source": "embedded",
+          "public_key_hash": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+          "verification_result": "pass",
+          "key_resolution_time": "2026-06-28T09:00:00.000Z",
+          "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+          "verifier_role": "admission"
+        },
+        {
+          "signer_id": "signer-b",
+          "key_id": "signer-b-key",
+          "key_source": "published_jwks",
+          "public_key_hash": null,
+          "signature_input_hash": "906a51a3be93e9ab5c4911080b2e1dc4ad07bbbc9711aa997f212ea95257008c",
+          "verification_result": "pass",
+          "key_resolution_time": "2026-06-28T09:00:00.000Z",
+          "key_resolution_evidence_hash": "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+          "verifier_role": "co-signer"
+        }
+      ],
+      "fixture_certification_time": "2026-06-28T10:00:00.000Z"
+    }
+  ],
+  "provenance": "Built by build_v12.py. Expected results are hand-written from docs/spec/verifier-key-source-ref-v1.md, not computed by the verifier."
+}
