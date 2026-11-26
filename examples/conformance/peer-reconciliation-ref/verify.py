@@ -381,7 +381,7 @@ def load_vectors() -> list[dict]:
     for name in VECTOR_FILES:
         path = here / name
         if not path.exists():
-            continue
+            raise SystemExit(f"missing vector file {name}")
         for v in json.loads(path.read_text())["vectors"]:
             if v["id"] in seen:
                 raise SystemExit(f"duplicate vector id {v['id']} in {name}")

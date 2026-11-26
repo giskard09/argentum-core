@@ -83,3 +83,33 @@ def test_new_vectors_file_is_what_the_builder_writes():
                        capture_output=True, text=True)
     assert r.returncode == 0, r.stderr
     assert r.stdout == (HERE / "vectors-v1.3.1.json").read_text()
+
+
+def test_every_negative_vector_names_a_failure_mode():
+    # score() only enforces failure_mode when the vector has one, so a negative vector without it
+    # would pass condition 2 trivially.
+    v = _load()
+    for vec in v.load_vectors():
+        if vec["expected"] == "FAIL":
+            assert vec.get("failure_mode"), vec["id"]
+
+
+def test_missing_vector_file_is_an_error(tmp_path):
+    import shutil
+    d = tmp_path / "peer-reconciliation-ref"
+    d.mkdir()
+    shutil.copy(HERE / "verify.py", d)
+    shutil.copy(HERE / "vectors.json", d)
+    spec = importlib.util.spec_from_file_location("v_missing", d / "verify.py")
+    mod = importlib.util.module_from_spec(spec)
+    sys.path.insert(0, str(HERE.parent.parent.parent))   # jcs.py, as verify.py does from its own location
+    try:
+        spec.loader.exec_module(mod)
+        try:
+            mod.load_vectors()
+        except SystemExit as e:
+            assert "vectors-v1.3.1.json" in str(e)
+        else:
+            raise AssertionError("a missing vector file was skipped")
+    finally:
+        sys.path.remove(str(HERE.parent.parent.parent))
