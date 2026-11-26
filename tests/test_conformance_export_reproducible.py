@@ -77,8 +77,12 @@ class ExportReproducible(unittest.TestCase):
                 os.environ["SOURCE_DATE_EPOCH"] = old
 
     def test_default_is_the_current_time(self):
-        os.environ.pop("SOURCE_DATE_EPOCH", None)
-        ts = self.export_mod.resolve_generated_at()
+        saved = os.environ.pop("SOURCE_DATE_EPOCH", None)
+        try:
+            ts = self.export_mod.resolve_generated_at()
+        finally:
+            if saved is not None:
+                os.environ["SOURCE_DATE_EPOCH"] = saved
         self.assertRegex(ts, r"\A[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.000Z\Z")
         self.assertGreater(ts, "2026-11-26")
 
