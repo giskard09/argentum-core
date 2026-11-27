@@ -1,6 +1,6 @@
 {
   "export_version": "conformance-export-v0-draft",
-  "generated_at": "2026-11-26T23:20:11.000Z",
+  "generated_at": "2026-11-26T23:38:59.000Z",
   "generated_by": "examples/conformance/build_export.py",
   "source_repo": "giskard09/argentum-core",
   "note": "Draft aggregation of every conformance vector set in this repo. Public discovery route and final field-naming convention are deliberately NOT decided here — pending convergence with Kenneives/CTEF (agentgraph.co/.well-known/cte-test-vectors.json pattern, A2A#1628) so the ecosystem doesn't end up with two competing conventions. Each set's `files` map preserves the original vectors.json/fixture.json bytes unmodified.",
@@ -3381,6 +3381,560 @@
     "delegation-chain-ref": {
       "path": "examples/conformance/delegation-chain-ref/",
       "files": {
+        "coverage-vectors.json": {
+          "spec_version": "delegation-chain-ref-v1",
+          "description": "Additive vectors for delegation-chain-ref: rules and branches that no vector in the other files exercised (the 2026-10-10 scope-narrowing erratum, base invariants, replay registry, a not-assessed submission that must not be recorded) and RFC 8785 canonicalization (key order outside the BMP, number forms, integers outside the JCS profile). Vectors MUST be run in order (replay registry state carries across vectors within this file). A vector may carry its own pubkeys and enforce_scope_narrowing; the file declares neither.",
+          "vectors": [
+            {
+              "id": "cov-scope-widening-not-enforced-001",
+              "description": "2026-10-10 erratum. The chain widens scope between hops (mycelium:payment, then mycelium:*), and the caller does NOT declare enforce_scope_narrowing. Narrowing is a policy-level opt-in (module docstring, point 5; delegation-chain-ref.md), so the verifier reports nothing about it and the chain is PASS. A verifier that enforces narrowing without being told to fails this vector.",
+              "expected": "PASS",
+              "chain_artifact": {
+                "chain_id": "cov-scope-widening-not-enforced-001",
+                "hops": [
+                  {
+                    "delegatee": "test-cov-b",
+                    "delegator": "test-cov-a",
+                    "delegation_ref": "040c3bf7e3286af8a3f98c95c47b79f0d645190cf8dfd538026f255c2d11c8ed",
+                    "scope": "mycelium:payment"
+                  },
+                  {
+                    "delegatee": "test-cov-c",
+                    "delegator": "test-cov-b",
+                    "delegation_ref": "fdce8fb8d0b82bd95abc0c7737e5294f73874a2e9844cbbe2b95abaacf7cc0c1",
+                    "scope": "mycelium:*"
+                  }
+                ],
+                "leaf_action_ref": "2dc9272a5e7ba14f8e835fef32ada7183c040e640fe26844862031d47727fee7",
+                "root_delegator": "test-cov-a",
+                "scope": "mycelium:payment",
+                "version": "delegation-chain-ref-v1"
+              },
+              "delegation_chain_ref": "33b9f7fe84278f81cc284ff5da77679f6e9abaeeabf06beeef55fe0c76030dff",
+              "leaf_preimage": {
+                "agent_id": "test-cov-c",
+                "action_type": "payment.route",
+                "scope": "mycelium:*",
+                "timestamp": "2026-11-26T10:00:00.000Z"
+              }
+            },
+            {
+              "id": "cov-scope-equal-001",
+              "description": "enforce_scope_narrowing declared. Two hops with the same scope: equal scopes are valid (narrowing is 'equal or a sub-namespace'). PASS.",
+              "expected": "PASS",
+              "chain_artifact": {
+                "chain_id": "cov-scope-equal-001",
+                "hops": [
+                  {
+                    "delegatee": "test-cov-b",
+                    "delegator": "test-cov-a",
+                    "delegation_ref": "03a5a3dbba3a47a5a32122e008a68a8bfaaf6abe1bbc8e367aa4bba47c94e317",
+                    "scope": "mycelium:payment"
+                  },
+                  {
+                    "delegatee": "test-cov-c",
+                    "delegator": "test-cov-b",
+                    "delegation_ref": "8f4a4fa7bbc14ef0b3bbfe6b5b080463ade4376d4cfb6e44e53720ae0c629d3b",
+                    "scope": "mycelium:payment"
+                  }
+                ],
+                "leaf_action_ref": "b1c9fffc9b040960adaa2f690934e926152f3c2a6351ef85bf0499e109dd6105",
+                "root_delegator": "test-cov-a",
+                "scope": "mycelium:payment",
+                "version": "delegation-chain-ref-v1"
+              },
+              "delegation_chain_ref": "e1a7b506d5facb5c96bffb37ebfdd6c758109239d5c12898c42b2a17b0d07aba",
+              "leaf_preimage": {
+                "agent_id": "test-cov-c",
+                "action_type": "payment.route",
+                "scope": "mycelium:payment",
+                "timestamp": "2026-11-26T10:00:00.000Z"
+              },
+              "enforce_scope_narrowing": true
+            },
+            {
+              "id": "cov-scope-prefix-sibling-001",
+              "description": "enforce_scope_narrowing declared. hops[1].scope 'mycelium:payment' starts with hops[0].scope 'mycelium:pay' but is not a sub-namespace of it (no ':' boundary): a sibling, not a narrowing. scope_widening.",
+              "expected": "FAIL",
+              "failure_mode": "scope_widening",
+              "chain_artifact": {
+                "chain_id": "cov-scope-prefix-sibling-001",
+                "hops": [
+                  {
+                    "delegatee": "test-cov-b",
+                    "delegator": "test-cov-a",
+                    "delegation_ref": "3b678f95359885f070825c91678b9d74ff3f7606b2b7c723e3e281deab856a49",
+                    "scope": "mycelium:pay"
+                  },
+                  {
+                    "delegatee": "test-cov-c",
+                    "delegator": "test-cov-b",
+                    "delegation_ref": "19717cbb030992a3d9f6c384d5ebe2242497e54e91062906a0df05f62ad6e8db",
+                    "scope": "mycelium:payment"
+                  }
+                ],
+                "leaf_action_ref": "b1c9fffc9b040960adaa2f690934e926152f3c2a6351ef85bf0499e109dd6105",
+                "root_delegator": "test-cov-a",
+                "scope": "mycelium:pay",
+                "version": "delegation-chain-ref-v1"
+              },
+              "delegation_chain_ref": "23c9eba243174f3e804c6faeb81092ccc4759393e74a56a69e4b9ae8e0c1099e",
+              "leaf_preimage": {
+                "agent_id": "test-cov-c",
+                "action_type": "payment.route",
+                "scope": "mycelium:payment",
+                "timestamp": "2026-11-26T10:00:00.000Z"
+              },
+              "enforce_scope_narrowing": true,
+              "failure_detail": "'mycelium:payment' is not under 'mycelium:pay:'"
+            },
+            {
+              "id": "cov-scope-wildcard-sibling-001",
+              "description": "enforce_scope_narrowing declared. hops[0].scope 'mycelium:*' covers mycelium and its sub-namespaces only; hops[1].scope 'audit:read' is outside it. scope_widening.",
+              "expected": "FAIL",
+              "failure_mode": "scope_widening",
+              "chain_artifact": {
+                "chain_id": "cov-scope-wildcard-sibling-001",
+                "hops": [
+                  {
+                    "delegatee": "test-cov-b",
+                    "delegator": "test-cov-a",
+                    "delegation_ref": "f4d45b5015464c2b7286609aec45bcc9091b706feb2e63fc49f9a02467b2849f",
+                    "scope": "mycelium:*"
+                  },
+                  {
+                    "delegatee": "test-cov-c",
+                    "delegator": "test-cov-b",
+                    "delegation_ref": "a1de415a300534bcd7dcd451c7c213efa3cd6fbd13d5ad487e1a7a2d1dec4f66",
+                    "scope": "audit:read"
+                  }
+                ],
+                "leaf_action_ref": "9a7a904f56fab073c50f29142bdd0473cbc1a21ac70b780e4cf82faff34ed8d3",
+                "root_delegator": "test-cov-a",
+                "scope": "mycelium:*",
+                "version": "delegation-chain-ref-v1"
+              },
+              "delegation_chain_ref": "b8d984be43705a1d016bfab9317e3d2e343c23ba0dfdaef10f6aa1517d08f3ea",
+              "leaf_preimage": {
+                "agent_id": "test-cov-c",
+                "action_type": "payment.route",
+                "scope": "audit:read",
+                "timestamp": "2026-11-26T10:00:00.000Z"
+              },
+              "enforce_scope_narrowing": true,
+              "failure_detail": "'audit:read' is not under 'mycelium:*'"
+            },
+            {
+              "id": "cov-dcr-mismatch-001",
+              "description": "Everything is valid except the declared delegation_chain_ref, whose last hex digit was changed. SHA-256(JCS(chain_artifact)) does not match it.",
+              "expected": "FAIL",
+              "failure_mode": "delegation_chain_ref",
+              "chain_artifact": {
+                "chain_id": "cov-dcr-mismatch-001",
+                "hops": [
+                  {
+                    "delegatee": "test-cov-b",
+                    "delegator": "test-cov-a",
+                    "delegation_ref": "ae3815fb13fe0c3a01366dfb21d3ba1b65148030b7e27c849c4c46fd68fdf71c",
+                    "scope": "mycelium:payment"
+                  },
+                  {
+                    "delegatee": "test-cov-c",
+                    "delegator": "test-cov-b",
+                    "delegation_ref": "87eec51977f7d2aa351b974f8454f1804c2e61552dda624c5020ab5c6a39e043",
+                    "scope": "mycelium:payment"
+                  }
+                ],
+                "leaf_action_ref": "b1c9fffc9b040960adaa2f690934e926152f3c2a6351ef85bf0499e109dd6105",
+                "root_delegator": "test-cov-a",
+                "scope": "mycelium:payment",
+                "version": "delegation-chain-ref-v1"
+              },
+              "delegation_chain_ref": "1d949b81c4bfdd6cf7f66de5206a3f4b508f2e6e6c0bac22a1bdaa75efd4bab0",
+              "leaf_preimage": {
+                "agent_id": "test-cov-c",
+                "action_type": "payment.route",
+                "scope": "mycelium:payment",
+                "timestamp": "2026-11-26T10:00:00.000Z"
+              },
+              "failure_detail": "declared delegation_chain_ref is not the hash of the chain"
+            },
+            {
+              "id": "cov-chain-break-last-pair-001",
+              "description": "Three hops. hops[0]->hops[1] is continuous; hops[1].delegatee ('test-cov-c') is not hops[2].delegator ('test-cov-x'). The break is in the last pair, which a verifier that stops one pair early never sees.",
+              "expected": "FAIL",
+              "failure_mode": "chain_break",
+              "chain_artifact": {
+                "chain_id": "cov-chain-break-last-pair-001",
+                "hops": [
+                  {
+                    "delegatee": "test-cov-b",
+                    "delegator": "test-cov-a",
+                    "delegation_ref": "0893951f39888bcb89fa22260c54f0d895a256b50606203d6c0b7aac49fde773",
+                    "scope": "mycelium:payment"
+                  },
+                  {
+                    "delegatee": "test-cov-c",
+                    "delegator": "test-cov-b",
+                    "delegation_ref": "0fb6312ab88a1ccb8b94a76675b40d3acd845ed5b4004e37a039f9aeaadd7115",
+                    "scope": "mycelium:payment"
+                  },
+                  {
+                    "delegatee": "test-cov-d",
+                    "delegator": "test-cov-x",
+                    "delegation_ref": "48e49dc52b93ec6f6e0e1b2e416481c771692ec17a01179955c963add8017782",
+                    "scope": "mycelium:payment"
+                  }
+                ],
+                "leaf_action_ref": "0e86ff0f5bcd6e0c2ce1defb0d1e203743165d538a40203898ef93ecc2a35e83",
+                "root_delegator": "test-cov-a",
+                "scope": "mycelium:payment",
+                "version": "delegation-chain-ref-v1"
+              },
+              "delegation_chain_ref": "ed6eb905fb53e30651c9ed50f433d7ab052461acdf2f86217ba894abf261ff02",
+              "leaf_preimage": {
+                "agent_id": "test-cov-d",
+                "action_type": "payment.route",
+                "scope": "mycelium:payment",
+                "timestamp": "2026-11-26T10:00:00.000Z"
+              },
+              "failure_detail": "hops[1].delegatee != hops[2].delegator"
+            },
+            {
+              "id": "cov-root-anchoring-001",
+              "description": "root_delegator names 'test-cov-z' but hops[0].delegator is 'test-cov-a'. root_anchoring.",
+              "expected": "FAIL",
+              "failure_mode": "root_anchoring",
+              "chain_artifact": {
+                "chain_id": "cov-root-anchoring-001",
+                "hops": [
+                  {
+                    "delegatee": "test-cov-b",
+                    "delegator": "test-cov-a",
+                    "delegation_ref": "90fa91a18b774630256e4fe137f4523fab9c0e9cf777cec384cb6f5318399cb2",
+                    "scope": "mycelium:payment"
+                  },
+                  {
+                    "delegatee": "test-cov-c",
+                    "delegator": "test-cov-b",
+                    "delegation_ref": "9dede19153ee541c597c0410e9876115c6ab3f24837f0e03d8bbd30e284a6084",
+                    "scope": "mycelium:payment"
+                  }
+                ],
+                "leaf_action_ref": "b1c9fffc9b040960adaa2f690934e926152f3c2a6351ef85bf0499e109dd6105",
+                "root_delegator": "test-cov-z",
+                "scope": "mycelium:payment",
+                "version": "delegation-chain-ref-v1"
+              },
+              "delegation_chain_ref": "e8b2414d389dbd55008147645ae0a0229660baa7f7bea9929449e44af58f99e4",
+              "leaf_preimage": {
+                "agent_id": "test-cov-c",
+                "action_type": "payment.route",
+                "scope": "mycelium:payment",
+                "timestamp": "2026-11-26T10:00:00.000Z"
+              },
+              "failure_detail": "root_delegator != hops[0].delegator"
+            },
+            {
+              "id": "cov-leaf-anchoring-001",
+              "description": "leaf_action_ref was computed from a leaf_preimage with timestamp 2026-11-26T09:00:00.000Z; the vector carries a leaf_preimage with 2026-11-26T10:00:00.000Z. The recomputed action_ref differs from chain.leaf_action_ref (the scope matches, so only leaf_anchoring fails).",
+              "expected": "FAIL",
+              "failure_mode": "leaf_anchoring",
+              "chain_artifact": {
+                "chain_id": "cov-leaf-anchoring-001",
+                "hops": [
+                  {
+                    "delegatee": "test-cov-b",
+                    "delegator": "test-cov-a",
+                    "delegation_ref": "1b0ce164e98ce87b5f7f2acdd74f54bb1789dd838d3a66aa856f1cf360ad3600",
+                    "scope": "mycelium:payment"
+                  },
+                  {
+                    "delegatee": "test-cov-c",
+                    "delegator": "test-cov-b",
+                    "delegation_ref": "165585918f48f7b4861af947866fcaf46121866d5655edc6d939529296130c18",
+                    "scope": "mycelium:payment"
+                  }
+                ],
+                "leaf_action_ref": "190c9e7ca6bac161470eacc88fad83e8bef1d176d4139a9dbba47ef52cd86cf9",
+                "root_delegator": "test-cov-a",
+                "scope": "mycelium:payment",
+                "version": "delegation-chain-ref-v1"
+              },
+              "delegation_chain_ref": "930b2dc5f55dc4a93fd8211378284bebce4129c05af2a84e19fc9f08044d0f09",
+              "leaf_preimage": {
+                "agent_id": "test-cov-c",
+                "action_type": "payment.route",
+                "scope": "mycelium:payment",
+                "timestamp": "2026-11-26T10:00:00.000Z"
+              },
+              "failure_detail": "recomputed action_ref != leaf_action_ref"
+            },
+            {
+              "id": "cov-replay-ref-reuse-001",
+              "description": "A new chain_id that reuses a hop delegation_ref already accepted (hops[0] of cov-scope-equal-001). Reusing a delegation_ref across a different chain is a replay.",
+              "expected": "FAIL",
+              "failure_mode": "replay_detected",
+              "chain_artifact": {
+                "chain_id": "cov-replay-ref-reuse-001",
+                "hops": [
+                  {
+                    "delegatee": "test-cov-b",
+                    "delegator": "test-cov-a",
+                    "delegation_ref": "03a5a3dbba3a47a5a32122e008a68a8bfaaf6abe1bbc8e367aa4bba47c94e317",
+                    "scope": "mycelium:payment"
+                  },
+                  {
+                    "delegatee": "test-cov-c",
+                    "delegator": "test-cov-b",
+                    "delegation_ref": "2babb5dd3609ab6f9293d8b09c95f2414810a1356709d21bbbb3a90750ad363a",
+                    "scope": "mycelium:payment"
+                  }
+                ],
+                "leaf_action_ref": "b1c9fffc9b040960adaa2f690934e926152f3c2a6351ef85bf0499e109dd6105",
+                "root_delegator": "test-cov-a",
+                "scope": "mycelium:payment",
+                "version": "delegation-chain-ref-v1"
+              },
+              "delegation_chain_ref": "72291a889142608601ecca9fbe37ad6a78aaa0c94d8407e842cbf73d475447c7",
+              "leaf_preimage": {
+                "agent_id": "test-cov-c",
+                "action_type": "payment.route",
+                "scope": "mycelium:payment",
+                "timestamp": "2026-11-26T10:00:00.000Z"
+              },
+              "failure_detail": "delegation_ref already accepted under another chain_id"
+            },
+            {
+              "id": "cov-replay-chain-id-reuse-001",
+              "description": "The chain_id of cov-scope-equal-001 again, with different delegation_refs. Resubmitting an accepted chain_id is a replay even when no delegation_ref repeats.",
+              "expected": "FAIL",
+              "failure_mode": "replay_detected",
+              "chain_artifact": {
+                "chain_id": "cov-scope-equal-001",
+                "hops": [
+                  {
+                    "delegatee": "test-cov-b",
+                    "delegator": "test-cov-a",
+                    "delegation_ref": "98967977927f903b7cf2d7a2d731ba72ac004ba1bbc6e3f8ff32caf3a2bdd004",
+                    "scope": "mycelium:payment"
+                  },
+                  {
+                    "delegatee": "test-cov-c",
+                    "delegator": "test-cov-b",
+                    "delegation_ref": "0c284fad0c4af41f0331563cc7147f3183000b27e3b6f2d568c0fe82fc3bbe9a",
+                    "scope": "mycelium:payment"
+                  }
+                ],
+                "leaf_action_ref": "b1c9fffc9b040960adaa2f690934e926152f3c2a6351ef85bf0499e109dd6105",
+                "root_delegator": "test-cov-a",
+                "scope": "mycelium:payment",
+                "version": "delegation-chain-ref-v1"
+              },
+              "delegation_chain_ref": "5f31d2ed7c9cc2f4e924168822070af6e22936afe7ddd3ae05cc2c2c5d781cbb",
+              "leaf_preimage": {
+                "agent_id": "test-cov-c",
+                "action_type": "payment.route",
+                "scope": "mycelium:payment",
+                "timestamp": "2026-11-26T10:00:00.000Z"
+              },
+              "failure_detail": "chain_id already accepted"
+            },
+            {
+              "id": "cov-not-assessed-001",
+              "description": "Signed hops, no keys in the key set the caller gives and the set is not declared complete: the signatures are not assessed. NOT_ASSESSED, and the chain_id is NOT recorded (the submission was not accepted).",
+              "expected": "NOT_ASSESSED",
+              "chain_artifact": {
+                "chain_id": "cov-not-assessed",
+                "hops": [
+                  {
+                    "delegatee": "test-cov-b",
+                    "delegator": "test-cov-a",
+                    "delegation_ref": "8c22bc68459b2024de44346d0917997db1da4f0f70c93fe84233c959ab171dc6",
+                    "scope": "mycelium:payment",
+                    "hop_signature": "bd+Rji0MvuN9x3V9otbRAo1HqLorvhWwMSsKJnn+0d8x27CFKNaKMy9GrfIljFTdOYG9iWbcPDtEfujXRc1FAA=="
+                  },
+                  {
+                    "delegatee": "test-cov-c",
+                    "delegator": "test-cov-b",
+                    "delegation_ref": "82472426e4dbe3b44781a049a8043494f71b33f50b7db24cc877a5af8cfde823",
+                    "scope": "mycelium:payment",
+                    "hop_signature": "z2pQosxSRFCg3hGY+CNo4zSYmkp+jpZQM1UHDon9UUeiuHT0BOAofwfvRGE7737txf+bGhPlmsIT+veldD3vCQ=="
+                  }
+                ],
+                "leaf_action_ref": "b1c9fffc9b040960adaa2f690934e926152f3c2a6351ef85bf0499e109dd6105",
+                "root_delegator": "test-cov-a",
+                "scope": "mycelium:payment",
+                "version": "delegation-chain-ref-v1"
+              },
+              "delegation_chain_ref": "da6ad4120aabe7c5f1e300c5c79795044b6aab5a2ebea5678d78bd562b40c31e",
+              "leaf_preimage": {
+                "agent_id": "test-cov-c",
+                "action_type": "payment.route",
+                "scope": "mycelium:payment",
+                "timestamp": "2026-11-26T10:00:00.000Z"
+              },
+              "pubkeys": {}
+            },
+            {
+              "id": "cov-not-assessed-then-accepted-001",
+              "description": "The same chain as cov-not-assessed-001, now with the keys. The signatures verify, so it is PASS. It must not be reported as a replay: the earlier submission was not accepted and recorded nothing.",
+              "expected": "PASS",
+              "chain_artifact": {
+                "chain_id": "cov-not-assessed",
+                "hops": [
+                  {
+                    "delegatee": "test-cov-b",
+                    "delegator": "test-cov-a",
+                    "delegation_ref": "8c22bc68459b2024de44346d0917997db1da4f0f70c93fe84233c959ab171dc6",
+                    "scope": "mycelium:payment",
+                    "hop_signature": "bd+Rji0MvuN9x3V9otbRAo1HqLorvhWwMSsKJnn+0d8x27CFKNaKMy9GrfIljFTdOYG9iWbcPDtEfujXRc1FAA=="
+                  },
+                  {
+                    "delegatee": "test-cov-c",
+                    "delegator": "test-cov-b",
+                    "delegation_ref": "82472426e4dbe3b44781a049a8043494f71b33f50b7db24cc877a5af8cfde823",
+                    "scope": "mycelium:payment",
+                    "hop_signature": "z2pQosxSRFCg3hGY+CNo4zSYmkp+jpZQM1UHDon9UUeiuHT0BOAofwfvRGE7737txf+bGhPlmsIT+veldD3vCQ=="
+                  }
+                ],
+                "leaf_action_ref": "b1c9fffc9b040960adaa2f690934e926152f3c2a6351ef85bf0499e109dd6105",
+                "root_delegator": "test-cov-a",
+                "scope": "mycelium:payment",
+                "version": "delegation-chain-ref-v1"
+              },
+              "delegation_chain_ref": "da6ad4120aabe7c5f1e300c5c79795044b6aab5a2ebea5678d78bd562b40c31e",
+              "leaf_preimage": {
+                "agent_id": "test-cov-c",
+                "action_type": "payment.route",
+                "scope": "mycelium:payment",
+                "timestamp": "2026-11-26T10:00:00.000Z"
+              },
+              "pubkeys": {
+                "test-cov-a": "zy/XN6RJXvNJk2x6BxTRe47RWN9rXdAaNGamM06eVDE=",
+                "test-cov-b": "QysHVn35V+N2rTDt21ei02fr0laEZRbqyzNrXc2/WH4="
+              }
+            },
+            {
+              "id": "cov-jcs-astral-key-001",
+              "description": "RFC 8785 key order. chain_artifact carries an opaque ext object with two keys, U+FFFF and U+1F600. RFC 8785 orders keys by UTF-16 code unit, so U+1F600 (D83D DE00) comes before U+FFFF; ordering by code point gives the reverse and a different hash. delegation_chain_ref is the SHA-256 of the canonical string written out by hand in build_coverage_vectors.py. PASS.",
+              "expected": "PASS",
+              "chain_artifact": {
+                "chain_id": "cov-jcs-astral-key-001",
+                "hops": [
+                  {
+                    "delegatee": "test-cov-b",
+                    "delegator": "test-cov-a",
+                    "delegation_ref": "b1c894a542c3bc1f7ea65b45e683bd828e5a7ce0341aa2a2bbd1e8cb0f442ea3",
+                    "scope": "mycelium:payment"
+                  },
+                  {
+                    "delegatee": "test-cov-c",
+                    "delegator": "test-cov-b",
+                    "delegation_ref": "a182284334a9c5cb1b1505448715e7587f75be8928e3abf0566af0af8258ffc4",
+                    "scope": "mycelium:payment"
+                  }
+                ],
+                "leaf_action_ref": "b1c9fffc9b040960adaa2f690934e926152f3c2a6351ef85bf0499e109dd6105",
+                "root_delegator": "test-cov-a",
+                "scope": "mycelium:payment",
+                "version": "delegation-chain-ref-v1",
+                "ext": {
+                  "￿": 2,
+                  "😀": 1
+                }
+              },
+              "delegation_chain_ref": "93f126eb438e5dc52dba1db1391780aff5eca904bfd3f951347685a379d81392",
+              "leaf_preimage": {
+                "agent_id": "test-cov-c",
+                "action_type": "payment.route",
+                "scope": "mycelium:payment",
+                "timestamp": "2026-11-26T10:00:00.000Z"
+              }
+            },
+            {
+              "id": "cov-jcs-number-forms-001",
+              "description": "RFC 8785 numbers. chain_artifact carries an opaque ext object with 1.0, 0.000001 and 1e21. ECMAScript Number::toString (RFC 8785) writes them 1, 0.000001 and 1e+21; Python's repr gives 1.0, 1e-06 and 1e+21. delegation_chain_ref is the SHA-256 of the canonical string written out by hand in build_coverage_vectors.py. PASS.",
+              "expected": "PASS",
+              "chain_artifact": {
+                "chain_id": "cov-jcs-number-forms-001",
+                "hops": [
+                  {
+                    "delegatee": "test-cov-b",
+                    "delegator": "test-cov-a",
+                    "delegation_ref": "843a062d5fc74274762b710be77fe8358baec312db3ffd3e3475f7f9e2ce33af",
+                    "scope": "mycelium:payment"
+                  },
+                  {
+                    "delegatee": "test-cov-c",
+                    "delegator": "test-cov-b",
+                    "delegation_ref": "7eccb9288f5ba5d0ef5a2b8114a8d2bd50a040d90a81034087c9211432ef68ac",
+                    "scope": "mycelium:payment"
+                  }
+                ],
+                "leaf_action_ref": "b1c9fffc9b040960adaa2f690934e926152f3c2a6351ef85bf0499e109dd6105",
+                "root_delegator": "test-cov-a",
+                "scope": "mycelium:payment",
+                "version": "delegation-chain-ref-v1",
+                "ext": {
+                  "s": 1e-06,
+                  "n": 1.0,
+                  "e": 1e+21
+                }
+              },
+              "delegation_chain_ref": "5555a86d492b93b5e244e8ede1685a262df2f60f358c7da109413071d2cfe3ea",
+              "leaf_preimage": {
+                "agent_id": "test-cov-c",
+                "action_type": "payment.route",
+                "scope": "mycelium:payment",
+                "timestamp": "2026-11-26T10:00:00.000Z"
+              }
+            },
+            {
+              "id": "cov-int-out-of-profile-001",
+              "description": "chain_artifact carries an opaque ext integer, 9007199254740993 (2^53 + 1), which an IEEE-754 double cannot hold. RFC 8785 numbers are doubles and the repo's jcs.py refuses it, so the chain cannot be canonicalized and the verifier reports a failure instead of hashing an exact integer or raising. The declared delegation_chain_ref is a placeholder.",
+              "expected": "FAIL",
+              "failure_mode": "delegation_chain_ref",
+              "chain_artifact": {
+                "chain_id": "cov-int-out-of-profile-001",
+                "hops": [
+                  {
+                    "delegatee": "test-cov-b",
+                    "delegator": "test-cov-a",
+                    "delegation_ref": "83d529e46fa3c3bf93645109e99a4e71446b6ee7725a13fc9f753e229907fe6b",
+                    "scope": "mycelium:payment"
+                  },
+                  {
+                    "delegatee": "test-cov-c",
+                    "delegator": "test-cov-b",
+                    "delegation_ref": "e2ff82494a3262901234907be82bf747ac1b256e8f35c844b13f3e2a6ee91e6c",
+                    "scope": "mycelium:payment"
+                  }
+                ],
+                "leaf_action_ref": "b1c9fffc9b040960adaa2f690934e926152f3c2a6351ef85bf0499e109dd6105",
+                "root_delegator": "test-cov-a",
+                "scope": "mycelium:payment",
+                "version": "delegation-chain-ref-v1",
+                "ext": {
+                  "n": 9007199254740993
+                }
+              },
+              "delegation_chain_ref": "0000000000000000000000000000000000000000000000000000000000000000",
+              "leaf_preimage": {
+                "agent_id": "test-cov-c",
+                "action_type": "payment.route",
+                "scope": "mycelium:payment",
+                "timestamp": "2026-11-26T10:00:00.000Z"
+              },
+              "failure_detail": "integer outside +/-(2^53-1)"
+            }
+          ],
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
+        },
         "cross-org-vectors.json": {
           "pubkeys": {
             "test-cross-org-a": "cM2fzXznjkKrREvc+Vq0A89IODqDnFP5l8knecbgoHQ=",
