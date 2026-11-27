@@ -100,6 +100,12 @@ python verify.py
 
 Expected: `2/2 passed`, with the differential check printing `True`.
 
+## Canonicalization of this copy (declared limit)
+
+This directory carries its own copy of the delegation-chain verifier, `verify.py`, written when the directory was added (`2c197dc`, 2026-09-01) and not updated with [`../verify.py`](../verify.py), which `../verify.py`'s docstring calls a frozen copy. Its `jcs()` is `json.dumps(sort_keys=True, ensure_ascii=False)`. That is **not** RFC 8785: it orders object keys outside the Basic Multilingual Plane by code point instead of by UTF-16 code unit, and writes numbers in Python's form (`1.0`, `1e-06`) instead of ECMAScript's (`1`, `0.000001`). The spec ([`delegation-chain-ref.md`](../../../../docs/spec/delegation-chain-ref.md), Derivation) requires RFC 8785. Nothing here claims otherwise: this copy is not an RFC 8785 implementation.
+
+The copy is left as it is so that its bytes, which `../SHA256SUMS` lists, stay tied to the vectors of this directory. No object in this directory's JSON files has a key outside the BMP or a number whose two forms differ (every JSON subtree canonicalizes to the same bytes under this copy and under the repo's `jcs.py`); `tests/test_delegation_chain_frozen_jcs.py` checks that and fails if such data is added, so the choice between changing the copy and keeping it is made again then. For the current reference behaviour (RFC 8785 since 2026-11-26) see [`../verify.py`](../verify.py).
+
 ## Provenance
 
 Gap identified by MoltyCel (x402#2332) via a differential test comparing this
