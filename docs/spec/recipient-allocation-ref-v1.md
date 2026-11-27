@@ -58,6 +58,8 @@ recipient_allocation_ref = SHA-256(JCS(preimage))
 
 JCS: RFC 8785 canonical JSON: object keys sorted recursively by UTF-16 code units (§3.2.3), no whitespace, literal UTF-8 — **not** `json.dumps(sort_keys=True)`, which sorts by code point and diverges for keys outside the BMP. Reference implementation: [`jcs.py`](../../jcs.py).
 
+**Reference verifier note (2026-11-26).** From its first revision (`5aaa1f2`, 2026-06-27) until this change, `examples/conformance/recipient-allocation-ref/verify.py` computed JCS with `json.dumps(sort_keys=True, ensure_ascii=False)`, which the paragraph above says not to use: it differs from RFC 8785 for object keys outside the BMP and for number forms (`1.0`, `0.000001`). No published vector contained such data (all 96 JSON subtrees of `vectors.json` canonicalize to identical bytes under both), so no published hash and no verdict changes. The verifier now calls `jcs.py`; an integer outside ±(2^53−1) ends the run with a `ValueError`, where it used to be hashed exactly. The spec text did not change. The fixture's `reproduce_in_python` field in `vectors.json` still shows the `sort_keys` form; it is left as published (changing it changes the bytes of a cited file) and is not the RFC 8785 recipe.
+
 ```python
 import hashlib, json
 
