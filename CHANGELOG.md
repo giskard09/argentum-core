@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Changed — anchoring-precedence-ref: verifier canonicalizes with RFC 8785 (2026-11-26)
+
+- `verify.py` computed JCS with `json.dumps(sort_keys=True)` from its first revision (`7274077`, 2026-06-28) until now, which the spec (Derivation) says not to use: it differs from RFC 8785 for object keys outside the BMP and for number forms. It now calls the repo's `jcs.py`; an integer outside ±(2^53−1) is reported as a `canonical_envelope` failure instead of being hashed. Spec text unchanged; one note added.
+- Compatibility, measured with the old and the new `verify.py`: all 192 JSON subtrees of `vectors.json` canonicalize to identical bytes, and the verifier output and exit code are identical (8/8). No published hash and no verdict changes.
+- `tests/test_jcs_anchoring_precedence_ref.py` (3 tests). No vector carries data where the two canonicalizations differ: the envelope has a fixed set of fields and the spec defines no extension field, so none was invented; the regression is pinned at function level instead. Reverting `jcs()` to `sort_keys` fails all 3.
+
 ### Changed — disclosure-scoped-ref: verifier canonicalizes with RFC 8785 (2026-11-26)
 
 - `verify.py` computed JCS with `json.dumps(sort_keys=True)` from its first revision (`65ddd3c`, 2026-07-08) until now, which the spec says not to use in Python: it differs from RFC 8785 for object keys outside the BMP and for number forms. `verify.mjs` was not affected. It now calls the repo's `jcs.py`; a field value holding an integer outside ±(2^53−1) ends the run with a `ValueError` instead of being hashed exactly. Spec text unchanged; one note added.
