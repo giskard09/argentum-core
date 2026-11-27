@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Declared — delegation-chain-ref/leaf-screen-halt and revoked-ancestor keep a non-RFC 8785 copy of the verifier (2026-11-26)
+
+- Both subdirectories carry their own copy of the delegation-chain verifier (`384e134`, 2026-06-28; `2c197dc`, 2026-09-01). Its `jcs()` is `json.dumps(sort_keys=True)`, which is not RFC 8785 (key order outside the BMP, number forms). The spec requires RFC 8785. `../verify.py` was brought to it today; these copies are not changed, so their bytes (listed in `../SHA256SUMS`) stay tied to their vectors.
+- Each README gains a section, "Canonicalization of this copy (declared limit)", that says so and does not call the copy RFC 8785. `tests/test_delegation_chain_frozen_jcs.py` (6 tests) fails if the copy stops using `sort_keys` without the README changing, and if any JSON subtree of either directory canonicalizes differently under the copy and under `jcs.py` (so adding such data forces a decision).
+- Compatibility: no code, vector or verdict changes; the subtrees of both directories canonicalize to identical bytes. `SHA256SUMS` regenerated (the two READMEs changed).
+
 ### Changed — offer-identity-ref: verifier canonicalizes with RFC 8785 (2026-11-26)
 
 - `verify.py` computed JCS with `json.dumps(sort_keys=True)` from its first revision (`4aaf85f`, 2026-09-02) until now, which the spec (Derivation) says not to use: it differs from RFC 8785 for object keys outside the BMP and for number forms. It now calls the repo's `jcs.py`; an integer outside ±(2^53−1) is reported as a `canonical_offer` failure instead of being hashed. Spec text unchanged; one note added.
