@@ -61,6 +61,7 @@ field_digest(field_name, value, salt) = SHA256(JCS({
   `json.dumps(sort_keys=True)` (code-point order, diverges for keys outside the BMP) —
   use [`jcs.py`](../../jcs.py); in JS, the minimal recursive sorted-key serializer
   (`Array.prototype.sort` already compares UTF-16 code units) — see the reference verifiers).
+- **Reference verifier note (2026-11-26).** From its first revision (`65ddd3c`, 2026-07-08) until this change, `examples/conformance/disclosure-scoped-ref/verify.py` computed JCS with `json.dumps(sort_keys=True, ensure_ascii=False)`, which the bullet above says not to use in Python: it differs from RFC 8785 for object keys outside the BMP and for number forms (`1.0`, `0.000001`). `verify.mjs` was not affected. No published vector contained such data (all 94 JSON subtrees of `vectors.json` canonicalize to identical bytes under both), so no published hash and no verdict changes. The verifier now calls `jcs.py`; a field value holding an integer outside ±(2^53−1) ends the run with a `ValueError`, where it used to be hashed exactly. The spec text did not change.
 
 ### Commitment vector and root
 
