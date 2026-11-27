@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+### Changed — recipient-allocation-ref: verifier canonicalizes with RFC 8785 (2026-11-26)
+
+- `verify.py` computed JCS with `json.dumps(sort_keys=True)` from its first revision (`5aaa1f2`, 2026-06-27) until now, which the spec says not to use: it differs from RFC 8785 for object keys outside the BMP and for number forms. It now calls the repo's `jcs.py`; an integer outside ±(2^53−1) ends the run with a `ValueError` (the script has no per-vector error path) instead of being hashed. Spec text unchanged; one note added.
+- Compatibility, measured with the old and the new `verify.py`: all 96 JSON subtrees of `vectors.json` canonicalize to identical bytes, and the script output and exit code are identical (2/2). No published hash and no verdict changes.
+- No vector was added: the preimage has a fixed set of fields and the spec defines no extension field. `tests/test_jcs_recipient_allocation_ref.py` (5 tests) pins the behaviour at function level; reverting `jcs()` to `sort_keys` fails 4 of the 5.
+- Not changed: the fixture's `reproduce_in_python` field in `vectors.json` still shows the `sort_keys` form, which is not the RFC 8785 recipe the spec gives. Left as published, because changing it changes the bytes of a file others cite.
+
 ### Changed — delegation-chain-ref: verifier canonicalizes with RFC 8785; 15 vectors for untested rules; mutants (2026-11-26)
 
 - Spec (`docs/spec/delegation-chain-ref.md`, Derivation): one note says that from its first revision (`16e140a`, 2026-06-28) until now `verify.py` computed JCS with `json.dumps(sort_keys=True)`, which the spec says not to use, and that this differed from RFC 8785 for object keys outside the BMP and for number forms (`1.0`, `0.000001`). The spec text did not change; the verifier is brought to it.
