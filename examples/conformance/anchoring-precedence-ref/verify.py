@@ -100,9 +100,10 @@ def verify_vector(vector: dict) -> tuple[bool, list[str]]:
 
 
 def main():
-    vectors_path = Path(__file__).parent / "vectors.json"
-    data = json.loads(vectors_path.read_text())
-    vectors = data["vectors"]
+    here = Path(__file__).parent
+    vectors = []
+    for name in ("vectors.json", "vectors-jcs.json"):
+        vectors += json.loads((here / name).read_text())["vectors"]
 
     print(f"anchoring-precedence-ref-v1 conformance — {len(vectors)} vectors\n")
 

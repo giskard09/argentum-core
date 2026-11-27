@@ -2,9 +2,12 @@
 
 Until 2026-11-26 it used json.dumps(sort_keys=True), which the spec says not to use. These tests pin the
 two differences (key order outside the BMP, number forms) and that an out-of-profile integer is a reported
-failure rather than a crash. Reverting jcs() to sort_keys fails the first two.
+failure rather than a crash. Reverting jcs() to sort_keys fails them, and the two vectors in vectors-jcs.json.
 """
 import importlib.util
+import json
+import subprocess
+import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent.parent / "examples" / "conformance" / "anchoring-precedence-ref"
@@ -37,3 +40,24 @@ def test_out_of_profile_integer_is_a_failure_not_a_crash():
     assert not ok
     assert any(f.startswith("canonical_envelope: envelope cannot be canonicalized") for f in failures)
     assert not any("admission_invariant: admission_hash" in f and "!=" in f for f in failures)
+
+
+def test_new_vectors_are_what_the_builder_writes():
+    r = subprocess.run([sys.executable, "-B", "-I", str(HERE / "build_jcs_vectors.py"), "--check"])
+    assert r.returncode == 0
+
+
+def test_a_verifier_that_goes_back_to_sort_keys_fails_the_new_vectors():
+    # Same module source with jcs() replaced by json.dumps(sort_keys=True): both new PASS vectors must be rejected.
+    src = (HERE / "verify.py").read_text()
+    old = '    return jcs_bytes(obj).decode("utf-8")'
+    assert src.count(old) == 1
+    ns = {"__file__": str(HERE / "verify.py"), "__name__": "mutant"}
+    exec(compile(src.replace(old, '    return json.dumps(obj, separators=(",", ":"), sort_keys=True, ensure_ascii=False)'),
+                 "mutant.py", "exec"), ns)
+    vectors = json.loads((HERE / "vectors-jcs.json").read_text())["vectors"]
+    assert len(vectors) == 2
+    for vec in vectors:
+        ok, _failures = ns["verify_vector"](vec)
+        assert not ok, vec["id"]
+        assert v.verify_vector(vec)[0], vec["id"]

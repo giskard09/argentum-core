@@ -1,0 +1,76 @@
+{
+  "spec_version": "anchoring-precedence-ref-v1",
+  "description": "Additive vectors: the envelope carries an extra field with data where RFC 8785 and json.dumps(sort_keys=True) differ (a key outside the BMP; number forms). A verifier that canonicalizes with sort_keys computes another anchoring_precedence_ref and rejects them.",
+  "vectors": [
+    {
+      "id": "jcs-astral-key-001",
+      "description": "RFC 8785 key order. The envelope carries an extra field `ext` with two keys, U+FFFF and U+1F600. RFC 8785 orders keys by UTF-16 code unit, so U+1F600 (D83D DE00) sorts before U+FFFF; ordering by code point gives the reverse and a different anchoring_precedence_ref. All five invariants pass.",
+      "expected": "PASS",
+      "envelope": {
+        "anchor_block_time": 1782677381,
+        "mechanism": "on-chain",
+        "outcome_ts_ms": 1782677980000,
+        "trail_id": "b4377bcd-7342-4f7d-bdb3-daf41201bd47",
+        "version": "anchoring-precedence-ref-v1",
+        "ext": {
+          "\uffff": 2,
+          "\ud83d\ude00": 1
+        }
+      },
+      "anchoring_precedence_ref": "6928ce01c1597e927c138f4fa6446084559585df749448f69ae686f7babc1a38",
+      "checks": {
+        "canonical_envelope": true,
+        "admission_invariant": true,
+        "anchoring_existence": true,
+        "anchoring_precedence": true,
+        "chain_invariant": true
+      },
+      "admission_hash": "6928ce01c1597e927c138f4fa6446084559585df749448f69ae686f7babc1a38",
+      "mechanism_detail": {
+        "tier": "on-chain",
+        "clock": "Arbitrum",
+        "anchor_ms": 1782677381000,
+        "precedence": true,
+        "margin_s": 599
+      }
+    },
+    {
+      "id": "jcs-number-forms-001",
+      "description": "RFC 8785 numbers. The envelope carries an extra field `ext` with 1.0, 0.000001 and 1e21, which ECMAScript Number::toString (RFC 8785) writes as 1, 0.000001 and 1e+21 (Python's repr gives 1.0, 1e-06, 1e+21). All five invariants pass.",
+      "expected": "PASS",
+      "envelope": {
+        "anchor_block_time": 1782677381,
+        "mechanism": "on-chain",
+        "outcome_ts_ms": 1782677980000,
+        "trail_id": "b4377bcd-7342-4f7d-bdb3-daf41201bd47",
+        "version": "anchoring-precedence-ref-v1",
+        "ext": {
+          "s": 1e-06,
+          "n": 1.0,
+          "e": 1e+21
+        }
+      },
+      "anchoring_precedence_ref": "7be44d6b21f9a33bc03261995f83c621be05cbfb83c2ec6211cc064e95d6f764",
+      "checks": {
+        "canonical_envelope": true,
+        "admission_invariant": true,
+        "anchoring_existence": true,
+        "anchoring_precedence": true,
+        "chain_invariant": true
+      },
+      "admission_hash": "7be44d6b21f9a33bc03261995f83c621be05cbfb83c2ec6211cc064e95d6f764",
+      "mechanism_detail": {
+        "tier": "on-chain",
+        "clock": "Arbitrum",
+        "anchor_ms": 1782677381000,
+        "precedence": true,
+        "margin_s": 599
+      }
+    }
+  ],
+  "provenance": {
+    "authored_by": "giskard09 (argentum-core)",
+    "verification_mode": "asserted",
+    "independently_reproduced_by": []
+  }
+}
