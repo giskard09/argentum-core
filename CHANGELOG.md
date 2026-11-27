@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+### Changed — disclosure-scoped-ref: verifier canonicalizes with RFC 8785 (2026-11-26)
+
+- `verify.py` computed JCS with `json.dumps(sort_keys=True)` from its first revision (`65ddd3c`, 2026-07-08) until now, which the spec says not to use in Python: it differs from RFC 8785 for object keys outside the BMP and for number forms. `verify.mjs` was not affected. It now calls the repo's `jcs.py`; a field value holding an integer outside ±(2^53−1) ends the run with a `ValueError` instead of being hashed exactly. Spec text unchanged; one note added.
+- Compatibility, measured with the old and the new `verify.py`: all 94 JSON subtrees of `vectors.json` canonicalize to identical bytes, and the verifier output and exit code are identical. No published hash and no verdict changes.
+- No vector was added: the fixture is one record with three scripted vectors, and a vector with such data needs a second fixture. `tests/test_jcs_disclosure_scoped_ref.py` (6 tests) pins the behaviour at function level, including a field digest checked against a hand-written canonical string; reverting `jcs()` to `sort_keys` fails 5 of the 6.
+- Run from a checkout of the repository: `verify.py` now imports `jcs.py` from the repository root; before, the folder alone was enough. `verify.mjs` is still self-contained.
+
 ### Changed — recipient-allocation-ref: verifier canonicalizes with RFC 8785 (2026-11-26)
 
 - `verify.py` computed JCS with `json.dumps(sort_keys=True)` from its first revision (`5aaa1f2`, 2026-06-27) until now, which the spec says not to use: it differs from RFC 8785 for object keys outside the BMP and for number forms. It now calls the repo's `jcs.py`; an integer outside ±(2^53−1) ends the run with a `ValueError` (the script has no per-vector error path) instead of being hashed. Spec text unchanged; one note added.

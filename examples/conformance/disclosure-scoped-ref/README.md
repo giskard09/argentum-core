@@ -51,7 +51,7 @@ pattern as `screen_ref` alongside a settlement `action_ref`
 ## Run
 
 ```
-python3 verify.py      # zero-dependency, offline
+python3 verify.py      # no third-party dependency, offline; run from a checkout of the repo (imports jcs.py from its root)
 node verify.mjs         # zero-dependency, offline
 ```
 
