@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+### Changed — offer-identity-ref: verifier canonicalizes with RFC 8785 (2026-11-26)
+
+- `verify.py` computed JCS with `json.dumps(sort_keys=True)` from its first revision (`4aaf85f`, 2026-09-02) until now, which the spec (Derivation) says not to use: it differs from RFC 8785 for object keys outside the BMP and for number forms. It now calls the repo's `jcs.py`; an integer outside ±(2^53−1) is reported as a `canonical_offer` failure instead of being hashed. Spec text unchanged; one note added.
+- Compatibility, measured with the old and the new `verify.py`: all 95 JSON subtrees of `vectors.json` canonicalize to identical bytes, and the verifier output and exit code are identical (4/4). No published hash and no verdict changes.
+- New: `vectors-jcs.json` (2 positive vectors, built by `build_jcs_vectors.py`; the hashed object is the exact `x402Response` the server served, so any field it carries is hashed): a key outside the BMP and number forms. Each hash comes from `jcs.py` and is asserted equal to a value computed once with Node.js. The old verifier rejects both; the new one accepts them. `vectors.json` is unchanged.
+- `tests/test_jcs_offer_identity_ref.py` (5 tests). Reverting `jcs()` to `sort_keys` fails 4 of the 5 (the fifth is the builder check). `conformance-export.json` and `conformance-vectors.json` regenerated.
+
 ### Changed — settlement-evidence-ref: verifier canonicalizes with RFC 8785 (2026-11-26)
 
 - `verify.py` computed JCS with `json.dumps(sort_keys=True)` from its first revision (`4aaf85f`, 2026-09-02) until now, which the spec (Derivation) says not to use: it differs from RFC 8785 for object keys outside the BMP and for number forms. It now calls the repo's `jcs.py`; an integer outside ±(2^53−1) is reported as a `canonical_settlement` failure instead of being hashed. Spec text unchanged; one note added.
