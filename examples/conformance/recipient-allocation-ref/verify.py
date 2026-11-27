@@ -5,8 +5,16 @@ Reproduces recipient_allocation_ref from preimage fields and validates all invar
 import hashlib, json, sys
 from pathlib import Path
 
+# RFC 8785 JCS from the repo's jcs.py. Until 2026-11-26 jcs() was json.dumps(sort_keys=True), which the
+# spec says not to use (code-point key order; Python number forms). Run from a checkout of the repository.
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
+from jcs import jcs_bytes  # noqa: E402
+
+
 def jcs(obj):
-    return json.dumps(obj, separators=(',', ':'), sort_keys=True, ensure_ascii=False)
+    """Raises ValueError for an integer outside +/-(2^53-1) or a non-finite float (out of the JCS profile):
+    this script has no per-vector error path, so such a preimage ends the run with a traceback."""
+    return jcs_bytes(obj).decode("utf-8")
 
 def compute_ref(preimage):
     return hashlib.sha256(jcs(preimage).encode()).hexdigest()
