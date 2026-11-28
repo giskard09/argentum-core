@@ -49,6 +49,7 @@ silently defaulting the unverified case to "settled."
 `settlement_evidence_ref` is `SHA-256(JCS(settlement_artifact))` where:
 
 - **JCS** is RFC 8785 canonical JSON: object keys sorted recursively by UTF-16 code units (§3.2.3), no whitespace, literal UTF-8 — **not** `json.dumps(sort_keys=True)`, which sorts by code point and diverges for keys outside the BMP. Reference implementation: [`jcs.py`](../../jcs.py)
+- **Reference verifier note (2026-11-26).** From its first revision (`4aaf85f`, 2026-09-02) until this change, `examples/conformance/settlement-evidence-ref/verify.py` computed JCS with `json.dumps(sort_keys=True, ensure_ascii=False)`, which the first bullet says not to use: it differs from RFC 8785 for object keys outside the BMP and for number forms (`1.0`, `0.000001`). No published vector contained such data (all 123 JSON subtrees of `vectors.json` canonicalize to identical bytes under both), so no published hash and no verdict changes. The verifier now calls `jcs.py`; an integer outside ±(2^53−1) is reported as a `canonical_settlement` failure. The spec text did not change. Two additive vectors in `vectors-jcs.json` carry an extra `ext` field with such data (hashes checked against `jcs.py` and, once, against Node.js).
 - **SHA-256** lowercase hex
 - `settlement_artifact` must contain at minimum: `network`, `transaction`, `payer_debit`,
   `payee_credit`, `version`. `offer_identity_ref` is optional.
