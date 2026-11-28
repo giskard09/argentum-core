@@ -21,6 +21,7 @@ A system that only confirms an anchor exists can be manipulated by a participant
 `anchoring_precedence_ref` is `SHA-256(JCS(envelope))` where:
 
 - **JCS** is RFC 8785 canonical JSON: object keys sorted recursively by UTF-16 code units (§3.2.3), no whitespace, literal UTF-8 — **not** `json.dumps(sort_keys=True)`, which sorts by code point and diverges for keys outside the BMP. Reference implementation: [`jcs.py`](../../jcs.py)
+- **Reference verifier note (2026-11-26).** From its first revision (`7274077`, 2026-06-28) until this change, `examples/conformance/anchoring-precedence-ref/verify.py` computed JCS with `json.dumps(sort_keys=True, ensure_ascii=False)`, which the first bullet says not to use: it differs from RFC 8785 for object keys outside the BMP and for number forms (`1.0`, `0.000001`). No published vector contains such data (all 192 JSON subtrees of `vectors.json` canonicalize to identical bytes under both), so no published hash and no verdict changes. The verifier now calls `jcs.py`; an integer outside ±(2^53−1) is reported as a `canonical_envelope` failure. The spec text did not change. Two additive vectors in `vectors-jcs.json` carry an extra `ext` field with such data (hashes checked against `jcs.py` and, once, against Node.js).
 - **SHA-256** lowercase hex
 - `envelope` must contain at minimum: `trail_id`, `anchor_block_time`, `mechanism`, `outcome_ts_ms`, `version`
 
