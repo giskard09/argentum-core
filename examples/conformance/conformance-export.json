@@ -13540,6 +13540,92 @@
     "settlement-evidence-ref": {
       "path": "examples/conformance/settlement-evidence-ref/",
       "files": {
+        "vectors-jcs.json": {
+          "spec_version": "settlement-evidence-ref-v1",
+          "description": "Additive vectors: the settlement_artifact carries an extra field with data where RFC 8785 and json.dumps(sort_keys=True) differ (a key outside the BMP; number forms). A verifier that canonicalizes with sort_keys computes another settlement_evidence_ref and rejects them.",
+          "vectors": [
+            {
+              "id": "jcs-astral-key-001",
+              "description": "RFC 8785 key order. The settlement_artifact carries an extra field `ext` with two keys, U+FFFF and U+1F600. RFC 8785 orders keys by UTF-16 code unit, so U+1F600 (D83D DE00) sorts before U+FFFF; ordering by code point gives the reverse and a different settlement_evidence_ref. Otherwise identical to settlement-matched-001: all four checks pass.",
+              "expected": "PASS",
+              "settlement_artifact": {
+                "network": "base-sepolia",
+                "transaction": "0x7c8692c003b80a48bb8123ae6965e26464d271ee2041404cc025e0f15e5fcaba",
+                "offer_identity_ref": "0df1f6792f5aa482568ff3b6cb39568d5fe0b5f29b7dc7148b5dba400451d4c4",
+                "payer_debit": {
+                  "address": "0xA11ce00000000000000000000000000000000001",
+                  "amount": "10000",
+                  "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e"
+                },
+                "payee_credit": {
+                  "address": "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+                  "amount": "10000",
+                  "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e"
+                },
+                "version": "settlement-evidence-ref-v1",
+                "ext": {
+                  "￿": 2,
+                  "😀": 1
+                }
+              },
+              "settlement_evidence_ref": "e3ade4f297a1d9ffc243f6cd817ceac9caf6d9ac05819756cf22a1a5ad1f8a33",
+              "referenced_offer": {
+                "maxAmountRequired": "10000",
+                "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+                "payTo": "0x209693Bc6afc0C5328bA36FaF03C514EF312287C"
+              },
+              "checks": {
+                "ledger_recomputed": true,
+                "debit_credit_paired": true,
+                "matches_offer": true,
+                "transaction_present": true
+              }
+            },
+            {
+              "id": "jcs-number-forms-001",
+              "description": "RFC 8785 numbers. The settlement_artifact carries an extra field `ext` with 1.0, 0.000001 and 1e21, which ECMAScript Number::toString (RFC 8785) writes as 1, 0.000001 and 1e+21 (Python's repr gives 1.0, 1e-06, 1e+21). Otherwise identical to settlement-matched-001: all four checks pass.",
+              "expected": "PASS",
+              "settlement_artifact": {
+                "network": "base-sepolia",
+                "transaction": "0x7c8692c003b80a48bb8123ae6965e26464d271ee2041404cc025e0f15e5fcaba",
+                "offer_identity_ref": "0df1f6792f5aa482568ff3b6cb39568d5fe0b5f29b7dc7148b5dba400451d4c4",
+                "payer_debit": {
+                  "address": "0xA11ce00000000000000000000000000000000001",
+                  "amount": "10000",
+                  "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e"
+                },
+                "payee_credit": {
+                  "address": "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+                  "amount": "10000",
+                  "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e"
+                },
+                "version": "settlement-evidence-ref-v1",
+                "ext": {
+                  "s": 1e-06,
+                  "n": 1.0,
+                  "e": 1e+21
+                }
+              },
+              "settlement_evidence_ref": "06545fe02140009f10b6b623146208d4302f4e29a12ae9a557048c888dd77f66",
+              "referenced_offer": {
+                "maxAmountRequired": "10000",
+                "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+                "payTo": "0x209693Bc6afc0C5328bA36FaF03C514EF312287C"
+              },
+              "checks": {
+                "ledger_recomputed": true,
+                "debit_credit_paired": true,
+                "matches_offer": true,
+                "transaction_present": true
+              }
+            }
+          ],
+          "provenance": {
+            "authored_by": "giskard09 (argentum-core)",
+            "verification_mode": "asserted",
+            "independently_reproduced_by": []
+          }
+        },
         "vectors.json": {
           "spec_version": "settlement-evidence-ref-v1",
           "description": "Conformance vectors for settlement-evidence-ref-v1 (docs/spec/settlement-evidence-ref.md). Four checks: ledger_recomputed (payer_debit/payee_credit read from the rail's own transaction data, never accepted as a bare facilitator success flag), debit_credit_paired (both sides present, not just one), matches_offer (when offer_identity_ref is present, the settled amount/asset/payee match what the offer required), transaction_present (settlement_artifact.transaction is a non-empty string — the same field x402#2887 found left as '' in a production receipt despite the settlement hash existing). A verifier that accepts a facilitator's success:true alone, without independently recomputed debit/credit, silently passes facilitator-assertion-only-001 — this is R5's central prohibition.",
