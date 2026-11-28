@@ -1,0 +1,64 @@
+{
+  "spec_version": "offer-identity-ref-v1",
+  "description": "Additive vectors: the x402_response carries an extra field with data where RFC 8785 and json.dumps(sort_keys=True) differ (a key outside the BMP; number forms). A verifier that canonicalizes with sort_keys computes another offer_identity_ref and rejects them.",
+  "vectors": [
+    {
+      "id": "jcs-astral-key-001",
+      "description": "RFC 8785 key order. The x402_response carries an extra field `ext` with two keys, U+FFFF and U+1F600. RFC 8785 orders keys by UTF-16 code unit, so U+1F600 (D83D DE00) sorts before U+FFFF; ordering by code point gives the reverse and a different offer_identity_ref. Otherwise identical to offer-identity-001.",
+      "expected": "PASS",
+      "x402_response": {
+        "x402Version": 1,
+        "accepts": [
+          {
+            "scheme": "exact",
+            "network": "base-sepolia",
+            "maxAmountRequired": "10000",
+            "resource": "https://api.example.com/weather",
+            "description": "Current weather data for a given location",
+            "mimeType": "application/json",
+            "payTo": "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+            "maxTimeoutSeconds": 60,
+            "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e"
+          }
+        ],
+        "ext": {
+          "\uffff": 2,
+          "\ud83d\ude00": 1
+        }
+      },
+      "offer_identity_ref": "235ee23922975b24ea87a9af570fb1fe87557b0f9bbcc2a8659eea24d61ae2ff"
+    },
+    {
+      "id": "jcs-number-forms-001",
+      "description": "RFC 8785 numbers. The x402_response carries an extra field `ext` with 1.0, 0.000001 and 1e21, which ECMAScript Number::toString (RFC 8785) writes as 1, 0.000001 and 1e+21 (Python's repr gives 1.0, 1e-06, 1e+21). Otherwise identical to offer-identity-001.",
+      "expected": "PASS",
+      "x402_response": {
+        "x402Version": 1,
+        "accepts": [
+          {
+            "scheme": "exact",
+            "network": "base-sepolia",
+            "maxAmountRequired": "10000",
+            "resource": "https://api.example.com/weather",
+            "description": "Current weather data for a given location",
+            "mimeType": "application/json",
+            "payTo": "0x209693Bc6afc0C5328bA36FaF03C514EF312287C",
+            "maxTimeoutSeconds": 60,
+            "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e"
+          }
+        ],
+        "ext": {
+          "s": 1e-06,
+          "n": 1.0,
+          "e": 1e+21
+        }
+      },
+      "offer_identity_ref": "3c0b7a3bf401cfa780530a2658aa86777c953dbcf185ac0eb7b818343bea3f37"
+    }
+  ],
+  "provenance": {
+    "authored_by": "giskard09 (argentum-core)",
+    "verification_mode": "asserted",
+    "independently_reproduced_by": []
+  }
+}

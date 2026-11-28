@@ -19,8 +19,15 @@ import sys
 from pathlib import Path
 
 
+# RFC 8785 JCS from the repo's jcs.py. Until 2026-11-26 jcs() was json.dumps(sort_keys=True), which the
+# spec says not to use (code-point key order; Python number forms). Run from a checkout of the repository.
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent))
+from jcs import jcs_bytes  # noqa: E402
+
+
 def jcs(obj: dict) -> str:
-    return json.dumps(obj, separators=(",", ":"), sort_keys=True, ensure_ascii=False)
+    """Raises ValueError for an integer outside +/-(2^53-1) or a non-finite float (out of the JCS profile)."""
+    return jcs_bytes(obj).decode("utf-8")
 
 
 def sha256hex(s: str) -> str:
@@ -30,9 +37,13 @@ def sha256hex(s: str) -> str:
 def verify_vector(vector: dict) -> tuple[bool, list[str]]:
     failures = []
 
-    computed_ref = sha256hex(jcs(vector["x402_response"]))
     declared_ref = vector.get("offer_identity_ref", "")
-    if computed_ref != declared_ref:
+    try:
+        computed_ref = sha256hex(jcs(vector["x402_response"]))
+    except (ValueError, TypeError) as e:
+        computed_ref = None
+        failures.append(f"canonical_offer: x402_response cannot be canonicalized under RFC 8785 ({e})")
+    if computed_ref is not None and computed_ref != declared_ref:
         failures.append(
             f"canonical_offer: computed {computed_ref} != declared {declared_ref}"
         )
@@ -41,9 +52,10 @@ def verify_vector(vector: dict) -> tuple[bool, list[str]]:
 
 
 def main():
-    vectors_path = Path(__file__).parent / "vectors.json"
-    data = json.loads(vectors_path.read_text())
-    vectors = data["vectors"]
+    here = Path(__file__).parent
+    vectors = []
+    for name in ("vectors.json", "vectors-jcs.json"):
+        vectors += json.loads((here / name).read_text())["vectors"]
 
     print(f"offer-identity-ref-v1 conformance — {len(vectors)} vectors\n")
 
